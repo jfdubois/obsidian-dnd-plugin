@@ -10,7 +10,7 @@ None selected.
 
 ## Last completed task
 
-P2-T001 — Implement branded IDs and common enums
+P2-T002 — Implement ruleset and source-policy types
 
 ## Blockers
 
@@ -128,6 +128,12 @@ Summary: Created missing `scripts/` and `fixtures/` directories with `.gitkeep`.
 Validation: directory listing confirms all required top-level directories present.
 Commit: not committed.
 Notes:
+
+2026-07-22 — P2-T002 — complete
+Summary: Implemented CharacterContentPolicy with ruleset, enabledSourceIds, mode (snapshot), and optional sourceProfileOrigin. Implemented QueryContext with ruleset, enabledSourceIds, requiredSourceIds, and includeCore. Both types have runtime validators accepting unknown, factory functions creating immutable copies of arrays, and helper functions (policyContainsSource, queryContextContainsSource). SourceProfileOrigin validated with non-negative finite profileRevision. 42 new tests covering factories, validators, negative inputs, helper functions, and round-trips. Total test count: 133.
+Validation: `npm run typecheck` passes all 8 packages (EXIT 0). `npm run lint` passes (EXIT 0). `npm run test` passes 133/133 (EXIT 0). `npm run build` passes all 8 packages (EXIT 0). `npm run check` passes (EXIT 0).
+Commit: not committed.
+Notes: Ruleset type was already implemented in P2-T001. This task adds the source-policy layer built on top of the branded IDs and enum types.
 
 2026-07-22 — P2-T001 — complete
 Summary: Implemented branded ID types (EntityId, SourceId, CharacterId, CatalogRevision, ChoiceDefinitionId, ChoiceInstanceId, ClassInstanceId, ItemInstanceId, ResourceId) with factory functions, string accessors, runtime type guards, and assertion helpers. Implemented common enums (Ruleset, RuleEntityKind, Ability, ContentAccess, SourceCategory, DiagnosticSeverity) with guard functions and constant arrays. All types use strict TypeScript with no `any`. Validators accept `unknown` and narrow to branded types. 91 tests pass covering factories, accessors, validators, assertions, negative inputs, and round-trips.

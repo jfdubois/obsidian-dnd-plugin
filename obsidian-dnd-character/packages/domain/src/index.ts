@@ -77,3 +77,19 @@ export {
   assertItemInstanceId,
   assertResourceId,
 } from "./validators";
+
+export {
+  /* Source policy types */
+  type CharacterContentPolicy,
+  type SourceProfileOrigin,
+  type QueryContext,
+  /* Source policy factories */
+  createCharacterContentPolicy,
+  createQueryContext,
+  /* Source policy validators */
+  isCharacterContentPolicy,
+  isQueryContext,
+  /* Source policy helpers */
+  policyContainsSource,
+  queryContextContainsSource,
+} from "./source-policy";
