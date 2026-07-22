@@ -92,8 +92,8 @@ Create a strict TypeScript workspace with independent build/test targets.
 
 ### Phase 1 gate
 
-- [ ] One root command runs all static checks and tests.
-- [ ] No application code exists without strict compilation.
+- [x] One root command runs all static checks and tests.
+- [x] No application code exists without strict compilation.
 
 ---
 

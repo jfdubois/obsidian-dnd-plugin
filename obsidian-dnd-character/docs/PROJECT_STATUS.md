@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Phase 1 — Monorepo and quality baseline
+Phase 2 — Domain and normalized catalog contracts
 
 ## Current task
 
@@ -10,7 +10,7 @@ None selected.
 
 ## Last completed task
 
-P1-T006 — Add package boundaries
+Phase 1 gate — Monorepo and quality baseline
 
 ## Blockers
 
@@ -38,6 +38,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-22 — Phase 1 gate — complete
+Summary: Verified both gate criteria. (1) One root command: `npm run check` now runs typecheck, lint, and test sequentially (EXIT 0). (2) Strict compilation: tsconfig.base.json enforces strict, noImplicitReturns, noFallthroughCasesInSwitch, noUncheckedIndexedAccess, isolatedModules, forceConsistentCasingInFileNames across all 8 workspace packages.
+Validation: `npm run check` passes (typecheck 8 packages + lint + 6/6 tests, EXIT 0). `npx tsc --showConfig` confirms all strict options active.
+Commit: not committed.
+Notes: Phase 1 complete. Phase 2 (Domain and normalized catalog contracts) is now open.
 
 2026-07-22 — P1-T006 — complete
 Summary: Created package manifests and dependency constraints for all 8 workspace packages: packages/domain, packages/catalog-contract, packages/character-contract, packages/rules-engine, packages/testing, apps/catalog-builder, apps/obsidian-plugin, apps/catalog-server. Each package has package.json with correct dependency declarations matching 02_SYSTEM_ARCHITECTURE.md section 2, tsconfig.json extending tsconfig.base.json, and src/index.ts entry point. npm workspaces resolve the dependency graph correctly with no cycles. Forbidden dependency direction is documented in architecture doc and enforced by TypeScript module resolution (undeclared imports fail compilation).
