@@ -1,0 +1,44 @@
+# Dependencies
+**/node_modules/
+
+# Build outputs
+**/dist/
+**/build/
+**/coverage/
+**/*.map
+
+# Generated Obsidian plugin output
+**/main.js
+
+# Environment files
+**/.env
+**/.env.*
+!**/.env.example
+
+# Logs
+**/*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+
+# Editors and operating systems
+**/.vscode/
+**/.idea/
+**/.DS_Store
+**/Thumbs.db
+
+# External source repositories
+/external/
+
+# Generated catalog and Docker runtime data
+/runtime/
+
+# Obsidian test vault
+/test-vaults/
+
+# Local deployment configuration
+**/deploy.config.local.json
+
+# Temporary files
+**/tmp/
+**/.cache/
