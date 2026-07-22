@@ -10,7 +10,7 @@ None selected.
 
 ## Last completed task
 
-P0-T002 — Establish branch and commit policy
+P0-T003 — Pin Obsidian references
 
 ## Blockers
 
@@ -28,7 +28,8 @@ Not initialized.
 
 ## Plugin baseline
 
-- Obsidian API snapshot: not pinned.
+- Obsidian API snapshot: pinned (SHA-256 `ed358aa…`).
+- Sample plugin: pinned at commit `23c165f`.
 - Minimum app version: not selected.
 - Plugin version: not initialized.
 
@@ -37,6 +38,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-22 — P0-T003 — complete
+Summary: Verified obsidian.d.ts SHA-256 matches recorded hash. Computed and recorded SHA-256 hashes for all 5 sample-plugin reference files. Added retrieval date to SOURCE.md.
+Validation: sha256sum -c verified all 6 files against recorded hashes.
+Commit: not committed.
+Notes:
 
 2026-07-22 — P0-T002 — complete
 Summary: Added branch policy (main/release, dev/integration, P#-T### feature branches) and commit policy (Conventional Commits with scope) to Engineering SOP sections 1-2. Added policy summary to project README. Renumbered existing SOP sections.

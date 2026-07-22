@@ -29,7 +29,7 @@ Create a reproducible project foundation and prevent API/source ambiguity.
   - Document feature-branch and commit naming rules.
   - Accept: policy added to engineering SOP and repository README.
 
-- [ ] **P0-T003 — Pin Obsidian references**
+- [x] **P0-T003 — Pin Obsidian references**
   - Save the current official `obsidian.d.ts` and official sample-plugin reference files under `references/obsidian/`.
   - Record retrieval date and upstream commit or immutable URL.
   - Accept: hashes recorded in `references/obsidian/SOURCE.md`.
