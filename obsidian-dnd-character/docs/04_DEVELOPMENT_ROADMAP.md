@@ -24,7 +24,7 @@ Create a reproducible project foundation and prevent API/source ambiguity.
   - Output: committed directory structure and root README.
   - Accept: clean clone shows all controlling documents.
 
-- [ ] **P0-T002 — Establish branch and commit policy**
+- [x] **P0-T002 — Establish branch and commit policy**
   - Configure `main` as release branch and `dev` as integration branch.
   - Document feature-branch and commit naming rules.
   - Accept: policy added to engineering SOP and repository README.
