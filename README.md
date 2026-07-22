@@ -31,3 +31,4 @@ With nvm:
 
 ```bash
 nvm use
+```
