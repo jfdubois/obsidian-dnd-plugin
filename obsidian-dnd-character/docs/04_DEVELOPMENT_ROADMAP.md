@@ -34,7 +34,7 @@ Create a reproducible project foundation and prevent API/source ambiguity.
   - Record retrieval date and upstream commit or immutable URL.
   - Accept: hashes recorded in `references/obsidian/SOURCE.md`.
 
-- [ ] **P0-T004 — Pin D&D Beyond fixture**
+- [x] **P0-T004 — Pin D&D Beyond fixture**
   - Save the provided character JSON as an immutable test/reference fixture.
   - Record that it is a hydrated behavioral reference, not an API contract.
   - Accept: fixture checksum and source note recorded.

@@ -10,7 +10,7 @@ None selected.
 
 ## Last completed task
 
-P0-T003 — Pin Obsidian references
+P0-T004 — Pin D&D Beyond fixture
 
 ## Blockers
 
@@ -38,6 +38,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-22 — P0-T004 — complete
+Summary: Verified D&D Beyond fixture `character-156579226.json` exists, SHA-256 matches recorded hash. SOURCE.md documents restrictions (behavioral reference only, no production calls).
+Validation: sha256sum verified fixture against recorded hash `c26017d…`.
+Commit: not committed.
+Notes:
 
 2026-07-22 — P0-T003 — complete
 Summary: Verified obsidian.d.ts SHA-256 matches recorded hash. Computed and recorded SHA-256 hashes for all 5 sample-plugin reference files. Added retrieval date to SOURCE.md.
