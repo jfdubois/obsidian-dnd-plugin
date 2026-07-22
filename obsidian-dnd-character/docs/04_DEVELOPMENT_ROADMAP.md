@@ -55,8 +55,8 @@ Create a reproducible project foundation and prevent API/source ambiguity.
 
 ### Phase 0 gate
 
-- [ ] Exact source revisions and API contract are reproducible.
-- [ ] No code work begins while source or licensing policy is ambiguous.
+- [x] Exact source revisions and API contract are reproducible.
+- [x] No code work begins while source or licensing policy is ambiguous.
 
 ---
 

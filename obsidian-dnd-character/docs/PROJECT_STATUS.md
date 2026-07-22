@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Phase 0 — Governance and pinned inputs
+Phase 1 — Monorepo and quality baseline
 
 ## Current task
 
@@ -10,7 +10,7 @@ None selected.
 
 ## Last completed task
 
-P0-T007 — Create API usage register
+Phase 0 gate — verified and closed
 
 ## Blockers
 
@@ -38,6 +38,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-22 — Phase 0 gate — complete
+Summary: Verified both gate criteria. (1) All source revisions reproducible: Obsidian API SHA-256 ed358aa…, sample plugin commit 23c165f with 5 file hashes, D&D Beyond fixture SHA-256 c26017d…, 5eTools commit 3c5d9d3 in SOURCE_COMMIT.txt, 17 API symbols verified in docs/API_USAGE.md. (2) No licensing ambiguity: ADR-001 through ADR-008 accepted, risk register R-001 through R-010 populated, D&D Beyond restrictions explicit, non-free content bundling prohibited, raw 5eTools isolated to catalog-builder.
+Validation: manual review of all SOURCE.md files, hashes, commits, ADRs, and risk register.
+Commit: not committed.
+Notes: Phase 0 complete. Phase 1 (Monorepo and quality baseline) is now open.
 
 2026-07-22 — P0-T007 — complete
 Summary: Created docs/API_USAGE.md with template header and 17 verified Obsidian API symbols extracted from pinned references/obsidian/obsidian.d.ts. Signatures include requestUrl, Plugin.registerView, Workspace.getRightLeaf, WorkspaceLeaf.setViewState, Plugin.loadData, Plugin.saveData, Vault.cachedRead, Vault.process, Plugin.addCommand, Plugin.addSettingTab, Component.onunload, Component.register, Component.registerEvent, ItemView, ViewCreator, Vault.create, and Vault.createFolder. Each entry records verified signature, @since version, purpose, and placeholder for usage file and manual test.
