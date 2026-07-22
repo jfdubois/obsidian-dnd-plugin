@@ -1,0 +1,14 @@
+{
+  "name": "@obsidian-dnd/catalog-server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Docker-based static catalog server — implementation in Phase 5",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}

@@ -86,7 +86,7 @@ Create a strict TypeScript workspace with independent build/test targets.
   - Run install, typecheck, lint, unit tests, and builds.
   - Accept: CI passes on `dev`.
 
-- [ ] **P1-T006 — Add package boundaries**
+- [x] **P1-T006 — Add package boundaries**
   - Create package manifests and dependency constraints for domain, catalog contract, character contract, rules engine, builder, server, and plugin.
   - Accept: forbidden dependency direction is documented and linted where practical.
 

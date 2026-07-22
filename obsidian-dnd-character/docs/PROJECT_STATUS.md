@@ -10,7 +10,7 @@ None selected.
 
 ## Last completed task
 
-P1-T005 — Add CI workflow
+P1-T006 — Add package boundaries
 
 ## Blockers
 
@@ -38,6 +38,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-22 — P1-T006 — complete
+Summary: Created package manifests and dependency constraints for all 8 workspace packages: packages/domain, packages/catalog-contract, packages/character-contract, packages/rules-engine, packages/testing, apps/catalog-builder, apps/obsidian-plugin, apps/catalog-server. Each package has package.json with correct dependency declarations matching 02_SYSTEM_ARCHITECTURE.md section 2, tsconfig.json extending tsconfig.base.json, and src/index.ts entry point. npm workspaces resolve the dependency graph correctly with no cycles. Forbidden dependency direction is documented in architecture doc and enforced by TypeScript module resolution (undeclared imports fail compilation).
+Validation: `npm run typecheck` passes all 8 packages (EXIT 0). `npm run lint` passes (EXIT 0). `npm run test` passes 6/6 (EXIT 0). `npm run build` passes all 8 packages (EXIT 0). `npm run check` passes (EXIT 0).
+Commit: not committed.
+Notes: The testing package depends on all other shared packages to provide builders and fixtures. The catalog-server package has no internal dependencies (Docker service, implementation deferred to Phase 5).
 
 2026-07-22 — P1-T005 — complete
 Summary: Created .github/workflows/ci.yml with GitHub Actions workflow triggered on push to main/dev and pull requests. Workflow uses ubuntu-latest, Node.js 22, npm cache, and runs npm ci, typecheck, lint, test, and build from the obsidian-dnd-character workspace directory. All five steps verified passing locally.
