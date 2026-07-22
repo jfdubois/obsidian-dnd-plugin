@@ -10,7 +10,7 @@ None selected.
 
 ## Last completed task
 
-P2-T003 — Implement catalog manifest runtime schema
+P2-T004 — Implement source metadata schema
 
 ## Blockers
 
@@ -148,6 +148,12 @@ Validation:
 Commit:
 Notes:
 ```
+
+2026-07-22 — P2-T004 — complete
+Summary: Implemented CatalogSource type with runtime validator accepting unknown, factory function, and 32 tests covering positive fixtures (all categories, both rulesets, with/without published), negative input for every field, type boundaries, and round-trip validation. Reuses SourceId, Ruleset, and SourceCategory from domain package.
+Validation: `npm run typecheck` passes all 8 packages (EXIT 0). `npm run lint` passes (EXIT 0). `npm run test` passes 208/208 (EXIT 0). `npm run build` passes all 8 packages (EXIT 0). `npm run check` passes (EXIT 0).
+Commit: not committed.
+Notes: The CatalogSource type follows data contract section 3 exactly. The published field is optional (string | undefined). The validator rejects empty strings for published when present, allowing undefined. SourceCategory is imported from domain rather than duplicated.
 
 2026-07-22 — P2-T003 — complete
 Summary: Implemented CatalogManifest type with runtime validator accepting unknown, factory function creating immutable copies, and 43 tests covering positive fixtures, negative input for every field, type boundaries, and round-trip validation. Added declaration: true to tsconfig.base.json so workspace packages can resolve each other's types. Added varsIgnorePattern to ESLint no-unused-vars to support _prefixed destructured variables in tests.
