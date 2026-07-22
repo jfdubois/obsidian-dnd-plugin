@@ -22,3 +22,12 @@ The following directories are not committed:
 - `external/`
 - `runtime/`
 - `test-vaults/`
+
+## Development runtime
+
+This project uses Node.js 22.
+
+With nvm:
+
+```bash
+nvm use
