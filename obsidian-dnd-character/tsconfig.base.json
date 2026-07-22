@@ -8,6 +8,7 @@
     "target": "ES2021",
     "moduleResolution": "node",
     "isolatedModules": true,
+    "declaration": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "allowSyntheticDefaultImports": true,

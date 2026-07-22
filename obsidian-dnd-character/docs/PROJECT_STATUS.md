@@ -10,7 +10,7 @@ None selected.
 
 ## Last completed task
 
-P2-T002 — Implement ruleset and source-policy types
+P2-T003 — Implement catalog manifest runtime schema
 
 ## Blockers
 
@@ -148,3 +148,9 @@ Validation:
 Commit:
 Notes:
 ```
+
+2026-07-22 — P2-T003 — complete
+Summary: Implemented CatalogManifest type with runtime validator accepting unknown, factory function creating immutable copies, and 43 tests covering positive fixtures, negative input for every field, type boundaries, and round-trip validation. Added declaration: true to tsconfig.base.json so workspace packages can resolve each other's types. Added varsIgnorePattern to ESLint no-unused-vars to support _prefixed destructured variables in tests.
+Validation: `npm run typecheck` passes all 8 packages (EXIT 0). `npm run lint` passes (EXIT 0). `npm run test` passes 176/176 (EXIT 0). `npm run build` passes all 8 packages (EXIT 0). `npm run check` passes (EXIT 0).
+Commit: not committed.
+Notes: The CatalogManifest type follows the data contract section 2 exactly. The validator enforces apiVersion === 1, schemaVersion >= 1 (integer), non-empty strings for revision/version fields, non-empty arrays for rulesets and entityKinds, and a non-null object for checksums with non-empty string keys and values.
