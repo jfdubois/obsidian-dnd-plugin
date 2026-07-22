@@ -70,7 +70,7 @@ Create a strict TypeScript workspace with independent build/test targets.
   - Add root `package.json`, lockfile, workspace configuration, and shared scripts.
   - Accept: `npm install` completes from clean clone.
 
-- [ ] **P1-T002 — Add shared TypeScript configuration**
+- [x] **P1-T002 — Add shared TypeScript configuration**
   - Enable strict mode, no implicit returns, no fallthrough, unchecked indexed access, isolated modules, and consistent casing.
   - Accept: empty packages compile.
 

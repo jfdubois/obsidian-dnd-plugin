@@ -10,7 +10,7 @@ None selected.
 
 ## Last completed task
 
-P1-T001 — Initialize npm workspace
+P1-T002 — Add shared TypeScript configuration
 
 ## Blockers
 
@@ -38,6 +38,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-22 — P1-T002 — complete
+Summary: Created tsconfig.base.json with shared strict compiler options: strict, noImplicitReturns, noFallthroughCasesInSwitch, noUncheckedIndexedAccess, isolatedModules, forceConsistentCasingInFileNames, ESNext module, ES2021 target, DOM+ES2021 lib. Added TypeScript 5.9.3 as root devDependency. Config validated via --showConfig — all strict options active and inherited correctly.
+Validation: `npx tsc --showConfig` confirmed all strict options inherited. `npm run check` passes (EXIT 0).
+Commit: not committed.
+Notes: Base config has no `include` field; each workspace package extends it and provides its own `include`/`files`.
 
 2026-07-22 — P1-T001 — complete
 Summary: Created root package.json with npm workspaces config (apps/*, packages/*), engine pin (Node >=22), and shared scripts (check, typecheck, lint, test, build, dev:plugin, build:catalog, docker:catalog). Created scripts/run-workspaces.mjs helper that discovers workspace directories, skips missing packages, and runs named scripts in each workspace that defines them. All root scripts exit 0 with no workspace packages present.

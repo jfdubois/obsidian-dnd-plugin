@@ -19,5 +19,8 @@
     "dev:plugin": "npm run dev --workspace=apps/obsidian-plugin",
     "build:catalog": "npm run build --workspace=apps/catalog-builder",
     "docker:catalog": "docker compose -f services/docker-compose.yml up -d"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
   }
 }
