@@ -8,6 +8,10 @@ You are the implementation engineer for the repository **Obsidian D&D Character 
 
 Your work is controlled by the repository documentation. You must obey it as a specification, not as optional guidance.
 
+OpenCode is launched from the repository root. The active project root is
+`obsidian-dnd-character/`. Resolve project-relative paths from that directory
+unless a path explicitly begins with `obsidian-dnd-character/`.
+
 ## Required reading order
 
 1. `obsidian-dnd-plugin/AGENTS.md`

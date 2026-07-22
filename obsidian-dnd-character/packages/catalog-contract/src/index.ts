@@ -24,3 +24,25 @@ export {
   /* Entity summary validator */
   isCatalogEntitySummary,
 } from "./entity-summary";
+
+export {
+  /* Render node types */
+  type RenderNode,
+  type RenderParagraphNode,
+  type RenderHeadingNode,
+  type RenderListNode,
+  type RenderTableNode,
+  type RenderReferenceNode,
+  type RenderDiceNode,
+  type RenderNoteNode,
+  /* Render node validator */
+  isRenderNode,
+  /* Render node factories */
+  createRenderParagraph,
+  createRenderHeading,
+  createRenderListNode,
+  createRenderTableNode,
+  createRenderReferenceNode,
+  createRenderDiceNode,
+  createRenderNote,
+} from "./render-node";

@@ -10,6 +10,10 @@ None selected.
 
 ## Last completed task
 
+P2-T006 — Implement safe render-node schema
+
+## Last completed task
+
 P2-T005 — Implement entity summary schema
 
 ## Blockers
@@ -148,6 +152,12 @@ Validation:
 Commit:
 Notes:
 ```
+
+2026-07-22 — P2-T006 — complete
+Summary: Implemented RenderNode discriminated union with 7 variants (paragraph, heading, list, table, reference, dice, note). Validator accepts unknown and recursively validates nested list items. Factories create immutable copies of arrays in list and table nodes. 66 tests covering positive fixtures for all variants, negative input for every field, type boundaries, and round-trip validation including deeply nested structures. Total test count: 310.
+Validation: `npm run typecheck` passes all 8 packages (EXIT 0). `npm run lint` passes (EXIT 0). `npm run test` passes 310/310 (EXIT 0). `npm run build` passes all 8 packages (EXIT 0). `npm run check` passes (EXIT 0).
+Commit: not committed.
+Notes: The list items type is RenderNode[][] where each inner array represents one list item that may contain multiple nodes (text, nested lists, etc.). The validator rejects arbitrary HTML types — only the 7 defined variants are accepted.
 
 2026-07-22 — P2-T005 — complete
 Summary: Implemented CatalogEntitySummary type with runtime validator accepting unknown, factory function creating immutable copy of tags array, and 36 tests covering positive fixtures (all entity kinds, both rulesets, both access levels, legacy/non-legacy, empty/non-empty tags), negative input for every field, type boundaries, and round-trip validation. Reuses EntityId, SourceId, Ruleset, RuleEntityKind, and ContentAccess from domain package.

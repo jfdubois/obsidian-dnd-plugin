@@ -108,7 +108,7 @@ Define stable project-owned schemas before importing source data.
 - [x] **P2-T003 — Implement catalog manifest runtime schema**
 - [x] **P2-T004 — Implement source metadata schema**
 - [x] **P2-T005 — Implement entity summary schema**
-- [ ] **P2-T006 — Implement safe render-node schema**
+- [x] **P2-T006 — Implement safe render-node schema**
 - [ ] **P2-T007 — Implement prerequisites and query schema**
 - [ ] **P2-T008 — Implement choice-definition schema**
 - [ ] **P2-T009 — Implement effect discriminated union**
