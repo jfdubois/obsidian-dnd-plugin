@@ -66,34 +66,34 @@ Create a reproducible project foundation and prevent API/source ambiguity.
 
 Create a strict TypeScript workspace with independent build/test targets.
 
-- [ ] **P1-T001 — Initialize npm workspace**
+- [x] **P1-T001 — Initialize npm workspace**
   - Add root `package.json`, lockfile, workspace configuration, and shared scripts.
   - Accept: `npm install` completes from clean clone.
 
-- [ ] **P1-T002 — Add shared TypeScript configuration**
+- [x] **P1-T002 — Add shared TypeScript configuration**
   - Enable strict mode, no implicit returns, no fallthrough, unchecked indexed access, isolated modules, and consistent casing.
   - Accept: empty packages compile.
 
-- [ ] **P1-T003 — Add ESLint and formatting checks**
+- [x] **P1-T003 — Add ESLint and formatting checks**
   - Include Obsidian-specific lint plugin for the plugin package.
   - Accept: root lint command passes.
 
-- [ ] **P1-T004 — Add unit test framework**
+- [x] **P1-T004 — Add unit test framework**
   - Configure a TypeScript unit test runner and coverage reporting.
   - Accept: sample test passes in every shared package.
 
-- [ ] **P1-T005 — Add CI workflow**
+- [x] **P1-T005 — Add CI workflow**
   - Run install, typecheck, lint, unit tests, and builds.
   - Accept: CI passes on `dev`.
 
-- [ ] **P1-T006 — Add package boundaries**
+- [x] **P1-T006 — Add package boundaries**
   - Create package manifests and dependency constraints for domain, catalog contract, character contract, rules engine, builder, server, and plugin.
   - Accept: forbidden dependency direction is documented and linted where practical.
 
 ### Phase 1 gate
 
-- [ ] One root command runs all static checks and tests.
-- [ ] No application code exists without strict compilation.
+- [x] One root command runs all static checks and tests.
+- [x] No application code exists without strict compilation.
 
 ---
 

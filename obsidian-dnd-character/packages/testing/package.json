@@ -1,0 +1,21 @@
+{
+  "name": "@obsidian-dnd/testing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@obsidian-dnd/domain": "0.0.0",
+    "@obsidian-dnd/catalog-contract": "0.0.0",
+    "@obsidian-dnd/character-contract": "0.0.0",
+    "@obsidian-dnd/rules-engine": "0.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
