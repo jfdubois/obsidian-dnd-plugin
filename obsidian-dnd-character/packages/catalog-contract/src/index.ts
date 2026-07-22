@@ -46,3 +46,51 @@ export {
   createRenderDiceNode,
   createRenderNote,
 } from "./render-node";
+
+export {
+  /* Prerequisite types */
+  type RulePrerequisite,
+  type AbilityScorePrerequisite,
+  type LevelPrerequisite,
+  type EntitySelectionPrerequisite,
+  /* Prerequisite validator */
+  isRulePrerequisite,
+  /* Prerequisite factories */
+  createAbilityScorePrerequisite,
+  createLevelPrerequisite,
+  createEntitySelectionPrerequisite,
+} from "./prerequisite";
+
+export {
+  /* Query types */
+  type CatalogQuery,
+  type EntityQuery,
+  type SpellQuery,
+  type ProficiencyQuery,
+  type EquipmentQuery,
+  /* Query enums */
+  type SpellAcquisitionMode,
+  type ProficiencyQueryKind,
+  type EquipmentCategory,
+  type EquipmentRarity,
+  type EquipmentBodySlot,
+  /* Query enum constants */
+  SPELL_ACQUISITION_MODES,
+  PROFICIENCY_QUERY_KINDS,
+  EQUIPMENT_CATEGORIES,
+  EQUIPMENT_RARITIES,
+  EQUIPMENT_BODY_SLOTS,
+  /* Query enum guards */
+  isSpellAcquisitionMode,
+  isProficiencyQueryKind,
+  isEquipmentCategory,
+  isEquipmentRarity,
+  isEquipmentBodySlot,
+  /* Query validator */
+  isCatalogQuery,
+  /* Query factories */
+  createEntityQuery,
+  createSpellQuery,
+  createProficiencyQuery,
+  createEquipmentQuery,
+} from "./query";

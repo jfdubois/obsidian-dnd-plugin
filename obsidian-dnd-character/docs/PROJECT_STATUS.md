@@ -10,6 +10,10 @@ None selected.
 
 ## Last completed task
 
+P2-T007 — Implement prerequisites and query schema
+
+## Last completed task
+
 P2-T006 — Implement safe render-node schema
 
 ## Last completed task
@@ -42,6 +46,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-22 — P2-T007 — complete
+Summary: Implemented RulePrerequisite discriminated union with 3 variants (ability-score, level, entity-selection). Validator accepts unknown, enforces non-negative finite numbers, minimum value >= 1 for ability-score and level, and valid EntityId for entity-selection. Implemented CatalogQuery discriminated union with 4 variants (entity, spell, proficiency, equipment) and supporting enums: SpellAcquisitionMode (4 values), ProficiencyQueryKind (4 values), EquipmentCategory (6 values), EquipmentRarity (6 values), EquipmentBodySlot (13 values). All enums have guard functions, constant arrays, and are exported. Factories create immutable copies of arrays. 104 new tests covering positive fixtures for all variants, negative input for every field, type boundaries, enum guards, factory immutability, and round-trips. Total test count: 414.
+Validation: `npm run typecheck` passes all 8 packages (EXIT 0). `npm run lint` passes (EXIT 0). `npm run test` passes 414/414 (EXIT 0). `npm run build` passes all 8 packages (EXIT 0). `npm run check` passes (EXIT 0).
+Commit: not committed.
+Notes: The RulePrerequisite type is used by RuleEntity.prerequisites and ChoiceDefinition.prerequisites. CatalogQuery variants are used by ChoiceDefinition.optionQuery. QueryContext was already implemented in P2-T002 in the domain package.
 
 2026-07-22 — Phase 1 gate — complete
 Summary: Verified both gate criteria. (1) One root command: `npm run check` now runs typecheck, lint, and test sequentially (EXIT 0). (2) Strict compilation: tsconfig.base.json enforces strict, noImplicitReturns, noFallthroughCasesInSwitch, noUncheckedIndexedAccess, isolatedModules, forceConsistentCasingInFileNames across all 8 workspace packages.
