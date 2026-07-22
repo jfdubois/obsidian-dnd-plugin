@@ -15,3 +15,12 @@ export {
   /* Source metadata validator */
   isCatalogSource,
 } from "./source-metadata";
+
+export {
+  /* Entity summary types */
+  type CatalogEntitySummary,
+  /* Entity summary factory */
+  createCatalogEntitySummary,
+  /* Entity summary validator */
+  isCatalogEntitySummary,
+} from "./entity-summary";

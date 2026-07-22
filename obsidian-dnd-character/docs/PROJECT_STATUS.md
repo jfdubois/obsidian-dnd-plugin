@@ -10,7 +10,7 @@ None selected.
 
 ## Last completed task
 
-P2-T004 — Implement source metadata schema
+P2-T005 — Implement entity summary schema
 
 ## Blockers
 
@@ -148,6 +148,12 @@ Validation:
 Commit:
 Notes:
 ```
+
+2026-07-22 — P2-T005 — complete
+Summary: Implemented CatalogEntitySummary type with runtime validator accepting unknown, factory function creating immutable copy of tags array, and 36 tests covering positive fixtures (all entity kinds, both rulesets, both access levels, legacy/non-legacy, empty/non-empty tags), negative input for every field, type boundaries, and round-trip validation. Reuses EntityId, SourceId, Ruleset, RuleEntityKind, and ContentAccess from domain package.
+Validation: `npm run typecheck` passes all 8 packages (EXIT 0). `npm run lint` passes (EXIT 0). `npm run test` passes 244/244 (EXIT 0). `npm run build` passes all 8 packages (EXIT 0). `npm run check` passes (EXIT 0).
+Commit: not committed.
+Notes: The CatalogEntitySummary type follows data contract section 4 exactly. Tags must be non-empty strings (empty strings rejected). The factory creates an immutable copy of the tags array to prevent external mutation.
 
 2026-07-22 — P2-T004 — complete
 Summary: Implemented CatalogSource type with runtime validator accepting unknown, factory function, and 32 tests covering positive fixtures (all categories, both rulesets, with/without published), negative input for every field, type boundaries, and round-trip validation. Reuses SourceId, Ruleset, and SourceCategory from domain package.
