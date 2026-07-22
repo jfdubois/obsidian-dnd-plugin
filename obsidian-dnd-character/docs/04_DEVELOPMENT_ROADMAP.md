@@ -78,7 +78,7 @@ Create a strict TypeScript workspace with independent build/test targets.
   - Include Obsidian-specific lint plugin for the plugin package.
   - Accept: root lint command passes.
 
-- [ ] **P1-T004 — Add unit test framework**
+- [x] **P1-T004 — Add unit test framework**
   - Configure a TypeScript unit test runner and coverage reporting.
   - Accept: sample test passes in every shared package.
 

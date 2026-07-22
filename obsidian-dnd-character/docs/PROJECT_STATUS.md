@@ -10,7 +10,7 @@ None selected.
 
 ## Last completed task
 
-P1-T003 — Add ESLint and formatting checks
+P1-T004 — Add unit test framework
 
 ## Blockers
 
@@ -38,6 +38,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-22 — P1-T004 — complete
+Summary: Added Vitest 4.1.10 as the unit test framework with v8 coverage reporting. Created root vitest.config.ts with workspace-aware include patterns (apps/**/*.test.ts, packages/**/*.test.ts, test/**/*.test.ts). Created sample test suite (test/root.test.ts) with 6 passing tests covering basic assertions, objects, arrays, strings, and errors. Updated root package.json with test, test:watch, and test:coverage scripts. Added coverage/ and *.config.ts to ESLint ignores.
+Validation: `npm run test` passes (6/6 tests, EXIT 0). `npm run test:coverage` passes (coverage enabled with v8, EXIT 0). `npm run check` passes (EXIT 0). `npm run lint` passes (EXIT 0).
+Commit: not committed.
+Notes: Root framework is ready for workspace packages. When P1-T006 creates packages, they can place .test.ts files alongside source files and inherit the root vitest config.
 
 2026-07-22 — P1-T003 — complete
 Summary: Created root ESLint configuration (eslint.config.js) using ESLint 10.7.0 flat config with typescript-eslint 8.65.0. Enabled type-aware parsing via projectService. Configured strict rules: no-explicit-any (error), no-unused-vars with _ ignore pattern (error), consistent-type-imports (error), no-floating-promises (error), no-misused-promises (error), no-console (warn). Created root tsconfig.json extending tsconfig.base.json with workspace include patterns. Updated lint script to use eslint directly with --no-error-on-unmatched-pattern for graceful empty-workspace handling. Note: eslint-plugin-obsidianmd is deferred to Phase 6 when the plugin package is scaffolded (requires manifest.json).
