@@ -19,7 +19,7 @@ A phase is complete only when every task and the phase gate are complete.
 
 Create a reproducible project foundation and prevent API/source ambiguity.
 
-- [ ] **P0-T001 — Create repository skeleton**
+- [x] **P0-T001 — Create repository skeleton**
   - Create root documents, `apps/`, `packages/`, `docs/`, `references/`, `scripts/`, and `fixtures/`.
   - Output: committed directory structure and root README.
   - Accept: clean clone shows all controlling documents.

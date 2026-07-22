@@ -10,7 +10,7 @@ None selected.
 
 ## Last completed task
 
-None.
+P0-T001 — Create repository skeleton
 
 ## Blockers
 
@@ -38,7 +38,11 @@ See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
 
-Add one entry per completed or blocked task:
+2026-07-22 — P0-T001 — complete
+Summary: Created missing `scripts/` and `fixtures/` directories with `.gitkeep`. Remaining skeleton (`apps/`, `packages/`, `docs/`, `references/`, root documents) already in place.
+Validation: directory listing confirms all required top-level directories present.
+Commit: not committed.
+Notes:
 
 ```text
 YYYY-MM-DD — P#-T### — status
