@@ -39,7 +39,7 @@ Create a reproducible project foundation and prevent API/source ambiguity.
   - Record that it is a hydrated behavioral reference, not an API contract.
   - Accept: fixture checksum and source note recorded.
 
-- [ ] **P0-T005 — Pin 5eTools clone**
+- [x] **P0-T005 — Pin 5eTools clone**
   - Clone the configured source repository locally.
   - Record exact Git commit.
   - Do not copy the full source into the project repository unless explicitly intended.

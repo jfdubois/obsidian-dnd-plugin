@@ -10,7 +10,7 @@ None selected.
 
 ## Last completed task
 
-P0-T004 — Pin D&D Beyond fixture
+P0-T005 — Pin 5eTools clone
 
 ## Blockers
 
@@ -22,7 +22,7 @@ Not initialized.
 
 ## Catalog baseline
 
-- 5eTools source commit: not pinned.
+- 5eTools source commit: `3c5d9d3` pinned.
 - Catalog schema version: not implemented.
 - Active catalog revision: none.
 
@@ -38,6 +38,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-22 — P0-T005 — complete
+Summary: Verified 5eTools clone at external/5etools-src. Commit 3c5d9d3 matches SOURCE.md. Created SOURCE_COMMIT.txt for builder reference.
+Validation: git rev-parse HEAD matches recorded commit. diff confirms match.
+Commit: not committed.
+Notes:
 
 2026-07-22 — P0-T004 — complete
 Summary: Verified D&D Beyond fixture `character-156579226.json` exists, SHA-256 matches recorded hash. SOURCE.md documents restrictions (behavioral reference only, no production calls).

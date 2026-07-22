@@ -13,4 +13,5 @@ Local development path:
 `/home/jdubois/Documents/Projects/obsidian-dnd-plugin/external/5etools-src`
 
 The local clone is external to the project repository and is not committed.
+The exact commit is also recorded in `SOURCE_COMMIT.txt` for machine consumption.
 The catalog builder must record the source commit in every generated catalog manifest.
