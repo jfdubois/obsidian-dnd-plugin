@@ -19,44 +19,44 @@ A phase is complete only when every task and the phase gate are complete.
 
 Create a reproducible project foundation and prevent API/source ambiguity.
 
-- [ ] **P0-T001 — Create repository skeleton**
+- [x] **P0-T001 — Create repository skeleton**
   - Create root documents, `apps/`, `packages/`, `docs/`, `references/`, `scripts/`, and `fixtures/`.
   - Output: committed directory structure and root README.
   - Accept: clean clone shows all controlling documents.
 
-- [ ] **P0-T002 — Establish branch and commit policy**
+- [x] **P0-T002 — Establish branch and commit policy**
   - Configure `main` as release branch and `dev` as integration branch.
   - Document feature-branch and commit naming rules.
   - Accept: policy added to engineering SOP and repository README.
 
-- [ ] **P0-T003 — Pin Obsidian references**
+- [x] **P0-T003 — Pin Obsidian references**
   - Save the current official `obsidian.d.ts` and official sample-plugin reference files under `references/obsidian/`.
   - Record retrieval date and upstream commit or immutable URL.
   - Accept: hashes recorded in `references/obsidian/SOURCE.md`.
 
-- [ ] **P0-T004 — Pin D&D Beyond fixture**
+- [x] **P0-T004 — Pin D&D Beyond fixture**
   - Save the provided character JSON as an immutable test/reference fixture.
   - Record that it is a hydrated behavioral reference, not an API contract.
   - Accept: fixture checksum and source note recorded.
 
-- [ ] **P0-T005 — Pin 5eTools clone**
+- [x] **P0-T005 — Pin 5eTools clone**
   - Clone the configured source repository locally.
   - Record exact Git commit.
   - Do not copy the full source into the project repository unless explicitly intended.
   - Accept: builder configuration can locate a clone and report the commit.
 
-- [ ] **P0-T006 — Create decision and risk register**
+- [x] **P0-T006 — Create decision and risk register**
   - Initialize architecture decisions and current risks.
   - Accept: ADR-001 through ADR-006 from the supplied pack are reviewed and marked accepted or revised.
 
-- [ ] **P0-T007 — Create API usage register**
+- [x] **P0-T007 — Create API usage register**
   - Create `docs/API_USAGE.md` with template and initial verified symbols.
   - Accept: no implementation API may be used without an entry.
 
 ### Phase 0 gate
 
-- [ ] Exact source revisions and API contract are reproducible.
-- [ ] No code work begins while source or licensing policy is ambiguous.
+- [x] Exact source revisions and API contract are reproducible.
+- [x] No code work begins while source or licensing policy is ambiguous.
 
 ---
 

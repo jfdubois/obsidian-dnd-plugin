@@ -18,6 +18,21 @@ This pack is the controlling documentation for developing the project with a loc
 12. `docs/PROJECT_STATUS.md`
 13. `prompts/QWEN_TASK_PROMPT.md`
 
+## Branch and commit policy
+
+See `docs/05_ENGINEERING_SOP.md` sections 1 and 2 for the complete policy.
+
+| Branch | Role |
+|---|---|
+| `main` | Release branch (validated releases only) |
+| `dev` | Integration branch (all completed tasks) |
+| `P#-T###-<slug>` | Feature branch (one task per branch) |
+
+- No direct pushes to `main` or `dev`.
+- Squash-merge feature branches into `dev`.
+- Merge `dev` into `main` when a phase gate passes.
+- Conventional Commits with scope qualifier: `feat(builder): implement _copy resolver`
+
 ## Controlling rules
 
 - `AGENTS.md` contains mandatory implementation guardrails.

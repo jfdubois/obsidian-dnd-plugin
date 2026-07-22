@@ -1,10 +1,86 @@
 # 05 — Engineering Standard Operating Procedure
 
-## 1. Objective
+## 1. Branch Policy
+
+### Branch roles
+
+| Branch | Role | Protection requirement |
+|---|---|---|
+| `main` | Release branch. Contains only validated, gate-passed releases. | Required |
+| `dev` | Integration branch. All completed tasks integrate here first. | Required |
+| `P#-T###-<slug>` | Feature branch. One roadmap task per branch. | Not required |
+
+### Branch rules
+
+1. Never push directly to `main` or `dev`.
+2. Each roadmap task works on a branch named `P#-T###-<descriptive-slug>` (e.g. `P0-T003-pin-obsidian-refs`).
+3. A feature branch is created from `dev`.
+4. After acceptance criteria pass, merge the feature branch into `dev` with a squash merge.
+5. When a phase gate passes, merge `dev` into `main` with a merge commit.
+6. Delete the feature branch after merge.
+7. Keep `dev` green at all times. Do not merge incomplete work.
+
+### Example workflow
+
+```bash
+git checkout dev
+git pull origin dev
+git checkout -b P3-T006-resolve-copy
+# ... implement, test, validate ...
+git add .
+git commit -m "feat(builder): implement _copy resolver"
+git push origin P3-T006-resolve-copy
+# After review and CI: squash-merge into dev, delete branch
+```
+
+## 2. Commit Policy
+
+### Commit message format
+
+Follow Conventional Commits with a scope qualifier:
+
+```
+<type>(<scope>): <description>
+```
+
+### Types
+
+| Type | Use for |
+|---|---|
+| `feat` | New functionality (roadmap task implementation) |
+| `fix` | Bug fixes |
+| `refactor` | Code restructuring without behavior change |
+| `test` | Adding or updating tests |
+| `docs` | Documentation, status, ADR updates |
+| `chore` | Configuration, tooling, dependency updates |
+| `build` | Build system, bundler, compiler changes |
+
+### Scopes
+
+Use the component or package name: `builder`, `plugin`, `engine`, `domain`, `catalog`, `server`, `contract`, `project`.
+
+### Rules
+
+1. One roadmap task per branch; multiple commits per branch are allowed.
+2. Imperative mood in the description (e.g. "implement", not "implemented").
+3. No period at the end of the subject line.
+4. Subject line max 72 characters.
+5. Include the task ID in the body when the commit is part of a roadmap task:
+
+```
+feat(builder): implement _copy resolver
+
+P3-T006
+```
+
+6. Do not commit secrets, raw 5eTools source, or non-free catalog content.
+7. Do not commit generated plugin output (`main.js`, `.map` files).
+
+## 3. Objective
 
 Ensure a local coding LLM can develop the system incrementally without scope drift, undocumented APIs, source-format leakage, or unverifiable completion claims.
 
-## 2. Task lifecycle
+## 4. Task lifecycle
 
 ### Step 1 — Select task
 
@@ -100,7 +176,7 @@ docs(project): complete P4-T004
 
 Use the completion report defined in `AGENTS.md`. Do not start the next task automatically.
 
-## 3. Definition of Ready
+## 5. Definition of Ready
 
 A task is ready when:
 
@@ -112,7 +188,7 @@ A task is ready when:
 
 If not ready, mark blocked and state the exact missing input.
 
-## 4. Definition of Done
+## 6. Definition of Done
 
 A task is done only when:
 
@@ -124,7 +200,7 @@ A task is done only when:
 - no new unresolved warnings were introduced;
 - acceptance criteria are demonstrated.
 
-## 5. Obsidian API verification SOP
+## 7. Obsidian API verification SOP
 
 For each new symbol:
 
@@ -137,7 +213,7 @@ For each new symbol:
 
 If the symbol is not found, do not use it.
 
-## 6. 5eTools importer SOP
+## 8. 5eTools importer SOP
 
 For each entity type:
 
@@ -158,7 +234,7 @@ For each entity type:
    - malformed/unresolved fixture.
 10. Fail publication if included references remain unresolved.
 
-## 7. Character transaction SOP
+## 9. Character transaction SOP
 
 For create/edit/level/equipment/source-policy transactions:
 
@@ -174,7 +250,7 @@ For create/edit/level/equipment/source-policy transactions:
 
 Never write intermediate wizard/level-up state to the authoritative character file.
 
-## 8. Cache SOP
+## 10. Cache SOP
 
 - Cache is optional for correctness.
 - Cache reads must validate envelope metadata.
@@ -183,7 +259,7 @@ Never write intermediate wizard/level-up state to the authoritative character fi
 - Cache invalidation must be explicit after character/source/catalog changes.
 - Do not synchronize large transient caches through the vault unless formally decided.
 
-## 9. Testing strategy
+## 11. Testing strategy
 
 ### Unit tests
 
@@ -218,7 +294,7 @@ Never write intermediate wizard/level-up state to the authoritative character fi
 - desktop and Android narrow layouts;
 - real Docker server access.
 
-## 10. Error and diagnostic format
+## 12. Error and diagnostic format
 
 Errors should include:
 
@@ -244,7 +320,7 @@ interface Diagnostic {
 }
 ```
 
-## 11. Code review checklist
+## 13. Code review checklist
 
 - [ ] Scope matches one roadmap task.
 - [ ] Domain boundaries respected.
