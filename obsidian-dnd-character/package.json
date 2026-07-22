@@ -1,0 +1,23 @@
+{
+  "name": "obsidian-dnd-character",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Obsidian D&D Character Manager — monorepo root",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "check": "npm run typecheck && npm run lint",
+    "typecheck": "node scripts/run-workspaces.mjs typecheck",
+    "lint": "node scripts/run-workspaces.mjs lint",
+    "test": "node scripts/run-workspaces.mjs test",
+    "build": "node scripts/run-workspaces.mjs build",
+    "dev:plugin": "npm run dev --workspace=apps/obsidian-plugin",
+    "build:catalog": "npm run build --workspace=apps/catalog-builder",
+    "docker:catalog": "docker compose -f services/docker-compose.yml up -d"
+  }
+}

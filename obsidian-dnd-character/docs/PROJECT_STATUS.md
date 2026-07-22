@@ -10,7 +10,7 @@ None selected.
 
 ## Last completed task
 
-Phase 0 gate — verified and closed
+P1-T001 — Initialize npm workspace
 
 ## Blockers
 
@@ -38,6 +38,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-22 — P1-T001 — complete
+Summary: Created root package.json with npm workspaces config (apps/*, packages/*), engine pin (Node >=22), and shared scripts (check, typecheck, lint, test, build, dev:plugin, build:catalog, docker:catalog). Created scripts/run-workspaces.mjs helper that discovers workspace directories, skips missing packages, and runs named scripts in each workspace that defines them. All root scripts exit 0 with no workspace packages present.
+Validation: `npm install` completes from clean state (EXIT 0). `npm run check`, `npm run typecheck`, `npm run lint`, `npm run test`, `npm run build` all pass with no workspaces (EXIT 0).
+Commit: not committed.
+Notes: Scripts use custom helper to avoid npm's "No workspaces found" error when workspace directories lack package.json. The helper will be replaced or simplified once P1-T006 creates package manifests.
 
 2026-07-22 — Phase 0 gate — complete
 Summary: Verified both gate criteria. (1) All source revisions reproducible: Obsidian API SHA-256 ed358aa…, sample plugin commit 23c165f with 5 file hashes, D&D Beyond fixture SHA-256 c26017d…, 5eTools commit 3c5d9d3 in SOURCE_COMMIT.txt, 17 API symbols verified in docs/API_USAGE.md. (2) No licensing ambiguity: ADR-001 through ADR-008 accepted, risk register R-001 through R-010 populated, D&D Beyond restrictions explicit, non-free content bundling prohibited, raw 5eTools isolated to catalog-builder.

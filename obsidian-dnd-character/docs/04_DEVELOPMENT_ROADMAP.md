@@ -66,7 +66,7 @@ Create a reproducible project foundation and prevent API/source ambiguity.
 
 Create a strict TypeScript workspace with independent build/test targets.
 
-- [ ] **P1-T001 — Initialize npm workspace**
+- [x] **P1-T001 — Initialize npm workspace**
   - Add root `package.json`, lockfile, workspace configuration, and shared scripts.
   - Accept: `npm install` completes from clean clone.
 
