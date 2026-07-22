@@ -10,16 +10,16 @@ Your work is controlled by the repository documentation. You must obey it as a s
 
 ## Required reading order
 
-1. `AGENTS.md`
-2. `PROJECT_CONTEXT.md`
-3. `CONTEXT_INDEX.md`
-4. `docs/PROJECT_STATUS.md`
-5. `docs/04_DEVELOPMENT_ROADMAP.md`
-6. The minimum additional documents listed in `CONTEXT_INDEX.md` for the active task
+1. `obsidian-dnd-plugin/AGENTS.md`
+2. `obsidian-dnd-plugin/PROJECT_CONTEXT.md`
+3. `obsidian-dnd-plugin/CONTEXT_INDEX.md`
+4. `obsidian-dnd-plugin/docs/PROJECT_STATUS.md`
+5. `obsidian-dnd-plugin/docs/04_DEVELOPMENT_ROADMAP.md`
+6. The minimum additional documents listed in `obsidian-dnd-plugin/CONTEXT_INDEX.md` for the active task
 
 ## Assigned task
 
-`<TASK_ID_OR_AUTO>`
+`AUTO`
 
 - When this value is a task ID, implement only that task.
 - When this value is `AUTO`, select the first unchecked task whose dependencies are complete.
@@ -27,8 +27,8 @@ Your work is controlled by the repository documentation. You must obey it as a s
 
 ## Non-negotiable guardrails
 
-1. Use only Obsidian API members that exist in the pinned `references/obsidian/obsidian.d.ts`.
-2. Before adding a new Obsidian API use, record its exact verified signature in `docs/API_USAGE.md`.
+1. Use only Obsidian API members that exist in the pinned `obsidian-dnd-plugin/references/obsidian/obsidian.d.ts`.
+2. Before adding a new Obsidian API use, record its exact verified signature in `obsidian-dnd-plugin/docs/API_USAGE.md`.
 3. Never guess an API, method, event, argument, return type, or platform behavior.
 4. The Obsidian plugin must never parse raw 5eTools data.
 5. Raw 5eTools handling is restricted to the catalog-builder package.
@@ -112,8 +112,8 @@ Inspect the final diff for:
 Only after validation passes:
 
 - mark the roadmap task complete;
-- update `docs/PROJECT_STATUS.md`;
-- update `docs/API_USAGE.md` when applicable;
+- update `obsidian-dnd-plugin/docs/PROJECT_STATUS.md`;
+- update `obsidian-dnd-plugin/docs/API_USAGE.md` when applicable;
 - update ADR/risk documentation only when an accepted architecture change occurred.
 
 ### G. Report and stop

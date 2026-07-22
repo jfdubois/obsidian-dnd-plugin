@@ -103,7 +103,7 @@ Create a strict TypeScript workspace with independent build/test targets.
 
 Define stable project-owned schemas before importing source data.
 
-- [ ] **P2-T001 — Implement branded IDs and common enums**
+- [x] **P2-T001 — Implement branded IDs and common enums**
 - [ ] **P2-T002 — Implement ruleset and source-policy types**
 - [ ] **P2-T003 — Implement catalog manifest runtime schema**
 - [ ] **P2-T004 — Implement source metadata schema**

@@ -10,7 +10,7 @@ None selected.
 
 ## Last completed task
 
-Phase 1 gate — Monorepo and quality baseline
+P2-T001 — Implement branded IDs and common enums
 
 ## Blockers
 
@@ -128,6 +128,12 @@ Summary: Created missing `scripts/` and `fixtures/` directories with `.gitkeep`.
 Validation: directory listing confirms all required top-level directories present.
 Commit: not committed.
 Notes:
+
+2026-07-22 — P2-T001 — complete
+Summary: Implemented branded ID types (EntityId, SourceId, CharacterId, CatalogRevision, ChoiceDefinitionId, ChoiceInstanceId, ClassInstanceId, ItemInstanceId, ResourceId) with factory functions, string accessors, runtime type guards, and assertion helpers. Implemented common enums (Ruleset, RuleEntityKind, Ability, ContentAccess, SourceCategory, DiagnosticSeverity) with guard functions and constant arrays. All types use strict TypeScript with no `any`. Validators accept `unknown` and narrow to branded types. 91 tests pass covering factories, accessors, validators, assertions, negative inputs, and round-trips.
+Validation: `npm run typecheck` passes all 8 packages (EXIT 0). `npm run lint` passes (EXIT 0). `npm run test` passes 91/91 (EXIT 0). `npm run build` passes all 8 packages (EXIT 0). `npm run check` passes (EXIT 0).
+Commit: not committed.
+Notes: Branded types are structurally `string` at runtime; type safety is enforced at compile time. Runtime validators accept any non-empty string, which is correct for the initial design — canonical ID format validation will be added in later tasks when ID construction rules are finalized.
 
 ```text
 YYYY-MM-DD — P#-T### — status
