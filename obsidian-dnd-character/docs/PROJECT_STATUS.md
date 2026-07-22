@@ -10,7 +10,7 @@ None selected.
 
 ## Last completed task
 
-P1-T004 — Add unit test framework
+P1-T005 — Add CI workflow
 
 ## Blockers
 
@@ -38,6 +38,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-22 — P1-T005 — complete
+Summary: Created .github/workflows/ci.yml with GitHub Actions workflow triggered on push to main/dev and pull requests. Workflow uses ubuntu-latest, Node.js 22, npm cache, and runs npm ci, typecheck, lint, test, and build from the obsidian-dnd-character workspace directory. All five steps verified passing locally.
+Validation: `npm run typecheck` passes (EXIT 0). `npm run lint` passes (EXIT 0). `npm run test` passes (6/6 tests, EXIT 0). `npm run build` passes (EXIT 0).
+Commit: not committed.
+Notes: CI will run on the next push to dev. Matrix strategy includes Node 22 only, matching the pinned engine. Docker steps and manual mobile tests are deferred to later phases.
 
 2026-07-22 — P1-T004 — complete
 Summary: Added Vitest 4.1.10 as the unit test framework with v8 coverage reporting. Created root vitest.config.ts with workspace-aware include patterns (apps/**/*.test.ts, packages/**/*.test.ts, test/**/*.test.ts). Created sample test suite (test/root.test.ts) with 6 passing tests covering basic assertions, objects, arrays, strings, and errors. Updated root package.json with test, test:watch, and test:coverage scripts. Added coverage/ and *.config.ts to ESLint ignores.

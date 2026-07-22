@@ -82,7 +82,7 @@ Create a strict TypeScript workspace with independent build/test targets.
   - Configure a TypeScript unit test runner and coverage reporting.
   - Accept: sample test passes in every shared package.
 
-- [ ] **P1-T005 — Add CI workflow**
+- [x] **P1-T005 — Add CI workflow**
   - Run install, typecheck, lint, unit tests, and builds.
   - Accept: CI passes on `dev`.
 
