@@ -4,11 +4,17 @@
 
 ### ADR-001 — External normalized catalog
 
+**Status:** accepted
+**Date:** 2026-07-22
+
 **Decision:** The plugin consumes a versioned normalized catalog served by a local/private Docker service. It does not bundle the full content catalog and does not parse raw 5eTools data at runtime.
 
 **Reason:** New entities using supported schemas can appear without plugin rebuilds, while raw-source changes remain isolated in the builder.
 
 ### ADR-002 — Static revision server first
+
+**Status:** accepted
+**Date:** 2026-07-22
 
 **Decision:** Generate static immutable JSON revisions and serve them with a minimal static server.
 
@@ -16,11 +22,17 @@
 
 ### ADR-003 — Per-character source policy
 
+**Status:** accepted
+**Date:** 2026-07-22
+
 **Decision:** Source selections are stored per character. Settings contain reusable profiles only.
 
 **Reason:** Different characters and campaigns may allow different books, and level-up must honor the character's historical policy.
 
 ### ADR-004 — Core access is record-level
+
+**Status:** accepted
+**Date:** 2026-07-22
 
 **Decision:** Free/core eligibility is assigned from explicit record metadata, not from the book's display category.
 
@@ -28,11 +40,17 @@
 
 ### ADR-005 — Persist selections, cache candidates
 
+**Status:** accepted
+**Date:** 2026-07-22
+
 **Decision:** Persist current choices and origin grants. Derive and optionally cache future candidate IDs and level-up plans.
 
 **Reason:** This retains the useful hybrid behavior seen in the D&D Beyond hydrated response without duplicating catalogs or making stale option lists authoritative.
 
 ### ADR-006 — Derived values are non-authoritative
+
+**Status:** accepted
+**Date:** 2026-07-22
 
 **Decision:** AC, modifiers, skill totals, spell DC, slot maxima, and similar values are calculated from state and catalog rules.
 

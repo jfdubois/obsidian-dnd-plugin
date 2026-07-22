@@ -45,7 +45,7 @@ Create a reproducible project foundation and prevent API/source ambiguity.
   - Do not copy the full source into the project repository unless explicitly intended.
   - Accept: builder configuration can locate a clone and report the commit.
 
-- [ ] **P0-T006 — Create decision and risk register**
+- [x] **P0-T006 — Create decision and risk register**
   - Initialize architecture decisions and current risks.
   - Accept: ADR-001 through ADR-006 from the supplied pack are reviewed and marked accepted or revised.
 

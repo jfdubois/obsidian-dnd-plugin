@@ -10,7 +10,7 @@ None selected.
 
 ## Last completed task
 
-P0-T005 — Pin 5eTools clone
+P0-T006 — Create decision and risk register
 
 ## Blockers
 
@@ -38,6 +38,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-22 — P0-T006 — complete
+Summary: Reviewed ADR-001 through ADR-006 against AGENTS.md, PROJECT_CONTEXT.md, and data contracts. All six align with controlling documents. Added "Status: accepted" and date to each. Risk register (R-001 through R-010) already populated.
+Validation: manual review of each ADR against governing documents.
+Commit: not committed.
+Notes:
 
 2026-07-22 — P0-T005 — complete
 Summary: Verified 5eTools clone at external/5etools-src. Commit 3c5d9d3 matches SOURCE.md. Created SOURCE_COMMIT.txt for builder reference.
