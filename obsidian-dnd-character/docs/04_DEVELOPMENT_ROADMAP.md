@@ -49,7 +49,7 @@ Create a reproducible project foundation and prevent API/source ambiguity.
   - Initialize architecture decisions and current risks.
   - Accept: ADR-001 through ADR-006 from the supplied pack are reviewed and marked accepted or revised.
 
-- [ ] **P0-T007 — Create API usage register**
+- [x] **P0-T007 — Create API usage register**
   - Create `docs/API_USAGE.md` with template and initial verified symbols.
   - Accept: no implementation API may be used without an entry.
 

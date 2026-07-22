@@ -10,7 +10,7 @@ None selected.
 
 ## Last completed task
 
-P0-T006 — Create decision and risk register
+P0-T007 — Create API usage register
 
 ## Blockers
 
@@ -38,6 +38,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-22 — P0-T007 — complete
+Summary: Created docs/API_USAGE.md with template header and 17 verified Obsidian API symbols extracted from pinned references/obsidian/obsidian.d.ts. Signatures include requestUrl, Plugin.registerView, Workspace.getRightLeaf, WorkspaceLeaf.setViewState, Plugin.loadData, Plugin.saveData, Vault.cachedRead, Vault.process, Plugin.addCommand, Plugin.addSettingTab, Component.onunload, Component.register, Component.registerEvent, ItemView, ViewCreator, Vault.create, and Vault.createFolder. Each entry records verified signature, @since version, purpose, and placeholder for usage file and manual test.
+Validation: manual grep of pinned obsidian.d.ts confirmed all signatures and @since values.
+Commit: not committed.
+Notes: requestUrl and WorkspaceLeaf.setViewState have no @since in pinned file. Vault.process requires 1.1.0+.
 
 2026-07-22 — P0-T006 — complete
 Summary: Reviewed ADR-001 through ADR-006 against AGENTS.md, PROJECT_CONTEXT.md, and data contracts. All six align with controlling documents. Added "Status: accepted" and date to each. Risk register (R-001 through R-010) already populated.
