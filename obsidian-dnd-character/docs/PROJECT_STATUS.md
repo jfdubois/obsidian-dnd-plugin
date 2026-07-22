@@ -10,7 +10,7 @@ None selected.
 
 ## Last completed task
 
-P1-T002 — Add shared TypeScript configuration
+P1-T003 — Add ESLint and formatting checks
 
 ## Blockers
 
@@ -38,6 +38,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-22 — P1-T003 — complete
+Summary: Created root ESLint configuration (eslint.config.js) using ESLint 10.7.0 flat config with typescript-eslint 8.65.0. Enabled type-aware parsing via projectService. Configured strict rules: no-explicit-any (error), no-unused-vars with _ ignore pattern (error), consistent-type-imports (error), no-floating-promises (error), no-misused-promises (error), no-console (warn). Created root tsconfig.json extending tsconfig.base.json with workspace include patterns. Updated lint script to use eslint directly with --no-error-on-unmatched-pattern for graceful empty-workspace handling. Note: eslint-plugin-obsidianmd is deferred to Phase 6 when the plugin package is scaffolded (requires manifest.json).
+Validation: `npm run lint` passes (EXIT 0). `npm run check` passes (EXIT 0). End-to-end test with temporary workspace package confirmed type-aware rules detect violations.
+Commit: not committed.
+Notes: Root config provides shared baseline. Workspace packages extend via projectService. The obsidianmd plugin will be added per-package in P6-T001 when the plugin scaffold is created.
 
 2026-07-22 — P1-T002 — complete
 Summary: Created tsconfig.base.json with shared strict compiler options: strict, noImplicitReturns, noFallthroughCasesInSwitch, noUncheckedIndexedAccess, isolatedModules, forceConsistentCasingInFileNames, ESNext module, ES2021 target, DOM+ES2021 lib. Added TypeScript 5.9.3 as root devDependency. Config validated via --showConfig — all strict options active and inherited correctly.

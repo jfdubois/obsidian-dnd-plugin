@@ -74,7 +74,7 @@ Create a strict TypeScript workspace with independent build/test targets.
   - Enable strict mode, no implicit returns, no fallthrough, unchecked indexed access, isolated modules, and consistent casing.
   - Accept: empty packages compile.
 
-- [ ] **P1-T003 — Add ESLint and formatting checks**
+- [x] **P1-T003 — Add ESLint and formatting checks**
   - Include Obsidian-specific lint plugin for the plugin package.
   - Accept: root lint command passes.
 
