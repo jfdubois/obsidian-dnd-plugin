@@ -70,23 +70,30 @@ interface CatalogEntitySummary {
 ## 5. Normalized entity
 
 ```ts
-interface RuleEntity {
-  id: EntityId;
-  kind: RuleEntityKind;
-  name: string;
-  sourceId: SourceId;
-  ruleset: Ruleset;
-  access: "core" | "source";
-  page?: number;
-  legacy: boolean;
-  summary?: string;
-  content: RenderNode[];
-  prerequisites: RulePrerequisite[];
-  effects: RuleEffect[];
-  choices: ChoiceDefinition[];
+interface RuleEntity { 
+  id: EntityId; 
+  kind: RuleEntityKind; 
+  name: string; sourceId: 
+  SourceId; ruleset: 
+  Ruleset; 
+  access: "core" | "source"; 
+  page?: number; 
+  legacy: boolean; 
+  summary?: string; 
+  content: RenderNode[]; 
+  prerequisites: RulePrerequisite[]; 
+  effects: RuleEffect[]; 
+  choices: ChoiceDefinition[]; 
   dependencies: EntityId[];
+
+  automationStatus: AutomationStatus; 
+  displayProjection: SheetProjection;
 }
 ```
+
+`automationStatus` describes the overall support level of the entity or feature.
+
+`displayProjection` identifies where the full entity or feature description is primarily displayed. Individual effects may define different projections.
 
 ## 6. Render nodes
 
@@ -149,29 +156,185 @@ interface QueryContext {
 
 Query evaluation must be deterministic for a given catalog revision and input.
 
-## 9. Effects
+## 9. Effects and projections
 
 ```ts
-type RuleEffect =
-  | { type: "add-ability"; ability: Ability; value: number }
-  | { type: "set-ability"; ability: Ability; value: number }
-  | { type: "add-proficiency"; proficiency: ProficiencyRef }
-  | { type: "add-expertise"; skillId: EntityId }
-  | { type: "add-language"; languageId: EntityId }
-  | { type: "set-movement"; mode: MovementMode; value: number }
-  | { type: "add-movement"; mode: MovementMode; value: number }
-  | { type: "add-sense"; sense: SenseDefinition }
-  | { type: "add-resistance"; damageType: string }
-  | { type: "add-immunity"; immunity: string }
-  | { type: "set-ac-formula"; formula: ArmorClassFormula }
-  | { type: "add-ac"; value: number; condition?: EffectCondition }
-  | { type: "grant-spell"; spellId: EntityId; grant: SpellGrant }
-  | { type: "grant-resource"; resource: ResourceDefinition }
-  | { type: "grant-attack"; attack: AttackDefinition }
-  | { type: "grant-feature"; featureId: EntityId };
+type AutomationStatus = 
+  | "full" 
+  | "partial" 
+  | "display-only" 
+  | "manual-adjudication";
+
+type SheetProjection = 
+  | "armor-class" 
+  | "initiative" 
+  | "movement" 
+  | "senses" 
+  | "abilities" 
+  | "saving-throws" 
+  | "skills" 
+  | "defenses" 
+  | "proficiencies" 
+  | "actions" 
+  | "attacks" 
+  | "spellcasting" 
+  | "resources" 
+  | "inventory" 
+  | "conditions" 
+  | "species-traits" 
+  | "class-features" 
+  | "feats" 
+  | "features-and-traits";
+
+interface EffectPresentation { 
+  primary: SheetProjection; 
+  secondary: SheetProjection[]; 
+}
+
+interface EffectOrigin { 
+  entityId: EntityId; 
+  sourceId: SourceId; 
+  method: "structured" | "reviewed-mapping";
+}
+
+interface RuleEffectMetadata { 
+  automationStatus: AutomationStatus; 
+  presentation: EffectPresentation; 
+  origin: EffectOrigin;
+}
+```
+
+Conditional roll effects use explicit roll and predicate types:
+
+```ts
+type RollType = 
+  | "saving-throw" 
+  | "ability-check" 
+  | "skill-check" 
+  | "attack-roll"; 
+
+type RollMode = 
+  | "advantage" 
+  | "disadvantage"; 
+
+type RollPredicate = 
+  | { 
+    type: "ability"; 
+    ability: Ability; 
+    } 
+  | { 
+    type: "skill"; 
+    skillId: EntityId; 
+    } 
+  | { 
+    type: "condition"; 
+    conditionId: EntityId; 
+    purpose: "avoid" | "end" | "avoid-or-end"; 
+    } 
+  | { 
+    type: "damage-type"; 
+    damageType: string; 
+    } 
+  | { 
+    type: "concentration"; 
+    };
+```
+
+Immunities shall not be represented by an ambiguous string:
+
+```ts
+type ImmunityDefinition = 
+  | { 
+    type: "damage"; 
+    damageType: string; 
+    } 
+  | { 
+    type: "condition"; 
+    conditionId: EntityId; 
+    } 
+  | { 
+    type: "disease"; 
+    } 
+  | { 
+    type: "magical-sleep"; 
+    };
+```
+
+Capabilities represent mechanical rules that do not necessarily change a numeric total:
+
+```ts
+type CapabilityDefinition = 
+  | { 
+    type: "no-breathing-required"; 
+  } 
+  | { 
+    type: "no-food-required"; 
+  } 
+  | { 
+    type: "no-water-required"; 
+  } 
+  | { 
+    type: "no-sleep-required"; 
+  } 
+  | { 
+    type: "water-breathing"; 
+  };
+```
+
+The effect union becomes:
+
+```ts
+type RuleEffect = RuleEffectMetadata & 
+  ( 
+    | { type: "add-ability"; ability: Ability; value: number } 
+    | { type: "set-ability"; ability: Ability; value: number } 
+    | { type: "add-proficiency"; proficiency: ProficiencyRef } 
+    | { type: "add-expertise"; skillId: EntityId } 
+    | { type: "add-language"; languageId: EntityId } 
+    | { type: "set-movement"; mode: MovementMode; value: number } 
+    | { type: "add-movement"; mode: MovementMode; value: number } 
+    | { type: "add-sense"; sense: SenseDefinition } 
+    | { type: "add-resistance"; damageType: string } 
+    | { type: "add-immunity"; immunity: ImmunityDefinition } 
+    | { 
+      type: "conditional-roll-mode"; 
+      rollType: RollType; 
+      mode: RollMode; 
+      predicate: RollPredicate; 
+      } 
+    | { 
+      type: "add-capability"; 
+      capability: CapabilityDefinition; 
+      } 
+    | { type: "set-ac-formula"; formula: ArmorClassFormula } 
+    | { 
+      type: "add-ac"; 
+      value: number; 
+      condition?: EffectCondition; 
+      } 
+    | { 
+      type: "grant-spell"; 
+      spellId: EntityId; 
+      grant: SpellGrant; 
+      } 
+    | { 
+      type: "grant-resource"; 
+      resource: ResourceDefinition; 
+      } 
+    | { 
+      type: "grant-attack"; 
+      attack: AttackDefinition; 
+      } 
+    | { 
+      type: "grant-feature"; 
+      featureId: EntityId; 
+      } 
+  );
 ```
 
 A future mechanic that cannot fit an existing discriminated union requires a formal schema change.
+
+Narrative content without a normalized effect remains in `RuleEntity.content`. It shall not be converted into a guessed effect.
 
 ## 10. Class progression
 
@@ -348,30 +511,46 @@ interface CharacterResourceState {
 ## 18. Derived snapshot
 
 ```ts
-interface DerivedCharacterSnapshot {
-  characterId: CharacterId;
-  catalogRevision: CatalogRevision;
-  characterStateHash: string;
-  totalLevel: number;
-  proficiencyBonus: DerivedNumber;
-  abilities: Record<Ability, DerivedAbility>;
-  savingThrows: Record<Ability, DerivedNumber>;
-  skills: Record<EntityId, DerivedNumber>;
-  armorClass: DerivedNumber;
-  initiative: DerivedNumber;
-  movement: DerivedMovement;
-  hitPoints: {
-    maximum: DerivedNumber;
-    current: number;
-    temporary: number;
-  };
-  attacks: DerivedAttack[];
-  spellcasting: DerivedSpellcasting[];
-  resources: DerivedResource[];
-  features: DerivedFeature[];
-  diagnostics: Diagnostic[];
-}
+interface DerivedCharacterSnapshot { 
+  characterId: CharacterId; 
+  catalogRevision: CatalogRevision; 
+  characterStateHash: string; 
+  totalLevel: number; 
+  proficiencyBonus: DerivedNumber; 
+  abilities: Record<Ability, DerivedAbility>; 
+  savingThrows: Record<Ability, DerivedNumber>; 
+  skills: Record<EntityId, DerivedNumber>; 
+  armorClass: DerivedNumber; 
+  initiative: DerivedNumber; 
+  movement: DerivedMovement; 
+  hitPoints: { 
+    maximum: DerivedNumber; 
+    current: number; 
+    temporary: number; 
+  }; 
+  attacks: DerivedAttack[]; 
+  spellcasting: DerivedSpellcasting[]; 
+  resources: DerivedResource[]; 
 
+  defenses: DerivedDefense[]; 
+  conditionalRollEffects: DerivedConditionalRollEffect[]; 
+  capabilities: DerivedCapability[]; 
+  features: DerivedFeature[]; 
+
+  projections: Record< 
+    SheetProjection, 
+    DerivedFeatureReference[] 
+  >; 
+
+  diagnostics: Diagnostic[]; 
+}
+```
+
+A projected feature reference shall retain the normalized source entity or feature ID.
+
+The same normalized effect may appear in multiple projection arrays, but it shall not be evaluated more than once.
+
+```ts
 interface DerivedNumber {
   total: number;
   contributions: Contribution[];

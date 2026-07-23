@@ -79,6 +79,10 @@ In phase-orchestrator mode:
 - Unresolved included references are build failures, not warnings.
 - Never write entity-name exceptions such as `if (name === "Elf")` or `if (className === "Wizard")`.
 - Branch only on normalized schema fields, discriminated unions, or rule capability types.
+- Do not infer mechanical effects by parsing narrative rule text in the plugin or rules engine.
+- Narrative-only mechanics may become automated only through a versioned, runtime-validated semantic mapping approved by an architecture decision.
+- Semantic mappings must target canonical entity or feature IDs. They must not be implemented as display-name branches.
+- Unmapped narrative mechanics remain safe render content with explicit automation diagnostics.
 
 ## 4. D&D Beyond usage restriction
 
@@ -160,6 +164,9 @@ A cache hit is valid only when all inputs match. Unknown or incomplete cache met
 - Every interactive element requires an accessible label and keyboard behavior where applicable.
 - Invalid dependent selections must be shown and resolved; never silently replace them.
 - Narrative rules that are not mechanically normalized are displayed as text and marked non-automated.
+- Every projected mechanical rule must identify its originating normalized entity or feature.
+- One normalized effect may appear in multiple sheet sections, but it must remain one effect with one activation state and one provenance trace.
+- Character-sheet projections are derived and must not be persisted as authoritative character state.
 
 ## 11. Testing rules
 

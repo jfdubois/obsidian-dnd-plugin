@@ -274,6 +274,69 @@ For each entity type:
    - malformed/unresolved fixture.
 10. Fail publication if included references remain unresolved.
 
+### 8.1 Rule semantics and character-sheet projection SOP
+
+For every normalized rule-bearing entity:
+
+1. Preserve the complete supported narrative content as safe render nodes.
+2. Normalize supported structured source fields generically.
+3. Classify each normalized mechanic as:
+  - derived-value effect;
+  - conditional roll effect;
+  - defense or immunity;
+  - capability;
+  - grant;
+  - action;
+  - resource;
+  - display-only mechanic;
+  - narrative information.
+4. Assign an automation status:
+  - full;
+  - partial;
+  - display-only;
+  - manual-adjudication.
+5. Assign a primary character-sheet projection.
+6. Assign secondary projections only when the same rule is useful in multiple sections.
+7. Record effect provenance:
+  - source entity ID;
+  - source ID;
+  - structured or reviewed-mapping origin.
+8. Do not parse narrative rule text at plugin runtime or rules-engine runtime.
+9. Do not add entity-name or feature-name branches.
+10. A reviewed semantic mapping may add an effect only when:
+  - it targets a canonical entity or feature ID;
+  - it is versioned and runtime-validated;
+  - it identifies its ruleset and source revision;
+  - it contains normalized data only;
+  - it has positive and negative tests.
+11. Leave unmapped narrative mechanics visible.
+12. Emit an actionable diagnostic for every known but non-automated mechanic.
+13. Ensure that one effect projected into multiple sections is evaluated only once.
+14. Add tests covering:
+  - normalization;
+  - activation;
+  - deactivation;
+  - projection;
+  - source provenance;
+  - unsupported behavior.
+
+Default projections shall be based on normalized mechanic type, not on display names.
+
+Examples:
+
+| Mechanic | Primary projection | Secondary projection |
+|---|---|---|
+| AC formula | Armor Class | Inventory |
+| Conditional save advantage | Saving Throws | Defenses |
+| Skill-check disadvantage | Skills | Inventory |
+| Damage resistance | Defenses | Features and Traits |
+| Disease immunity | Defenses | Species Traits |
+| No breathing required | Species Traits | Defenses |
+| Species narrative feature | Species Traits | — |
+| Class feature | Class Features | Actions or Resources when applicable |
+
+The character sheet shall consume normalized projections from the derived snapshot. It shall not independently decide rule meaning from source text.
+
 ## 9. Character transaction SOP
 
 For create/edit/level/equipment/source-policy transactions:

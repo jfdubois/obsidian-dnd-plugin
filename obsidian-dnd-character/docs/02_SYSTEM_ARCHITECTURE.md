@@ -222,6 +222,59 @@ Sidebar view
 
 The derived snapshot must be reproducible and contain diagnostics and contribution traces.
 
+## 8.1 Semantic rule and character-sheet projection flow
+
+Resolved source record
+    |
+    v
+Entity-type normalizer
+    |
+    +--> Generic structured-field normalization
+    |
+    +--> Reviewed semantic mapping lookup
+    |
+    +--> Safe narrative render content
+    |
+    v
+Normalized rule entity
+  - effects
+  - automation status
+  - provenance
+  - display projection
+    |
+    v
+Rules-engine effect collection
+    |
+    v
+Derived values, defenses, capabilities,
+conditional roll effects, and contribution traces
+    |
+    v
+Character-sheet projection index
+    |
+    v
+Sidebar sections
+
+The catalog builder owns semantic normalization.
+
+The rules engine and Obsidian plugin shall not parse narrative rule text to discover mechanics.
+
+Reviewed semantic mappings shall:
+
+- be project-owned versioned data;
+- be keyed by canonical entity or feature ID;
+- be runtime-validated;
+- identify their source ruleset and extraction method;
+- contain normalized data only;
+- never contain executable code;
+- never use display-name conditionals.
+
+An unmapped narrative rule remains available as safe render content.
+
+A normalized effect may be projected into multiple sheet sections. Projection does not duplicate the effect, its activation state, or its contribution trace.
+
+Sheet projections are derived data and are not persisted in the authoritative character document.
+
 ## 9. Command flow
 
 ```text

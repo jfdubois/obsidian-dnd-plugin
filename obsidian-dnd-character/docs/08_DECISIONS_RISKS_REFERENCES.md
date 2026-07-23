@@ -68,6 +68,26 @@
 
 **Reason:** Avoid hallucinated rules and class/species-specific exceptions.
 
+### ADR-009 — Reviewed semantic mechanics and character-sheet projection
+
+**Decision:** Normalized rule-bearing entities shall distinguish calculated effects, conditional roll effects, defenses, capabilities, grants, actions, resources, display-only mechanics, and narrative information.
+Every normalized mechanical effect shall retain its automation status, source provenance, and character-sheet projection.
+
+Structured 5eTools fields shall be normalized generically. Narrative rule text shall not be interpreted automatically at runtime or through unrestricted text parsing.
+
+A versioned, runtime-validated semantic mapping may define reviewed mechanical effects for narrative-only rules when it:
+
+targets a canonical entity or feature ID;
+identifies the source ruleset and source revision;
+contains no executable code;
+passes schema validation;
+includes rule-specific tests;
+records that the effect originated from a reviewed mapping.
+
+Narrative mechanics without a reviewed mapping shall remain visible as safe render content and shall be marked display-only or manual-adjudication.
+
+**Reason:** eTools does not represent every mechanical rule through universal structured fields. This decision permits explicit and testable support for rules such as conditional saving-throw advantage and physiological capabilities without guessing from prose, adding entity-name code branches, or hiding unsupported traits.
+
 ## Principal risks
 
 | ID | Risk | Impact | Mitigation |
@@ -82,6 +102,7 @@
 | R-008 | LLM implements entity-name exceptions | Unmaintainable parser | Code review/search gate, generic fixture requirements |
 | R-009 | Character source removal or level reduction orphans state | Data loss | Transactional dependency analysis and preview |
 | R-010 | Cache treated as source of truth | Stale/incorrect choices | Cache envelopes, input hashes, deletion tests |
+| R-011 | Reviewed semantic mappings become incomplete or stale | Incorrect or missing character effects | Key mappings by canonical identity and ruleset, pin source revisions, require provenance and regression tests, and report unmapped narrative mechanics |
 
 ## Reference notes
 

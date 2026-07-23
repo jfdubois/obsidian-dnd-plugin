@@ -201,6 +201,41 @@ The plugin shall clearly distinguish:
 - unavailable references;
 - incompatible schema.
 
+### FR-014 Rule semantics and character-sheet projection
+
+very normalized rule-bearing entity shall distinguish between:
+
+- derived-value effects;
+- conditional roll effects;
+- defenses and immunities;
+- capabilities;
+- grants;
+- actions;
+- resources;
+- display-only mechanics;
+- narrative information.
+
+Every normalized mechanical effect shall expose:
+
+- automation status;
+- source provenance;
+- primary character-sheet projection;
+- optional secondary character-sheet projections.
+
+The character sheet shall project rules into the section where they are most useful during play.
+
+Examples include:
+
+- conditional advantage against being Poisoned in Saving Throws;
+- disease immunity in Defenses;
+- Sentry's Rest in Species Traits;
+- armor contribution in Armor Class;
+- armor-related Stealth disadvantage in Skills and Inventory.
+
+A single effect may appear in more than one sheet section, but it shall remain one normalized effect and one derived result.
+
+Narrative rules that are not mechanically normalized shall remain visible and shall be marked as non-automated.
+
 ## 4. Non-functional requirements
 
 ### NFR-001 Reliability

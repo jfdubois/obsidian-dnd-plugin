@@ -135,6 +135,17 @@ For each task:
 
 Read and resolve raw source generically without generating final entities yet.
 
+- [ ] **P3-T000 — Extend semantic effect and sheet-projection contracts**
+  - Add automation-status types.
+  - Add sheet-projection types.
+  - Add effect provenance.
+  - Add conditional-roll effects.
+  - Add explicit immunity definitions.
+  - Add capability effects.
+  - Update runtime validators, factories, exports, fixtures, and tests.
+  - Update architecture, requirements, SOP, decision register, and acceptance matrix.
+  - Accept: npm run check and npm run build pass; existing effects are migrated; representative synthetic fixtures validate conditional saving-throw, defense, capability, and feature projections.
+
 - [ ] **P3-T001 — Implement builder configuration**
   - Clone path, output path, included rulesets, content policy, build mode.
 
@@ -145,28 +156,45 @@ Read and resolve raw source generically without generating final entities yet.
   - Safe path handling, parse diagnostics, file inventory.
 
 - [ ] **P3-T004 — Implement raw boundary validation**
-  - Use `unknown`; retain only fields required by importers.
+  - Accept raw values as unknown.
+  - Validate file and record envelopes before use.
+  - Preserve builder-only resolved data required by later importers.
+  - Prevent raw fields from crossing into normalized catalog contracts.
+  - Record unclaimed structured fields instead of silently discarding them.
 
 - [ ] **P3-T005 — Implement canonical reference parser**
   - Parse pipe-delimited entity references into structured keys.
 
-- [ ] **P3-T006 — Implement `_copy` resolver**
+- [ ] **P3-T006 — Implement _copy resolver**
   - Resolve base entity by structured identity.
 
-- [ ] **P3-T007 — Implement `_mod` operations used by included data**
+- [ ] **P3-T007 — Implement _mod operations used by included data**
   - Each supported operation requires fixtures and tests.
   - Unknown operations fail the build.
 
-- [ ] **P3-T008 — Implement `_preserve` behavior**
-- [ ] **P3-T009 — Implement `_versions` expansion**
+- [ ] **P3-T008 — Implement _preserve behavior**
+
+- [ ] **P3-T009 — Implement _versions expansion**
+
 - [ ] **P3-T010 — Detect inheritance cycles**
+
 - [ ] **P3-T011 — Emit resolved-record debug fixtures**
+  - Include source path, structured identity, inheritance chain, and resolved field inventory.
+  - Confirm that raw fields remain confined to catalog-builder fixtures.
+
 - [ ] **P3-T012 — Produce ingestion diagnostic report**
+  - Report parse and resolution failures.
+  - Inventory observed structured fields by entity type.
+  - Identify fields claimed by a future importer.
+  - Identify unclaimed candidate mechanical fields.
+  - Never classify unclaimed fields as narrative automatically.
 
 ### Phase 3 gate
 
 - [ ] Representative race/background/class records resolve without name exceptions.
 - [ ] Unknown source mechanics fail with actionable diagnostics.
+- [ ] No candidate structured mechanic is silently discarded before normalization or explicitly classified as unsupported.
+- [ ] Raw 5eTools fields remain confined to the catalog-builder boundary.
 
 ---
 
@@ -177,37 +205,72 @@ Read and resolve raw source generically without generating final entities yet.
 Generate a valid versioned catalog using stable contracts.
 
 - [ ] **P4-T001 — Implement ruleset classifier**
+
 - [ ] **P4-T002 — Implement record-level core/source classifier**
+
 - [ ] **P4-T003 — Implement source metadata normalizer**
-- [ ] **P4-T004 — Implement species normalizer**
-- [ ] **P4-T005 — Implement background normalizer**
-- [ ] **P4-T006 — Implement class index loader**
-- [ ] **P4-T007 — Implement class normalizer**
-- [ ] **P4-T008 — Implement subclass normalizer**
-- [ ] **P4-T009 — Implement class-feature normalizer**
-- [ ] **P4-T010 — Implement subclass-feature normalizer**
-- [ ] **P4-T011 — Implement feat normalizer**
-- [ ] **P4-T012 — Implement optional-feature normalizer**
-- [ ] **P4-T013 — Implement spell normalizer**
-- [ ] **P4-T014 — Implement spell relation builder**
-- [ ] **P4-T015 — Implement item/base-item normalizer**
-- [ ] **P4-T016 — Implement skills and languages normalizers**
-- [ ] **P4-T017 — Implement canonical ID generator**
-- [ ] **P4-T018 — Implement global reference resolver**
-- [ ] **P4-T019 — Implement compact indexes**
-- [ ] **P4-T020 — Implement checksums and manifest generation**
-- [ ] **P4-T021 — Implement validation/inventory reports**
-- [ ] **P4-T022 — Implement atomic revision publication**
-- [ ] **P4-T023 — Add golden catalog build tests**
+
+- [ ] **P4-T004 — Implement semantic mapping and projection infrastructure**
+  - Implement versioned, runtime-validated reviewed semantic mappings.
+  - Key mappings by canonical entity or feature ID and ruleset.
+  - Record structured or reviewed-mapping provenance.
+  - Implement default projections by normalized mechanic type.
+  - Reject executable content and display-name branches.
+  - Emit diagnostics for unmatched, invalid, or stale mappings.
+
+- [ ] **P4-T005 — Implement species normalizer**
+
+- [ ] **P4-T006 — Implement background normalizer**
+
+- [ ] **P4-T007 — Implement class index loader**
+
+- [ ] **P4-T008 — Implement class normalizer**
+
+- [ ] **P4-T009 — Implement subclass normalizer**
+
+- [ ] **P4-T010 — Implement class-feature normalizer**
+
+- [ ] **P4-T011 — Implement subclass-feature normalizer**
+
+- [ ] **P4-T012 — Implement feat normalizer**
+
+- [ ] **P4-T013 — Implement optional-feature normalizer**
+
+- [ ] **P4-T014 — Implement spell normalizer**
+
+- [ ] **P4-T015 — Implement spell relation builder**
+
+- [ ] **P4-T016 — Implement item/base-item normalizer**
+
+- [ ] **P4-T017 — Implement skills and languages normalizers**
+
+- [ ] **P4-T018 — Implement canonical ID generator**
+
+- [ ] **P4-T019 — Implement global reference resolver**
+
+- [ ] **P4-T020 — Implement compact indexes**
+
+- [ ] **P4-T021 — Implement checksums and manifest generation**
+
+- [ ] **P4-T022 — Implement validation/inventory reports**
+
+- [ ] **P4-T023 — Implement atomic revision publication**
+
+- [ ] **P4-T024 — Add golden catalog build tests**
 
 Each entity normalizer must:
-
-- accept a resolved raw record;
-- produce one normalized entity or an explicit exclusion diagnostic;
-- never branch by entity name;
-- preserve narrative content as safe render nodes;
-- produce structured effects/choices only from structured source fields;
-- record unsupported structured mechanics as build diagnostics.
+  - accept a resolved raw record;
+  - produce one normalized entity or an explicit exclusion diagnostic;
+  - never branch by entity name or display feature name;
+  - preserve narrative content as safe render nodes;
+  - produce structured effects and choices from supported structured source fields;
+  - apply only runtime-validated reviewed semantic mappings;
+  - assign automation status;
+  - assign primary and optional secondary projections;
+  - record effect provenance;
+  - record unsupported structured mechanics as build diagnostics;
+  - retain unmapped narrative mechanics as display content;
+  - never claim full automation when unsupported narrative remains.
 
 ### Phase 4 gate
 
@@ -215,6 +278,8 @@ Each entity normalizer must:
 - [ ] Zero unresolved references for included entities.
 - [ ] Both rulesets represented.
 - [ ] Core access classification verified against fixtures.
+- [ ] Every emitted effect has automation status, provenance, and projection metadata.
+- [ ] Unmapped narrative mechanics remain visible with diagnostics.
 - [ ] Build is reproducible for the same source commit/configuration.
 
 ---
@@ -331,31 +396,35 @@ Persist authoritative character state safely in the vault.
 
 ## Goal
 
-Calculate the initial character sheet with explanation traces.
+Calculate the initial character sheet with explanation and provenance traces.
 
 - [ ] **P9-T001 — Implement effect collection order**
 - [ ] **P9-T002 — Implement total level and proficiency bonus**
 - [ ] **P9-T003 — Implement ability scores/modifiers**
 - [ ] **P9-T004 — Implement proficiencies and expertise**
-- [ ] **P9-T005 — Implement saving throws**
-- [ ] **P9-T006 — Implement skills and passive values**
+- [ ] **P9-T005 — Implement saving throws and conditional save effects**
+- [ ] **P9-T006 — Implement skills, passive values, and conditional skill effects**
 - [ ] **P9-T007 — Implement movement and senses**
 - [ ] **P9-T008 — Implement maximum HP**
 - [ ] **P9-T009 — Implement armor class**
 - [ ] **P9-T010 — Implement initiative**
 - [ ] **P9-T011 — Implement attacks**
-- [ ] **P9-T012 — Implement defenses**
+- [ ] **P9-T012 — Implement defenses, immunities, and capabilities**
 - [ ] **P9-T013 — Implement spellcasting totals and slot maxima**
 - [ ] **P9-T014 — Implement feature resources**
-- [ ] **P9-T015 — Implement contribution traces**
+- [ ] **P9-T015 — Implement contribution and provenance traces**
 - [ ] **P9-T016 — Implement unsupported-mechanic diagnostics**
-- [ ] **P9-T017 — Add 2014 and 2024 golden-character tests**
+- [ ] **P9-T017 — Implement character-sheet projection index**
+- [ ] **P9-T018 — Add 2014 and 2024 golden-character tests**
 
 ### Phase 9 gate
 
 - [ ] Same inputs always produce identical snapshot.
 - [ ] Important totals explain their contributors.
-- [ ] No derived total is required in persisted character JSON.
+- [ ] Conditional effects identify their predicates and originating feature.
+- [ ] Defenses and capabilities remain semantically distinct.
+- [ ] Multiple projections do not cause an effect to be evaluated more than once.
+- [ ] No derived total or projection is required in persisted character JSON.
 
 ---
 
@@ -400,26 +469,31 @@ Create valid level-one characters through a dependency-aware modal.
 ## Goal
 
 Display and interact with a character during play.
-
 - [ ] **P11-T001 — Implement active-character selector**
 - [ ] **P11-T002 — Implement responsive header**
 - [ ] **P11-T003 — Implement primary-stat cards**
 - [ ] **P11-T004 — Implement HP controls**
-- [ ] **P11-T005 — Implement abilities/saves/skills sections**
-- [ ] **P11-T006 — Implement actions/attacks section**
-- [ ] **P11-T007 — Implement spells and slot controls**
-- [ ] **P11-T008 — Implement features/resources section**
-- [ ] **P11-T009 — Implement conditions/death saves/hit dice**
-- [ ] **P11-T010 — Implement short-rest command**
-- [ ] **P11-T011 — Implement long-rest command**
-- [ ] **P11-T012 — Implement rerender event flow**
-- [ ] **P11-T013 — Add accessible labels and keyboard behavior**
-- [ ] **P11-T014 — Add narrow-sidebar CSS tests/manual checklist**
+- [ ] **P11-T005 — Implement abilities, saves, skills, and conditional roll sections**
+- [ ] **P11-T006 — Implement defenses and capabilities section**
+- [ ] **P11-T007 — Implement actions/attacks section**
+- [ ] **P11-T008 — Implement spells and slot controls**
+- [ ] **P11-T009 — Implement projected species traits, class features, feats, and resources**
+- [ ] **P11-T010 — Implement conditions/death saves/hit dice**
+- [ ] **P11-T011 — Implement short-rest command**
+- [ ] **P11-T012 — Implement long-rest command**
+- [ ] **P11-T013 — Implement rerender event flow**
+- [ ] **P11-T014 — Add accessible labels and keyboard behavior**
+- [ ] **P11-T015 — Add narrow-sidebar CSS tests/manual checklist**
 
 ### Phase 11 gate
 
 - [ ] All interactive state persists immediately and safely.
 - [ ] View updates without reopen.
+- [ ] Conditional saving-throw effects appear in Saving Throws.
+- [ ] Immunities and resistances appear in Defenses.
+- [ ] Species capabilities and narrative traits appear in Species Traits.
+- [ ] Display-only mechanics are marked non-automated.
+- [ ] Every projected rule exposes its source feature.
 - [ ] Mobile controls are usable.
 
 ---
@@ -436,15 +510,31 @@ Manage item instances and apply structured equipment effects.
 - [ ] **P12-T004 — Implement equip/unequip validation**
 - [ ] **P12-T005 — Implement attune/unattune validation**
 - [ ] **P12-T006 — Implement containers and charges**
-- [ ] **P12-T007 — Implement armor calculation integration**
+- [ ] **P12-T007 — Implement armor mechanical integration**
+  - Activate armor effects only for the equipped item instance.
+  - Resolve active body armor and shield composition.
+  - Apply AC formulas and Dexterity rules.
+  - Apply armor proficiency or training diagnostics.
+  - Apply Strength requirements where defined by the active ruleset.
+  - Apply conditional Stealth disadvantage.
+  - Remove every contribution and conditional effect when unequipped.
+
 - [ ] **P12-T008 — Implement weapon attack integration**
-- [ ] **P12-T009 — Implement item contribution traces**
+- [ ] **P12-T009 — Implement item contribution and projection traces**
+  - Identify the originating item instance and catalog entity.
+  - Project AC contributions to Armor Class.
+  - Project conditional skill effects to Skills and Inventory.
+  - Do not evaluate the same item effect more than once.
+
 - [ ] **P12-T010 — Add multiple-instance regression tests**
 
 ### Phase 12 gate
 
+- [ ] Adding an item without equipping it does not activate equipment effects.
 - [ ] Equipping/unequipping changes only effects from that item instance.
+- [ ] Unequipping armor removes its AC formula and all conditional penalties.
 - [ ] Invalid equipment conflicts are explained.
+- [ ] Item projections retain catalog and item-instance provenance.
 
 ---
 
