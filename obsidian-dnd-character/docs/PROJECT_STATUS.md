@@ -2,11 +2,11 @@
 
 ## Current phase
 
-Phase 2 — Domain and normalized catalog contracts
+Phase 2 — Domain and normalized catalog contracts (COMPLETE)
 
 ## Last completed task
 
-P2-T013 — Add round-trip and invalid-input tests
+Phase 2 gate — complete
 
 ## Blockers
 
@@ -34,6 +34,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-23 — Phase 2 gate — complete
+Summary: Verified both gate criteria. (1) Hand-authored normalized catalog fixture validates: fixture in commit c0506ed passes all catalog-contract validators (1086/1086 tests). (2) Contracts contain no raw 5eTools fields: comprehensive search of all 16 non-test source files in catalog-contract found zero raw 5eTools field names and zero imports from external/5etools-src.
+Validation: `npm run check` passes (typecheck + lint + 1086/1086 tests, EXIT 0). `npm run build` passes (EXIT 0).
+Commit: see Git history for Phase 2 gate.
+Notes: Phase 2 complete. Phase 3 (Catalog builder ingestion foundation) is now open.
 
 2026-07-23 — P2-T013 — complete
 Summary: Added round-trip tests verifying factory outputs pass validators for all 6 entity/progression modules. Added invalid-input rejection tests for class-progression, entity-background, entity-feat, entity-item, entity-species, and entity-spell. 121 new tests across 6 files (819 lines). Total test count: 1086.

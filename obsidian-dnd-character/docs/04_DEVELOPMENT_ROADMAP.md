@@ -124,8 +124,8 @@ For each task:
 
 ### Phase 2 gate
 
-- [ ] A hand-authored normalized catalog fixture validates.
-- [ ] Contracts contain no raw 5eTools-specific fields.
+- [x] A hand-authored normalized catalog fixture validates.
+- [x] Contracts contain no raw 5eTools-specific fields.
 
 ---
 
