@@ -6,7 +6,7 @@ Phase 2 — Domain and normalized catalog contracts
 
 ## Last completed task
 
-P2-T009 — Implement effect discriminated union
+P2-T010 — Implement class progression/grant schema
 
 ## Blockers
 
@@ -34,6 +34,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-23 — P2-T010 — complete
+Summary: Implemented ClassRule, LevelDefinition, LevelGrant discriminated union (6 variants: feature, choice, subclass-choice, ability-score-improvement, spell-progression, resource-progression), SpellLevelGrant, SpellcastingProgression, and SlotsPerRest. All validators accept unknown, enforce non-negative integers, valid branded IDs, and nested array validation. Factories create immutable copies of arrays. 89 new tests covering positive fixtures for all variants, negative input for every field, type boundaries, factory immutability, and round-trips. Total test count: 686.
+Validation: `npm run check` passes (typecheck + lint + 686/686 tests, EXIT 0). `npm run build` passes (EXIT 0).
+Commit: see Git history for P2-T010.
+Notes: ClassRule includes all RuleEntity fields plus class-specific fields (hitDie, primaryAbilities, savingThrowProficiencies, startingChoices, levels, subclassIds, spellcasting). SpellLevelGrant includes optional slotsPerRest for pact magic and similar mechanics.
 
 2026-07-22 — P2-T009 — complete
 Summary: Implemented RuleEffect discriminated union with 16 variants (add-ability, set-ability, add-proficiency, add-expertise, add-language, set-movement, add-movement, add-sense, add-resistance, add-immunity, set-ac-formula, add-ac, grant-spell, grant-resource, grant-attack, grant-feature). Supporting types: ProficiencyRef (5 kinds), MovementMode (5 modes), SenseDefinition (5 types), ArmorClassFormula (6 types), EffectCondition (3 types), SpellGrant (4 types), ResourceDefinition with ValueFormula (4 types) and ResourceRecovery (4 types), AttackDefinition with DamageDefinition, DiceExpression, AttackRange (3 types), AttackProperty (10 strings + custom). All validators accept unknown, enforce finite numbers, non-empty strings, valid enums. Factories produce valid effects. 132 new tests covering positive fixtures for all variants, negative input for every field, type boundaries, factory immutability, and round-trips. Total test count: 597.

@@ -264,3 +264,35 @@ export {
   createRangedRange,
   createTouchRange,
 } from "./effect";
+
+export {
+  /* Class progression types */
+  type LevelGrant,
+  type FeatureGrant,
+  type ChoiceGrant,
+  type SubclassChoiceGrant,
+  type AbilityScoreImprovementGrant,
+  type SpellProgressionGrant,
+  type ResourceProgressionGrant,
+  type SpellLevelGrant,
+  type SpellcastingProgression,
+  type LevelDefinition,
+  type ClassRule,
+  /* Class progression validators */
+  isLevelGrant,
+  isSpellLevelGrant,
+  isSpellcastingProgression,
+  isLevelDefinition,
+  isClassRule,
+  /* Class progression factories */
+  createFeatureGrant,
+  createChoiceGrant,
+  createSubclassChoiceGrant,
+  createAbilityScoreImprovementGrant,
+  createSpellProgressionGrant,
+  createResourceProgressionGrant,
+  createSpellLevelGrant,
+  createSpellcastingProgression,
+  createLevelDefinition,
+  createClassRule,
+} from "./class-progression";
