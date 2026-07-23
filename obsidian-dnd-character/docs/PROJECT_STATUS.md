@@ -6,7 +6,7 @@ Phase 2 — Domain and normalized catalog contracts
 
 ## Last completed task
 
-P2-T008 — Implement choice-definition schema
+P2-T009 — Implement effect discriminated union
 
 ## Last completed task
 
@@ -42,6 +42,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-22 — P2-T009 — complete
+Summary: Implemented RuleEffect discriminated union with 16 variants (add-ability, set-ability, add-proficiency, add-expertise, add-language, set-movement, add-movement, add-sense, add-resistance, add-immunity, set-ac-formula, add-ac, grant-spell, grant-resource, grant-attack, grant-feature). Supporting types: ProficiencyRef (5 kinds), MovementMode (5 modes), SenseDefinition (5 types), ArmorClassFormula (6 types), EffectCondition (3 types), SpellGrant (4 types), ResourceDefinition with ValueFormula (4 types) and ResourceRecovery (4 types), AttackDefinition with DamageDefinition, DiceExpression, AttackRange (3 types), AttackProperty (10 strings + custom). All validators accept unknown, enforce finite numbers, non-empty strings, valid enums. Factories produce valid effects. 132 new tests covering positive fixtures for all variants, negative input for every field, type boundaries, factory immutability, and round-trips. Total test count: 597.
+Validation: `npm run typecheck` passes all 8 packages (EXIT 0). `npm run lint` passes (EXIT 0). `npm run test` passes 597/597 (EXIT 0). `npm run build` passes all 8 packages (EXIT 0).
+Commit: not committed.
+Notes: RuleEffect is used by RuleEntity.effects. The supporting types (ProficiencyRef, SenseDefinition, ArmorClassFormula, etc.) are used by the respective effect variants. MovementMode enum is exported with constant array and guard function. The add-immunity effect uses damageType (string) rather than immunityType to match the data contract.
 
 2026-07-22 — P2-T008 — complete
 Summary: Implemented ChoiceDefinition interface with ChoiceDefinitionType enum (8 values: entity, ability, skill-proficiency, tool-proficiency, language, equipment, spell, feature). Validator accepts unknown, enforces valid ChoiceDefinitionId, non-empty label, valid type, non-negative finite minimum >= 0, finite maximum >= 1, minimum <= maximum, boolean repeatable, valid CatalogQuery for optionQuery, and array of valid RulePrerequisite. Factory creates immutable copy of prerequisites array. 51 new tests covering positive fixtures for all types, negative input for every field, type boundaries, factory immutability, and round-trips. Total test count: 465.
