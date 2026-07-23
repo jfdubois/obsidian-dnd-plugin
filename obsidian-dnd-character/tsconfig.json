@@ -1,14 +1,13 @@
 {
-  "extends": "./tsconfig.base.json",
-  "include": [
-    "apps/**/*.ts",
-    "packages/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    "**/node_modules",
-    "**/dist",
-    "**/build",
-    "**/out"
+  "files": [],
+  "references": [
+    { "path": "packages/domain" },
+    { "path": "packages/catalog-contract" },
+    { "path": "packages/character-contract" },
+    { "path": "packages/rules-engine" },
+    { "path": "packages/testing" },
+    { "path": "apps/catalog-builder" },
+    { "path": "apps/catalog-server" },
+    { "path": "apps/obsidian-plugin" }
   ]
 }

@@ -13,12 +13,12 @@
   },
   "scripts": {
     "check": "npm run typecheck && npm run lint && npm run test",
-    "typecheck": "node scripts/run-workspaces.mjs typecheck",
+    "typecheck": "tsc -b",
     "lint": "eslint . --no-error-on-unmatched-pattern",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "build": "node scripts/run-workspaces.mjs build",
+    "build": "tsc -b",
     "dev:plugin": "npm run dev --workspace=apps/obsidian-plugin",
     "build:catalog": "npm run build --workspace=apps/catalog-builder",
     "docker:catalog": "docker compose -f services/docker-compose.yml up -d"
