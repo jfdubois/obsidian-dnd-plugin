@@ -216,3 +216,27 @@ Documentation updated:
 Next task:
 - <task ID>
 ```
+
+## 14. Large-file editing protocol
+
+1. Before editing an existing file, inspect its line count and locate the
+   exact symbols or sections that need modification.
+2. Do not read an entire file over 300 lines when symbol search and bounded
+   ranges can provide the required context.
+3. Do not replace an existing file over 300 lines in one Write call.
+   Use targeted Edit operations for individual logical sections.
+4. Independent new contracts, validators, helpers, or tests should be placed
+   in focused modules when this avoids expanding an already large file.
+   Preserve existing public exports through the package index.
+5. A tool-call failure containing "Unterminated string", truncated JSON, or
+   incomplete arguments is a transport failure. Do not retry the same complete
+   content through Bash, Python, base64, temporary files, or another wrapper.
+6. After one oversized mutation failure, reduce the mutation to targeted edits
+   or split the implementation into modules.
+7. After two failures on the same file region, stop and report the target,
+   attempted mutation, error, and proposed smaller operation.
+8. Bash or Python may perform a concise transformation of existing file
+   contents. They must not be used to embed and transport a complete generated
+   source file inside the command argument.
+9. Verify each logical mutation with a targeted diff and the narrowest useful
+   typecheck or test before continuing.

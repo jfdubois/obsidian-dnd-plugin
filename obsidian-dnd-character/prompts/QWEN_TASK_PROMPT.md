@@ -318,6 +318,23 @@ Do not include entire control documents in the capsule.
 
 Require the subagent to read the authoritative files itself.
 
+### Executor efficiency rules
+
+- The task capsule references authoritative repository sections instead of
+  copying large specifications.
+- The orchestrator does not pre-read implementation files that the executor
+  must inspect.
+- Use no more than eight read/search operations before the first edit unless
+  a concrete blocker is found.
+- Read large files by symbol and bounded range.
+- State one implementation plan and begin editing. Do not repeatedly reconsider
+  a resolved design.
+- Existing large files are patched incrementally, never regenerated wholesale.
+- Use compiler and test failures to discover downstream call sites instead of
+  preemptively opening every possible consumer.
+- A task may be implemented through multiple bounded internal slices while
+  remaining one roadmap task and one final orchestrator commit.
+
 ## 11. Task subagent rules
 
 Invoke a new implementation subagent for exactly one roadmap task.
@@ -329,13 +346,14 @@ The subagent must:
 1. work only on the assigned task;
 2. read `AGENTS.md`, the roadmap task, and task-specific documents;
 3. inspect existing code and tests before editing;
-4. make the smallest complete implementation;
-5. add or update tests in the same change;
-6. validate external or persisted data from `unknown`;
-7. preserve strict TypeScript and dependency direction;
-8. leave changes uncommitted;
-9. return a compact structured report;
-10. stop after the assigned task.
+4. for files over 300 lines, locate relevant symbols first and read only bounded ranges unless the complete file is demonstrably required;
+5. make the smallest complete implementation;
+6. add or update tests in the same change;
+7. validate external or persisted data from `unknown`;
+8. preserve strict TypeScript and dependency direction;
+9. leave changes uncommitted;
+10. return a compact structured report;
+11. stop after the assigned task.
 
 The subagent must not:
 
