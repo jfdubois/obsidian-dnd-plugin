@@ -114,7 +114,7 @@ Define stable project-owned schemas before importing source data.
 - [x] **P2-T009 — Implement effect discriminated union**
 - [x] **P2-T010 — Implement class progression/grant schema**
 - [x] **P2-T011 — Implement species/background/feat/spell/item schemas**
-- [ ] **P2-T012 — Add schema version constants**
+- [x] **P2-T012 — Add schema version constants**
 - [ ] **P2-T013 — Add round-trip and invalid-input tests**
 
 For each task:

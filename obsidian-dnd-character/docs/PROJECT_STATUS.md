@@ -6,7 +6,7 @@ Phase 2 — Domain and normalized catalog contracts
 
 ## Last completed task
 
-P2-T011 — Implement species/background/feat/spell/item schemas
+P2-T012 — Add schema version constants
 
 ## Blockers
 
@@ -34,6 +34,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-23 — P2-T012 — complete
+Summary: Added CATALOG_API_VERSION and CATALOG_SCHEMA_VERSION constants in schema-version.ts. Added CatalogApiVersion branded type, isSupportedApiVersion and isSupportedSchemaVersion guard functions. Updated CatalogManifest to use CATALOG_API_VERSION constant instead of hardcoded 1. All exports added to index.ts. 22 tests covering constants, guards, and manifest integration. Total test count: 1086.
+Validation: `npm run check` passes (typecheck + lint + 1086/1086 tests, EXIT 0). `npm run build` passes (EXIT 0).
+Commit: see Git history for P2-T012.
+Notes: Constants are centralized for easy bumping when catalog contract evolves.
 
 2026-07-23 — P2-T011 — complete
 Summary: Implemented SpeciesRule (size, speed, darkvision, darkvisionRange, languageIds, traitDefs), BackgroundRule (skillProficiencies, featureId), FeatRule (abilityScorePrerequisite, abilityMinScore), SpellRule (school, level, castingTime, range, duration, concentration, ritual, higherLevelEffects), and ItemRule (category, rarity, cost, weight, bodySlot, properties, requiresAttunement). All extend RuleEntity base fields. Supporting types: TraitDefinition, ItemCost. Each has validator accepting unknown, factory function, and tests. 188 new tests (49+29+29+34+47). Total test count: 879.
