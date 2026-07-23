@@ -5,6 +5,7 @@ import {
   isRuleEntityKind,
 } from "@obsidian-dnd/domain";
 import type { Ruleset, RuleEntityKind } from "@obsidian-dnd/domain";
+import { CATALOG_API_VERSION } from "./schema-version";
 
 /* ── Catalog manifest ───────────────────────────────────────────
    The manifest is the top-level descriptor for a published catalog
@@ -13,7 +14,7 @@ import type { Ruleset, RuleEntityKind } from "@obsidian-dnd/domain";
    activating the revision.                                     */
 
 export interface CatalogManifest {
-  apiVersion: 1;
+  apiVersion: typeof CATALOG_API_VERSION;
   schemaVersion: number;
   catalogRevision: CatalogRevision;
   sourceRevision: string;
@@ -28,7 +29,7 @@ export function isCatalogManifest(value: unknown): value is CatalogManifest {
   if (typeof value !== "object" || value === null) return false;
   const obj = value as Record<string, unknown>;
 
-  if (obj.apiVersion !== 1) return false;
+  if (obj.apiVersion !== CATALOG_API_VERSION) return false;
 
   if (typeof obj.schemaVersion !== "number" || !Number.isInteger(obj.schemaVersion) || obj.schemaVersion < 1) {
     return false;
@@ -74,7 +75,7 @@ export function createCatalogManifest(
   },
 ): CatalogManifest {
   return {
-    apiVersion: 1,
+    apiVersion: CATALOG_API_VERSION,
     schemaVersion: props.schemaVersion,
     catalogRevision: props.catalogRevision,
     sourceRevision: props.sourceRevision,

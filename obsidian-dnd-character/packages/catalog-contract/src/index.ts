@@ -8,6 +8,17 @@ export {
 } from "./catalog-manifest";
 
 export {
+  /* Schema version constants */
+  CATALOG_API_VERSION,
+  CATALOG_SCHEMA_VERSION,
+  /* Schema version types */
+  type CatalogApiVersion,
+  /* Schema version guards */
+  isSupportedApiVersion,
+  isSupportedSchemaVersion,
+} from "./schema-version";
+
+export {
   /* Source metadata types */
   type CatalogSource,
   /* Source metadata factory */
