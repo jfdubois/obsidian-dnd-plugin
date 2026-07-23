@@ -461,3 +461,138 @@ describe("createItemRule", () => {
     expect(rule.properties).not.toBe(properties);
   });
 });
+
+/* ── Round-trip tests ──────────────────────────────────────────── */
+
+describe("round-trip", () => {
+  it("ItemCost round-trips", () => {
+    const cost = createItemCost(10, "gp");
+    expect(isItemCost(cost)).toBe(true);
+  });
+
+  it("ItemRule round-trips with minimal fields", () => {
+    const rule = createItemRule(
+      makeEntityId(),
+      "Dagger",
+      makeSourceId(),
+      "2024",
+      "core",
+      "weapon",
+      ["light", "thrown"],
+      false,
+      [makeMinimalRenderNode()],
+      [],
+      [],
+      [],
+      [],
+      false,
+    );
+    expect(isItemRule(rule)).toBe(true);
+  });
+
+  it("ItemRule round-trips with full data", () => {
+    const rule = createItemRule(
+      makeEntityId(),
+      "Ring of Protection",
+      makeSourceId(),
+      "2024",
+      "source",
+      "other",
+      ["wondrous"],
+      true,
+      [makeMinimalRenderNode()],
+      [makeMinimalPrerequisite()],
+      [makeMinimalEffect()],
+      [makeMinimalChoiceDefinition()],
+      [makeEntityId()],
+      false,
+      130,
+      "Wondrous item, ring (requires attunement)",
+      "rare",
+      createItemCost(0, "gp"),
+      0,
+      "ring",
+    );
+    expect(isItemRule(rule)).toBe(true);
+  });
+});
+
+/* ── Invalid input rejection tests ─────────────────────────────── */
+
+describe("invalid input rejection", () => {
+  describe("isItemCost rejects", () => {
+    it("null", () => {
+      expect(isItemCost(null)).toBe(false);
+    });
+
+    it("undefined", () => {
+      expect(isItemCost(undefined)).toBe(false);
+    });
+
+    it("string", () => {
+      expect(isItemCost("not an object")).toBe(false);
+    });
+
+    it("number", () => {
+      expect(isItemCost(42)).toBe(false);
+    });
+
+    it("array", () => {
+      expect(isItemCost([])).toBe(false);
+    });
+
+    it("missing amount", () => {
+      expect(isItemCost({ unit: "gp" })).toBe(false);
+    });
+
+    it("missing unit", () => {
+      expect(isItemCost({ amount: 10 })).toBe(false);
+    });
+
+    it("wrong type for amount", () => {
+      expect(isItemCost({ amount: "ten", unit: "gp" })).toBe(false);
+    });
+  });
+
+  describe("isItemRule rejects", () => {
+    it("null", () => {
+      expect(isItemRule(null)).toBe(false);
+    });
+
+    it("undefined", () => {
+      expect(isItemRule(undefined)).toBe(false);
+    });
+
+    it("string", () => {
+      expect(isItemRule("not an object")).toBe(false);
+    });
+
+    it("number", () => {
+      expect(isItemRule(42)).toBe(false);
+    });
+
+    it("array", () => {
+      expect(isItemRule([])).toBe(false);
+    });
+
+    it("missing id", () => {
+      expect(isItemRule({ kind: "item", name: "Test", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], category: "weapon" as const, properties: [], requiresAttunement: false })).toBe(false);
+    });
+
+    it("missing name", () => {
+      expect(isItemRule({ id: makeEntityId(), kind: "item", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], category: "weapon" as const, properties: [], requiresAttunement: false })).toBe(false);
+    });
+
+    it("missing category", () => {
+      expect(isItemRule({ id: makeEntityId(), kind: "item", name: "Test", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], properties: [], requiresAttunement: false })).toBe(false);
+    });
+
+    it("missing properties", () => {
+      expect(isItemRule({ id: makeEntityId(), kind: "item", name: "Test", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], category: "weapon" as const, requiresAttunement: false })).toBe(false);
+    });
+
+    it("missing requiresAttunement", () => {
+      expect(isItemRule({ id: makeEntityId(), kind: "item", name: "Test", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], category: "weapon" as const, properties: [] })).toBe(false);
+    });
+  });
+});

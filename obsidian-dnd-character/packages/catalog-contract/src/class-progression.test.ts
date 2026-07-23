@@ -736,3 +736,265 @@ describe("createClassRule", () => {
     expect(rule.subclassIds).not.toBe(subclass);
   });
 });
+
+/* ── Round-trip tests ──────────────────────────────────────────── */
+
+describe("round-trip", () => {
+  it("all LevelGrant variants round-trip through validator", () => {
+    const grants: LevelGrant[] = [
+      createFeatureGrant(makeEntityId()),
+      createChoiceGrant(makeChoiceId()),
+      createSubclassChoiceGrant(makeChoiceId()),
+      createAbilityScoreImprovementGrant(makeChoiceId()),
+      createSpellProgressionGrant(createSpellLevelGrant(1, 2)),
+      createResourceProgressionGrant(makeResourceId(), createFixedValueFormula(6)),
+    ];
+
+    for (const grant of grants) {
+      expect(isLevelGrant(grant)).toBe(true);
+    }
+  });
+
+  it("SpellLevelGrant round-trips", () => {
+    const grant = createSpellLevelGrant(3, 3);
+    expect(isSpellLevelGrant(grant)).toBe(true);
+
+    const grantWithRest = createSpellLevelGrant(1, 4, { short: 1, long: 2 });
+    expect(isSpellLevelGrant(grantWithRest)).toBe(true);
+  });
+
+  it("SpellcastingProgression round-trips", () => {
+    const prog = createSpellcastingProgression(5, {
+      1: createSpellLevelGrant(1, 4),
+      2: createSpellLevelGrant(2, 3),
+    });
+    expect(isSpellcastingProgression(prog)).toBe(true);
+  });
+
+  it("LevelDefinition round-trips", () => {
+    const def = createLevelDefinition(3, [
+      createFeatureGrant(makeEntityId()),
+      createChoiceGrant(makeChoiceId()),
+    ]);
+    expect(isLevelDefinition(def)).toBe(true);
+  });
+
+  it("ClassRule round-trips with full progression", () => {
+    const levels = {
+      1: createLevelDefinition(1, [createFeatureGrant(makeEntityId())]),
+      2: createLevelDefinition(2, [createAbilityScoreImprovementGrant(makeChoiceId())]),
+      3: createLevelDefinition(3, [
+        createFeatureGrant(makeEntityId()),
+        createSpellProgressionGrant(createSpellLevelGrant(1, 2)),
+      ]),
+    };
+
+    const spellcasting = createSpellcastingProgression(1, {
+      1: createSpellLevelGrant(1, 2),
+      2: createSpellLevelGrant(2, 3),
+    });
+
+    const rule = createClassRule(
+      makeEntityId(),
+      "Full Test Class",
+      makeSourceId(),
+      "2024",
+      "core",
+      8,
+      ["STR"],
+      ["STR", "CON"],
+      [makeMinimalChoiceDefinition()],
+      levels,
+      [makeEntityId()],
+      [makeMinimalRenderNode()],
+      [makeMinimalPrerequisite()],
+      [makeMinimalEffect()],
+      [makeMinimalChoiceDefinition()],
+      [makeEntityId()],
+      false,
+      10,
+      "A complete test class.",
+      spellcasting,
+    );
+
+    expect(isClassRule(rule)).toBe(true);
+  });
+});
+
+/* ── Invalid input rejection tests ─────────────────────────────── */
+
+describe("invalid input rejection", () => {
+  describe("isLevelGrant rejects", () => {
+    it("null", () => {
+      expect(isLevelGrant(null)).toBe(false);
+    });
+
+    it("undefined", () => {
+      expect(isLevelGrant(undefined)).toBe(false);
+    });
+
+    it("string", () => {
+      expect(isLevelGrant("not an object")).toBe(false);
+    });
+
+    it("number", () => {
+      expect(isLevelGrant(42)).toBe(false);
+    });
+
+    it("array", () => {
+      expect(isLevelGrant([])).toBe(false);
+    });
+
+    it("plain object without type", () => {
+      expect(isLevelGrant({})).toBe(false);
+    });
+
+    it("unknown discriminant", () => {
+      expect(isLevelGrant({ type: "unknown-type" })).toBe(false);
+    });
+  });
+
+  describe("isSpellLevelGrant rejects", () => {
+    it("null", () => {
+      expect(isSpellLevelGrant(null)).toBe(false);
+    });
+
+    it("undefined", () => {
+      expect(isSpellLevelGrant(undefined)).toBe(false);
+    });
+
+    it("string", () => {
+      expect(isSpellLevelGrant("not an object")).toBe(false);
+    });
+
+    it("number", () => {
+      expect(isSpellLevelGrant(42)).toBe(false);
+    });
+
+    it("array", () => {
+      expect(isSpellLevelGrant([])).toBe(false);
+    });
+
+    it("missing spellLevel", () => {
+      expect(isSpellLevelGrant({ slots: 2 })).toBe(false);
+    });
+
+    it("missing slots", () => {
+      expect(isSpellLevelGrant({ spellLevel: 1 })).toBe(false);
+    });
+
+    it("wrong type for spellLevel", () => {
+      expect(isSpellLevelGrant({ spellLevel: "one", slots: 2 })).toBe(false);
+    });
+
+    it("wrong type for slots", () => {
+      expect(isSpellLevelGrant({ spellLevel: 1, slots: "two" })).toBe(false);
+    });
+  });
+
+  describe("isSpellcastingProgression rejects", () => {
+    it("null", () => {
+      expect(isSpellcastingProgression(null)).toBe(false);
+    });
+
+    it("undefined", () => {
+      expect(isSpellcastingProgression(undefined)).toBe(false);
+    });
+
+    it("string", () => {
+      expect(isSpellcastingProgression("not an object")).toBe(false);
+    });
+
+    it("number", () => {
+      expect(isSpellcastingProgression(42)).toBe(false);
+    });
+
+    it("array", () => {
+      expect(isSpellcastingProgression([])).toBe(false);
+    });
+
+    it("missing casterLevel", () => {
+      expect(isSpellcastingProgression({ spellLevels: {} })).toBe(false);
+    });
+
+    it("missing spellLevels", () => {
+      expect(isSpellcastingProgression({ casterLevel: 1 })).toBe(false);
+    });
+
+    it("wrong type for casterLevel", () => {
+      expect(isSpellcastingProgression({ casterLevel: "one", spellLevels: {} })).toBe(false);
+    });
+  });
+
+  describe("isLevelDefinition rejects", () => {
+    it("null", () => {
+      expect(isLevelDefinition(null)).toBe(false);
+    });
+
+    it("undefined", () => {
+      expect(isLevelDefinition(undefined)).toBe(false);
+    });
+
+    it("string", () => {
+      expect(isLevelDefinition("not an object")).toBe(false);
+    });
+
+    it("number", () => {
+      expect(isLevelDefinition(42)).toBe(false);
+    });
+
+    it("array", () => {
+      expect(isLevelDefinition([])).toBe(false);
+    });
+
+    it("missing level", () => {
+      expect(isLevelDefinition({ grants: [] })).toBe(false);
+    });
+
+    it("missing grants", () => {
+      expect(isLevelDefinition({ level: 1 })).toBe(false);
+    });
+
+    it("wrong type for level", () => {
+      expect(isLevelDefinition({ level: "one", grants: [] })).toBe(false);
+    });
+  });
+
+  describe("isClassRule rejects", () => {
+    it("null", () => {
+      expect(isClassRule(null)).toBe(false);
+    });
+
+    it("undefined", () => {
+      expect(isClassRule(undefined)).toBe(false);
+    });
+
+    it("string", () => {
+      expect(isClassRule("not an object")).toBe(false);
+    });
+
+    it("number", () => {
+      expect(isClassRule(42)).toBe(false);
+    });
+
+    it("array", () => {
+      expect(isClassRule([])).toBe(false);
+    });
+
+    it("missing id", () => {
+      expect(isClassRule({ kind: "class", name: "Test", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], hitDie: 8, primaryAbilities: ["STR" as const], savingThrowProficiencies: [], startingChoices: [], levels: {}, subclassIds: [] })).toBe(false);
+    });
+
+    it("missing name", () => {
+      expect(isClassRule({ id: makeEntityId(), kind: "class", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], hitDie: 8, primaryAbilities: ["STR" as const], savingThrowProficiencies: [], startingChoices: [], levels: {}, subclassIds: [] })).toBe(false);
+    });
+
+    it("missing levels", () => {
+      expect(isClassRule({ id: makeEntityId(), kind: "class", name: "Test", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], hitDie: 8, primaryAbilities: ["STR" as const], savingThrowProficiencies: [], startingChoices: [], subclassIds: [] })).toBe(false);
+    });
+
+    it("empty primaryAbilities", () => {
+      expect(isClassRule({ id: makeEntityId(), kind: "class", name: "Test", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], hitDie: 8, primaryAbilities: [], savingThrowProficiencies: [], startingChoices: [], levels: { 1: createLevelDefinition(1, [createFeatureGrant(makeEntityId())]) }, subclassIds: [] })).toBe(false);
+    });
+  });
+});

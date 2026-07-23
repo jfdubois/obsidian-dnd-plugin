@@ -455,3 +455,132 @@ describe("createSpellRule", () => {
     expect(rule.higherLevelEffects).not.toBe(higherLevel);
   });
 });
+
+/* ── Round-trip tests ──────────────────────────────────────────── */
+
+describe("round-trip", () => {
+  it("SpellRule round-trips with minimal fields", () => {
+    const rule = createSpellRule(
+      makeEntityId(),
+      "Firebolt",
+      makeSourceId(),
+      "2024",
+      "core",
+      "evocation",
+      0,
+      "1 action",
+      "120 feet",
+      "Instantaneous",
+      false,
+      false,
+      [makeMinimalRenderNode()],
+      [],
+      [],
+      [],
+      [],
+      false,
+    );
+    expect(isSpellRule(rule)).toBe(true);
+  });
+
+  it("SpellRule round-trips with full data", () => {
+    const rule = createSpellRule(
+      makeEntityId(),
+      "Fireball",
+      makeSourceId(),
+      "2024",
+      "core",
+      "evocation",
+      3,
+      "1 action",
+      "150 feet",
+      "Instantaneous",
+      false,
+      false,
+      [makeMinimalRenderNode()],
+      [makeMinimalPrerequisite()],
+      [makeMinimalEffect()],
+      [makeMinimalChoiceDefinition()],
+      [makeEntityId()],
+      false,
+      220,
+      "A bright streak flashes from your pointing finger.",
+      [makeMinimalRenderNode()],
+    );
+    expect(isSpellRule(rule)).toBe(true);
+  });
+
+  it("SpellRule round-trips with concentration and ritual", () => {
+    const rule = createSpellRule(
+      makeEntityId(),
+      "Detect Magic",
+      makeSourceId(),
+      "2024",
+      "core",
+      "divination",
+      1,
+      "1 action",
+      "Self",
+      "Concentration, up to 10 minutes",
+      true,
+      true,
+      [makeMinimalRenderNode()],
+      [],
+      [],
+      [],
+      [],
+      false,
+    );
+    expect(isSpellRule(rule)).toBe(true);
+  });
+});
+
+/* ── Invalid input rejection tests ─────────────────────────────── */
+
+describe("invalid input rejection", () => {
+  describe("isSpellRule rejects", () => {
+    it("null", () => {
+      expect(isSpellRule(null)).toBe(false);
+    });
+
+    it("undefined", () => {
+      expect(isSpellRule(undefined)).toBe(false);
+    });
+
+    it("string", () => {
+      expect(isSpellRule("not an object")).toBe(false);
+    });
+
+    it("number", () => {
+      expect(isSpellRule(42)).toBe(false);
+    });
+
+    it("array", () => {
+      expect(isSpellRule([])).toBe(false);
+    });
+
+    it("missing id", () => {
+      expect(isSpellRule({ kind: "spell", name: "Test", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], school: "evocation", level: 0, castingTime: "1 action", range: "Self", duration: "Instantaneous", concentration: false, ritual: false })).toBe(false);
+    });
+
+    it("missing school", () => {
+      expect(isSpellRule({ id: makeEntityId(), kind: "spell", name: "Test", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], level: 0, castingTime: "1 action", range: "Self", duration: "Instantaneous", concentration: false, ritual: false })).toBe(false);
+    });
+
+    it("missing level", () => {
+      expect(isSpellRule({ id: makeEntityId(), kind: "spell", name: "Test", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], school: "evocation", castingTime: "1 action", range: "Self", duration: "Instantaneous", concentration: false, ritual: false })).toBe(false);
+    });
+
+    it("missing castingTime", () => {
+      expect(isSpellRule({ id: makeEntityId(), kind: "spell", name: "Test", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], school: "evocation", level: 0, range: "Self", duration: "Instantaneous", concentration: false, ritual: false })).toBe(false);
+    });
+
+    it("missing concentration", () => {
+      expect(isSpellRule({ id: makeEntityId(), kind: "spell", name: "Test", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], school: "evocation", level: 0, castingTime: "1 action", range: "Self", duration: "Instantaneous", ritual: false })).toBe(false);
+    });
+
+    it("missing ritual", () => {
+      expect(isSpellRule({ id: makeEntityId(), kind: "spell", name: "Test", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], school: "evocation", level: 0, castingTime: "1 action", range: "Self", duration: "Instantaneous", concentration: false })).toBe(false);
+    });
+  });
+});

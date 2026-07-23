@@ -330,3 +330,84 @@ describe("createBackgroundRule", () => {
     expect(rule.skillProficiencies).not.toBe(skills);
   });
 });
+
+/* ── Round-trip tests ──────────────────────────────────────────── */
+
+describe("round-trip", () => {
+  it("BackgroundRule round-trips with minimal fields", () => {
+    const rule = createBackgroundRule(
+      makeEntityId(),
+      "Acolyte",
+      makeSourceId(),
+      "2024",
+      "core",
+      [],
+      [makeMinimalRenderNode()],
+      [],
+      [],
+      [],
+      [],
+      false,
+    );
+    expect(isBackgroundRule(rule)).toBe(true);
+  });
+
+  it("BackgroundRule round-trips with full data", () => {
+    const rule = createBackgroundRule(
+      makeEntityId(),
+      "Acolyte",
+      makeSourceId(),
+      "2024",
+      "core",
+      [makeEntityId()],
+      [makeMinimalRenderNode()],
+      [makeMinimalPrerequisite()],
+      [makeMinimalEffect()],
+      [makeMinimalChoiceDefinition()],
+      [makeEntityId()],
+      false,
+      12,
+      "You have spent your life in the service of a temple.",
+      makeEntityId(),
+    );
+    expect(isBackgroundRule(rule)).toBe(true);
+  });
+});
+
+/* ── Invalid input rejection tests ─────────────────────────────── */
+
+describe("invalid input rejection", () => {
+  describe("isBackgroundRule rejects", () => {
+    it("null", () => {
+      expect(isBackgroundRule(null)).toBe(false);
+    });
+
+    it("undefined", () => {
+      expect(isBackgroundRule(undefined)).toBe(false);
+    });
+
+    it("string", () => {
+      expect(isBackgroundRule("not an object")).toBe(false);
+    });
+
+    it("number", () => {
+      expect(isBackgroundRule(42)).toBe(false);
+    });
+
+    it("array", () => {
+      expect(isBackgroundRule([])).toBe(false);
+    });
+
+    it("missing id", () => {
+      expect(isBackgroundRule({ kind: "background", name: "Test", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], skillProficiencies: [] })).toBe(false);
+    });
+
+    it("missing name", () => {
+      expect(isBackgroundRule({ id: makeEntityId(), kind: "background", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], skillProficiencies: [] })).toBe(false);
+    });
+
+    it("missing skillProficiencies", () => {
+      expect(isBackgroundRule({ id: makeEntityId(), kind: "background", name: "Test", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [] })).toBe(false);
+    });
+  });
+});

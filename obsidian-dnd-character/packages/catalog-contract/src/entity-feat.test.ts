@@ -338,3 +338,79 @@ describe("createFeatRule", () => {
     expect(rule.dependencies).not.toBe(deps);
   });
 });
+
+/* ── Round-trip tests ──────────────────────────────────────────── */
+
+describe("round-trip", () => {
+  it("FeatRule round-trips with minimal fields", () => {
+    const rule = createFeatRule(
+      makeEntityId(),
+      "Tough",
+      makeSourceId(),
+      "2024",
+      "core",
+      [makeMinimalRenderNode()],
+      [],
+      [],
+      [],
+      [],
+      false,
+    );
+    expect(isFeatRule(rule)).toBe(true);
+  });
+
+  it("FeatRule round-trips with full data", () => {
+    const rule = createFeatRule(
+      makeEntityId(),
+      "Great Weapon Master",
+      makeSourceId(),
+      "2024",
+      "core",
+      [makeMinimalRenderNode()],
+      [makeMinimalPrerequisite()],
+      [makeMinimalEffect()],
+      [makeMinimalChoiceDefinition()],
+      [makeEntityId()],
+      false,
+      50,
+      "Deal extra damage at the cost of accuracy.",
+      "STR",
+      20,
+    );
+    expect(isFeatRule(rule)).toBe(true);
+  });
+});
+
+/* ── Invalid input rejection tests ─────────────────────────────── */
+
+describe("invalid input rejection", () => {
+  describe("isFeatRule rejects", () => {
+    it("null", () => {
+      expect(isFeatRule(null)).toBe(false);
+    });
+
+    it("undefined", () => {
+      expect(isFeatRule(undefined)).toBe(false);
+    });
+
+    it("string", () => {
+      expect(isFeatRule("not an object")).toBe(false);
+    });
+
+    it("number", () => {
+      expect(isFeatRule(42)).toBe(false);
+    });
+
+    it("array", () => {
+      expect(isFeatRule([])).toBe(false);
+    });
+
+    it("missing id", () => {
+      expect(isFeatRule({ kind: "feat", name: "Test", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [] })).toBe(false);
+    });
+
+    it("missing name", () => {
+      expect(isFeatRule({ id: makeEntityId(), kind: "feat", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [] })).toBe(false);
+    });
+  });
+});

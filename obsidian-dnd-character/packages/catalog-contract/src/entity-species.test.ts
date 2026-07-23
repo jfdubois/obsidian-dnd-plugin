@@ -523,3 +523,139 @@ describe("createSpeciesRule", () => {
     }
   });
 });
+
+/* ── Round-trip tests ──────────────────────────────────────────── */
+
+describe("round-trip", () => {
+  it("TraitDefinition round-trips", () => {
+    const trait = createTraitDefinition("Darkvision", [makeMinimalRenderNode()]);
+    expect(isTraitDefinition(trait)).toBe(true);
+  });
+
+  it("SpeciesRule round-trips with minimal fields", () => {
+    const rule = createSpeciesRule(
+      makeEntityId(),
+      "Human",
+      makeSourceId(),
+      "2024",
+      "core",
+      "Medium",
+      30,
+      false,
+      [],
+      [],
+      [makeMinimalRenderNode()],
+      [],
+      [],
+      [],
+      [],
+      false,
+    );
+    expect(isSpeciesRule(rule)).toBe(true);
+  });
+
+  it("SpeciesRule round-trips with full data", () => {
+    const rule = createSpeciesRule(
+      makeEntityId(),
+      "Elf",
+      makeSourceId(),
+      "2024",
+      "core",
+      "Medium",
+      30,
+      true,
+      [makeEntityId()],
+      [makeMinimalTraitDefinition()],
+      [makeMinimalRenderNode()],
+      [makeMinimalPrerequisite()],
+      [makeMinimalEffect()],
+      [makeMinimalChoiceDefinition()],
+      [makeEntityId()],
+      false,
+      10,
+      "Graceful and long-lived.",
+      60,
+    );
+    expect(isSpeciesRule(rule)).toBe(true);
+  });
+});
+
+/* ── Invalid input rejection tests ─────────────────────────────── */
+
+describe("invalid input rejection", () => {
+  describe("isTraitDefinition rejects", () => {
+    it("null", () => {
+      expect(isTraitDefinition(null)).toBe(false);
+    });
+
+    it("undefined", () => {
+      expect(isTraitDefinition(undefined)).toBe(false);
+    });
+
+    it("string", () => {
+      expect(isTraitDefinition("not an object")).toBe(false);
+    });
+
+    it("number", () => {
+      expect(isTraitDefinition(42)).toBe(false);
+    });
+
+    it("array", () => {
+      expect(isTraitDefinition([])).toBe(false);
+    });
+
+    it("missing name", () => {
+      expect(isTraitDefinition({ content: [] })).toBe(false);
+    });
+
+    it("missing content", () => {
+      expect(isTraitDefinition({ name: "Trait" })).toBe(false);
+    });
+
+    it("wrong type for name", () => {
+      expect(isTraitDefinition({ name: 123, content: [] })).toBe(false);
+    });
+  });
+
+  describe("isSpeciesRule rejects", () => {
+    it("null", () => {
+      expect(isSpeciesRule(null)).toBe(false);
+    });
+
+    it("undefined", () => {
+      expect(isSpeciesRule(undefined)).toBe(false);
+    });
+
+    it("string", () => {
+      expect(isSpeciesRule("not an object")).toBe(false);
+    });
+
+    it("number", () => {
+      expect(isSpeciesRule(42)).toBe(false);
+    });
+
+    it("array", () => {
+      expect(isSpeciesRule([])).toBe(false);
+    });
+
+    it("missing id", () => {
+      expect(isSpeciesRule({ kind: "species", name: "Test", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], size: "Medium", speed: 30, darkvision: false, languageIds: [], traitDefs: [] })).toBe(false);
+    });
+
+    it("missing name", () => {
+      expect(isSpeciesRule({ id: makeEntityId(), kind: "species", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], size: "Medium", speed: 30, darkvision: false, languageIds: [], traitDefs: [] })).toBe(false);
+    });
+
+    it("missing size", () => {
+      expect(isSpeciesRule({ id: makeEntityId(), kind: "species", name: "Test", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], speed: 30, darkvision: false, languageIds: [], traitDefs: [] })).toBe(false);
+    });
+
+    it("missing speed", () => {
+      expect(isSpeciesRule({ id: makeEntityId(), kind: "species", name: "Test", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], size: "Medium", darkvision: false, languageIds: [], traitDefs: [] })).toBe(false);
+    });
+
+    it("missing darkvision", () => {
+      expect(isSpeciesRule({ id: makeEntityId(), kind: "species", name: "Test", sourceId: makeSourceId(), ruleset: "2024" as const, access: "core" as const, legacy: false, content: [], prerequisites: [], effects: [], choices: [], dependencies: [], size: "Medium", speed: 30, languageIds: [], traitDefs: [] })).toBe(false);
+    });
+  });
+});
