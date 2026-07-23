@@ -1,0 +1,629 @@
+{
+  "manifest": {
+    "apiVersion": 1,
+    "schemaVersion": 1,
+    "catalogRevision": "test-001",
+    "sourceRevision": "5etools-2024-01-15",
+    "builderVersion": "0.1.0-test",
+    "generatedAt": "2025-01-15T12:00:00.000Z",
+    "rulesets": ["2024"],
+    "entityKinds": ["species", "background", "feat", "spell", "item", "class"],
+    "checksums": {
+      "species.json": "sha256:abc123",
+      "backgrounds.json": "sha256:def456",
+      "feats.json": "sha256:ghi789",
+      "spells.json": "sha256:jkl012",
+      "items.json": "sha256:mno345",
+      "classes.json": "sha256:pqr678"
+    }
+  },
+  "sources": [
+    {
+      "id": "source:2024:core:phb",
+      "name": "Player's Handbook",
+      "abbreviation": "PHB",
+      "ruleset": "2024",
+      "published": "2024-11-19",
+      "category": "core"
+    },
+    {
+      "id": "source:2024:corefree:unearthed",
+      "name": "Unearthed Arcana Compilation",
+      "abbreviation": "UA",
+      "ruleset": "2024",
+      "category": "other"
+    }
+  ],
+  "entities": {
+    "species": [
+      {
+        "id": "species:2024:core:elf",
+        "kind": "species",
+        "name": "Elf",
+        "sourceId": "source:2024:core:phb",
+        "ruleset": "2024",
+        "access": "core",
+        "page": 28,
+        "legacy": false,
+        "summary": "Graceful and long-lived inhabitants of magical forests.",
+        "content": [
+          {
+            "type": "paragraph",
+            "text": "Elves are a magical people of otherworldly grace, inhabiting forest glens and vast wooded wildernesses."
+          },
+          {
+            "type": "heading",
+            "level": 3,
+            "text": "Elvish Traits"
+          },
+          {
+            "type": "list",
+            "ordered": false,
+            "items": [
+              [
+                { "type": "paragraph", "text": "You have keen senses and an aptitude for magic." }
+              ]
+            ]
+          }
+        ],
+        "prerequisites": [],
+        "effects": [
+          {
+            "type": "add-ability",
+            "ability": "DEX",
+            "value": 2
+          },
+          {
+            "type": "add-sense",
+            "sense": {
+              "type": "darkvision",
+              "range": 60
+            }
+          },
+          {
+            "type": "add-language",
+            "languageId": "language:2024:core:common"
+          },
+          {
+            "type": "add-language",
+            "languageId": "language:2024:core:elvish"
+          },
+          {
+            "type": "add-proficiency",
+            "proficiency": {
+              "kind": "saving-throw",
+              "ability": "WIS"
+            }
+          },
+          {
+            "type": "add-immunity",
+            "damageType": "sleep"
+          }
+        ],
+        "choices": [
+          {
+            "id": "choice:species:2024:core:elf:subrace",
+            "label": "Choose an elf subrace",
+            "type": "entity",
+            "minimum": 1,
+            "maximum": 1,
+            "repeatable": false,
+            "optionQuery": {
+              "type": "entity",
+              "kind": "species"
+            },
+            "prerequisites": []
+          }
+        ],
+        "dependencies": [
+          "language:2024:core:common",
+          "language:2024:core:elvish"
+        ],
+        "size": "Medium",
+        "speed": 30,
+        "darkvision": true,
+        "darkvisionRange": 60,
+        "languageIds": [
+          "language:2024:core:common",
+          "language:2024:core:elvish"
+        ],
+        "traitDefs": [
+          {
+            "name": "Fey Ancestry",
+            "content": [
+              {
+                "type": "paragraph",
+                "text": "You have advantage on saving throws made against being charmed, and magic can't put you to sleep."
+              }
+            ]
+          },
+          {
+            "name": "Trance",
+            "content": [
+              {
+                "type": "paragraph",
+                "text": "Elves don't need sleep. Instead, they meditate deeply, remaining semiconscious, for 4 hours a day."
+              },
+              {
+                "type": "note",
+                "text": "During a trance, you can dream after a fashion; such dreams are actually mental exercises that have become reflexive through years of practice."
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "backgrounds": [
+      {
+        "id": "background:2024:core:soldier",
+        "kind": "background",
+        "name": "Soldier",
+        "sourceId": "source:2024:core:phb",
+        "ruleset": "2024",
+        "access": "core",
+        "page": 122,
+        "legacy": false,
+        "summary": "You spent years serving in an army of some kind.",
+        "content": [
+          {
+            "type": "paragraph",
+            "text": "War has been your life for as long as you care to remember."
+          },
+          {
+            "type": "heading",
+            "level": 3,
+            "text": "Military Rank"
+          },
+          {
+            "type": "table",
+            "columns": ["Rank", "Description"],
+            "rows": [
+              ["Private", "The lowest rank, a fresh recruit"],
+              ["Sergeant", "A non-commissioned officer"],
+              ["Captain", "Commands a company of soldiers"]
+            ]
+          }
+        ],
+        "prerequisites": [],
+        "effects": [
+          {
+            "type": "add-proficiency",
+            "proficiency": {
+              "kind": "tool",
+              "toolId": "tool:2024:core:gaming-set-dice"
+            }
+          },
+          {
+            "type": "add-proficiency",
+            "proficiency": {
+              "kind": "armor",
+              "category": "medium"
+            }
+          }
+        ],
+        "choices": [
+          {
+            "id": "choice:background:2024:core:soldier:skills",
+            "label": "Choose two skill proficiencies",
+            "type": "skill-proficiency",
+            "minimum": 2,
+            "maximum": 2,
+            "repeatable": false,
+            "optionQuery": {
+              "type": "proficiency",
+              "kind": "skill"
+            },
+            "prerequisites": []
+          }
+        ],
+        "dependencies": [
+          "tool:2024:core:gaming-set-dice"
+        ],
+        "skillProficiencies": [
+          "skill:2024:core:athletics",
+          "skill:2024:core:intimidation"
+        ],
+        "featureId": "class-feature:2024:core:soldier:military-rank"
+      }
+    ],
+    "feats": [
+      {
+        "id": "feat:2024:core:tough",
+        "kind": "feat",
+        "name": "Tough",
+        "sourceId": "source:2024:core:phb",
+        "ruleset": "2024",
+        "access": "core",
+        "page": 160,
+        "legacy": false,
+        "summary": "Your fortitude allows you to shrug off injury.",
+        "content": [
+          {
+            "type": "paragraph",
+            "text": "Your hit point maximum increases by an amount equal to three times your level whenever you gain a level."
+          },
+          {
+            "type": "dice",
+            "expression": "3d10",
+            "label": "Example hit points at level 3"
+          }
+        ],
+        "prerequisites": [
+          {
+            "type": "ability-score",
+            "ability": "CON",
+            "minimumValue": 13
+          }
+        ],
+        "effects": [
+          {
+            "type": "grant-feature",
+            "featureId": "class-feature:2024:core:tough:hit-point-increase"
+          }
+        ],
+        "choices": [],
+        "dependencies": [
+          "class-feature:2024:core:tough:hit-point-increase"
+        ],
+        "abilityScorePrerequisite": "CON",
+        "abilityMinScore": 13
+      }
+    ],
+    "spells": [
+      {
+        "id": "spell:2024:core:firebolt",
+        "kind": "spell",
+        "name": "Firebolt",
+        "sourceId": "source:2024:core:phb",
+        "ruleset": "2024",
+        "access": "core",
+        "page": 240,
+        "legacy": false,
+        "summary": "A mote of fire flies from your finger.",
+        "content": [
+          {
+            "type": "paragraph",
+            "text": "A bright streak flashes from your pointing finger to a target within range and then bursts into a small flame."
+          },
+          {
+            "type": "dice",
+            "expression": "1d10",
+            "label": "Fire damage at 1st level"
+          }
+        ],
+        "prerequisites": [],
+        "effects": [
+          {
+            "type": "grant-attack",
+            "attack": {
+              "name": "Firebolt",
+              "damage": {
+                "type": "simple",
+                "dice": {
+                  "count": 1,
+                  "sides": 10,
+                  "modifier": 0
+                },
+                "damageType": "fire"
+              },
+              "range": {
+                "type": "ranged",
+                "normal": 120,
+                "maximum": 120
+              },
+              "properties": []
+            }
+          }
+        ],
+        "choices": [],
+        "dependencies": [],
+        "school": "Evocation",
+        "level": 0,
+        "castingTime": "1 action",
+        "range": "120 feet",
+        "duration": "Instantaneous",
+        "concentration": false,
+        "ritual": false
+      },
+      {
+        "id": "spell:2024:core:fireball",
+        "kind": "spell",
+        "name": "Fireball",
+        "sourceId": "source:2024:core:phb",
+        "ruleset": "2024",
+        "access": "core",
+        "page": 241,
+        "legacy": false,
+        "summary": "A bright streak flashes from your pointing finger to a point you choose.",
+        "content": [
+          {
+            "type": "paragraph",
+            "text": "A bright streak flashes from your pointing finger to a point you choose within range and then blossoms with a low roar into an explosion of flame."
+          },
+          {
+            "type": "dice",
+            "expression": "8d6",
+            "label": "Fire damage"
+          }
+        ],
+        "prerequisites": [],
+        "effects": [
+          {
+            "type": "grant-attack",
+            "attack": {
+              "name": "Fireball",
+              "damage": {
+                "type": "simple",
+                "dice": {
+                  "count": 8,
+                  "sides": 6,
+                  "modifier": 0
+                },
+                "damageType": "fire"
+              },
+              "range": {
+                "type": "ranged",
+                "normal": 150,
+                "maximum": 150
+              },
+              "properties": []
+            }
+          }
+        ],
+        "choices": [],
+        "dependencies": [],
+        "school": "Evocation",
+        "level": 3,
+        "castingTime": "1 action",
+        "range": "150 feet",
+        "duration": "Instantaneous",
+        "concentration": false,
+        "ritual": false,
+        "higherLevelEffects": [
+          {
+            "type": "paragraph",
+            "text": "When you cast this spell using a spell slot of 4th level or higher, the damage increases by 1d6 for each slot level above 3rd."
+          }
+        ]
+      }
+    ],
+    "items": [
+      {
+        "id": "item:2024:core:longsword",
+        "kind": "item",
+        "name": "Longsword",
+        "sourceId": "source:2024:core:phb",
+        "ruleset": "2024",
+        "access": "core",
+        "page": 196,
+        "legacy": false,
+        "summary": "A common melee weapon with a long blade.",
+        "content": [
+          {
+            "type": "paragraph",
+            "text": "The longsword is a weapon with which you are proficient. You can use this weapon to make melee attacks."
+          }
+        ],
+        "prerequisites": [],
+        "effects": [
+          {
+            "type": "grant-attack",
+            "attack": {
+              "name": "Longsword",
+              "damage": {
+                "type": "simple",
+                "dice": {
+                  "count": 1,
+                  "sides": 8,
+                  "modifier": 0
+                },
+                "damageType": "slashing"
+              },
+              "range": {
+                "type": "melee",
+                "reach": 5
+              },
+              "properties": [
+                "versatile",
+                {
+                  "type": "custom",
+                  "name": "Versatile (1d10)"
+                }
+              ]
+            }
+          }
+        ],
+        "choices": [],
+        "dependencies": [],
+        "category": "weapon",
+        "rarity": "common",
+        "cost": {
+          "amount": 15,
+          "unit": "gp"
+        },
+        "weight": 3,
+        "properties": [
+          "versatile"
+        ],
+        "requiresAttunement": false
+      }
+    ],
+    "classes": [
+      {
+        "id": "class:2024:core:fighter",
+        "kind": "class",
+        "name": "Fighter",
+        "sourceId": "source:2024:core:phb",
+        "ruleset": "2024",
+        "access": "core",
+        "page": 52,
+        "legacy": false,
+        "summary": "A master of martial combat.",
+        "content": [
+          {
+            "type": "paragraph",
+            "text": "Whether trained from birth or self-taught through years of relentless combat, fighters understand how to put their physical prowess to use."
+          },
+          {
+            "type": "heading",
+            "level": 3,
+            "text": "Fighter Class Features"
+          },
+          {
+            "type": "list",
+            "ordered": true,
+            "items": [
+              [
+                { "type": "paragraph", "text": "Hit Points" }
+              ],
+              [
+                { "type": "paragraph", "text": "Proficiencies" }
+              ],
+              [
+                { "type": "paragraph", "text": "Second Wind" }
+              ]
+            ]
+          }
+        ],
+        "prerequisites": [],
+        "effects": [
+          {
+            "type": "add-proficiency",
+            "proficiency": {
+              "kind": "armor",
+              "category": "light"
+            }
+          },
+          {
+            "type": "add-proficiency",
+            "proficiency": {
+              "kind": "armor",
+              "category": "medium"
+            }
+          },
+          {
+            "type": "add-proficiency",
+            "proficiency": {
+              "kind": "armor",
+              "category": "heavy"
+            }
+          },
+          {
+            "type": "add-proficiency",
+            "proficiency": {
+              "kind": "armor",
+              "category": "shield"
+            }
+          },
+          {
+            "type": "grant-resource",
+            "resource": {
+              "name": "Second Wind",
+              "maximum": {
+                "type": "fixed",
+                "value": 1
+              },
+              "recovery": {
+                "type": "short-rest",
+                "amountRecovered": 1
+              }
+            }
+          },
+          {
+            "type": "grant-attack",
+            "attack": {
+              "name": "Second Wind",
+              "damage": {
+                "type": "simple",
+                "dice": {
+                  "count": 1,
+                  "sides": 10,
+                  "modifier": 0
+                },
+                "damageType": "healing"
+              },
+              "range": {
+                "type": "melee",
+                "reach": 0
+              },
+              "properties": []
+            }
+          }
+        ],
+        "choices": [
+          {
+            "id": "choice:class:2024:core:fighter:fighting-style",
+            "label": "Choose a fighting style",
+            "type": "feature",
+            "minimum": 1,
+            "maximum": 1,
+            "repeatable": false,
+            "optionQuery": {
+              "type": "entity",
+              "kind": "class-feature"
+            },
+            "prerequisites": []
+          }
+        ],
+        "dependencies": [
+          "class-feature:2024:core:fighter:second-wind",
+          "class-feature:2024:core:fighter:action-surrogate"
+        ],
+        "hitDie": 10,
+        "primaryAbilities": ["STR", "DEX"],
+        "savingThrowProficiencies": ["STR", "CON"],
+        "startingChoices": [
+          {
+            "id": "choice:class:2024:core:fighter:starting-equipment",
+            "label": "Choose starting equipment",
+            "type": "equipment",
+            "minimum": 1,
+            "maximum": 1,
+            "repeatable": false,
+            "optionQuery": {
+              "type": "equipment",
+              "category": "weapon"
+            },
+            "prerequisites": []
+          }
+        ],
+        "levels": {
+          "1": {
+            "level": 1,
+            "grants": [
+              {
+                "type": "feature",
+                "featureId": "class-feature:2024:core:fighter:1:second-wind"
+              },
+              {
+                "type": "choice",
+                "choiceDefinitionId": "choice:class:2024:core:fighter:fighting-style"
+              }
+            ]
+          },
+          "2": {
+            "level": 2,
+            "grants": [
+              {
+                "type": "feature",
+                "featureId": "class-feature:2024:core:fighter:2:action-surrogate"
+              },
+              {
+                "type": "resource-progression",
+                "resourceId": "resource:2024:core:fighter:second-wind",
+                "maximum": {
+                  "type": "fixed",
+                  "value": 2
+                }
+              }
+            ]
+          }
+        },
+        "subclassIds": [
+          "subclass:2024:core:fighter:champion",
+          "subclass:2024:core:fighter:battle-master"
+        ]
+      }
+    ]
+  }
+}
