@@ -115,7 +115,7 @@ Define stable project-owned schemas before importing source data.
 - [x] **P2-T010 — Implement class progression/grant schema**
 - [x] **P2-T011 — Implement species/background/feat/spell/item schemas**
 - [x] **P2-T012 — Add schema version constants**
-- [ ] **P2-T013 — Add round-trip and invalid-input tests**
+- [x] **P2-T013 — Add round-trip and invalid-input tests**
 
 For each task:
 
