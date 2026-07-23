@@ -16,6 +16,7 @@ Use this file to locate the minimum context required for a task.
 | Spell filtering | data contracts, catalog relations, source policy requirements, acceptance matrix |
 | UI/sidebar/mobile | product requirements, architecture, UI phase, acceptance matrix |
 | Completing any task | `AGENTS.md`, current task in roadmap, `docs/PROJECT_STATUS.md`, `prompts/QWEN_TASK_PROMPT.md` |
+| Executing a complete roadmap phase | `AGENTS.md`, `prompts/QWEN_TASK_PROMPT.md`, `docs/04_DEVELOPMENT_ROADMAP.md`, `docs/05_ENGINEERING_SOP.md`, `docs/PROJECT_STATUS.md`, plus the task-specific documents listed in this index |
 
 ## Reference files that must be pinned in the repository
 

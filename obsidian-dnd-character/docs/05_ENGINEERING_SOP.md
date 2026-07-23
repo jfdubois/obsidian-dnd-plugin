@@ -2,23 +2,46 @@
 
 ## 1. Branch Policy
 
-### Branch roles
-
-| Branch | Role | Protection requirement |
+### Branch roles 
+| Branch | Role | Automated agent access |
 |---|---|---|
-| `main` | Release branch. Contains only validated, gate-passed releases. | Required |
-| `dev` | Integration branch. All completed tasks integrate here first. | Required |
-| `P#-T###-<slug>` | Feature branch. One roadmap task per branch. | Not required |
+| `main` | Release branch containing explicitly approved releases. | No automatic commits, merges, or pushes. |
+| `dev` | Active integration and development branch. | Validated roadmap tasks and phase gates are committed and pushed directly. |
+| Optional task branch | Used only when the user explicitly requests an isolated or experimental branch. | Not created automatically. |
 
-### Branch rules
+### Branch rules 
 
-1. Never push directly to `main` or `dev`.
-2. Each roadmap task works on a branch named `P#-T###-<descriptive-slug>` (e.g. `P0-T003-pin-obsidian-refs`).
-3. A feature branch is created from `dev`.
-4. After acceptance criteria pass, merge the feature branch into `dev` with a squash merge.
-5. When a phase gate passes, merge `dev` into `main` with a merge commit.
-6. Delete the feature branch after merge.
-7. Keep `dev` green at all times. Do not merge incomplete work.
+1. Normal roadmap development occurs directly on `dev`. 
+2. Each completed roadmap task is one atomic commit on `dev`. 
+3. Push each completed task commit to `origin/dev` before starting the next task. 
+4. A phase gate is committed separately after every task in the phase is complete. 
+5. Keep `dev` green. Do not commit or push incomplete or failing work. 
+6. The working tree must be clean before beginning a phase. 
+7. The local `dev` branch must be synchronized with `origin/dev` before beginning a phase. 
+8. Do not automatically merge or push to `main`. 
+9. Movement from `dev` to `main` requires an explicit user instruction. 
+10. Do not create a task branch unless the user explicitly requests one. 
+
+### Standard task workflow 
+
+```bash 
+git fetch origin dev 
+git status --short 
+git branch --show-current 
+git rev-list --left-right --count origin/dev...dev
+```
+
+# Implement and validate one task. 
+
+```bash
+git diff --check 
+git diff --stat 
+git add -A 
+git diff --cached --check 
+git diff --cached --stat 
+git commit -m "chore(project): complete P2-T009" -m "P2-T009"
+git push origin dev
+```
 
 ### Example workflow
 
@@ -61,20 +84,30 @@ Use the component or package name: `builder`, `plugin`, `engine`, `domain`, `cat
 
 ### Rules
 
-1. One roadmap task per branch; multiple commits per branch are allowed.
-2. Imperative mood in the description (e.g. "implement", not "implemented").
-3. No period at the end of the subject line.
-4. Subject line max 72 characters.
-5. Include the task ID in the body when the commit is part of a roadmap task:
+1. One completed roadmap task per commit.
+2. Use the configured Git author identity. Do not use `--author`.
+3. Do not add an AI or agent as an author or co-author.
+4. Do not amend an existing task commit.
+5. The standard roadmap task message is:
 
-```
-feat(builder): implement _copy resolver
+   ```text
+   chore(project): complete <TASK-ID>
 
-P3-T006
-```
+   <TASK-ID>
+   ```
 
-6. Do not commit secrets, raw 5eTools source, or non-free catalog content.
-7. Do not commit generated plugin output (`main.js`, `.map` files).
+6. The standard phase-gate message is:
+  ```text
+  chore(project): complete phase <PHASE-NUMBER> gate
+
+  Phase <PHASE-NUMBER> gate
+  ```
+
+7. git add -A is allowed only after reviewing the unstaged file list and confirming that every change belongs to the active task or gate.
+8. Review the staged file list and staged diff before committing.
+9. Push the task commit to origin/dev before beginning another task.
+10. Do not commit secrets, raw 5eTools source, or non-free catalog content.
+11. Do not commit generated plugin output such as main.js or source-map files.
 
 ## 3. Objective
 
@@ -172,9 +205,16 @@ test(leveling): add source-policy eligibility fixture
 docs(project): complete P4-T004
 ```
 
-### Step 10 — Report and stop
+### Step 10 — Report or continue 
 
-Use the completion report defined in `AGENTS.md`. Do not start the next task automatically.
+In single-task mode, report and stop. 
+
+In phase-orchestrator mode: 
+
+1. commit and push the validated task; 
+2. reload the controlling documents; 
+3. select the next ready task in the same phase; 
+4. stop only after the phase gate passes or the phase becomes blocked.
 
 ## 5. Definition of Ready
 

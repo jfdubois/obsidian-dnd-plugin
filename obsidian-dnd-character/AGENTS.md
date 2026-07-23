@@ -4,17 +4,57 @@ These rules apply to every agent and every implementation task in this repositor
 
 ## 1. Work protocol
 
-1. Read `PROJECT_CONTEXT.md` and `CONTEXT_INDEX.md`.
-2. Read `docs/PROJECT_STATUS.md`.
-3. Select exactly one unchecked task from `docs/04_DEVELOPMENT_ROADMAP.md` unless the user explicitly assigns another task.
-4. Read only the documents listed for that task area in `CONTEXT_INDEX.md`.
-5. Inspect the existing implementation before changing files.
-6. State the task ID, scope, assumptions, and validation commands before editing.
-7. Implement only the selected task and its required supporting changes.
-8. Run all task-specific checks.
-9. Update the task checkbox and `docs/PROJECT_STATUS.md` only after acceptance criteria pass.
-10. Report changed files, commands run, test results, remaining risks, and the next task ID.
+Two execution modes are permitted.
+
+### 1.1 Single-task mode
+
+### 1.1 Single-task mode Single-task mode is the default when a user or agent assigns one roadmap task.
+
+Single-task mode is the default when a user or agent assigns one roadmap task.
+
+1. Read `PROJECT_CONTEXT.md` and `CONTEXT_INDEX.md`. 
+2. Read `docs/PROJECT_STATUS.md`. 
+3. Select exactly one unchecked task from `docs/04_DEVELOPMENT_ROADMAP.md` unless the user explicitly assigns another task. 
+4. Read only the documents listed for that task area in `CONTEXT_INDEX.md`. 
+5. Inspect the existing implementation before changing files. 
+6. State the task ID, scope, assumptions, and validation commands before editing. 
+7. Implement only the selected task and its required supporting changes. 
+8. Run all task-specific checks. 
+9. Update the task checkbox and `docs/PROJECT_STATUS.md` only after acceptance criteria pass. 
+10. Report changed files, commands run, test results, remaining risks, and the next task ID. 
 11. Stop. Do not automatically begin the next task.
+
+### 1.2 Phase-orchestrator mode
+
+Phase-orchestrator mode is permitted only when the user explicitly invokes the phase workflow defined in `prompts/QWEN_TASK_PROMPT.md`.
+
+In phase-orchestrator mode:
+
+In phase-orchestrator mode: 
+
+1. Select exactly one roadmap phase. 
+2. Execute its incomplete tasks sequentially. 
+3. Delegate each task to a new, disposable subagent session. 
+4. Each task subagent must obey the single-task protocol and stop after its assigned task.
+5. A task subagent must not:
+  - select another task;
+  - update the roadmap;
+  - update `docs/PROJECT_STATUS.md`; 
+  - create a Git commit; 
+  - push changes; 
+  - change branches; 
+  - invoke another subagent.
+6. The phase orchestrator must independently review and validate the task changes.
+7. Only the phase orchestrator may: 
+  - mark the task complete;
+  - update project status;
+  - commit the completed task;
+  - push the task commit to `dev`.
+8. After a successful task commit and push, the phase orchestrator must reload the controlling repository documents before selecting the next task.
+9. After all phase tasks pass, validate and complete the phase gate.
+10. Stop after the phase gate. Do not begin the next phase.
+11. If any task or gate is blocked, stop the phase without inventing a solution or discarding uncommitted work.
+
 
 ## 2. No invented APIs
 

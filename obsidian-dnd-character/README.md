@@ -18,20 +18,28 @@ This pack is the controlling documentation for developing the project with a loc
 12. `docs/PROJECT_STATUS.md`
 13. `prompts/QWEN_TASK_PROMPT.md`
 
-## Branch and commit policy
+## Branch and commit policy 
 
-See `docs/05_ENGINEERING_SOP.md` sections 1 and 2 for the complete policy.
+See `docs/05_ENGINEERING_SOP.md` sections 1 and 2 for the complete policy. 
 
-| Branch | Role |
-|---|---|
-| `main` | Release branch (validated releases only) |
-| `dev` | Integration branch (all completed tasks) |
-| `P#-T###-<slug>` | Feature branch (one task per branch) |
+| Branch | Role | 
+|---|---| 
+| `main` | Release branch; changed only after explicit user approval. | 
+| `dev` | Active integration branch; validated task commits are pushed directly. | 
+| Optional task branch | Created only when explicitly requested. | 
 
-- No direct pushes to `main` or `dev`.
-- Squash-merge feature branches into `dev`.
-- Merge `dev` into `main` when a phase gate passes.
-- Conventional Commits with scope qualifier: `feat(builder): implement _copy resolver`
+- Normal development occurs directly on `dev`. 
+- One validated roadmap task is committed at a time. 
+- Each task commit is pushed before the next task begins. 
+- A phase gate receives a separate commit. 
+- Automated agents do not merge or push to `main`. 
+- Standard task commit: 
+
+  ```text
+  chore(project): complete <TASK-ID> 
+  
+  <TASK-ID>
+  ```
 
 ## Controlling rules
 
