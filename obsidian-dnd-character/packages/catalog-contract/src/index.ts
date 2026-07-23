@@ -296,3 +296,54 @@ export {
   createLevelDefinition,
   createClassRule,
 } from "./class-progression";
+
+export {
+  /* Species types */
+  type TraitDefinition,
+  type SpeciesRule,
+  /* Species validators */
+  isTraitDefinition,
+  isSpeciesRule,
+  /* Species factories */
+  createTraitDefinition,
+  createSpeciesRule,
+} from "./entity-species";
+
+export {
+  /* Background types */
+  type BackgroundRule,
+  /* Background validator */
+  isBackgroundRule,
+  /* Background factory */
+  createBackgroundRule,
+} from "./entity-background";
+
+export {
+  /* Feat types */
+  type FeatRule,
+  /* Feat validator */
+  isFeatRule,
+  /* Feat factory */
+  createFeatRule,
+} from "./entity-feat";
+
+export {
+  /* Spell types */
+  type SpellRule,
+  /* Spell validator */
+  isSpellRule,
+  /* Spell factory */
+  createSpellRule,
+} from "./entity-spell";
+
+export {
+  /* Item types */
+  type ItemCost,
+  type ItemRule,
+  /* Item validators */
+  isItemCost,
+  isItemRule,
+  /* Item factories */
+  createItemCost,
+  createItemRule,
+} from "./entity-item";

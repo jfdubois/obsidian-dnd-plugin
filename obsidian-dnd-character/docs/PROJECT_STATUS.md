@@ -6,7 +6,7 @@ Phase 2 — Domain and normalized catalog contracts
 
 ## Last completed task
 
-P2-T010 — Implement class progression/grant schema
+P2-T011 — Implement species/background/feat/spell/item schemas
 
 ## Blockers
 
@@ -34,6 +34,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-23 — P2-T011 — complete
+Summary: Implemented SpeciesRule (size, speed, darkvision, darkvisionRange, languageIds, traitDefs), BackgroundRule (skillProficiencies, featureId), FeatRule (abilityScorePrerequisite, abilityMinScore), SpellRule (school, level, castingTime, range, duration, concentration, ritual, higherLevelEffects), and ItemRule (category, rarity, cost, weight, bodySlot, properties, requiresAttunement). All extend RuleEntity base fields. Supporting types: TraitDefinition, ItemCost. Each has validator accepting unknown, factory function, and tests. 188 new tests (49+29+29+34+47). Total test count: 879.
+Validation: `npm run check` passes (typecheck + lint + 879/879 tests, EXIT 0). `npm run build` passes (EXIT 0).
+Commit: see Git history for P2-T011.
+Notes: SpeciesRule uses TraitDefinition for species-specific traits not fully normalized into RuleEffect. ItemRule imports EquipmentCategory, EquipmentRarity, EquipmentBodySlot from query module.
 
 2026-07-23 — P2-T010 — complete
 Summary: Implemented ClassRule, LevelDefinition, LevelGrant discriminated union (6 variants: feature, choice, subclass-choice, ability-score-improvement, spell-progression, resource-progression), SpellLevelGrant, SpellcastingProgression, and SlotsPerRest. All validators accept unknown, enforce non-negative integers, valid branded IDs, and nested array validation. Factories create immutable copies of arrays. 89 new tests covering positive fixtures for all variants, negative input for every field, type boundaries, factory immutability, and round-trips. Total test count: 686.
