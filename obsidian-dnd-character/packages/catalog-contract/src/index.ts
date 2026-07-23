@@ -62,6 +62,20 @@ export {
 } from "./prerequisite";
 
 export {
+  /* Choice-definition types */
+  type ChoiceDefinition,
+  type ChoiceDefinitionType,
+  /* Choice-definition constants */
+  CHOICE_DEFINITION_TYPES,
+  /* Choice-definition guard */
+  isChoiceDefinitionType,
+  /* Choice-definition validator */
+  isChoiceDefinition,
+  /* Choice-definition factory */
+  createChoiceDefinition,
+} from "./choice-definition";
+
+export {
   /* Query types */
   type CatalogQuery,
   type EntityQuery,
