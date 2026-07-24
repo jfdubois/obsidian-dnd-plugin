@@ -162,7 +162,7 @@ Read and resolve raw source generically without generating final entities yet.
   - Prevent raw fields from crossing into normalized catalog contracts.
   - Record unclaimed structured fields instead of silently discarding them.
 
-- [ ] **P3-T005 — Implement canonical reference parser**
+- [x] **P3-T005 — Implement canonical reference parser**
   - Parse pipe-delimited entity references into structured keys.
 
 - [ ] **P3-T006 — Implement _copy resolver**

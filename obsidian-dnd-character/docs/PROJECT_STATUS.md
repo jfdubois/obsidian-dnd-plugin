@@ -6,7 +6,7 @@ Phase 3 — Catalog builder ingestion foundation (IN PROGRESS)
 
 ## Last completed task
 
-P3-T004 — Implement raw boundary validation
+P3-T005 — Implement canonical reference parser
 
 ## Blockers
 
@@ -34,6 +34,11 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-24 — P3-T005 — complete
+Summary: Implemented canonical reference parser for catalog-builder. Added CanonicalReference, StructuredReference, SubclassFeatureReference, and ParsedReference discriminated union types. Four parsing functions: parseCanonicalReference (pipe-delimited), parseSubclassFeatureRef (nested pipes), parseInlineReference ({@tag ...}), parseStructuredReference ({name, source}). Universal parseReference auto-detects format. Type guards, factory, and extract helpers. 57 tests covering all parsers, guards, extractors, error cases, and real 5eTools patterns.
+Validation: `npm run check` passes (typecheck + lint + 1379/1379 tests, EXIT 0). `npm run build` passes (EXIT 0).
+Commit: see Git history for P3-T005.
 
 2026-07-24 — P3-T004 — complete
 Summary: Implemented raw boundary validation for catalog-builder. Added raw envelope validators for file and record structures, unknown-accepting validators before field access, builder-only resolved data types, unclaimed field recording, and raw-to-normalized boundary guards. 952 tests covering positive validation, negative rejection, boundary enforcement, and diagnostic reporting.
