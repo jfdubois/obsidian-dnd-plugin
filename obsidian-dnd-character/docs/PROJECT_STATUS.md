@@ -6,7 +6,7 @@ Phase 3 — Catalog builder ingestion foundation (IN PROGRESS)
 
 ## Last completed task
 
-P3-T003 — Implement raw JSON loader
+P3-T004 — Implement raw boundary validation
 
 ## Blockers
 
@@ -34,6 +34,11 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-24 — P3-T004 — complete
+Summary: Implemented raw boundary validation for catalog-builder. Added raw envelope validators for file and record structures, unknown-accepting validators before field access, builder-only resolved data types, unclaimed field recording, and raw-to-normalized boundary guards. 952 tests covering positive validation, negative rejection, boundary enforcement, and diagnostic reporting.
+Validation: `npm run check` passes (typecheck + lint + 1379/1379 tests, EXIT 0). `npm run build` passes (EXIT 0).
+Commit: see Git history for P3-T004.
 
 2026-07-23 — P3-T003 — complete
 Summary: Implemented raw JSON loader for catalog-builder. Added RawLoaderDiagnostic type (code, severity, message, path), RawLoadSummary (totalFound, successfullyParsed, parseFailures, readFailures), RawLoadResult (files as Record<string, unknown>, diagnostics, summary), RawLoaderError with typed codes (DATA_DIR_NOT_FOUND, DATA_DIR_NOT_DIRECTORY, READ_PERMISSION_DENIED, JSON_PARSE_ERROR, UNEXPECTED_STRUCTURE), and loadRawJsonFiles service. Service recursively discovers all .json files under data/, reads each file with per-file error handling, parses JSON capturing line/column info on parse errors, and returns structured result with file inventory and diagnostics. One file failure does not prevent loading others. 40 tests covering real 5eTools clone positive tests, missing directory, invalid JSON, permission issues, nested directories, edge cases, and result structure validation.
