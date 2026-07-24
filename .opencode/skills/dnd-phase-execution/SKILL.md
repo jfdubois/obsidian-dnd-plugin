@@ -1,6 +1,6 @@
 ---
 name: dnd-phase-execution
-description: Execute exactly one Obsidian D&D roadmap phase with disposable task workers, bounded large-file edits, independent validation, atomic task commits, pushes to dev, rehydration between tasks, and a separate phase-gate commit.
+description: Execute exactly one Obsidian D&D roadmap phase with immediate delegation to disposable task workers, bounded parent context, independent validation, atomic task commits, pushes to dev, rehydration between tasks, and a separate phase-gate commit.
 compatibility: opencode
 metadata:
   project: obsidian-dnd-character
@@ -19,13 +19,9 @@ OpenCode runs from the Git worktree root:
 /home/jdubois/Documents/Projects/obsidian-dnd-plugin
 ```
 
-The active project is:
+The active project is `obsidian-dnd-character/`.
 
-```text
-obsidian-dnd-character/
-```
-
-Git commands run from the current worktree root. Project npm commands use:
+Run Git commands from the worktree root. Run project scripts with:
 
 ```bash
 npm --prefix obsidian-dnd-character run <script>
@@ -50,21 +46,13 @@ Use this order when instructions conflict:
 11. this skill
 12. existing code and tests
 
-Do not guess through a conflict. Stop and identify it.
+Do not preload these files merely because they appear in the authority list. Read a lower-level authority only when the active task requires it or a conflict must be resolved.
 
 ## 3. Durable state
 
 Conversation history and compaction summaries are not authoritative.
 
-Authoritative continuation state is:
-
-- repository control documents;
-- active roadmap checkbox and gate;
-- source and tests;
-- Git commits, branch, working tree, and remote synchronization;
-- current uncommitted diff.
-
-Maintain this compact ledger in parent reasoning:
+Maintain only this parent ledger:
 
 ```text
 Phase:
@@ -76,26 +64,56 @@ Gate status:
 Blocking issue:
 ```
 
-After compaction, do not mutate files until the ledger has been reconstructed from Git and repository files.
+After compaction, do not mutate files until the ledger is reconstructed from bounded control-document sections and Git state.
 
-## 4. Initial context budget
+## 4. Delegation-first context budget
 
-At phase start, read only:
+The parent orchestrator coordinates. The worker investigates and implements.
 
-- `obsidian-dnd-character/AGENTS.md`;
-- `obsidian-dnd-character/PROJECT_CONTEXT.md`;
-- `obsidian-dnd-character/CONTEXT_INDEX.md`;
-- the selected phase section and gate in the roadmap;
-- the current-state portion of `docs/PROJECT_STATUS.md`;
-- relevant SOP sections for branch, task lifecycle, validation, and large files.
+Before the first worker, the parent may load only:
 
-Do not load complete historical status logs, complete reference fixtures, or all task-specific documents.
+1. `obsidian-dnd-character/AGENTS.md`;
+2. `obsidian-dnd-character/CONTEXT_INDEX.md`;
+3. the selected phase section and gate from the roadmap;
+4. the current-state header of `docs/PROJECT_STATUS.md`.
 
-For each task, use `CONTEXT_INDEX.md` to load only relevant sections and implementation files.
+Use bounded reads. Never open the complete roadmap, complete status history, or complete SOP.
+
+For an exact phase number, extract only that phase. Example for Phase 3:
+
+```bash
+awk '
+  /^# Phase 3 / {printing=1}
+  printing && /^# Phase / && !/^# Phase 3 / {exit}
+  printing {print}
+' obsidian-dnd-character/docs/04_DEVELOPMENT_ROADMAP.md
+```
+
+Read only the status header needed to identify current phase, last task, blockers, and validation baseline, normally:
+
+```bash
+sed -n '1,100p' obsidian-dnd-character/docs/PROJECT_STATUS.md
+```
+
+Do not read `PROJECT_CONTEXT.md`, the SOP, architecture, contracts, source files, tests, raw 5eTools data, or reference fixtures before delegation unless a concrete conflict prevents task selection.
+
+After preflight, use at most four repository read/search operations before invoking the first worker. Do not compensate with broad Bash searches.
+
+Before the first worker, prohibited parent targets are:
+
+```text
+obsidian-dnd-character/apps/
+obsidian-dnd-character/packages/
+obsidian-dnd-character/external/
+external/
+obsidian-dnd-character/references/
+```
+
+The worker owns implementation discovery.
 
 ## 5. Preflight
 
-Run:
+Run one grouped preflight command:
 
 ```bash
 pwd
@@ -121,11 +139,9 @@ Require:
 - required control documents and selected phase exist;
 - phase tasks and gate are explicit.
 
-Do not change Git identity.
+Do not change Git identity. If a requirement fails, stop before delegation.
 
-If any requirement fails, stop before delegation.
-
-At phase start report:
+Report once:
 
 ```text
 Phase:
@@ -137,50 +153,51 @@ Remaining tasks:
 Phase gate:
 ```
 
+Do not repeat this information before delegation.
+
 ## 6. Phase and task selection
 
 Use the phase explicitly assigned by the user. If the assignment is `AUTO`, select the first phase with an incomplete task or gate after confirming all previous gates are complete.
 
-Inside the phase:
+Inside the bounded phase section:
 
 1. preserve completed tasks;
 2. select the first incomplete task in roadmap order;
 3. confirm earlier tasks and explicit dependencies are complete;
-4. identify task acceptance criteria and applicable shared phase criteria;
-5. inspect only enough current implementation to prepare a precise worker capsule.
+4. copy only the task's written requirements and applicable shared phase criteria;
+5. identify task-area documents from `CONTEXT_INDEX.md` without opening them in the parent.
+
+Do not inspect implementation, tests, fixtures, raw source, or reference data before the worker.
 
 If no incomplete task is ready, stop as blocked.
 
-## 7. Worker capsule
+## 7. Minimal worker capsule
 
-Before delegation, prepare:
+Prepare only:
 
 ```text
 Project root:
-Phase:
-Task ID:
-Task title:
+Phase and task:
 Dependencies confirmed:
-Exact task requirements:
-Shared phase requirements:
-Acceptance criteria:
-Required documents:
-Relevant implementation files:
-Relevant tests:
-Expected files to change:
-Existing files over 300 lines:
-Required bounded-edit method:
-Prohibited replacement targets:
+Exact roadmap requirements:
+Applicable phase acceptance criteria:
+Task-area documents from CONTEXT_INDEX.md:
 Required validation:
 Explicit exclusions:
-Known risks:
+Worker discovery requirement:
 ```
 
-Do not paste complete control documents into the capsule.
+Set `Worker discovery requirement` to:
 
-For every expected existing file over 300 lines, identify known symbols, exports, fixtures, describe blocks, or logical sections. List the file under prohibited replacement targets.
+```text
+Discover relevant implementation files, tests, raw-source examples, line counts,
+symbols, bounded ranges, expected changes, and risks before editing. The parent
+has intentionally not pre-read them.
+```
 
-Before delegation report:
+Do not predict new filenames, public APIs, implementation structure, or expected changed files. Do not list large files unless their relevance is explicitly stated in the roadmap or current status.
+
+Report once:
 
 ```text
 Starting task: <ID and title>
@@ -188,21 +205,25 @@ Dependencies: complete
 Worker: new disposable dnd-task-worker
 ```
 
-Invoke a fresh `dnd-task-worker`. Never resume or reuse a prior task worker.
+Invoke a fresh `dnd-task-worker` immediately. Never resume or reuse a prior task worker.
 
 ## 8. Parent review
 
 The worker must leave changes uncommitted and unstaged.
 
-Run:
+Start with compact review metadata:
 
 ```bash
 git status --short
 git diff --check
 git diff --stat
+git diff --numstat
 git diff --name-only
-git diff
 ```
+
+Do not immediately load one complete repository diff.
+
+Review each changed file separately. Use bounded diffs or symbol/range reads. A full `git diff` is allowed only when the total change is small enough to inspect without threatening parent context.
 
 Confirm:
 
@@ -210,7 +231,7 @@ Confirm:
 - roadmap and project status were not changed by the worker;
 - no commit, generated output, secret, unrelated dependency update, or future-task implementation exists;
 - dependency direction and runtime validation rules are preserved;
-- no undocumented Obsidian API, raw-source leakage, protected `any`, entity-name branch, persisted derived value, silent replacement, or unsupported narrative inference was added;
+- no undocumented Obsidian API, raw-source leakage, protected `any`, entity-name branch, persisted derived value, silent replacement, or narrative inference was added;
 - positive and negative tests exist where required.
 
 For every changed existing file over 300 lines, confirm:
@@ -219,9 +240,9 @@ For every changed existing file over 300 lines, confirm:
 - the diff is localized;
 - unrelated sections remain untouched;
 - the file was not deleted/recreated or transported as a complete replacement;
-- focused validation was run after logical slices.
+- focused validation followed logical slices.
 
-A mutation exceeding 200 changed lines or 25 percent of an existing file over 300 lines triggers mandatory review before further work. Reject formatting churn, delete/re-add patterns, or broad rewrites.
+A mutation exceeding 200 changed lines or 25 percent of an existing file over 300 lines triggers mandatory review before further work. Reject formatting churn, delete/re-add patterns, and broad rewrites.
 
 ## 9. Repairs
 
@@ -231,7 +252,7 @@ For a correctable defect, invoke a fresh `dnd-task-worker` with only:
 - changed files;
 - failed command or review finding;
 - shortest useful error excerpt;
-- exact required correction;
+- exact correction;
 - files and behavior that must remain unchanged.
 
 Maximum attempts per task:
@@ -239,13 +260,11 @@ Maximum attempts per task:
 - one original worker;
 - two fresh repair workers.
 
-A worker stopped before any accepted repository mutation does not consume a repair attempt.
-
 After two unsuccessful repairs, stop as blocked or partial. Never loop indefinitely.
 
 ## 10. Independent validation
 
-Run task-specific tests, then:
+Run focused task checks, then:
 
 ```bash
 npm --prefix obsidian-dnd-character run check
@@ -254,13 +273,7 @@ npm --prefix obsidian-dnd-character run build
 
 Do not invent scripts, suppress failures, or rely only on worker-reported results.
 
-A task is complete only when:
-
-- focused checks pass;
-- check passes;
-- build passes;
-- every acceptance criterion passes;
-- parent review passes.
+A task is complete only when focused checks, check, build, acceptance criteria, and parent review all pass.
 
 ## 11. Task documentation
 
@@ -285,17 +298,23 @@ Before staging:
 git status --short
 git diff --check
 git diff --stat
+git diff --numstat
 git diff --name-only
 ```
 
-Then:
+Stage only after confirming every change belongs to the task:
 
 ```bash
 git add -A
 git diff --cached --check
 git diff --cached --stat
+git diff --cached --numstat
 git diff --cached --name-only
-git diff --cached
+```
+
+Review staged files separately when the staged diff is large. Then:
+
+```bash
 git commit -m "chore(project): complete <TASK-ID>" -m "<TASK-ID>"
 git push origin dev
 ```
@@ -312,59 +331,50 @@ git rev-list --left-right --count origin/dev...dev
 
 Require the configured author, a clean tree, and synchronized `dev`.
 
-After push report:
-
-```text
-Completed task: <ID and title>
-Commit: <hash>
-Validation: PASS
-Push: PASS
-Remaining phase tasks: <count>
-```
-
 If commit or push fails, stop without starting another task.
 
 ## 13. Rehydration between tasks
 
-After each successful task push, discard detailed worker context and retain only the compact ledger.
+After each successful task push, retain only the ledger.
 
-Re-read:
+Re-read only:
 
-- `obsidian-dnd-character/AGENTS.md`;
-- selected phase section and gate;
-- current-state portion of project status;
+- the bounded selected-phase roadmap section;
+- the current-status header;
 - Git log, status, and synchronization.
 
-Do not re-read this skill or every control document unless an instruction source changed or a conflict must be resolved. Select the next task from durable state, not memory.
+Do not re-read AGENTS, CONTEXT_INDEX, this skill, SOP, project context, source, or tests unless an instruction source changed or a conflict must be resolved.
+
+Select the next task and delegate immediately using the same minimal capsule.
 
 ## 14. Phase gate
 
 When all phase tasks are complete:
 
-1. re-read exact gate criteria;
+1. re-read the bounded gate criteria;
 2. confirm one commit per task;
 3. require a clean tree;
-4. compare current state with the phase starting commit;
+4. compare current state with the phase starting commit using compact stats first;
 5. run gate-specific validation;
 6. run project check and build;
-7. inspect complete phase change for architecture drift;
+7. inspect changed areas for architecture drift using targeted diffs;
 8. verify each gate criterion explicitly.
 
-If the gate explicitly requires a small missing fixture, test, or report, delegate one fresh gate-specific worker and review it like a task. If the gate requires substantial unplanned functionality, stop and identify the missing roadmap task.
+If the gate explicitly requires a small missing fixture, test, or report, delegate one fresh gate-specific worker. If it requires substantial unplanned functionality, stop and identify the missing roadmap task.
 
 Only after the gate passes:
 
 - mark gate criteria complete;
 - update project status with gate results, validation, limitations, next phase, and `Commit: see Git history for Phase <N> gate.`;
 - stage and review;
-- commit with:
+- commit and push:
 
 ```bash
 git commit -m "chore(project): complete phase <N> gate" -m "Phase <N> gate"
 git push origin dev
 ```
 
-Verify author, clean tree, and synchronization. Do not start the next phase or touch `main`.
+Do not start the next phase or touch `main`.
 
 ## 15. Blocking conditions
 
@@ -412,7 +422,7 @@ Starting commit: <hash>
 Ending commit: <hash>
 
 Task commits:
-- <task ID>: <commit hash> — <title>
+- <task ID>: <commit hash> - <title>
 
 Gate commit:
 - <commit hash or none>
