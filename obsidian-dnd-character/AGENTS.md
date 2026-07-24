@@ -269,3 +269,16 @@ A whole-file replacement may occur only when all of the following are true:
   4. the replacement can be validated against an authoritative generator or source.
 
 If these conditions are not met, the agent must use bounded edits, add focused modules, or stop as blocked.
+
+## 15. Context-efficient execution protocol
+
+1. Read only the selected roadmap phase, active task, and phase gate unless broader roadmap context is explicitly required.
+2. Use `CONTEXT_INDEX.md` to select bounded architecture, contract, SOP, and acceptance sections.
+3. Treat `docs/PROJECT_STATUS.md` as compact current state and `docs/PROJECT_HISTORY.md` as historical reference.
+4. Do not load historical work logs during normal task execution.
+5. In phase-orchestrator mode, reread the complete phase prompt only at phase start or after context compaction.
+6. After each successful task push, retain only the compact phase ledger, task commit, validation result, unresolved risks, next task, and gate status.
+7. Review large diffs file-by-file and hunk-by-hunk. An unrestricted full diff is not required when bounded review can verify the task.
+8. Retain only compact PASS summaries for successful commands and the shortest causal excerpt for failures.
+9. For an 81,920-token model context, preserve at least 20 percent for review, repair, validation, documentation, and final reporting.
+10. Compact closed task context before the remaining reserve becomes insufficient; reconstruct authoritative state from repository files and Git afterward.

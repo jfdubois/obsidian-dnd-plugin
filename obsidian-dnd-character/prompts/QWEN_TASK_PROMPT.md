@@ -136,29 +136,45 @@ Conversation history is not authoritative project state.
 Durable project state consists of:
 
 * controlling repository documents;
-* roadmap checkboxes;
 * current source and tests;
+* roadmap checkboxes;
+* project status;
 * Git commits;
 * current branch and working tree;
 * remote synchronization state.
 
-At the beginning of the run and after every successful task push, re-read:
+### Full hydration
 
-```text
-obsidian-dnd-character/prompts/QWEN_TASK_PROMPT.md
-obsidian-dnd-character/AGENTS.md
-obsidian-dnd-character/PROJECT_CONTEXT.md
-obsidian-dnd-character/CONTEXT_INDEX.md
-obsidian-dnd-character/docs/04_DEVELOPMENT_ROADMAP.md
-obsidian-dnd-character/docs/05_ENGINEERING_SOP.md
-obsidian-dnd-character/docs/PROJECT_STATUS.md
-```
+At phase start, after context compaction, or when a controlling document changed, read:
 
-Also read the minimum task-specific documents identified in:
+* `obsidian-dnd-character/AGENTS.md`;
+* `obsidian-dnd-character/PROJECT_CONTEXT.md`;
+* `obsidian-dnd-character/CONTEXT_INDEX.md`;
+* the selected phase section and gate from `obsidian-dnd-character/docs/04_DEVELOPMENT_ROADMAP.md`;
+* the applicable SOP sections from `obsidian-dnd-character/docs/05_ENGINEERING_SOP.md`;
+* the current-state sections of `obsidian-dnd-character/docs/PROJECT_STATUS.md`;
+* the task-specific documents identified by `CONTEXT_INDEX.md`.
 
-```text
-obsidian-dnd-character/CONTEXT_INDEX.md
-```
+Read `prompts/QWEN_TASK_PROMPT.md` at phase start or after context compaction. Do not reread it after every successful task.
+
+### Between-task rehydration
+
+After every successful task push, read only:
+
+* the compact current-state section of `docs/PROJECT_STATUS.md`;
+* the selected phase section and gate from the roadmap;
+* the next task's task-specific documents;
+* the latest Git log entry and clean-tree/synchronization state.
+
+Reread `AGENTS.md`, `PROJECT_CONTEXT.md`, or the SOP only when:
+
+* one of those files changed;
+* the next task enters a different task area;
+* an instruction conflict occurs;
+* context compaction occurred;
+* the agent cannot state the applicable guardrail with confidence.
+
+Never load the complete roadmap when a bounded read of the selected phase and its gate is sufficient.
 
 If context compaction or DCP pruning occurs, reconstruct the current state from the repository and Git before taking another action.
 
@@ -168,22 +184,69 @@ Never depend on a previous conversational summary when the repository can answer
 
 The model has:
 
-* a 128k input context limit;
-* an approximately 8k output limit.
+* an 81,920-token input context limit;
+* a limited output context.
+
+The orchestrator must preserve at least 20 percent of the input context for validation, repair, documentation, commit review, and the final phase report.
 
 Apply these rules:
 
 1. Do not load full reference fixtures unless the active task needs a targeted portion.
 2. Do not paste complete source files into reports.
-3. Do not paste full diffs unless required to explain a blocker.
+3. Do not paste full diffs unless a bounded review cannot verify the change.
 4. Do not retain successful command output.
 5. Retain only short failure excerpts.
-6. Keep task plans under 30 lines.
-7. Keep task-worker reports under 100 lines.
-8. Keep the final phase report under 180 lines.
+6. Keep task plans under 20 lines.
+7. Keep task-worker reports under 50 lines.
+8. Keep the final phase report under 150 lines.
 9. Use a fresh subagent for every task.
 10. Never resume or reuse a previous task subagent.
-11. If a context-compression tool is available, compress only closed task context after recording the task ID, commit hash, validation result, and next task.
+11. Read the roadmap only from the selected phase heading through its gate; optionally read the next phase title and goal for reporting.
+12. Use bounded reads for SOP, contracts, architecture, tests, and status documents.
+13. If a context-compression tool is available, compress only closed task context after recording the task ID, commit hash, validation result, and next task.
+
+### Validation-output retention
+
+For successful validation commands, retain only:
+
+* command;
+* exit code;
+* number of tests when available;
+* PASS status.
+
+Do not reopen or summarize successful compiler, lint, build, or test logs.
+
+For failures, retain only:
+
+* failing command;
+* first causal error;
+* affected path and line;
+* up to 40 surrounding output lines.
+
+### Context budget checkpoint
+
+After every task commit, estimate whether the remaining context can support:
+
+* one worker result;
+* one repair cycle;
+* parent diff review;
+* full validation;
+* documentation;
+* commit and final report.
+
+Compact before selecting the next task when approximately 60 percent of the context has been consumed or when the remaining reserve is insufficient. Do not wait for automatic truncation.
+
+Before compaction, persist:
+
+* phase ID;
+* phase starting commit;
+* completed task IDs and commit hashes;
+* current task and retry count;
+* validation baseline;
+* unresolved findings;
+* gate status.
+
+After compaction, reconstruct state from the repository and Git.
 
 Maintain this compact phase ledger in the parent session:
 
@@ -298,76 +361,46 @@ Before invoking a task subagent, prepare this compact capsule:
 
 ```text
 Project root:
-Phase:
-Task ID:
-Task title:
-Dependencies confirmed:
-Exact task requirements:
-Shared phase requirements:
-Acceptance criteria:
-Required documents:
-Relevant implementation files:
-Relevant tests:
-Expected files to change:
-Existing files over 300 lines:
-Required bounded-edit method:
-Prohibited replacement targets:
-Required validation:
-Explicit exclusions:
-Known risks:
+Phase and task:
+Dependencies:
+Requirements and acceptance:
+Required document sections:
+Relevant implementation/test paths:
+Large files and bounded symbols:
+Expected changes:
+Prohibited scope:
+Validation:
+Risks:
 ```
 
 Do not include entire control documents in the capsule.
 
-Require the subagent to read the authoritative files itself.
+Reference authoritative headings instead of copying large specifications. Add only task-specific interpretation that the worker cannot obtain directly from the named files.
 
-When an expected file exceeds 300 lines, the capsule must identify it
-explicitly.
-
-For each such file, `Required bounded-edit method` must name the relevant
-symbols, exports, fixtures, describe blocks, or logical sections when they are
-known.
-
-`Prohibited replacement targets` must include every large existing source or
-test file that must not be regenerated.
+When an expected file exceeds 300 lines, identify it explicitly and name the relevant symbols, exports, fixtures, describe blocks, or logical sections. Every large existing file that must not be regenerated belongs under `Prohibited scope`.
 
 Example:
 
 ```text
-Existing files over 300 lines:
-- packages/catalog-contract/src/effect.ts
-- packages/catalog-contract/src/effect.test.ts
+Large files and bounded symbols:
+- packages/catalog-contract/src/effect.ts: RuleEffect union, metadata validators, factories
+- packages/catalog-contract/src/effect.test.ts: imports, positive/negative fixtures, factory tests
 
-Required bounded-edit method:
-- locate affected exports, schemas, factories, fixtures, and describe blocks;
-- inspect only bounded ranges;
-- patch imports and factory call sites by logical section;
-- run focused tests after each logical slice;
-- use typecheck failures to locate remaining consumers.
-
-Prohibited replacement targets:
-- packages/catalog-contract/src/effect.ts
-- packages/catalog-contract/src/effect.test.ts
+Prohibited scope:
+- no whole-file replacement of effect.ts or effect.test.ts
+- no future Phase 3 task implementation
 ```
-
-This example applies well to `P3-T000`, but the rule remains reusable for later tasks.
 
 ### Executor efficiency rules
 
-- The task capsule references authoritative repository sections instead of
-  copying large specifications.
-- The orchestrator does not pre-read implementation files that the executor
-  must inspect.
-- Use no more than eight read/search operations before the first edit unless
-  a concrete blocker is found.
+- The capsule references authoritative repository sections instead of copying specifications.
+- The orchestrator does not pre-read implementation files that the executor must inspect.
+- Use no more than eight read/search operations before the first edit unless a concrete blocker is found.
 - Read large files by symbol and bounded range.
-- State one implementation plan and begin editing. Do not repeatedly reconsider
-  a resolved design.
+- State one implementation plan and begin editing.
 - Existing large files are patched incrementally, never regenerated wholesale.
-- Use compiler and test failures to discover downstream call sites instead of
-  preemptively opening every possible consumer.
-- A task may be implemented through multiple bounded internal slices while
-  remaining one roadmap task and one final orchestrator commit.
+- Use compiler and test failures to discover downstream call sites instead of preemptively opening every possible consumer.
+- A task may be implemented through multiple bounded internal slices while remaining one roadmap task and one final orchestrator commit.
 
 ## 11. Task subagent rules
 
@@ -471,95 +504,58 @@ Blocking decision required:
 
 ## 12. Product guardrails
 
-The following rules apply to the orchestrator and every task subagent.
+All guardrails in `obsidian-dnd-character/AGENTS.md` apply.
 
-1. Use only Obsidian API members present in:
+During parent review, verify at minimum:
 
-   ```text
-   obsidian-dnd-character/references/obsidian/obsidian.d.ts
-   ```
+* no undocumented Obsidian API;
+* no raw 5eTools leakage outside catalog-builder;
+* no protected-module `any`;
+* no entity-name exception;
+* no persisted derived value;
+* no incomplete cache identity;
+* no partial transaction;
+* no silent replacement;
+* no narrative-mechanic inference;
+* no mobile-incompatible plugin dependency;
+* no non-free content;
+* no unsupported completion claim.
 
-2. Before using a new Obsidian API member, record:
-
-   * symbol name;
-   * exact signature;
-   * minimum API version when documented;
-   * project file using it;
-   * reason for use.
-
-   Record this in:
-
-   ```text
-   obsidian-dnd-character/docs/API_USAGE.md
-   ```
-
-3. Never guess an API, method, event, argument, return type, or platform behavior.
-
-4. The Obsidian plugin must never parse raw 5eTools data.
-
-5. Raw 5eTools structures are restricted to catalog-builder.
-
-6. Never branch on entity names.
-
-7. Never add special cases for a class, species, background, feat, spell, item, or other named entity.
-
-8. Use strict TypeScript.
-
-9. Do not use `any` in domain, catalog, persistence, or calculation modules.
-
-10. Validate external, downloaded, and persisted values from `unknown`.
-
-11. Persist authoritative selections and mutable state, not complete catalog definitions.
-
-12. Do not persist future candidate lists.
-
-13. Derived totals are calculated and are never authoritative.
-
-14. Disposable caches must include catalog revision and relevant input hashes.
-
-15. Core-free records remain eligible.
-
-16. Optional source access is stored per character.
-
-17. Do not remove a source required by current character content without a validated transaction.
-
-18. Do not silently replace invalid selections.
-
-19. Do not interpret narrative text as a mechanical effect without normalized structured support.
-
-20. Keep the plugin mobile-compatible.
-
-21. Do not use Node-only or Electron-only APIs in plugin runtime code without an accepted ADR.
-
-22. Do not call D&D Beyond from production code.
-
-23. D&D Beyond JSON is a reference fixture only.
-
-24. Do not bundle or publicly redistribute non-free catalog content.
-
-25. Do not claim a command passed unless it was executed and its result observed.
-
-26. Do not complete a task while an acceptance criterion remains unresolved.
-
-27. For an existing file over 300 lines, a single mutation changing more than
-    25 percent of the file or more than 200 lines requires explicit orchestrator
-    review before further edits.
-
-    This threshold is a review trigger, not permission to rewrite the file.
+Do not duplicate or redefine the complete AGENTS rules in this prompt. When exact interpretation is needed, read the bounded applicable section from `AGENTS.md`.
 
 ## 13. Parent review
 
 When the task subagent returns, do not trust its completion claim without inspection.
 
-Run:
+Start with:
 
 ```bash
 git status --short
 git diff --check
 git diff --stat
+git diff --numstat
 git diff --name-only
-git diff
 ```
+
+Review changed files with bounded commands:
+
+```bash
+git diff --unified=20 -- <path>
+```
+
+Use an unrestricted `git diff` only when:
+
+* the total diff is no more than 400 changed lines;
+* no large existing file is involved; or
+* a cross-file consistency review demonstrably requires it.
+
+For larger diffs:
+
+1. review each changed file separately;
+2. inspect documentation changes by heading;
+3. inspect large source and test files by changed hunk;
+4. use `git diff --numstat` to detect replacement, formatting churn, or suspicious re-creation;
+5. do not retain already-approved file diffs in active context.
 
 Confirm:
 
@@ -571,56 +567,26 @@ Confirm:
 * no future task was partially implemented;
 * no unrelated dependency upgrade occurred.
 
-Review specifically for:
-
-* undocumented Obsidian API use;
-* APIs absent from the pinned definition;
-* raw source fields outside catalog-builder;
-* `any` in protected modules;
-* entity-name exceptions;
-* persisted derived values;
-* incomplete cache fingerprints;
-* partial transactions;
-* silent selection replacement;
-* unsupported narrative mechanics;
-* Node or Electron dependencies in plugin runtime code;
-* non-free content;
-* missing negative tests;
-* unrequested scope.
+Apply the Product guardrails review from section 12 and verify missing negative tests or unrequested scope.
 
 For every changed existing file over 300 lines, also confirm:
 
-- the worker identified the affected symbols or test sections before editing;
-- the worker recorded the bounded ranges it inspected;
-- the diff is localized rather than a delete-and-recreate operation;
-- unrelated tests, assertions, exports, and implementation sections remain
-  untouched;
-- the file was not recreated through Bash, Python, heredoc, base64, a
-  temporary file, or another wrapper;
-- targeted validation was run after each logical mutation slice.
+- the worker identified affected symbols or test sections before editing;
+- bounded ranges were recorded;
+- the diff is localized rather than delete-and-recreate;
+- unrelated sections remain untouched;
+- the file was not recreated through Bash, Python, heredoc, base64, a temporary file, or another wrapper;
+- targeted validation followed each logical mutation slice.
 
-If a worker proposes a whole-file rewrite before making changes, terminate that
-worker immediately and invoke a fresh repair worker with bounded-edit
-instructions.
+If a worker proposes a whole-file rewrite before making changes, terminate that worker immediately and invoke a fresh repair worker with bounded-edit instructions.
 
-A worker terminated before any repository mutation is accepted does not consume
-a repair attempt.
+A worker terminated before any repository mutation is accepted does not consume a repair attempt.
 
 ### Large-file diff review trigger
 
-For an existing file over 300 lines, a single worker mutation that changes more
-than 25 percent of the file or more than 200 lines requires explicit
-orchestrator review before any further mutation or validation proceeds.
+For an existing file over 300 lines, a single worker mutation that changes more than 25 percent of the file or more than 200 lines requires explicit orchestrator review before further mutation or validation.
 
-The orchestrator must determine whether the change consists of necessary,
-localized call-site updates or an attempted whole-file rewrite.
-
-This threshold is a mandatory review trigger. It is not permission to rewrite
-the file.
-
-If the diff is primarily deletion and re-addition, formatting churn, section
-reordering, or unrelated test modification, reject the mutation and invoke a
-fresh repair worker with bounded-edit instructions.
+Determine whether the change is necessary localized call-site work or an attempted whole-file rewrite. Reject deletion/re-addition, formatting churn, section reordering, and unrelated test modification.
 
 ## 14. Repair limit
 
@@ -776,20 +742,22 @@ Record the task ID and commit hash in the compact phase ledger.
 
 After every successful task push:
 
-1. discard detailed worker conversation from active reasoning;
+1. discard detailed worker conversation and approved diff content from active reasoning;
 2. retain only:
-
    * phase ID;
    * starting commit;
    * completed task IDs and commit hashes;
    * next task;
    * unresolved risks;
    * gate status;
-3. re-read the durable-context files;
-4. inspect current Git history and clean-tree status;
-5. select the next ready task in the same phase.
+3. read the compact current-state section of `docs/PROJECT_STATUS.md`;
+4. read only the selected phase section and gate from the roadmap;
+5. read the next task's minimum task-specific documents from `CONTEXT_INDEX.md`;
+6. inspect the latest Git history, clean-tree state, and remote synchronization;
+7. run the context budget checkpoint from section 6;
+8. select the next ready task in the same phase.
 
-Do not continue from memory alone.
+Do not reread the complete prompt, complete roadmap, complete SOP, or historical task log after every task. Do not continue from memory alone.
 
 ## 19. Phase gate
 

@@ -124,9 +124,11 @@ Select one roadmap task. Confirm that all dependency tasks are complete.
 Read:
 
 - `AGENTS.md`;
-- current `docs/PROJECT_STATUS.md`;
-- active task and phase gate;
-- only the relevant architecture/contracts/test sections.
+- the current-state sections of `docs/PROJECT_STATUS.md`;
+- the selected phase, active task, and phase gate from the roadmap;
+- only the relevant architecture/contracts/test sections listed by `CONTEXT_INDEX.md`.
+
+Do not load `docs/PROJECT_HISTORY.md` unless investigating a prior task or decision.
 
 ### Step 3 — Inspect current state
 
@@ -172,6 +174,8 @@ Also run package- or task-specific tests.
 
 ### Step 7 — Review diff
 
+Begin with `git diff --check`, `git diff --stat`, `git diff --numstat`, and `git diff --name-only`. Review changed files individually with bounded hunks when the total diff exceeds 400 changed lines or includes an existing file over 300 lines. Use unrestricted full diffs only when needed for cross-file consistency.
+
 Check:
 
 - no accidental generated/source files;
@@ -188,7 +192,8 @@ Check:
 Only after passing:
 
 - check the roadmap task;
-- update `docs/PROJECT_STATUS.md`;
+- update the compact current state and latest work entry in `docs/PROJECT_STATUS.md`;
+- move entries older than the latest three to `docs/PROJECT_HISTORY.md`;
 - update `docs/API_USAGE.md` if applicable;
 - update decision log if architecture changed;
 - update contracts/references when intentionally changed.
@@ -436,3 +441,25 @@ interface Diagnostic {
 - [ ] Errors are actionable.
 - [ ] Tests include negative path.
 - [ ] Documentation updated.
+## 14. Context-efficient execution
+
+### 14.1 Bounded document reads
+
+- Read only the selected roadmap phase and its gate during a phase run.
+- Read only applicable SOP, architecture, contract, and acceptance sections.
+- Treat `docs/PROJECT_STATUS.md` as compact current state.
+- Treat `docs/PROJECT_HISTORY.md` as historical reference loaded only for explicit investigation.
+- Do not reread the complete phase prompt after every completed task.
+
+### 14.2 Between-task state
+
+After a task commit and push, retain only the phase ledger, commit hash, validation result, unresolved risk, next task, and gate status. Rehydrate from compact status, the selected roadmap phase, the next task's indexed documents, and Git state.
+
+### 14.3 Validation output
+
+For successful commands, retain the command, exit code, test count when available, and PASS status. For failures, retain only the first causal error and the shortest useful excerpt.
+
+### 14.4 Context reserve
+
+For models with an 81,920-token context, reserve at least 20 percent for review, repair, validation, documentation, and final reporting. Compact closed task context before selecting another task when approximately 60 percent has been consumed.
+
