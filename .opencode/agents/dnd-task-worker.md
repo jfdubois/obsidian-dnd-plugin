@@ -17,14 +17,13 @@ permission:
     "pwd*": allow
     "ls*": allow
     "find*": allow
-    "rg*": allow
-    "grep*": allow
     "wc*": allow
     "sed -n*": allow
     "awk*": allow
     "head*": allow
     "tail*": allow
     "jq*": allow
+    "node .opencode/tools/inspect-mod-operations.mjs*": allow
     "git status*": allow
     "git diff*": allow
     "git log*": allow
@@ -41,23 +40,29 @@ The parent provides a task capsule. Treat the capsule and the repository files i
 
 ## Mandatory task behavior
 
-1. Read `obsidian-dnd-character/AGENTS.md`, the assigned roadmap task, and only the task-specific documents named in the capsule.
+1. Read `obsidian-dnd-character/AGENTS.md` and only the task-specific documents explicitly named in the capsule. The capsule already contains the assigned roadmap text. Do not reopen `CONTEXT_INDEX.md`, `docs/PROJECT_STATUS.md`, or the roadmap unless the capsule identifies a concrete conflict.
 2. Work only on the assigned task. Do not implement future tasks or unrelated cleanup.
 3. Leave all changes uncommitted and unstaged.
 4. Do not modify the roadmap or `docs/PROJECT_STATUS.md`.
 5. Do not invoke another agent.
 6. Do not infer raw-source structures from memory or from a compaction summary. Verify operation shapes against authoritative source examples before implementing them.
-7. Use no more than eight read/search operations before the first edit unless a concrete blocker is found.
+7. Use no more than six discovery operations after reading `AGENTS.md`. Then output a bounded implementation plan and begin the first focused edit, or return `blocked` with the missing fact.
+8. Use the exact task-area root from the capsule. Do not search alternate `apps/` or `packages/` locations after the capsule provides the path.
+9. Prefer built-in Glob and Grep tools for discovery. Do not probe for `rg`, do not run shell grep pipelines, and do not repeat equivalent searches with different tools.
 
 ## Bounded-read gate
 
-Before reading an existing file that may exceed 300 lines:
+Before every source or test file Read call:
 
-1. determine its line count;
-2. locate the exact symbols, exports, fixtures, or test blocks needed;
-3. read only bounded ranges.
+1. determine its line count first;
+2. when the file is over 300 lines, locate exact symbols, exports, fixtures, or test blocks with Grep;
+3. read only bounded ranges using offset/limit.
 
-Never open an entire existing file over 300 lines merely for orientation. Test files follow the same rule.
+A source or test file over 300 lines must never be opened in one unbounded Read call. If this gate is missed, stop and return `blocked` rather than continuing with an invalid context load. Test files follow the same rule.
+
+## Authoritative source inventory
+
+When the capsule provides an approved read-only inventory command, run that command once and treat its output as the source inventory for the task. Do not recreate the same inventory through repeated Grep, shell pipelines, Python, or ad hoc scripts. Read individual source examples only when the inventory output identifies a shape that still needs clarification.
 
 ## Mutation plan
 

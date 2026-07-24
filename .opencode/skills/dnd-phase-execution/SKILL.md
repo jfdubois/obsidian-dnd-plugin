@@ -29,6 +29,24 @@ npm --prefix obsidian-dnd-character run <script>
 
 Do not use `git -C`, initialize another repository, or change branches.
 
+## 1.1 Stable workspace map
+
+Use these paths exactly when constructing worker capsules:
+
+```text
+Catalog builder: obsidian-dnd-character/apps/catalog-builder/
+Catalog server: obsidian-dnd-character/apps/catalog-server/
+Obsidian plugin: obsidian-dnd-character/apps/obsidian-plugin/
+Domain: obsidian-dnd-character/packages/domain/
+Catalog contract: obsidian-dnd-character/packages/catalog-contract/
+Character contract: obsidian-dnd-character/packages/character-contract/
+Rules engine: obsidian-dnd-character/packages/rules-engine/
+Testing: obsidian-dnd-character/packages/testing/
+Raw 5eTools clone: external/5etools-src/
+```
+
+Do not guess or substitute `packages/catalog-builder`; the catalog builder is an app.
+
 ## 2. Authority
 
 Use this order when instructions conflict:
@@ -183,6 +201,8 @@ Dependencies confirmed:
 Exact roadmap requirements:
 Applicable phase acceptance criteria:
 Task-area documents from CONTEXT_INDEX.md:
+Exact task-area root from the stable workspace map:
+Approved read-only inventory command, when applicable:
 Required validation:
 Explicit exclusions:
 Worker discovery requirement:
@@ -206,7 +226,15 @@ use shell-based file creation or transport workarounds. After one transport fail
 split the mutation; after a second transport failure, stop as blocked.
 ```
 
-Do not predict new filenames, public APIs, implementation structure, or expected changed files. Do not list large files unless their relevance is explicitly stated in the roadmap or current status.
+Do not predict new filenames, public APIs, implementation structure, or expected changed files. Do not list large files unless their relevance is explicitly stated in the roadmap or current status. Always supply the exact task-area root from the stable workspace map.
+
+For `P3-T007`, supply this approved read-only inventory command:
+
+```bash
+node .opencode/tools/inspect-mod-operations.mjs external/5etools-src/data
+```
+
+The worker must use this once instead of constructing ad hoc recursive grep, Python, or shell-pipeline inventories.
 
 Report once:
 
