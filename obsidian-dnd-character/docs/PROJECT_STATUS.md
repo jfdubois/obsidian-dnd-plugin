@@ -6,7 +6,7 @@ Phase 3 — Catalog builder ingestion foundation (IN PROGRESS)
 
 ## Last completed task
 
-P3-T001 — Implement builder configuration
+P3-T002 — Implement source manifest reader
 
 ## Blockers
 
@@ -34,6 +34,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-23 — P3-T002 — complete
+Summary: Implemented source manifest reader for catalog-builder. Added SourceManifest type (clonePath, commitHash, shortHash, subject, date), SourceManifestError with typed codes (NOT_GIT_REPO, PATH_NOT_FOUND, GIT_COMMAND_FAILED), readSourceManifest service, isSourceManifest validator, and createSourceManifest factory. Service verifies path exists, contains .git directory, and runs git commands to capture commit metadata. Returns frozen immutable manifest. 34 tests covering positive cases with real 5eTools clone and negative cases for all error paths and validator rejections.
+Validation: `npm run check` passes (typecheck + lint + 1222/1222 tests, EXIT 0). `npm run build` passes (EXIT 0).
+Commit: see Git history for P3-T002.
+Notes: Added @types/node devDependency for Node.js built-in module types (child_process, fs, path).
 
 2026-07-23 — P3-T001 — complete
 Summary: Implemented builder configuration module for catalog-builder. Added BuilderConfig type with clonePath, outputPath, includedRulesets, contentPolicy (enabledSourceIds, includeCore), and buildMode. Added BuildMode type with BUILD_MODES constant and isBuildMode guard. Validator accepts unknown, narrows to BuilderConfig, validates all fields. Factory creates frozen immutable copy with immutable arrays. Default configuration provides both rulesets, core-only content, full build mode, and placeholder paths. 48 tests covering positive fixtures, negative input, factory immutability, round-trips, and defaults.
