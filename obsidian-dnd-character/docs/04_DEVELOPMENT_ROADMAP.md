@@ -165,7 +165,7 @@ Read and resolve raw source generically without generating final entities yet.
 - [x] **P3-T005 — Implement canonical reference parser**
   - Parse pipe-delimited entity references into structured keys.
 
-- [ ] **P3-T006 — Implement _copy resolver**
+- [x] **P3-T006 — Implement _copy resolver**
   - Resolve base entity by structured identity.
 
 - [ ] **P3-T007 — Implement _mod operations used by included data**

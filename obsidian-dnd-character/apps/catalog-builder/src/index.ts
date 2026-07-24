@@ -87,3 +87,26 @@ export {
   extractSourceAbbr,
   extractEntityName,
 } from "./ref-parser";
+
+export {
+  /* Copy resolver types */
+  type RawCopyValue,
+  type CopyChainStep,
+  type CopyResolutionResult,
+  type CopyResolutionSuccess,
+  type CopyResolutionFailure,
+  type CopyResolverDiagnostic,
+  type CopyDiagnosticCode,
+  type CopyResolverContext,
+  /* Copy resolver error */
+  CopyResolverError,
+  /* Copy resolver functions */
+  resolveCopy,
+  resolveCopyOrThrow,
+  resolveCopies,
+  collectCopyFailures,
+  /* Copy resolver guards */
+  isRawCopyValue,
+  isCopyResolutionSuccess,
+  isCopyResolutionFailure,
+} from "./copy-resolver";

@@ -6,11 +6,11 @@ Phase 3 — Catalog builder ingestion foundation
 
 ## Current task
 
-P3-T006 — Implement _copy resolver
+P3-T007 — Implement _mod operations used by included data
 
 ## Last completed task
 
-P3-T005 — Implement canonical reference parser
+P3-T006 — Implement _copy resolver
 
 ## Branch baseline
 
@@ -26,7 +26,7 @@ None recorded.
 
 - `npm run check`: passing at Phase 2 gate
 - `npm run build`: passing at Phase 2 gate
-- Tests: 1086 passing
+- Tests: 1417 passing
 
 ## Catalog baseline
 
@@ -43,9 +43,9 @@ None recorded.
 
 ## Current phase ledger
 
-- Phase starting commit: pending
-- Completed Phase 3 task commits: none
-- Current task: P3-T006
+- Phase starting commit: 6dcc189
+- Completed Phase 3 task commits: P3-T006
+- Current task: P3-T007
 - Current retry: 0
 - Gate status: not evaluated
 - Blocking issue: none
@@ -53,6 +53,11 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-24 — P3-T006 — Implement _copy resolver
+Summary: Created copy-resolver.ts (441 lines) and copy-resolver.test.ts (616 lines, 331 new tests). Resolves _copy field using canonical reference parser, locates base entity by name+source, handles nested _copy chains with cycle detection and depth limit (20). Provides resolveCopy (discriminated result), resolveCopyOrThrow (throw API), resolveCopies (batch), and collectCopyFailures utilities.
+Validation: `npm run check` passes (typecheck + lint + 1417/1417 tests, EXIT 0). `npm run build` passes (EXIT 0).
+Commit: see Git history for P3-T006.
 
 2026-07-23 — P3-T005 — Implement canonical reference parser
 Summary: Verified both gate criteria. (1) Hand-authored normalized catalog fixture validates: fixture in commit c0506ed passes all catalog-contract validators (1086/1086 tests). (2) Contracts contain no raw 5eTools fields: comprehensive search of all 16 non-test source files in catalog-contract found zero raw 5eTools field names and zero imports from external/5etools-src.
