@@ -37,3 +37,19 @@ export {
   /* Raw loader */
   loadRawJsonFiles,
 } from "./raw-loader";
+
+export {
+  /* Raw boundary types */
+  type FieldClassificationKind,
+  type FieldClassification,
+  type UnclaimedFieldDiagnostic,
+  type RawRecord,
+  type ValidatedFileEnvelope,
+  type RawBoundaryDiagnostic,
+  type FieldInventory,
+  type RawBoundaryResult,
+  /* Known raw fields registry */
+  KNOWN_RAW_FIELDS,
+  /* Validation function */
+  validateRawBoundary,
+} from "./raw-boundary";
