@@ -146,7 +146,7 @@ Read and resolve raw source generically without generating final entities yet.
   - Update architecture, requirements, SOP, decision register, and acceptance matrix.
   - Accept: npm run check and npm run build pass; existing effects are migrated; representative synthetic fixtures validate conditional saving-throw, defense, capability, and feature projections.
 
-- [ ] **P3-T001 — Implement builder configuration**
+- [x] **P3-T001 — Implement builder configuration**
   - Clone path, output path, included rulesets, content policy, build mode.
 
 - [ ] **P3-T002 — Implement source manifest reader**

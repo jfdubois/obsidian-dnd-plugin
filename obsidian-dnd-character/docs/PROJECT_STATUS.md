@@ -6,7 +6,7 @@ Phase 3 — Catalog builder ingestion foundation (IN PROGRESS)
 
 ## Last completed task
 
-P3-T000 — Extend semantic effect and sheet-projection contracts
+P3-T001 — Implement builder configuration
 
 ## Blockers
 
@@ -34,6 +34,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-23 — P3-T001 — complete
+Summary: Implemented builder configuration module for catalog-builder. Added BuilderConfig type with clonePath, outputPath, includedRulesets, contentPolicy (enabledSourceIds, includeCore), and buildMode. Added BuildMode type with BUILD_MODES constant and isBuildMode guard. Validator accepts unknown, narrows to BuilderConfig, validates all fields. Factory creates frozen immutable copy with immutable arrays. Default configuration provides both rulesets, core-only content, full build mode, and placeholder paths. 48 tests covering positive fixtures, negative input, factory immutability, round-trips, and defaults.
+Validation: `npm run check` passes (typecheck + lint + 1188/1188 tests, EXIT 0). `npm run build` passes (EXIT 0).
+Commit: see Git history for P3-T001.
+Notes: The BuilderConfig type is the foundation for all subsequent catalog-builder tasks. The contentPolicy sub-object mirrors the QueryContext structure from the domain package.
 
 2026-07-23 — P3-T000 — complete
 Summary: Extended semantic effect and sheet-projection contracts. Added AutomationStatus, SheetProjection, EffectPresentation, EffectOrigin, RuleEffectMetadata, RollType, RollMode, RollPredicate, ImmunityDefinition, and CapabilityDefinition types. Updated RuleEffect union to include metadata and two new effect variants (conditional-roll-mode, add-capability). Migrated AddImmunityEffect from damageType string to ImmunityDefinition. All 18 effect factories now accept RuleEffectMetadata. Added validators, factories, constants, guards, and 1140 tests (including 121 new tests for P3-T000). Updated normalized catalog fixture.
