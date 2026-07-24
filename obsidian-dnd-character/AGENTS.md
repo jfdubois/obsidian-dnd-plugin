@@ -6,8 +6,6 @@ These rules apply to every agent and every implementation task in this repositor
 
 Two execution modes are permitted.
 
-### 1.1 Single-task mode
-
 ### 1.1 Single-task mode Single-task mode is the default when a user or agent assigns one roadmap task.
 
 Single-task mode is the default when a user or agent assigns one roadmap task.
@@ -27,8 +25,6 @@ Single-task mode is the default when a user or agent assigns one roadmap task.
 ### 1.2 Phase-orchestrator mode
 
 Phase-orchestrator mode is permitted only when the user explicitly invokes the phase workflow defined in `prompts/QWEN_TASK_PROMPT.md`.
-
-In phase-orchestrator mode:
 
 In phase-orchestrator mode: 
 
@@ -240,3 +236,36 @@ Next task:
    source file inside the command argument.
 9. Verify each logical mutation with a targeted diff and the narrowest useful
    typecheck or test before continuing.
+
+### 14.1 Large-file mutation gate
+
+Before modifying an existing file over 300 lines, the agent must output and follow a bounded mutation plan containing:
+
+```text
+Target file:
+Line count:
+Symbols or test sections affected:
+Bounded ranges inspected:
+Planned edit operations:
+Expected untouched sections:
+Targeted validation command:
+```
+
+The agent must not begin the mutation until it has identified the exact symbols, describe blocks, fixtures, imports, or call sites being changed.
+
+For an existing file over 300 lines:
+  - whole-file replacement is prohibited;
+  - complete-file regeneration is prohibited;
+  - deleting and recreating the file is prohibited;
+  - generating the full replacement through Bash, Python, heredoc, base64, temporary files, or another transport is prohibited;
+  - the number of required edits does not justify a whole-file rewrite;
+  - test files are subject to the same rules as implementation files.
+
+A whole-file replacement may occur only when all of the following are true:
+
+  1. the file is generated output or a disposable fixture;
+  2. the active task explicitly requires regeneration;
+  3. the orchestrator records the exception before the write;
+  4. the replacement can be validated against an authoritative generator or source.
+
+If these conditions are not met, the agent must use bounded edits, add focused modules, or stop as blocked.

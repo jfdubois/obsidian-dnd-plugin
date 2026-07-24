@@ -309,6 +309,9 @@ Required documents:
 Relevant implementation files:
 Relevant tests:
 Expected files to change:
+Existing files over 300 lines:
+Required bounded-edit method:
+Prohibited replacement targets:
 Required validation:
 Explicit exclusions:
 Known risks:
@@ -317,6 +320,37 @@ Known risks:
 Do not include entire control documents in the capsule.
 
 Require the subagent to read the authoritative files itself.
+
+When an expected file exceeds 300 lines, the capsule must identify it
+explicitly.
+
+For each such file, `Required bounded-edit method` must name the relevant
+symbols, exports, fixtures, describe blocks, or logical sections when they are
+known.
+
+`Prohibited replacement targets` must include every large existing source or
+test file that must not be regenerated.
+
+Example:
+
+```text
+Existing files over 300 lines:
+- packages/catalog-contract/src/effect.ts
+- packages/catalog-contract/src/effect.test.ts
+
+Required bounded-edit method:
+- locate affected exports, schemas, factories, fixtures, and describe blocks;
+- inspect only bounded ranges;
+- patch imports and factory call sites by logical section;
+- run focused tests after each logical slice;
+- use typecheck failures to locate remaining consumers.
+
+Prohibited replacement targets:
+- packages/catalog-contract/src/effect.ts
+- packages/catalog-contract/src/effect.test.ts
+```
+
+This example applies well to `P3-T000`, but the rule remains reusable for later tasks.
 
 ### Executor efficiency rules
 
@@ -354,6 +388,31 @@ The subagent must:
 9. leave changes uncommitted;
 10. return a compact structured report;
 11. stop after the assigned task.
+
+Before every write or edit to an existing file over 300 lines, the subagent must confirm:
+
+```text
+Large-file check:
+- file:
+- line count:
+- exact symbols or sections:
+- bounded ranges inspected:
+- operation type: targeted edit
+- whole-file replacement: no
+```
+
+If the proposed operation would replace most or all of the file, the subagent must stop and redesign the change as bounded edits or focused modules.
+
+The phrases below indicate an invalid plan and require immediate replanning:
+
+* "rewrite the complete file";
+* "write the complete new version";
+* "replace the whole test file";
+* "given the size, regenerate it";
+* "comprehensive rewrite";
+* "easier to recreate the file".
+
+The subagent must not proceed with a write after producing any equivalent reasoning.
 
 The subagent must not:
 
@@ -482,6 +541,12 @@ The following rules apply to the orchestrator and every task subagent.
 
 26. Do not complete a task while an acceptance criterion remains unresolved.
 
+27. For an existing file over 300 lines, a single mutation changing more than
+    25 percent of the file or more than 200 lines requires explicit orchestrator
+    review before further edits.
+
+    This threshold is a review trigger, not permission to rewrite the file.
+
 ## 13. Parent review
 
 When the task subagent returns, do not trust its completion claim without inspection.
@@ -522,6 +587,40 @@ Review specifically for:
 * non-free content;
 * missing negative tests;
 * unrequested scope.
+
+For every changed existing file over 300 lines, also confirm:
+
+- the worker identified the affected symbols or test sections before editing;
+- the worker recorded the bounded ranges it inspected;
+- the diff is localized rather than a delete-and-recreate operation;
+- unrelated tests, assertions, exports, and implementation sections remain
+  untouched;
+- the file was not recreated through Bash, Python, heredoc, base64, a
+  temporary file, or another wrapper;
+- targeted validation was run after each logical mutation slice.
+
+If a worker proposes a whole-file rewrite before making changes, terminate that
+worker immediately and invoke a fresh repair worker with bounded-edit
+instructions.
+
+A worker terminated before any repository mutation is accepted does not consume
+a repair attempt.
+
+### Large-file diff review trigger
+
+For an existing file over 300 lines, a single worker mutation that changes more
+than 25 percent of the file or more than 200 lines requires explicit
+orchestrator review before any further mutation or validation proceeds.
+
+The orchestrator must determine whether the change consists of necessary,
+localized call-site updates or an attempted whole-file rewrite.
+
+This threshold is a mandatory review trigger. It is not permission to rewrite
+the file.
+
+If the diff is primarily deletion and re-addition, formatting churn, section
+reordering, or unrelated test modification, reject the mutation and invoke a
+fresh repair worker with bounded-edit instructions.
 
 ## 14. Repair limit
 
