@@ -135,7 +135,7 @@ For each task:
 
 Read and resolve raw source generically without generating final entities yet.
 
-- [ ] **P3-T000 — Extend semantic effect and sheet-projection contracts**
+- [x] **P3-T000 — Extend semantic effect and sheet-projection contracts**
   - Add automation-status types.
   - Add sheet-projection types.
   - Add effect provenance.

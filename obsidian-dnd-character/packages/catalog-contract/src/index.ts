@@ -134,12 +134,28 @@ export {
   type AddSenseEffect,
   type AddResistanceEffect,
   type AddImmunityEffect,
+  type ConditionalRollModeEffect,
+  type AddCapabilityEffect,
   type SetAcFormulaEffect,
   type AddAcEffect,
   type GrantSpellEffect,
   type GrantResourceEffect,
   type GrantAttackEffect,
   type GrantFeatureEffect,
+  /* Effect metadata types */
+  type RuleEffectMetadata,
+  type AutomationStatus,
+  type SheetProjection,
+  type EffectPresentation,
+  type EffectOrigin,
+  /* Roll types */
+  type RollType,
+  type RollMode,
+  type RollPredicate,
+  /* Immunity definition */
+  type ImmunityDefinition,
+  /* Capability definition */
+  type CapabilityDefinition,
   /* Supporting effect types */
   type ProficiencyRef,
   type ProficiencySkillRef,
@@ -197,11 +213,30 @@ export {
   RULE_EFFECT_TYPES,
   MOVEMENT_MODES,
   ATTACK_PROPERTIES,
+  AUTOMATION_STATUSES,
+  SHEET_PROJECTIONS,
+  ROLL_TYPES,
+  ROLL_MODES,
+  CAPABILITY_TYPES,
   /* Effect guards */
   isRuleEffectType,
   isMovementMode,
+  isAutomationStatus,
+  isSheetProjection,
+  isRollType,
+  isRollMode,
   /* Effect validator */
   isRuleEffect,
+  /* Metadata validators */
+  isRuleEffectMetadata,
+  isEffectPresentation,
+  isEffectOrigin,
+  /* Roll validators */
+  isRollPredicate,
+  /* Immunity validator */
+  isImmunityDefinition,
+  /* Capability validator */
+  isCapabilityDefinition,
   /* Supporting validators */
   isProficiencyRef,
   isSenseDefinition,
@@ -217,6 +252,8 @@ export {
   isDiceExpression,
   isAttackRange,
   isAttackProperty,
+  /* Effect metadata factory */
+  createRuleEffectMetadata,
   /* Effect factories */
   createAddAbilityEffect,
   createSetAbilityEffect,
@@ -228,12 +265,35 @@ export {
   createAddSenseEffect,
   createAddResistanceEffect,
   createAddImmunityEffect,
+  createConditionalRollModeEffect,
+  createAddCapabilityEffect,
   createSetAcFormulaEffect,
   createAddAcEffect,
   createGrantSpellEffect,
   createGrantResourceEffect,
   createGrantAttackEffect,
   createGrantFeatureEffect,
+  /* Immunity definition factories */
+  createDamageImmunity,
+  createConditionImmunity,
+  createDiseaseImmunity,
+  createMagicalSleepImmunity,
+  /* Capability definition factories */
+  createNoBreathingRequiredCapability,
+  createNoFoodRequiredCapability,
+  createNoWaterRequiredCapability,
+  createNoSleepRequiredCapability,
+  createWaterBreathingCapability,
+  /* Roll predicate factories */
+  createAbilityRollPredicate,
+  createSkillRollPredicate,
+  createConditionRollPredicate,
+  createDamageTypeRollPredicate,
+  createConcentrationRollPredicate,
+  /* Effect presentation factory */
+  createEffectPresentation,
+  /* Effect origin factory */
+  createEffectOrigin,
   /* Supporting type factories */
   createProficiencySkillRef,
   createProficiencyToolRef,

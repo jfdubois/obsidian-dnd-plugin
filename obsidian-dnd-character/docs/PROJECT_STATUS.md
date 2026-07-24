@@ -2,11 +2,11 @@
 
 ## Current phase
 
-Phase 2 — Domain and normalized catalog contracts (COMPLETE)
+Phase 3 — Catalog builder ingestion foundation (IN PROGRESS)
 
 ## Last completed task
 
-Phase 2 gate — complete
+P3-T000 — Extend semantic effect and sheet-projection contracts
 
 ## Blockers
 
@@ -34,6 +34,12 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-23 — P3-T000 — complete
+Summary: Extended semantic effect and sheet-projection contracts. Added AutomationStatus, SheetProjection, EffectPresentation, EffectOrigin, RuleEffectMetadata, RollType, RollMode, RollPredicate, ImmunityDefinition, and CapabilityDefinition types. Updated RuleEffect union to include metadata and two new effect variants (conditional-roll-mode, add-capability). Migrated AddImmunityEffect from damageType string to ImmunityDefinition. All 18 effect factories now accept RuleEffectMetadata. Added validators, factories, constants, guards, and 1140 tests (including 121 new tests for P3-T000). Updated normalized catalog fixture.
+Validation: `npm run check` passes (typecheck + lint + 1140/1140 tests, EXIT 0). `npm run build` passes (EXIT 0).
+Commit: see Git history for P3-T000.
+Notes: All effect factories now require RuleEffectMetadata as first argument. The catalog-contract package is the only consumer of these factories, so no cross-package breakage.
 
 2026-07-23 — Phase 2 gate — complete
 Summary: Verified both gate criteria. (1) Hand-authored normalized catalog fixture validates: fixture in commit c0506ed passes all catalog-contract validators (1086/1086 tests). (2) Contracts contain no raw 5eTools fields: comprehensive search of all 16 non-test source files in catalog-contract found zero raw 5eTools field names and zero imports from external/5etools-src.

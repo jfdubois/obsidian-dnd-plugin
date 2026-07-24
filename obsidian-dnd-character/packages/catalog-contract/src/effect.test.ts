@@ -16,6 +16,16 @@ import {
   isAttackRange,
   isAttackProperty,
   isMovementMode,
+  isAutomationStatus,
+  isSheetProjection,
+  isRollType,
+  isRollMode,
+  isRollPredicate,
+  isImmunityDefinition,
+  isCapabilityDefinition,
+  isEffectPresentation,
+  isEffectOrigin,
+  isRuleEffectMetadata,
   createAddAbilityEffect,
   createSetAbilityEffect,
   createAddProficiencyEffect,
@@ -26,12 +36,15 @@ import {
   createAddSenseEffect,
   createAddResistanceEffect,
   createAddImmunityEffect,
+  createConditionalRollModeEffect,
+  createAddCapabilityEffect,
   createSetAcFormulaEffect,
   createAddAcEffect,
   createGrantSpellEffect,
   createGrantResourceEffect,
   createGrantAttackEffect,
   createGrantFeatureEffect,
+  createRuleEffectMetadata,
   createProficiencySkillRef,
   createProficiencyToolRef,
   createProficiencyArmorRef,
@@ -71,16 +84,39 @@ import {
   createMeleeRange,
   createRangedRange,
   createTouchRange,
+  createDamageImmunity,
+  createConditionImmunity,
+  createDiseaseImmunity,
+  createMagicalSleepImmunity,
+  createNoBreathingRequiredCapability,
+  createNoFoodRequiredCapability,
+  createNoWaterRequiredCapability,
+  createNoSleepRequiredCapability,
+  createWaterBreathingCapability,
+  createAbilityRollPredicate,
+  createSkillRollPredicate,
+  createConditionRollPredicate,
+  createDamageTypeRollPredicate,
+  createConcentrationRollPredicate,
+  createEffectPresentation,
+  createEffectOrigin,
   type RuleEffectType,
 } from "./effect";
-import { createEntityId } from "@obsidian-dnd/domain";
+import { createEntityId, createSourceId } from "@obsidian-dnd/domain";
+
+const testMetadata = createRuleEffectMetadata(
+  "full",
+  createEffectPresentation("abilities", []),
+  createEffectOrigin(createEntityId("entity:test"), createSourceId("source:test"), "structured"),
+);
 
 describe("RuleEffectType", () => {
   it("guard accepts all known types", () => {
     const types: RuleEffectType[] = [
       "add-ability", "set-ability", "add-proficiency", "add-expertise",
       "add-language", "set-movement", "add-movement", "add-sense",
-      "add-resistance", "add-immunity", "set-ac-formula", "add-ac",
+      "add-resistance", "add-immunity", "conditional-roll-mode", "add-capability",
+      "set-ac-formula", "add-ac",
       "grant-spell", "grant-resource", "grant-attack", "grant-feature",
     ];
     for (const t of types) {
@@ -111,101 +147,139 @@ describe("MovementMode", () => {
 
 describe("RuleEffect: positive", () => {
   it("accepts add-ability", () => {
-    expect(isRuleEffect(createAddAbilityEffect("STR", 2))).toBe(true);
+    expect(isRuleEffect(createAddAbilityEffect(testMetadata, "STR", 2))).toBe(true);
   });
 
   it("accepts set-ability", () => {
-    expect(isRuleEffect(createSetAbilityEffect("DEX", 15))).toBe(true);
+    expect(isRuleEffect(createSetAbilityEffect(testMetadata, "DEX", 15))).toBe(true);
   });
 
   it("accepts add-proficiency with skill ref", () => {
-    expect(isRuleEffect(createAddProficiencyEffect(createProficiencySkillRef(createEntityId("skill:2024:core:athletics"))))).toBe(true);
+    expect(isRuleEffect(createAddProficiencyEffect(testMetadata, createProficiencySkillRef(createEntityId("skill:2024:core:athletics"))))).toBe(true);
   });
 
   it("accepts add-proficiency with armor ref", () => {
-    expect(isRuleEffect(createAddProficiencyEffect(createProficiencyArmorRef("light")))).toBe(true);
+    expect(isRuleEffect(createAddProficiencyEffect(testMetadata, createProficiencyArmorRef("light")))).toBe(true);
   });
 
   it("accepts add-proficiency with saving-throw ref", () => {
-    expect(isRuleEffect(createAddProficiencyEffect(createProficiencySavingThrowRef("CON")))).toBe(true);
+    expect(isRuleEffect(createAddProficiencyEffect(testMetadata, createProficiencySavingThrowRef("CON")))).toBe(true);
   });
 
   it("accepts add-expertise", () => {
-    expect(isRuleEffect(createAddExpertiseEffect(createEntityId("skill:2024:core:stealth")))).toBe(true);
+    expect(isRuleEffect(createAddExpertiseEffect(testMetadata, createEntityId("skill:2024:core:stealth")))).toBe(true);
   });
 
   it("accepts add-language", () => {
-    expect(isRuleEffect(createAddLanguageEffect(createEntityId("language:2024:core:celestial")))).toBe(true);
+    expect(isRuleEffect(createAddLanguageEffect(testMetadata, createEntityId("language:2024:core:celestial")))).toBe(true);
   });
 
   it("accepts set-movement", () => {
-    expect(isRuleEffect(createSetMovementEffect("walk", 30))).toBe(true);
+    expect(isRuleEffect(createSetMovementEffect(testMetadata, "walk", 30))).toBe(true);
   });
 
   it("accepts add-movement", () => {
-    expect(isRuleEffect(createAddMovementEffect("fly", 30))).toBe(true);
+    expect(isRuleEffect(createAddMovementEffect(testMetadata, "fly", 30))).toBe(true);
   });
 
   it("accepts add-sense with darkvision", () => {
-    expect(isRuleEffect(createAddSenseEffect(createDarkvisionSense(60)))).toBe(true);
+    expect(isRuleEffect(createAddSenseEffect(testMetadata, createDarkvisionSense(60)))).toBe(true);
   });
 
   it("accepts add-sense with truesight", () => {
-    expect(isRuleEffect(createAddSenseEffect(createTruesightSense(30)))).toBe(true);
+    expect(isRuleEffect(createAddSenseEffect(testMetadata, createTruesightSense(30)))).toBe(true);
   });
 
   it("accepts add-sense with generic", () => {
-    expect(isRuleEffect(createAddSenseEffect(createGenericSense("Eaveshear", 120)))).toBe(true);
+    expect(isRuleEffect(createAddSenseEffect(testMetadata, createGenericSense("Eaveshear", 120)))).toBe(true);
   });
 
   it("accepts add-resistance", () => {
-    expect(isRuleEffect(createAddResistanceEffect("fire"))).toBe(true);
+    expect(isRuleEffect(createAddResistanceEffect(testMetadata, "fire"))).toBe(true);
   });
 
-  it("accepts add-immunity", () => {
-    expect(isRuleEffect(createAddImmunityEffect("poison"))).toBe(true);
+  it("accepts add-immunity with damage type", () => {
+    expect(isRuleEffect(createAddImmunityEffect(testMetadata, createDamageImmunity("poison")))).toBe(true);
+  });
+
+  it("accepts add-immunity with condition", () => {
+    expect(isRuleEffect(createAddImmunityEffect(testMetadata, createConditionImmunity(createEntityId("condition:2024:core:poisoned"))))).toBe(true);
+  });
+
+  it("accepts add-immunity with disease", () => {
+    expect(isRuleEffect(createAddImmunityEffect(testMetadata, createDiseaseImmunity()))).toBe(true);
+  });
+
+  it("accepts add-immunity with magical-sleep", () => {
+    expect(isRuleEffect(createAddImmunityEffect(testMetadata, createMagicalSleepImmunity()))).toBe(true);
+  });
+
+  it("accepts conditional-roll-mode with ability predicate", () => {
+    expect(isRuleEffect(createConditionalRollModeEffect(testMetadata, "saving-throw", "advantage", createAbilityRollPredicate("STR")))).toBe(true);
+  });
+
+  it("accepts conditional-roll-mode with skill predicate", () => {
+    expect(isRuleEffect(createConditionalRollModeEffect(testMetadata, "ability-check", "disadvantage", createSkillRollPredicate(createEntityId("skill:2024:core:stealth"))))).toBe(true);
+  });
+
+  it("accepts conditional-roll-mode with condition predicate", () => {
+    expect(isRuleEffect(createConditionalRollModeEffect(testMetadata, "saving-throw", "advantage", createConditionRollPredicate(createEntityId("condition:2024:core:poisoned"), "avoid")))).toBe(true);
+  });
+
+  it("accepts conditional-roll-mode with damage-type predicate", () => {
+    expect(isRuleEffect(createConditionalRollModeEffect(testMetadata, "saving-throw", "advantage", createDamageTypeRollPredicate("fire")))).toBe(true);
+  });
+
+  it("accepts conditional-roll-mode with concentration predicate", () => {
+    expect(isRuleEffect(createConditionalRollModeEffect(testMetadata, "saving-throw", "disadvantage", createConcentrationRollPredicate()))).toBe(true);
+  });
+
+  it("accepts add-capability", () => {
+    expect(isRuleEffect(createAddCapabilityEffect(testMetadata, createNoBreathingRequiredCapability()))).toBe(true);
   });
 
   it("accepts set-ac-formula with dex", () => {
-    expect(isRuleEffect(createSetAcFormulaEffect(createDexAcFormula()))).toBe(true);
+    expect(isRuleEffect(createSetAcFormulaEffect(testMetadata, createDexAcFormula()))).toBe(true);
   });
 
   it("accepts set-ac-formula with dex-plus", () => {
-    expect(isRuleEffect(createSetAcFormulaEffect(createDexPlusAcFormula(14, 2)))).toBe(true);
+    expect(isRuleEffect(createSetAcFormulaEffect(testMetadata, createDexPlusAcFormula(14, 2)))).toBe(true);
   });
 
   it("accepts set-ac-formula with natural", () => {
-    expect(isRuleEffect(createSetAcFormulaEffect(createNaturalAcFormula(19)))).toBe(true);
+    expect(isRuleEffect(createSetAcFormulaEffect(testMetadata, createNaturalAcFormula(19)))).toBe(true);
   });
 
   it("accepts add-ac without condition", () => {
-    expect(isRuleEffect(createAddAcEffect(1))).toBe(true);
+    expect(isRuleEffect(createAddAcEffect(testMetadata, 1))).toBe(true);
   });
 
   it("accepts add-ac with equipment condition", () => {
-    expect(isRuleEffect(createAddAcEffect(1, createEquipmentCondition([createEntityId("item:2024:xphb:shield")])))).toBe(true);
+    expect(isRuleEffect(createAddAcEffect(testMetadata, 1, createEquipmentCondition([createEntityId("item:2024:xphb:shield")])))).toBe(true);
   });
 
   it("accepts add-ac with class-level condition", () => {
-    expect(isRuleEffect(createAddAcEffect(1, createClassLevelCondition(5)))).toBe(true);
+    expect(isRuleEffect(createAddAcEffect(testMetadata, 1, createClassLevelCondition(5)))).toBe(true);
   });
 
   it("accepts grant-spell with known grant", () => {
-    expect(isRuleEffect(createGrantSpellEffect(createEntityId("spell:2024:xphb:firebolt"), createSpellKnownGrant(0)))).toBe(true);
+    expect(isRuleEffect(createGrantSpellEffect(testMetadata, createEntityId("spell:2024:xphb:firebolt"), createSpellKnownGrant(0)))).toBe(true);
   });
 
   it("accepts grant-spell with cantrip grant", () => {
-    expect(isRuleEffect(createGrantSpellEffect(createEntityId("spell:2024:xphb:firebolt"), createSpellCantripGrant()))).toBe(true);
+    expect(isRuleEffect(createGrantSpellEffect(testMetadata, createEntityId("spell:2024:xphb:firebolt"), createSpellCantripGrant()))).toBe(true);
   });
 
   it("accepts grant-resource", () => {
     expect(isRuleEffect(createGrantResourceEffect(
+      testMetadata,
       createResourceDefinition("Second Wind", createFixedValueFormula(1), createLongRestRecovery()),
     ))).toBe(true);
   });
 
   it("accepts grant-attack", () => {
     expect(isRuleEffect(createGrantAttackEffect(
+      testMetadata,
       createAttackDefinition(
         "Jaw",
         createSimpleDamageDefinition(createDiceExpression(1, 8, 3), "piercing"),
@@ -216,7 +290,7 @@ describe("RuleEffect: positive", () => {
   });
 
   it("accepts grant-feature", () => {
-    expect(isRuleEffect(createGrantFeatureEffect(createEntityId("class-feature:2024:xphb:fighter:1:second-wind")))).toBe(true);
+    expect(isRuleEffect(createGrantFeatureEffect(testMetadata, createEntityId("class-feature:2024:xphb:fighter:1:second-wind")))).toBe(true);
   });
 });
 
@@ -234,87 +308,111 @@ describe("RuleEffect: negative", () => {
   });
 
   it("rejects unknown type string", () => {
-    expect(isRuleEffect({ type: "unknown" })).toBe(false);
+    expect(isRuleEffect({ type: "unknown", ...testMetadata })).toBe(false);
+  });
+
+  it("rejects effect without metadata", () => {
+    expect(isRuleEffect({ type: "add-ability", ability: "STR", value: 2 })).toBe(false);
   });
 
   it("rejects add-ability with invalid ability", () => {
-    expect(isRuleEffect({ type: "add-ability", ability: "LCK", value: 2 })).toBe(false);
+    expect(isRuleEffect({ ...testMetadata, type: "add-ability", ability: "LCK", value: 2 })).toBe(false);
   });
 
   it("rejects add-ability with non-number value", () => {
-    expect(isRuleEffect({ type: "add-ability", ability: "STR", value: "2" })).toBe(false);
+    expect(isRuleEffect({ ...testMetadata, type: "add-ability", ability: "STR", value: "2" })).toBe(false);
   });
 
   it("rejects add-ability with Infinity value", () => {
-    expect(isRuleEffect({ type: "add-ability", ability: "STR", value: Infinity })).toBe(false);
+    expect(isRuleEffect({ ...testMetadata, type: "add-ability", ability: "STR", value: Infinity })).toBe(false);
   });
 
   it("rejects set-ability with invalid ability", () => {
-    expect(isRuleEffect({ type: "set-ability", ability: "INT", value: "15" })).toBe(false);
+    expect(isRuleEffect({ ...testMetadata, type: "set-ability", ability: "INT", value: "15" })).toBe(false);
   });
 
   it("rejects add-proficiency with invalid proficiency", () => {
-    expect(isRuleEffect({ type: "add-proficiency", proficiency: "light armor" })).toBe(false);
+    expect(isRuleEffect({ ...testMetadata, type: "add-proficiency", proficiency: "light armor" })).toBe(false);
   });
 
   it("rejects add-expertise with empty skillId", () => {
-    expect(isRuleEffect({ type: "add-expertise", skillId: "" })).toBe(false);
+    expect(isRuleEffect({ ...testMetadata, type: "add-expertise", skillId: "" })).toBe(false);
   });
 
   it("rejects add-language with missing languageId", () => {
-    expect(isRuleEffect({ type: "add-language" })).toBe(false);
+    expect(isRuleEffect({ ...testMetadata, type: "add-language" })).toBe(false);
   });
 
   it("rejects set-movement with invalid mode", () => {
-    expect(isRuleEffect({ type: "set-movement", mode: "hover", value: 30 })).toBe(false);
+    expect(isRuleEffect({ ...testMetadata, type: "set-movement", mode: "hover", value: 30 })).toBe(false);
   });
 
   it("rejects add-movement with non-finite value", () => {
-    expect(isRuleEffect({ type: "add-movement", mode: "fly", value: NaN })).toBe(false);
+    expect(isRuleEffect({ ...testMetadata, type: "add-movement", mode: "fly", value: NaN })).toBe(false);
   });
 
   it("rejects add-sense with invalid sense", () => {
-    expect(isRuleEffect({ type: "add-sense", sense: { type: "unknown", range: 60 } })).toBe(false);
+    expect(isRuleEffect({ ...testMetadata, type: "add-sense", sense: { type: "unknown", range: 60 } })).toBe(false);
   });
 
   it("rejects add-resistance with empty damageType", () => {
-    expect(isRuleEffect({ type: "add-resistance", damageType: "" })).toBe(false);
+    expect(isRuleEffect({ ...testMetadata, type: "add-resistance", damageType: "" })).toBe(false);
   });
 
-  it("rejects add-immunity with missing damageType", () => {
-    expect(isRuleEffect({ type: "add-immunity" })).toBe(false);
+  it("rejects add-immunity with missing immunity", () => {
+    expect(isRuleEffect({ ...testMetadata, type: "add-immunity" })).toBe(false);
+  });
+
+  it("rejects add-immunity with invalid immunity", () => {
+    expect(isRuleEffect({ ...testMetadata, type: "add-immunity", immunity: { type: "unknown" } })).toBe(false);
+  });
+
+  it("rejects conditional-roll-mode with invalid rollType", () => {
+    expect(isRuleEffect({ ...testMetadata, type: "conditional-roll-mode", rollType: "unknown", mode: "advantage", predicate: { type: "concentration" } })).toBe(false);
+  });
+
+  it("rejects conditional-roll-mode with invalid mode", () => {
+    expect(isRuleEffect({ ...testMetadata, type: "conditional-roll-mode", rollType: "saving-throw", mode: "normal", predicate: { type: "concentration" } })).toBe(false);
+  });
+
+  it("rejects conditional-roll-mode with invalid predicate", () => {
+    expect(isRuleEffect({ ...testMetadata, type: "conditional-roll-mode", rollType: "saving-throw", mode: "advantage", predicate: { type: "unknown" } })).toBe(false);
+  });
+
+  it("rejects add-capability with invalid capability", () => {
+    expect(isRuleEffect({ ...testMetadata, type: "add-capability", capability: { type: "unknown" } })).toBe(false);
   });
 
   it("rejects set-ac-formula with invalid formula", () => {
-    expect(isRuleEffect({ type: "set-ac-formula", formula: { type: "unknown" } })).toBe(false);
+    expect(isRuleEffect({ ...testMetadata, type: "set-ac-formula", formula: { type: "unknown" } })).toBe(false);
   });
 
   it("rejects add-ac with non-number value", () => {
-    expect(isRuleEffect({ type: "add-ac", value: "1" })).toBe(false);
+    expect(isRuleEffect({ ...testMetadata, type: "add-ac", value: "1" })).toBe(false);
   });
 
   it("rejects add-ac with invalid condition", () => {
-    expect(isRuleEffect({ type: "add-ac", value: 1, condition: { type: "unknown" } })).toBe(false);
+    expect(isRuleEffect({ ...testMetadata, type: "add-ac", value: 1, condition: { type: "unknown" } })).toBe(false);
   });
 
   it("rejects grant-spell with missing spellId", () => {
-    expect(isRuleEffect({ type: "grant-spell", grant: { type: "cantrip" } })).toBe(false);
+    expect(isRuleEffect({ ...testMetadata, type: "grant-spell", grant: { type: "cantrip" } })).toBe(false);
   });
 
   it("rejects grant-spell with invalid grant", () => {
-    expect(isRuleEffect({ type: "grant-spell", spellId: createEntityId("x"), grant: { type: "unknown" } })).toBe(false);
+    expect(isRuleEffect({ ...testMetadata, type: "grant-spell", spellId: createEntityId("x"), grant: { type: "unknown" } })).toBe(false);
   });
 
   it("rejects grant-resource with invalid resource", () => {
-    expect(isRuleEffect({ type: "grant-resource", resource: { name: "" } })).toBe(false);
+    expect(isRuleEffect({ ...testMetadata, type: "grant-resource", resource: { name: "" } })).toBe(false);
   });
 
   it("rejects grant-attack with invalid attack", () => {
-    expect(isRuleEffect({ type: "grant-attack", attack: { name: "" } })).toBe(false);
+    expect(isRuleEffect({ ...testMetadata, type: "grant-attack", attack: { name: "" } })).toBe(false);
   });
 
   it("rejects grant-feature with empty featureId", () => {
-    expect(isRuleEffect({ type: "grant-feature", featureId: "" })).toBe(false);
+    expect(isRuleEffect({ ...testMetadata, type: "grant-feature", featureId: "" })).toBe(false);
   });
 });
 
@@ -617,85 +715,96 @@ describe("AttackProperty", () => {
 
 describe("Factories produce valid effects", () => {
   it("createAddAbilityEffect", () => {
-    const e = createAddAbilityEffect("STR", 2);
+    const e = createAddAbilityEffect(testMetadata, "STR", 2);
     expect(isRuleEffect(e)).toBe(true);
     expect(e.type).toBe("add-ability");
   });
 
   it("createSetAbilityEffect", () => {
-    const e = createSetAbilityEffect("DEX", 15);
+    const e = createSetAbilityEffect(testMetadata, "DEX", 15);
     expect(isRuleEffect(e)).toBe(true);
   });
 
   it("createAddProficiencyEffect", () => {
-    const e = createAddProficiencyEffect(createProficiencyArmorRef("light"));
+    const e = createAddProficiencyEffect(testMetadata, createProficiencyArmorRef("light"));
     expect(isRuleEffect(e)).toBe(true);
   });
 
   it("createAddExpertiseEffect", () => {
-    const e = createAddExpertiseEffect(createEntityId("skill:2024:core:stealth"));
+    const e = createAddExpertiseEffect(testMetadata, createEntityId("skill:2024:core:stealth"));
     expect(isRuleEffect(e)).toBe(true);
   });
 
   it("createAddLanguageEffect", () => {
-    const e = createAddLanguageEffect(createEntityId("language:2024:common"));
+    const e = createAddLanguageEffect(testMetadata, createEntityId("language:2024:common"));
     expect(isRuleEffect(e)).toBe(true);
   });
 
   it("createSetMovementEffect", () => {
-    const e = createSetMovementEffect("walk", 30);
+    const e = createSetMovementEffect(testMetadata, "walk", 30);
     expect(isRuleEffect(e)).toBe(true);
   });
 
   it("createAddMovementEffect", () => {
-    const e = createAddMovementEffect("fly", 30);
+    const e = createAddMovementEffect(testMetadata, "fly", 30);
     expect(isRuleEffect(e)).toBe(true);
   });
 
   it("createAddSenseEffect", () => {
-    const e = createAddSenseEffect(createDarkvisionSense(60));
+    const e = createAddSenseEffect(testMetadata, createDarkvisionSense(60));
     expect(isRuleEffect(e)).toBe(true);
   });
 
   it("createAddResistanceEffect", () => {
-    const e = createAddResistanceEffect("fire");
+    const e = createAddResistanceEffect(testMetadata, "fire");
     expect(isRuleEffect(e)).toBe(true);
   });
 
   it("createAddImmunityEffect", () => {
-    const e = createAddImmunityEffect("poison");
+    const e = createAddImmunityEffect(testMetadata, createDamageImmunity("poison"));
+    expect(isRuleEffect(e)).toBe(true);
+  });
+
+  it("createConditionalRollModeEffect", () => {
+    const e = createConditionalRollModeEffect(testMetadata, "saving-throw", "advantage", createAbilityRollPredicate("STR"));
+    expect(isRuleEffect(e)).toBe(true);
+  });
+
+  it("createAddCapabilityEffect", () => {
+    const e = createAddCapabilityEffect(testMetadata, createNoBreathingRequiredCapability());
     expect(isRuleEffect(e)).toBe(true);
   });
 
   it("createSetAcFormulaEffect", () => {
-    const e = createSetAcFormulaEffect(createDexAcFormula());
+    const e = createSetAcFormulaEffect(testMetadata, createDexAcFormula());
     expect(isRuleEffect(e)).toBe(true);
   });
 
   it("createAddAcEffect", () => {
-    const e = createAddAcEffect(1);
+    const e = createAddAcEffect(testMetadata, 1);
     expect(isRuleEffect(e)).toBe(true);
   });
 
   it("createAddAcEffect with condition", () => {
-    const e = createAddAcEffect(1, createAlwaysCondition());
+    const e = createAddAcEffect(testMetadata, 1, createAlwaysCondition());
     expect(isRuleEffect(e)).toBe(true);
   });
 
   it("createGrantSpellEffect", () => {
-    const e = createGrantSpellEffect(createEntityId("spell:2024:xphb:firebolt"), createSpellCantripGrant());
+    const e = createGrantSpellEffect(testMetadata, createEntityId("spell:2024:xphb:firebolt"), createSpellCantripGrant());
     expect(isRuleEffect(e)).toBe(true);
   });
 
   it("createGrantResourceEffect", () => {
     const e = createGrantResourceEffect(
+      testMetadata,
       createResourceDefinition("Test", createFixedValueFormula(3), createShortRestRecovery(1)),
     );
     expect(isRuleEffect(e)).toBe(true);
   });
 
   it("createGrantAttackEffect", () => {
-    const e = createGrantAttackEffect(createAttackDefinition(
+    const e = createGrantAttackEffect(testMetadata, createAttackDefinition(
       "Bite",
       createSimpleDamageDefinition(createDiceExpression(1, 6, 0), "piercing"),
       createMeleeRange(5),
@@ -705,8 +814,219 @@ describe("Factories produce valid effects", () => {
   });
 
   it("createGrantFeatureEffect", () => {
-    const e = createGrantFeatureEffect(createEntityId("feature:2024:xphb:darkvision"));
+    const e = createGrantFeatureEffect(testMetadata, createEntityId("feature:2024:xphb:darkvision"));
     expect(isRuleEffect(e)).toBe(true);
+  });
+});
+
+describe("AutomationStatus", () => {
+  it("guard accepts all statuses", () => {
+    expect(isAutomationStatus("full")).toBe(true);
+    expect(isAutomationStatus("partial")).toBe(true);
+    expect(isAutomationStatus("display-only")).toBe(true);
+    expect(isAutomationStatus("manual-adjudication")).toBe(true);
+  });
+
+  it("guard rejects unknown status", () => {
+    expect(isAutomationStatus("unknown")).toBe(false);
+    expect(isAutomationStatus(null)).toBe(false);
+  });
+});
+
+describe("SheetProjection", () => {
+  it("guard accepts all projections", () => {
+    expect(isSheetProjection("armor-class")).toBe(true);
+    expect(isSheetProjection("initiative")).toBe(true);
+    expect(isSheetProjection("movement")).toBe(true);
+    expect(isSheetProjection("senses")).toBe(true);
+    expect(isSheetProjection("abilities")).toBe(true);
+    expect(isSheetProjection("saving-throws")).toBe(true);
+    expect(isSheetProjection("skills")).toBe(true);
+    expect(isSheetProjection("defenses")).toBe(true);
+    expect(isSheetProjection("proficiencies")).toBe(true);
+    expect(isSheetProjection("actions")).toBe(true);
+    expect(isSheetProjection("attacks")).toBe(true);
+    expect(isSheetProjection("spellcasting")).toBe(true);
+    expect(isSheetProjection("resources")).toBe(true);
+    expect(isSheetProjection("inventory")).toBe(true);
+    expect(isSheetProjection("conditions")).toBe(true);
+    expect(isSheetProjection("species-traits")).toBe(true);
+    expect(isSheetProjection("class-features")).toBe(true);
+    expect(isSheetProjection("feats")).toBe(true);
+    expect(isSheetProjection("features-and-traits")).toBe(true);
+  });
+
+  it("guard rejects unknown projection", () => {
+    expect(isSheetProjection("unknown")).toBe(false);
+  });
+});
+
+describe("RollType", () => {
+  it("guard accepts all types", () => {
+    expect(isRollType("saving-throw")).toBe(true);
+    expect(isRollType("ability-check")).toBe(true);
+    expect(isRollType("skill-check")).toBe(true);
+    expect(isRollType("attack-roll")).toBe(true);
+  });
+
+  it("guard rejects unknown type", () => {
+    expect(isRollType("death-save")).toBe(false);
+  });
+});
+
+describe("RollMode", () => {
+  it("guard accepts all modes", () => {
+    expect(isRollMode("advantage")).toBe(true);
+    expect(isRollMode("disadvantage")).toBe(true);
+  });
+
+  it("guard rejects unknown mode", () => {
+    expect(isRollMode("normal")).toBe(false);
+  });
+});
+
+describe("RollPredicate", () => {
+  it("accepts ability predicate", () => {
+    expect(isRollPredicate(createAbilityRollPredicate("STR"))).toBe(true);
+  });
+
+  it("accepts skill predicate", () => {
+    expect(isRollPredicate(createSkillRollPredicate(createEntityId("skill:2024:core:stealth")))).toBe(true);
+  });
+
+  it("accepts condition predicate", () => {
+    expect(isRollPredicate(createConditionRollPredicate(createEntityId("condition:2024:core:poisoned"), "avoid"))).toBe(true);
+    expect(isRollPredicate(createConditionRollPredicate(createEntityId("condition:2024:core:poisoned"), "end"))).toBe(true);
+    expect(isRollPredicate(createConditionRollPredicate(createEntityId("condition:2024:core:poisoned"), "avoid-or-end"))).toBe(true);
+  });
+
+  it("accepts damage-type predicate", () => {
+    expect(isRollPredicate(createDamageTypeRollPredicate("fire"))).toBe(true);
+  });
+
+  it("accepts concentration predicate", () => {
+    expect(isRollPredicate(createConcentrationRollPredicate())).toBe(true);
+  });
+
+  it("rejects unknown type", () => {
+    expect(isRollPredicate({ type: "unknown" })).toBe(false);
+  });
+
+  it("rejects ability predicate with invalid ability", () => {
+    expect(isRollPredicate({ type: "ability", ability: "LCK" })).toBe(false);
+  });
+
+  it("rejects condition predicate with invalid purpose", () => {
+    expect(isRollPredicate({ type: "condition", conditionId: createEntityId("c"), purpose: "unknown" })).toBe(false);
+  });
+
+  it("rejects damage-type predicate with empty string", () => {
+    expect(isRollPredicate({ type: "damage-type", damageType: "" })).toBe(false);
+  });
+});
+
+describe("ImmunityDefinition", () => {
+  it("accepts damage immunity", () => {
+    expect(isImmunityDefinition(createDamageImmunity("poison"))).toBe(true);
+  });
+
+  it("accepts condition immunity", () => {
+    expect(isImmunityDefinition(createConditionImmunity(createEntityId("condition:2024:core:poisoned")))).toBe(true);
+  });
+
+  it("accepts disease immunity", () => {
+    expect(isImmunityDefinition(createDiseaseImmunity())).toBe(true);
+  });
+
+  it("accepts magical-sleep immunity", () => {
+    expect(isImmunityDefinition(createMagicalSleepImmunity())).toBe(true);
+  });
+
+  it("rejects unknown type", () => {
+    expect(isImmunityDefinition({ type: "unknown" })).toBe(false);
+  });
+
+  it("rejects damage immunity with empty string", () => {
+    expect(isImmunityDefinition({ type: "damage", damageType: "" })).toBe(false);
+  });
+});
+
+describe("CapabilityDefinition", () => {
+  it("accepts all capabilities", () => {
+    expect(isCapabilityDefinition(createNoBreathingRequiredCapability())).toBe(true);
+    expect(isCapabilityDefinition(createNoFoodRequiredCapability())).toBe(true);
+    expect(isCapabilityDefinition(createNoWaterRequiredCapability())).toBe(true);
+    expect(isCapabilityDefinition(createNoSleepRequiredCapability())).toBe(true);
+    expect(isCapabilityDefinition(createWaterBreathingCapability())).toBe(true);
+  });
+
+  it("rejects unknown type", () => {
+    expect(isCapabilityDefinition({ type: "unknown" })).toBe(false);
+  });
+});
+
+describe("EffectPresentation", () => {
+  it("accepts valid presentation", () => {
+    expect(isEffectPresentation(createEffectPresentation("abilities", []))).toBe(true);
+    expect(isEffectPresentation(createEffectPresentation("abilities", ["skills"]))).toBe(true);
+  });
+
+  it("rejects invalid primary", () => {
+    expect(isEffectPresentation({ primary: "unknown", secondary: [] })).toBe(false);
+  });
+
+  it("rejects non-array secondary", () => {
+    expect(isEffectPresentation({ primary: "abilities", secondary: "skills" })).toBe(false);
+  });
+
+  it("rejects invalid secondary element", () => {
+    expect(isEffectPresentation({ primary: "abilities", secondary: ["unknown"] })).toBe(false);
+  });
+});
+
+describe("EffectOrigin", () => {
+  it("accepts valid origin", () => {
+    expect(isEffectOrigin(createEffectOrigin(createEntityId("e"), createSourceId("s"), "structured"))).toBe(true);
+    expect(isEffectOrigin(createEffectOrigin(createEntityId("e"), createSourceId("s"), "reviewed-mapping"))).toBe(true);
+  });
+
+  it("rejects invalid method", () => {
+    expect(isEffectOrigin({ entityId: createEntityId("e"), sourceId: createSourceId("s"), method: "unknown" })).toBe(false);
+  });
+
+  it("rejects missing entityId", () => {
+    expect(isEffectOrigin({ sourceId: createSourceId("s"), method: "structured" })).toBe(false);
+  });
+
+  it("rejects missing sourceId", () => {
+    expect(isEffectOrigin({ entityId: createEntityId("e"), method: "structured" })).toBe(false);
+  });
+});
+
+describe("RuleEffectMetadata", () => {
+  it("accepts valid metadata", () => {
+    expect(isRuleEffectMetadata(testMetadata)).toBe(true);
+  });
+
+  it("rejects missing automationStatus", () => {
+    expect(isRuleEffectMetadata({
+      presentation: createEffectPresentation("abilities", []),
+      origin: createEffectOrigin(createEntityId("e"), createSourceId("s"), "structured"),
+    })).toBe(false);
+  });
+
+  it("rejects missing presentation", () => {
+    expect(isRuleEffectMetadata({
+      automationStatus: "full",
+      origin: createEffectOrigin(createEntityId("e"), createSourceId("s"), "structured"),
+    })).toBe(false);
+  });
+
+  it("rejects missing origin", () => {
+    expect(isRuleEffectMetadata({
+      automationStatus: "full",
+      presentation: createEffectPresentation("abilities", []),
+    })).toBe(false);
   });
 });
 
@@ -741,24 +1061,26 @@ describe("Factory immutability", () => {
 });
 
 describe("Round-trip", () => {
-  it("all 16 effect variants round-trip through validator", () => {
+  it("all 18 effect variants round-trip through validator", () => {
     const effects = [
-      createAddAbilityEffect("STR", 2),
-      createSetAbilityEffect("DEX", 15),
-      createAddProficiencyEffect(createProficiencySkillRef(createEntityId("skill:2024:core:athletics"))),
-      createAddExpertiseEffect(createEntityId("skill:2024:core:stealth")),
-      createAddLanguageEffect(createEntityId("language:2024:common")),
-      createSetMovementEffect("walk", 30),
-      createAddMovementEffect("fly", 30),
-      createAddSenseEffect(createDarkvisionSense(60)),
-      createAddResistanceEffect("fire"),
-      createAddImmunityEffect("poison"),
-      createSetAcFormulaEffect(createDexAcFormula()),
-      createAddAcEffect(1),
-      createGrantSpellEffect(createEntityId("spell:2024:xphb:firebolt"), createSpellCantripGrant()),
-      createGrantResourceEffect(createResourceDefinition("Test", createFixedValueFormula(1), createLongRestRecovery())),
-      createGrantAttackEffect(createAttackDefinition("Bite", createSimpleDamageDefinition(createDiceExpression(1, 6, 0), "piercing"), createMeleeRange(5), [])),
-      createGrantFeatureEffect(createEntityId("feature:2024:xphb:darkvision")),
+      createAddAbilityEffect(testMetadata, "STR", 2),
+      createSetAbilityEffect(testMetadata, "DEX", 15),
+      createAddProficiencyEffect(testMetadata, createProficiencySkillRef(createEntityId("skill:2024:core:athletics"))),
+      createAddExpertiseEffect(testMetadata, createEntityId("skill:2024:core:stealth")),
+      createAddLanguageEffect(testMetadata, createEntityId("language:2024:common")),
+      createSetMovementEffect(testMetadata, "walk", 30),
+      createAddMovementEffect(testMetadata, "fly", 30),
+      createAddSenseEffect(testMetadata, createDarkvisionSense(60)),
+      createAddResistanceEffect(testMetadata, "fire"),
+      createAddImmunityEffect(testMetadata, createDamageImmunity("poison")),
+      createConditionalRollModeEffect(testMetadata, "saving-throw", "advantage", createAbilityRollPredicate("STR")),
+      createAddCapabilityEffect(testMetadata, createNoBreathingRequiredCapability()),
+      createSetAcFormulaEffect(testMetadata, createDexAcFormula()),
+      createAddAcEffect(testMetadata, 1),
+      createGrantSpellEffect(testMetadata, createEntityId("spell:2024:xphb:firebolt"), createSpellCantripGrant()),
+      createGrantResourceEffect(testMetadata, createResourceDefinition("Test", createFixedValueFormula(1), createLongRestRecovery())),
+      createGrantAttackEffect(testMetadata, createAttackDefinition("Bite", createSimpleDamageDefinition(createDiceExpression(1, 6, 0), "piercing"), createMeleeRange(5), [])),
+      createGrantFeatureEffect(testMetadata, createEntityId("feature:2024:xphb:darkvision")),
     ];
 
     for (const effect of effects) {

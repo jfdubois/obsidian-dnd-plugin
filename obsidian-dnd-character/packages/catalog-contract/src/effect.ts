@@ -1,12 +1,217 @@
-import type { Ability, EntityId } from "@obsidian-dnd/domain";
-import { isAbility, isEntityId } from "@obsidian-dnd/domain";
+import type { Ability, EntityId, SourceId } from "@obsidian-dnd/domain";
+import { isAbility, isEntityId, isSourceId } from "@obsidian-dnd/domain";
+
+/* ── Automation status ─────────────────────────────────────────── */
+
+export type AutomationStatus = "full" | "partial" | "display-only" | "manual-adjudication";
+
+export const AUTOMATION_STATUSES: ReadonlyArray<AutomationStatus> = [
+  "full",
+  "partial",
+  "display-only",
+  "manual-adjudication",
+];
+
+export function isAutomationStatus(value: unknown): value is AutomationStatus {
+  return AUTOMATION_STATUSES.includes(value as AutomationStatus);
+}
+
+/* ── Sheet projection types ────────────────────────────────────── */
+
+export type SheetProjection =
+  | "armor-class" | "initiative" | "movement" | "senses" | "abilities"
+  | "saving-throws" | "skills" | "defenses" | "proficiencies"
+  | "actions" | "attacks" | "spellcasting" | "resources" | "inventory"
+  | "conditions" | "species-traits" | "class-features" | "feats" | "features-and-traits";
+
+export const SHEET_PROJECTIONS: ReadonlyArray<SheetProjection> = [
+  "armor-class", "initiative", "movement", "senses", "abilities",
+  "saving-throws", "skills", "defenses", "proficiencies",
+  "actions", "attacks", "spellcasting", "resources", "inventory",
+  "conditions", "species-traits", "class-features", "feats", "features-and-traits",
+];
+
+export function isSheetProjection(value: unknown): value is SheetProjection {
+  return SHEET_PROJECTIONS.includes(value as SheetProjection);
+}
+
+/* ── Effect presentation ───────────────────────────────────────── */
+
+export interface EffectPresentation {
+  primary: SheetProjection;
+  secondary: SheetProjection[];
+}
+
+export function isEffectPresentation(value: unknown): value is EffectPresentation {
+  if (typeof value !== "object" || value === null) return false;
+  const obj = value as Record<string, unknown>;
+  if (!isSheetProjection(obj.primary)) return false;
+  if (!Array.isArray(obj.secondary)) return false;
+  return obj.secondary.every((s: unknown) => isSheetProjection(s));
+}
+
+/* ── Effect origin ─────────────────────────────────────────────── */
+
+export interface EffectOrigin {
+  entityId: EntityId;
+  sourceId: SourceId;
+  method: "structured" | "reviewed-mapping";
+}
+
+export function isEffectOrigin(value: unknown): value is EffectOrigin {
+  if (typeof value !== "object" || value === null) return false;
+  const obj = value as Record<string, unknown>;
+  if (!isEntityId(obj.entityId)) return false;
+  if (!isSourceId(obj.sourceId)) return false;
+  if (obj.method !== "structured" && obj.method !== "reviewed-mapping") return false;
+  return true;
+}
+
+/* ── Rule effect metadata ──────────────────────────────────────── */
+
+export interface RuleEffectMetadata {
+  automationStatus: AutomationStatus;
+  presentation: EffectPresentation;
+  origin: EffectOrigin;
+}
+
+export function isRuleEffectMetadata(value: unknown): value is RuleEffectMetadata {
+  if (typeof value !== "object" || value === null) return false;
+  const obj = value as Record<string, unknown>;
+  if (!isAutomationStatus(obj.automationStatus)) return false;
+  if (!isEffectPresentation(obj.presentation)) return false;
+  if (!isEffectOrigin(obj.origin)) return false;
+  return true;
+}
+
+/* ── Roll types ────────────────────────────────────────────────── */
+
+export type RollType = "saving-throw" | "ability-check" | "skill-check" | "attack-roll";
+
+export const ROLL_TYPES: ReadonlyArray<RollType> = [
+  "saving-throw",
+  "ability-check",
+  "skill-check",
+  "attack-roll",
+];
+
+export function isRollType(value: unknown): value is RollType {
+  return ROLL_TYPES.includes(value as RollType);
+}
+
+export type RollMode = "advantage" | "disadvantage";
+
+export const ROLL_MODES: ReadonlyArray<RollMode> = [
+  "advantage",
+  "disadvantage",
+];
+
+export function isRollMode(value: unknown): value is RollMode {
+  return ROLL_MODES.includes(value as RollMode);
+}
+
+/* ── Roll predicate ────────────────────────────────────────────── */
+
+export type RollPredicate =
+  | { type: "ability"; ability: Ability; }
+  | { type: "skill"; skillId: EntityId; }
+  | { type: "condition"; conditionId: EntityId; purpose: "avoid" | "end" | "avoid-or-end"; }
+  | { type: "damage-type"; damageType: string; }
+  | { type: "concentration"; };
+
+export function isRollPredicate(value: unknown): value is RollPredicate {
+  if (typeof value !== "object" || value === null) return false;
+  const obj = value as Record<string, unknown>;
+  const type = obj.type;
+  if (typeof type !== "string") return false;
+
+  switch (type) {
+    case "ability": {
+      return isAbility(obj.ability);
+    }
+    case "skill": {
+      return isEntityId(obj.skillId);
+    }
+    case "condition": {
+      if (!isEntityId(obj.conditionId)) return false;
+      return obj.purpose === "avoid" || obj.purpose === "end" || obj.purpose === "avoid-or-end";
+    }
+    case "damage-type": {
+      return typeof obj.damageType === "string" && obj.damageType.length > 0;
+    }
+    case "concentration": {
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+/* ── Immunity definition ───────────────────────────────────────── */
+
+export type ImmunityDefinition =
+  | { type: "damage"; damageType: string; }
+  | { type: "condition"; conditionId: EntityId; }
+  | { type: "disease"; }
+  | { type: "magical-sleep"; };
+
+export function isImmunityDefinition(value: unknown): value is ImmunityDefinition {
+  if (typeof value !== "object" || value === null) return false;
+  const obj = value as Record<string, unknown>;
+  const type = obj.type;
+  if (typeof type !== "string") return false;
+
+  switch (type) {
+    case "damage": {
+      return typeof obj.damageType === "string" && obj.damageType.length > 0;
+    }
+    case "condition": {
+      return isEntityId(obj.conditionId);
+    }
+    case "disease": {
+      return true;
+    }
+    case "magical-sleep": {
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+/* ── Capability definition ─────────────────────────────────────── */
+
+export type CapabilityDefinition =
+  | { type: "no-breathing-required"; }
+  | { type: "no-food-required"; }
+  | { type: "no-water-required"; }
+  | { type: "no-sleep-required"; }
+  | { type: "water-breathing"; };
+
+export const CAPABILITY_TYPES: ReadonlyArray<CapabilityDefinition["type"]> = [
+  "no-breathing-required",
+  "no-food-required",
+  "no-water-required",
+  "no-sleep-required",
+  "water-breathing",
+];
+
+export function isCapabilityDefinition(value: unknown): value is CapabilityDefinition {
+  if (typeof value !== "object" || value === null) return false;
+  const obj = value as Record<string, unknown>;
+  const type = obj.type;
+  if (typeof type !== "string") return false;
+  return CAPABILITY_TYPES.includes(type as CapabilityDefinition["type"]);
+}
 
 /* ── Effect discriminated union ──────────────────────────────────
    Structured mechanical effects produced by normalized entities.
    The catalog builder converts raw 5eTools structured mechanics
    into these effect types. Narrative text remains in RenderNode.  */
 
-export type RuleEffect =
+export type RuleEffect = RuleEffectMetadata & (
   | AddAbilityEffect
   | SetAbilityEffect
   | AddProficiencyEffect
@@ -17,12 +222,15 @@ export type RuleEffect =
   | AddSenseEffect
   | AddResistanceEffect
   | AddImmunityEffect
+  | ConditionalRollModeEffect
+  | AddCapabilityEffect
   | SetAcFormulaEffect
   | AddAcEffect
   | GrantSpellEffect
   | GrantResourceEffect
   | GrantAttackEffect
-  | GrantFeatureEffect;
+  | GrantFeatureEffect
+);
 
 /* ── Effect type constants and guard ───────────────────────────── */
 
@@ -37,6 +245,8 @@ export type RuleEffectType =
   | "add-sense"
   | "add-resistance"
   | "add-immunity"
+  | "conditional-roll-mode"
+  | "add-capability"
   | "set-ac-formula"
   | "add-ac"
   | "grant-spell"
@@ -55,6 +265,8 @@ export const RULE_EFFECT_TYPES: ReadonlyArray<RuleEffectType> = [
   "add-sense",
   "add-resistance",
   "add-immunity",
+  "conditional-roll-mode",
+  "add-capability",
   "set-ac-formula",
   "add-ac",
   "grant-spell",
@@ -120,7 +332,19 @@ export interface AddResistanceEffect {
 
 export interface AddImmunityEffect {
   type: "add-immunity";
-  damageType: string;
+  immunity: ImmunityDefinition;
+}
+
+export interface ConditionalRollModeEffect {
+  type: "conditional-roll-mode";
+  rollType: RollType;
+  mode: RollMode;
+  predicate: RollPredicate;
+}
+
+export interface AddCapabilityEffect {
+  type: "add-capability";
+  capability: CapabilityDefinition;
 }
 
 export interface SetAcFormulaEffect {
@@ -463,8 +687,10 @@ export const ATTACK_PROPERTIES: ReadonlyArray<Exclude<AttackProperty, AttackProp
 export function isRuleEffect(value: unknown): value is RuleEffect {
   if (typeof value !== "object" || value === null) return false;
   const obj = value as Record<string, unknown>;
-  const type = obj.type;
 
+  if (!isRuleEffectMetadata(obj)) return false;
+
+  const type = obj.type;
   if (typeof type !== "string") return false;
 
   switch (type) {
@@ -509,7 +735,17 @@ export function isRuleEffect(value: unknown): value is RuleEffect {
       return true;
     }
     case "add-immunity": {
-      if (typeof obj.damageType !== "string" || obj.damageType.length === 0) return false;
+      if (!isImmunityDefinition(obj.immunity)) return false;
+      return true;
+    }
+    case "conditional-roll-mode": {
+      if (!isRollType(obj.rollType)) return false;
+      if (!isRollMode(obj.mode)) return false;
+      if (!isRollPredicate(obj.predicate)) return false;
+      return true;
+    }
+    case "add-capability": {
+      if (!isCapabilityDefinition(obj.capability)) return false;
       return true;
     }
     case "set-ac-formula": {
@@ -832,70 +1068,150 @@ export function isAttackProperty(value: unknown): value is AttackProperty {
   return false;
 }
 
+/* ── Metadata factory ──────────────────────────────────────────── */
+
+export function createRuleEffectMetadata(
+  automationStatus: AutomationStatus,
+  presentation: EffectPresentation,
+  origin: EffectOrigin,
+): RuleEffectMetadata {
+  return { automationStatus, presentation, origin };
+}
+
 /* ── Factories ─────────────────────────────────────────────────── */
 
-export function createAddAbilityEffect(ability: Ability, value: number): AddAbilityEffect {
-  return { type: "add-ability", ability, value };
+export function createAddAbilityEffect(
+  metadata: RuleEffectMetadata,
+  ability: Ability,
+  value: number,
+): RuleEffectMetadata & AddAbilityEffect {
+  return { ...metadata, type: "add-ability", ability, value };
 }
 
-export function createSetAbilityEffect(ability: Ability, value: number): SetAbilityEffect {
-  return { type: "set-ability", ability, value };
+export function createSetAbilityEffect(
+  metadata: RuleEffectMetadata,
+  ability: Ability,
+  value: number,
+): RuleEffectMetadata & SetAbilityEffect {
+  return { ...metadata, type: "set-ability", ability, value };
 }
 
-export function createAddProficiencyEffect(proficiency: ProficiencyRef): AddProficiencyEffect {
-  return { type: "add-proficiency", proficiency };
+export function createAddProficiencyEffect(
+  metadata: RuleEffectMetadata,
+  proficiency: ProficiencyRef,
+): RuleEffectMetadata & AddProficiencyEffect {
+  return { ...metadata, type: "add-proficiency", proficiency };
 }
 
-export function createAddExpertiseEffect(skillId: EntityId): AddExpertiseEffect {
-  return { type: "add-expertise", skillId };
+export function createAddExpertiseEffect(
+  metadata: RuleEffectMetadata,
+  skillId: EntityId,
+): RuleEffectMetadata & AddExpertiseEffect {
+  return { ...metadata, type: "add-expertise", skillId };
 }
 
-export function createAddLanguageEffect(languageId: EntityId): AddLanguageEffect {
-  return { type: "add-language", languageId };
+export function createAddLanguageEffect(
+  metadata: RuleEffectMetadata,
+  languageId: EntityId,
+): RuleEffectMetadata & AddLanguageEffect {
+  return { ...metadata, type: "add-language", languageId };
 }
 
-export function createSetMovementEffect(mode: MovementMode, value: number): SetMovementEffect {
-  return { type: "set-movement", mode, value };
+export function createSetMovementEffect(
+  metadata: RuleEffectMetadata,
+  mode: MovementMode,
+  value: number,
+): RuleEffectMetadata & SetMovementEffect {
+  return { ...metadata, type: "set-movement", mode, value };
 }
 
-export function createAddMovementEffect(mode: MovementMode, value: number): AddMovementEffect {
-  return { type: "add-movement", mode, value };
+export function createAddMovementEffect(
+  metadata: RuleEffectMetadata,
+  mode: MovementMode,
+  value: number,
+): RuleEffectMetadata & AddMovementEffect {
+  return { ...metadata, type: "add-movement", mode, value };
 }
 
-export function createAddSenseEffect(sense: SenseDefinition): AddSenseEffect {
-  return { type: "add-sense", sense };
+export function createAddSenseEffect(
+  metadata: RuleEffectMetadata,
+  sense: SenseDefinition,
+): RuleEffectMetadata & AddSenseEffect {
+  return { ...metadata, type: "add-sense", sense };
 }
 
-export function createAddResistanceEffect(damageType: string): AddResistanceEffect {
-  return { type: "add-resistance", damageType };
+export function createAddResistanceEffect(
+  metadata: RuleEffectMetadata,
+  damageType: string,
+): RuleEffectMetadata & AddResistanceEffect {
+  return { ...metadata, type: "add-resistance", damageType };
 }
 
-export function createAddImmunityEffect(damageType: string): AddImmunityEffect {
-  return { type: "add-immunity", damageType };
+export function createAddImmunityEffect(
+  metadata: RuleEffectMetadata,
+  immunity: ImmunityDefinition,
+): RuleEffectMetadata & AddImmunityEffect {
+  return { ...metadata, type: "add-immunity", immunity };
 }
 
-export function createSetAcFormulaEffect(formula: ArmorClassFormula): SetAcFormulaEffect {
-  return { type: "set-ac-formula", formula };
+export function createConditionalRollModeEffect(
+  metadata: RuleEffectMetadata,
+  rollType: RollType,
+  mode: RollMode,
+  predicate: RollPredicate,
+): RuleEffectMetadata & ConditionalRollModeEffect {
+  return { ...metadata, type: "conditional-roll-mode", rollType, mode, predicate };
 }
 
-export function createAddAcEffect(value: number, condition?: EffectCondition): AddAcEffect {
-  return { type: "add-ac", value, condition };
+export function createAddCapabilityEffect(
+  metadata: RuleEffectMetadata,
+  capability: CapabilityDefinition,
+): RuleEffectMetadata & AddCapabilityEffect {
+  return { ...metadata, type: "add-capability", capability };
 }
 
-export function createGrantSpellEffect(spellId: EntityId, grant: SpellGrant): GrantSpellEffect {
-  return { type: "grant-spell", spellId, grant };
+export function createSetAcFormulaEffect(
+  metadata: RuleEffectMetadata,
+  formula: ArmorClassFormula,
+): RuleEffectMetadata & SetAcFormulaEffect {
+  return { ...metadata, type: "set-ac-formula", formula };
 }
 
-export function createGrantResourceEffect(resource: ResourceDefinition): GrantResourceEffect {
-  return { type: "grant-resource", resource };
+export function createAddAcEffect(
+  metadata: RuleEffectMetadata,
+  value: number,
+  condition?: EffectCondition,
+): RuleEffectMetadata & AddAcEffect {
+  return { ...metadata, type: "add-ac", value, condition };
 }
 
-export function createGrantAttackEffect(attack: AttackDefinition): GrantAttackEffect {
-  return { type: "grant-attack", attack };
+export function createGrantSpellEffect(
+  metadata: RuleEffectMetadata,
+  spellId: EntityId,
+  grant: SpellGrant,
+): RuleEffectMetadata & GrantSpellEffect {
+  return { ...metadata, type: "grant-spell", spellId, grant };
 }
 
-export function createGrantFeatureEffect(featureId: EntityId): GrantFeatureEffect {
-  return { type: "grant-feature", featureId };
+export function createGrantResourceEffect(
+  metadata: RuleEffectMetadata,
+  resource: ResourceDefinition,
+): RuleEffectMetadata & GrantResourceEffect {
+  return { ...metadata, type: "grant-resource", resource };
+}
+
+export function createGrantAttackEffect(
+  metadata: RuleEffectMetadata,
+  attack: AttackDefinition,
+): RuleEffectMetadata & GrantAttackEffect {
+  return { ...metadata, type: "grant-attack", attack };
+}
+
+export function createGrantFeatureEffect(
+  metadata: RuleEffectMetadata,
+  featureId: EntityId,
+): RuleEffectMetadata & GrantFeatureEffect {
+  return { ...metadata, type: "grant-feature", featureId };
 }
 
 /* ── Supporting type factories ─────────────────────────────────── */
@@ -1063,4 +1379,88 @@ export function createRangedRange(normal: number, maximum: number): RangedRange 
 
 export function createTouchRange(): TouchRange {
   return { type: "touch" };
+}
+
+/* ── Immunity definition factories ─────────────────────────────── */
+
+export function createDamageImmunity(damageType: string): ImmunityDefinition {
+  return { type: "damage", damageType };
+}
+
+export function createConditionImmunity(conditionId: EntityId): ImmunityDefinition {
+  return { type: "condition", conditionId };
+}
+
+export function createDiseaseImmunity(): ImmunityDefinition {
+  return { type: "disease" };
+}
+
+export function createMagicalSleepImmunity(): ImmunityDefinition {
+  return { type: "magical-sleep" };
+}
+
+/* ── Capability definition factories ───────────────────────────── */
+
+export function createNoBreathingRequiredCapability(): CapabilityDefinition {
+  return { type: "no-breathing-required" };
+}
+
+export function createNoFoodRequiredCapability(): CapabilityDefinition {
+  return { type: "no-food-required" };
+}
+
+export function createNoWaterRequiredCapability(): CapabilityDefinition {
+  return { type: "no-water-required" };
+}
+
+export function createNoSleepRequiredCapability(): CapabilityDefinition {
+  return { type: "no-sleep-required" };
+}
+
+export function createWaterBreathingCapability(): CapabilityDefinition {
+  return { type: "water-breathing" };
+}
+
+/* ── Roll predicate factories ──────────────────────────────────── */
+
+export function createAbilityRollPredicate(ability: Ability): RollPredicate {
+  return { type: "ability", ability };
+}
+
+export function createSkillRollPredicate(skillId: EntityId): RollPredicate {
+  return { type: "skill", skillId };
+}
+
+export function createConditionRollPredicate(
+  conditionId: EntityId,
+  purpose: "avoid" | "end" | "avoid-or-end",
+): RollPredicate {
+  return { type: "condition", conditionId, purpose };
+}
+
+export function createDamageTypeRollPredicate(damageType: string): RollPredicate {
+  return { type: "damage-type", damageType };
+}
+
+export function createConcentrationRollPredicate(): RollPredicate {
+  return { type: "concentration" };
+}
+
+/* ── Effect presentation factory ───────────────────────────────── */
+
+export function createEffectPresentation(
+  primary: SheetProjection,
+  secondary: SheetProjection[],
+): EffectPresentation {
+  return { primary, secondary: [...secondary] };
+}
+
+/* ── Effect origin factory ─────────────────────────────────────── */
+
+export function createEffectOrigin(
+  entityId: EntityId,
+  sourceId: SourceId,
+  method: "structured" | "reviewed-mapping",
+): EffectOrigin {
+  return { entityId, sourceId, method };
 }

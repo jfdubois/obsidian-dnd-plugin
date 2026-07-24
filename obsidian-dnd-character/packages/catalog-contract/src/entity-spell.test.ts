@@ -17,7 +17,7 @@ import { createChoiceDefinition } from "./choice-definition";
 import type { RulePrerequisite } from "./prerequisite";
 import { createAbilityScorePrerequisite } from "./prerequisite";
 import type { RuleEffect } from "./effect";
-import { createAddAbilityEffect } from "./effect";
+import { createAddAbilityEffect, createRuleEffectMetadata, createEffectPresentation, createEffectOrigin } from "./effect";
 import type { RenderNode } from "./render-node";
 import { createRenderParagraph } from "./render-node";
 import { createEntityQuery } from "./query";
@@ -55,7 +55,15 @@ function makeMinimalPrerequisite(): RulePrerequisite {
 }
 
 function makeMinimalEffect(): RuleEffect {
-  return createAddAbilityEffect("STR", 2);
+  return createAddAbilityEffect(
+    createRuleEffectMetadata(
+      "full",
+      createEffectPresentation("abilities", []),
+      createEffectOrigin(makeEntityId(), makeSourceId(), "structured"),
+    ),
+    "STR",
+    2,
+  );
 }
 
 function makeMinimalRenderNode(): RenderNode {

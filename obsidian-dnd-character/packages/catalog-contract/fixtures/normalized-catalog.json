@@ -69,11 +69,17 @@
         "prerequisites": [],
         "effects": [
           {
+            "automationStatus": "full",
+            "presentation": { "primary": "abilities", "secondary": [] },
+            "origin": { "entityId": "species:2024:core:elf", "sourceId": "source:2024:core:phb", "method": "structured" },
             "type": "add-ability",
             "ability": "DEX",
             "value": 2
           },
           {
+            "automationStatus": "full",
+            "presentation": { "primary": "senses", "secondary": [] },
+            "origin": { "entityId": "species:2024:core:elf", "sourceId": "source:2024:core:phb", "method": "structured" },
             "type": "add-sense",
             "sense": {
               "type": "darkvision",
@@ -81,14 +87,23 @@
             }
           },
           {
+            "automationStatus": "full",
+            "presentation": { "primary": "proficiencies", "secondary": [] },
+            "origin": { "entityId": "species:2024:core:elf", "sourceId": "source:2024:core:phb", "method": "structured" },
             "type": "add-language",
             "languageId": "language:2024:core:common"
           },
           {
+            "automationStatus": "full",
+            "presentation": { "primary": "proficiencies", "secondary": [] },
+            "origin": { "entityId": "species:2024:core:elf", "sourceId": "source:2024:core:phb", "method": "structured" },
             "type": "add-language",
             "languageId": "language:2024:core:elvish"
           },
           {
+            "automationStatus": "full",
+            "presentation": { "primary": "proficiencies", "secondary": ["saving-throws"] },
+            "origin": { "entityId": "species:2024:core:elf", "sourceId": "source:2024:core:phb", "method": "structured" },
             "type": "add-proficiency",
             "proficiency": {
               "kind": "saving-throw",
@@ -96,8 +111,13 @@
             }
           },
           {
+            "automationStatus": "full",
+            "presentation": { "primary": "defenses", "secondary": [] },
+            "origin": { "entityId": "species:2024:core:elf", "sourceId": "source:2024:core:phb", "method": "structured" },
             "type": "add-immunity",
-            "damageType": "sleep"
+            "immunity": {
+              "type": "magical-sleep"
+            }
           }
         ],
         "choices": [
@@ -187,6 +207,9 @@
         "prerequisites": [],
         "effects": [
           {
+            "automationStatus": "full",
+            "presentation": { "primary": "proficiencies", "secondary": [] },
+            "origin": { "entityId": "background:2024:core:soldier", "sourceId": "source:2024:core:phb", "method": "structured" },
             "type": "add-proficiency",
             "proficiency": {
               "kind": "tool",
@@ -194,6 +217,9 @@
             }
           },
           {
+            "automationStatus": "full",
+            "presentation": { "primary": "proficiencies", "secondary": [] },
+            "origin": { "entityId": "background:2024:core:soldier", "sourceId": "source:2024:core:phb", "method": "structured" },
             "type": "add-proficiency",
             "proficiency": {
               "kind": "armor",
@@ -257,6 +283,9 @@
         ],
         "effects": [
           {
+            "automationStatus": "full",
+            "presentation": { "primary": "features-and-traits", "secondary": [] },
+            "origin": { "entityId": "feat:2024:core:tough", "sourceId": "source:2024:core:phb", "method": "structured" },
             "type": "grant-feature",
             "featureId": "class-feature:2024:core:tough:hit-point-increase"
           }
@@ -294,6 +323,9 @@
         "prerequisites": [],
         "effects": [
           {
+            "automationStatus": "full",
+            "presentation": { "primary": "attacks", "secondary": [] },
+            "origin": { "entityId": "spell:2024:core:firebolt", "sourceId": "source:2024:core:phb", "method": "structured" },
             "type": "grant-attack",
             "attack": {
               "name": "Firebolt",
@@ -349,6 +381,9 @@
         "prerequisites": [],
         "effects": [
           {
+            "automationStatus": "full",
+            "presentation": { "primary": "attacks", "secondary": [] },
+            "origin": { "entityId": "spell:2024:core:fireball", "sourceId": "source:2024:core:phb", "method": "structured" },
             "type": "grant-attack",
             "attack": {
               "name": "Fireball",
@@ -407,6 +442,9 @@
         "prerequisites": [],
         "effects": [
           {
+            "automationStatus": "full",
+            "presentation": { "primary": "attacks", "secondary": [] },
+            "origin": { "entityId": "item:2024:core:longsword", "sourceId": "source:2024:core:phb", "method": "structured" },
             "type": "grant-attack",
             "attack": {
               "name": "Longsword",
@@ -488,6 +526,9 @@
         "prerequisites": [],
         "effects": [
           {
+            "automationStatus": "full",
+            "presentation": { "primary": "proficiencies", "secondary": [] },
+            "origin": { "entityId": "class:2024:core:fighter", "sourceId": "source:2024:core:phb", "method": "structured" },
             "type": "add-proficiency",
             "proficiency": {
               "kind": "armor",
@@ -495,6 +536,9 @@
             }
           },
           {
+            "automationStatus": "full",
+            "presentation": { "primary": "proficiencies", "secondary": [] },
+            "origin": { "entityId": "class:2024:core:fighter", "sourceId": "source:2024:core:phb", "method": "structured" },
             "type": "add-proficiency",
             "proficiency": {
               "kind": "armor",
@@ -502,6 +546,9 @@
             }
           },
           {
+            "automationStatus": "full",
+            "presentation": { "primary": "proficiencies", "secondary": [] },
+            "origin": { "entityId": "class:2024:core:fighter", "sourceId": "source:2024:core:phb", "method": "structured" },
             "type": "add-proficiency",
             "proficiency": {
               "kind": "armor",
@@ -509,6 +556,9 @@
             }
           },
           {
+            "automationStatus": "full",
+            "presentation": { "primary": "proficiencies", "secondary": [] },
+            "origin": { "entityId": "class:2024:core:fighter", "sourceId": "source:2024:core:phb", "method": "structured" },
             "type": "add-proficiency",
             "proficiency": {
               "kind": "armor",
@@ -516,6 +566,9 @@
             }
           },
           {
+            "automationStatus": "full",
+            "presentation": { "primary": "resources", "secondary": [] },
+            "origin": { "entityId": "class:2024:core:fighter", "sourceId": "source:2024:core:phb", "method": "structured" },
             "type": "grant-resource",
             "resource": {
               "name": "Second Wind",
@@ -530,6 +583,9 @@
             }
           },
           {
+            "automationStatus": "full",
+            "presentation": { "primary": "actions", "secondary": ["attacks"] },
+            "origin": { "entityId": "class:2024:core:fighter", "sourceId": "source:2024:core:phb", "method": "structured" },
             "type": "grant-attack",
             "attack": {
               "name": "Second Wind",
