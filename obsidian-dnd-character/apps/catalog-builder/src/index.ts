@@ -12,3 +12,16 @@ export {
   /* Default */
   defaultBuilderConfig,
 } from "./config";
+
+export {
+  /* Source manifest types */
+  type SourceManifest,
+  /* Source manifest error */
+  SourceManifestError,
+  /* Source manifest reader */
+  readSourceManifest,
+  /* Source manifest validator */
+  isSourceManifest,
+  /* Source manifest factory */
+  createSourceManifest,
+} from "./source-manifest";
