@@ -6,7 +6,7 @@ Phase 3 — Catalog builder ingestion foundation (IN PROGRESS)
 
 ## Last completed task
 
-P3-T002 — Implement source manifest reader
+P3-T003 — Implement raw JSON loader
 
 ## Blockers
 
@@ -34,6 +34,11 @@ Not initialized.
 See `docs/08_DECISIONS_RISKS_REFERENCES.md`.
 
 ## Work log
+
+2026-07-23 — P3-T003 — complete
+Summary: Implemented raw JSON loader for catalog-builder. Added RawLoaderDiagnostic type (code, severity, message, path), RawLoadSummary (totalFound, successfullyParsed, parseFailures, readFailures), RawLoadResult (files as Record<string, unknown>, diagnostics, summary), RawLoaderError with typed codes (DATA_DIR_NOT_FOUND, DATA_DIR_NOT_DIRECTORY, READ_PERMISSION_DENIED, JSON_PARSE_ERROR, UNEXPECTED_STRUCTURE), and loadRawJsonFiles service. Service recursively discovers all .json files under data/, reads each file with per-file error handling, parses JSON capturing line/column info on parse errors, and returns structured result with file inventory and diagnostics. One file failure does not prevent loading others. 40 tests covering real 5eTools clone positive tests, missing directory, invalid JSON, permission issues, nested directories, edge cases, and result structure validation.
+Validation: `npm run check` passes (typecheck + lint + 1247/1247 tests, EXIT 0). `npm run build` passes (EXIT 0).
+Commit: see Git history for P3-T003.
 
 2026-07-23 — P3-T002 — complete
 Summary: Implemented source manifest reader for catalog-builder. Added SourceManifest type (clonePath, commitHash, shortHash, subject, date), SourceManifestError with typed codes (NOT_GIT_REPO, PATH_NOT_FOUND, GIT_COMMAND_FAILED), readSourceManifest service, isSourceManifest validator, and createSourceManifest factory. Service verifies path exists, contains .git directory, and runs git commands to capture commit metadata. Returns frozen immutable manifest. 34 tests covering positive cases with real 5eTools clone and negative cases for all error paths and validator rejections.

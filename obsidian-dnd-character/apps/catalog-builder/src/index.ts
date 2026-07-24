@@ -25,3 +25,15 @@ export {
   /* Source manifest factory */
   createSourceManifest,
 } from "./source-manifest";
+
+export {
+  /* Raw loader types */
+  type RawLoaderDiagnostic,
+  type RawLoadSummary,
+  type RawLoadResult,
+  type DiagnosticSeverity,
+  /* Raw loader error */
+  RawLoaderError,
+  /* Raw loader */
+  loadRawJsonFiles,
+} from "./raw-loader";

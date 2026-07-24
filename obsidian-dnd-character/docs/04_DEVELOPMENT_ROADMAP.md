@@ -152,7 +152,7 @@ Read and resolve raw source generically without generating final entities yet.
 - [x] **P3-T002 — Implement source manifest reader**
   - Verify Git repository and capture commit.
 
-- [ ] **P3-T003 — Implement raw JSON loader**
+- [x] **P3-T003 — Implement raw JSON loader**
   - Safe path handling, parse diagnostics, file inventory.
 
 - [ ] **P3-T004 — Implement raw boundary validation**
