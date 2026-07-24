@@ -131,6 +131,7 @@ git rev-parse HEAD
 
 Require:
 
+- record the exact final `git rev-parse HEAD` output as the phase `Starting commit`; do not substitute an older phase commit, status-file value, or another line from `git log`;
 - current directory and Git root are `/home/jdubois/Documents/Projects/obsidian-dnd-plugin`;
 - branch is exactly `dev`;
 - working tree is clean;
@@ -185,6 +186,7 @@ Task-area documents from CONTEXT_INDEX.md:
 Required validation:
 Explicit exclusions:
 Worker discovery requirement:
+Worker hard limits:
 ```
 
 Set `Worker discovery requirement` to:
@@ -193,6 +195,15 @@ Set `Worker discovery requirement` to:
 Discover relevant implementation files, tests, raw-source examples, line counts,
 symbols, bounded ranges, expected changes, and risks before editing. The parent
 has intentionally not pre-read them.
+```
+
+Set `Worker hard limits` to:
+
+```text
+Use bounded reads for every existing file over 300 lines. Keep new files focused
+and normally at or below 300 lines; split multi-family work before writing. Never
+use shell-based file creation or transport workarounds. After one transport failure,
+split the mutation; after a second transport failure, stop as blocked.
 ```
 
 Do not predict new filenames, public APIs, implementation structure, or expected changed files. Do not list large files unless their relevance is explicitly stated in the roadmap or current status.
@@ -210,6 +221,14 @@ Invoke a fresh `dnd-task-worker` immediately. Never resume or reuse a prior task
 ## 8. Parent review
 
 The worker must leave changes uncommitted and unstaged.
+
+If the worker returns no structured report:
+
+- inspect `git status --short`;
+- when the tree is clean, treat the invocation as failed rather than as a task defect;
+- allow one fresh replacement worker using the same task capsule plus the shortest failure note;
+- if the replacement also returns no report or leaves no changes, stop as blocked;
+- do not consume the normal two repair attempts for an invocation that made no repository mutation.
 
 Start with compact review metadata:
 

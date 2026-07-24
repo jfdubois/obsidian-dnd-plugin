@@ -37,5 +37,7 @@ Non-negotiable behavior:
 - Keep `dev` green and synchronized with `origin/dev` after each completed task.
 - Stop after the selected phase gate or on a defined blocker.
 - Output the phase ledger once and the task-start notice once. Do not repeatedly restate tasks, gate criteria, or the worker capsule.
+- Set `Starting commit` to the exact value returned by the current preflight `git rev-parse HEAD`; never infer it from Git history, project status, or the first commit of the phase.
+- If a worker returns no structured report and the tree is clean, treat it as a failed worker invocation. Allow one fresh replacement worker; if that also returns no report or no changes, stop as blocked.
 - After compaction, reconstruct state from the active skill, bounded repository state, Git state, and current diff before another mutation.
 - Never rely on a compaction summary as project authority.
