@@ -1,25 +1,24 @@
 # Context Index
 
-Use this file to locate the minimum context required for a task.
+Use this file to locate the minimum context required for a task. Do not load every listed file in full when a targeted section is sufficient.
 
 | Task area | Required documents |
 |---|---|
-| Product scope or feature decision | `PROJECT_CONTEXT.md`, `docs/01_PRODUCT_REQUIREMENTS.md`, `docs/08_DECISIONS_RISKS_REFERENCES.md` |
-| Repository setup | `AGENTS.md`, `docs/04_DEVELOPMENT_ROADMAP.md`, `docs/05_ENGINEERING_SOP.md`, `docs/07_WORKSPACE_SETUP.md` |
-| Catalog builder | `AGENTS.md`, `docs/02_SYSTEM_ARCHITECTURE.md`, `docs/03_DATA_CONTRACTS.md`, relevant phase in `docs/04_DEVELOPMENT_ROADMAP.md` |
-| Catalog server | `docs/02_SYSTEM_ARCHITECTURE.md`, `docs/07_WORKSPACE_SETUP.md`, relevant phase in roadmap |
-| Obsidian API work | `AGENTS.md`, pinned `references/obsidian/obsidian.d.ts`, `docs/02_SYSTEM_ARCHITECTURE.md`, `docs/05_ENGINEERING_SOP.md` |
-| Character persistence | `docs/03_DATA_CONTRACTS.md`, persistence phase in roadmap, test matrix |
-| Calculation engine | `docs/03_DATA_CONTRACTS.md`, engine phase in roadmap, test matrix |
-| Character creator | product requirements, architecture, data contracts, creator phase |
-| Level-up | product requirements, data contracts, level-up phase, acceptance matrix |
-| Spell filtering | data contracts, catalog relations, source policy requirements, acceptance matrix |
-| UI/sidebar/mobile | product requirements, architecture, UI phase, acceptance matrix |
-| Completing any task | `AGENTS.md`, selected phase/task and gate from the roadmap, current-state sections of `docs/PROJECT_STATUS.md`, orchestration prompt only when running phase mode |
-| Historical task investigation | `docs/PROJECT_HISTORY.md`, Git history, relevant task commit |
-| Executing a complete roadmap phase | `AGENTS.md`, `prompts/QWEN_TASK_PROMPT.md`, selected phase and gate from `docs/04_DEVELOPMENT_ROADMAP.md`, applicable sections of `docs/05_ENGINEERING_SOP.md`, current-state sections of `docs/PROJECT_STATUS.md`, plus the task-specific documents listed in this index |
+| Product scope or feature decision | `PROJECT_CONTEXT.md`, relevant section of `docs/01_PRODUCT_REQUIREMENTS.md`, relevant ADR/risk section |
+| Repository setup | `AGENTS.md`, active roadmap task, relevant sections of engineering SOP |
+| Catalog builder | `AGENTS.md`, relevant architecture/data-contract sections, active Phase 3 or 4 task |
+| Catalog server | relevant architecture/workspace sections and active Phase 5 task |
+| Obsidian API work | `AGENTS.md`, pinned `references/obsidian/obsidian.d.ts`, relevant architecture and API-register sections |
+| Character persistence | relevant data-contract sections, active persistence task, related acceptance tests |
+| Calculation engine | relevant effect/snapshot contracts, active engine task, related acceptance tests |
+| Character creator | relevant product, contract, and active creator-task sections |
+| Level-up/source policy | relevant product, contract, active progression task, and acceptance sections |
+| Spell filtering | query/relations/source-policy contract sections and related acceptance tests |
+| UI/sidebar/mobile | relevant product/UI architecture sections and related acceptance tests |
+| Completing one task | `AGENTS.md`, current-state portion of `docs/PROJECT_STATUS.md`, exact roadmap task and gate, task-specific rows above, current implementation/tests |
+| Executing a complete phase | OpenCode skill `dnd-phase-execution`, `AGENTS.md`, selected phase section/gate, current-state portion of project status; task-specific documents are loaded only when each task begins |
 
-## Reference files that must be pinned in the repository
+## Reference files that must remain pinned
 
 ```text
 references/
@@ -39,4 +38,4 @@ references/
     └── schema-notes/
 ```
 
-Do not load the entire D&D Beyond fixture or full raw 5eTools repository into the LLM context unless the active task requires a targeted portion.
+Do not load an entire reference fixture or the full raw 5eTools repository unless the active task requires a targeted portion.

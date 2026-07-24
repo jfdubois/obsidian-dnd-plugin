@@ -1,194 +1,163 @@
-# AGENTS.md — Mandatory Development Rules
+# AGENTS.md — Mandatory development rules
 
-These rules apply to every agent and every implementation task in this repository.
+These rules apply to every agent working in `obsidian-dnd-character/`.
 
-## 1. Work protocol
+## 1. Authority and execution modes
 
-Two execution modes are permitted.
+Repository documentation is binding. When instructions conflict, use accepted ADRs and the authority order defined by the active phase skill. Do not resolve conflicts by guessing.
 
-### 1.1 Single-task mode is the default when a user or agent assigns one roadmap task.
+Two modes are allowed:
 
-Single-task mode is the default when a user or agent assigns one roadmap task.
+### Single-task mode
 
-1. Read `PROJECT_CONTEXT.md` and `CONTEXT_INDEX.md`. 
-2. Read `docs/PROJECT_STATUS.md`. 
-3. Select exactly one unchecked task from `docs/04_DEVELOPMENT_ROADMAP.md` unless the user explicitly assigns another task. 
-4. Read only the documents listed for that task area in `CONTEXT_INDEX.md`. 
-5. Inspect the existing implementation before changing files. 
-6. State the task ID, scope, assumptions, and validation commands before editing. 
-7. Implement only the selected task and its required supporting changes. 
-8. Run all task-specific checks. 
-9. Update the task checkbox and `docs/PROJECT_STATUS.md` only after acceptance criteria pass. 
-10. Report changed files, commands run, test results, remaining risks, and the next task ID. 
-11. Stop. Do not automatically begin the next task.
+Use when one roadmap task is assigned.
 
-### 1.2 Phase-orchestrator mode
+- Read project context, context index, current status, the active roadmap task, and only task-specific documents.
+- Inspect implementation and tests before editing.
+- State task scope, expected files, exclusions, and validation.
+- Implement exactly one task and stop after reporting.
+- Update roadmap/status only after all acceptance criteria pass.
 
-Phase-orchestrator mode is permitted only when the user explicitly invokes the phase workflow defined in `prompts/QWEN_TASK_PROMPT.md`.
+### Phase-orchestrator mode
 
-In phase-orchestrator mode: 
+Use only when the user explicitly assigns a complete phase through the `dnd-phase-execution` OpenCode skill.
 
-1. Select exactly one roadmap phase. 
-2. Execute its incomplete tasks sequentially. 
-3. Delegate each task to a new, disposable subagent session. 
-4. Each task subagent must obey the single-task protocol and stop after its assigned task.
-5. A task subagent must not:
-  - select another task;
-  - update the roadmap;
-  - update `docs/PROJECT_STATUS.md`; 
-  - create a Git commit; 
-  - push changes; 
-  - change branches; 
-  - invoke another subagent.
-6. The phase orchestrator must independently review and validate the task changes.
-7. Only the phase orchestrator may: 
-  - mark the task complete;
-  - update project status;
-  - commit the completed task;
-  - push the task commit to `dev`.
-8. After a successful task commit and push, the phase orchestrator must reload the controlling repository documents before selecting the next task.
-9. After all phase tasks pass, validate and complete the phase gate.
-10. Stop after the phase gate. Do not begin the next phase.
-11. If any task or gate is blocked, stop the phase without inventing a solution or discarding uncommitted work.
+- One fresh `dnd-task-worker` per task.
+- Workers never update roadmap/status, stage, commit, push, switch branches, or invoke agents.
+- The parent independently reviews, validates, documents, commits, and pushes each task.
+- Reload durable repository state between tasks.
+- Stop after the selected phase gate or a defined blocker.
 
+## 2. Minimal context rule
 
-## 2. No invented APIs
+Do not preload the entire project documentation set.
 
-- Use only Obsidian API members present in the repository's pinned `references/obsidian/obsidian.d.ts`.
-- Before using a new Obsidian API member, search the pinned file and record it in `docs/API_USAGE.md` with:
-  - symbol name;
-  - exact signature;
-  - minimum API version from TSDoc when present;
-  - project file using it;
-  - reason for use.
-- Do not call internal, private, undocumented, or guessed Obsidian members.
-- Do not use Electron or Node-only APIs in the plugin unless the product is explicitly made desktop-only. The planned plugin must remain mobile-compatible.
-- Do not use browser `fetch` for catalog calls when the documented Obsidian `requestUrl` API is required by the architecture.
+For a task, read:
 
-## 3. Raw 5eTools isolation
+- this file;
+- current project status;
+- the exact roadmap task and phase gate;
+- only documents named for the task area in `CONTEXT_INDEX.md`;
+- only relevant source symbols, bounded ranges, and tests.
 
-- Raw 5eTools JSON may be imported only by the catalog-builder package.
-- The Obsidian plugin must never import, parse, or branch on raw 5eTools structures.
-- No raw 5eTools record is allowed in a character file.
-- No raw 5eTools record is allowed in the normalized catalog output.
-- All source references must resolve to canonical project entity IDs.
-- Unresolved included references are build failures, not warnings.
-- Never write entity-name exceptions such as `if (name === "Elf")` or `if (className === "Wizard")`.
-- Branch only on normalized schema fields, discriminated unions, or rule capability types.
-- Do not infer mechanical effects by parsing narrative rule text in the plugin or rules engine.
-- Narrative-only mechanics may become automated only through a versioned, runtime-validated semantic mapping approved by an architecture decision.
-- Semantic mappings must target canonical entity or feature IDs. They must not be implemented as display-name branches.
-- Unmapped narrative mechanics remain safe render content with explicit automation diagnostics.
+Do not load complete D&D Beyond fixtures, the full raw 5eTools repository, historical status logs, or unrelated phase specifications.
 
-## 4. D&D Beyond usage restriction
+Conversation history and compaction summaries are not authoritative project state. After compaction, reconstruct the current task from repository files, Git state, and the active diff before another mutation.
 
-- The D&D Beyond fixture is a behavioral and data-shape reference only.
-- Do not call D&D Beyond endpoints from production code.
-- Do not assume its JSON response is its database schema.
-- Do not reuse D&D Beyond IDs as project canonical IDs.
-- Do not copy D&D Beyond branding, assets, CSS, descriptions, or proprietary UI code.
+## 3. Product and architecture guardrails
 
-## 5. Data ownership
+- Use only Obsidian APIs present in `references/obsidian/obsidian.d.ts`.
+- Record each new verified Obsidian symbol in `docs/API_USAGE.md` before implementation.
+- Keep plugin runtime mobile-compatible; no Node/Electron-only API without an accepted ADR.
+- Use `requestUrl` rather than guessed or undocumented transport APIs.
+- Raw 5eTools structures exist only inside catalog-builder boundaries.
+- The plugin, normalized catalog, and character files never contain raw 5eTools records.
+- Resolve source references to canonical project IDs.
+- Included unresolved references are build failures.
+- Never branch on entity or feature display names.
+- Never infer mechanics from narrative text in plugin or rules-engine runtime.
+- Narrative automation requires a versioned, runtime-validated reviewed mapping targeting canonical identity.
+- Unmapped narrative remains safe render content with explicit automation diagnostics.
+- D&D Beyond is a behavioral fixture only; production code never calls it or adopts its IDs/schema.
+- Do not bundle or publicly redistribute non-free content.
 
-Authoritative data:
+## 4. Data and TypeScript rules
 
-- normalized versioned catalog artifacts;
-- character documents;
-- plugin settings;
-- schema migration history.
-
-Disposable data:
-
-- downloaded indexes;
-- entity response cache;
-- option candidate cache;
-- spell eligibility cache;
-- level-up plan cache;
-- derived character snapshots.
-
-A character must remain reconstructable after deleting all disposable caches, provided the referenced catalog revision remains available or its entities can be migrated.
-
-## 6. Character rules
-
-- Every character has exactly one ruleset: `2014` or `2024`.
-- Core-free content is always included by record-level access classification.
-- Optional source-book access is stored per character.
-- Plugin source profiles are presets only; they do not silently rewrite existing character policies.
-- Existing selected content remains a required dependency when changing source access.
-- Level-up option queries use the character's policy, class state, subclass, current selections, and target level.
-- Persist selections and their origin grants. Do not persist all future options.
-
-## 7. Cache rules
-
-Every cache key must include or derive from:
-
-- normalized catalog schema version;
-- catalog revision;
-- character ID when character-specific;
-- character state hash when eligibility depends on character state;
-- content-policy hash;
-- query type and query parameters.
-
-A cache hit is valid only when all inputs match. Unknown or incomplete cache metadata is a cache miss.
-
-## 8. TypeScript rules
-
-- Enable strict TypeScript.
+- Strict TypeScript is mandatory.
 - No `any` in domain, catalog, persistence, or calculation modules.
-- Use `unknown` at external boundaries and validate before conversion.
-- Use discriminated unions for effects, grants, mutations, and query types.
-- Use branded string types or equivalent wrappers for entity IDs, character IDs, source IDs, and instance IDs.
-- Exhaustive `switch` statements must use a `never` assertion.
-- Domain modules must not depend on Obsidian UI classes.
-- Side effects must be isolated behind repositories, clients, and services.
-- Pure calculation functions must remain deterministic.
+- Validate external, downloaded, raw, and persisted values from `unknown`.
+- Use discriminated unions for effects, grants, mutations, and queries.
+- Use branded IDs or equivalent wrappers.
+- Pure calculations remain deterministic and independent of Obsidian UI.
+- Persist authoritative selections and mutable state, not catalog copies, candidate lists, or derived totals.
+- Every persisted structure has a schema version and tested deterministic migrations.
+- Character create/edit/level/equipment/source-policy changes are atomic transactions.
+- Caches are disposable and must include all catalog, policy, query, and character-state fingerprints required for correctness.
+- Deleting caches must not destroy character state.
 
-## 9. Persistence rules
+## 5. Character and UI rules
 
-- Plugin settings use documented `Plugin.loadData()` and `Plugin.saveData()`.
-- Character files are stored in a configurable vault folder.
-- Character updates use documented atomic `Vault.process()` when modifying an existing plaintext character file.
-- All reads are runtime-validated.
-- Every persisted structure has a schema version.
-- Migrations are forward-only, deterministic, and tested.
-- Never partially save a character creation or level-up transaction.
+- A character has exactly one ruleset: 2014 or 2024.
+- Core-free records remain eligible through record-level classification.
+- Optional source access is stored per character.
+- Do not remove a required source or silently replace invalid selections.
+- Persist selected choices and origin grants, never all future candidates.
+- UI components issue typed commands; they do not mutate authoritative state directly.
+- Every interactive control requires appropriate accessible behavior.
+- Every projected mechanical rule retains source provenance.
+- Multiple projections reference one evaluated effect; projections are derived, not persisted.
 
-## 10. UI rules
+## 6. Large-file editing protocol
 
-- UI components issue commands; they do not mutate character objects directly.
-- Mobile/narrow-sidebar layout is a first-class acceptance target.
-- Every interactive element requires an accessible label and keyboard behavior where applicable.
-- Invalid dependent selections must be shown and resolved; never silently replace them.
-- Narrative rules that are not mechanically normalized are displayed as text and marked non-automated.
-- Every projected mechanical rule must identify its originating normalized entity or feature.
-- One normalized effect may appear in multiple sheet sections, but it must remain one effect with one activation state and one provenance trace.
-- Character-sheet projections are derived and must not be persisted as authoritative character state.
+An existing file over 300 lines must be edited through bounded mutations.
 
-## 11. Testing rules
+Before every mutation, identify and report:
 
-- No task is complete without its listed automated checks.
-- Every bug fix requires a regression test unless technically impossible and documented.
-- Catalog import tests must cover copies, modifications, versions, references, and 2014/2024 classification.
-- Calculation tests must use golden fixtures and contribution traces.
-- Persistence tests must cover corrupt data, migration, and atomic mutation behavior.
-- UI logic should be separated from DOM rendering so option filtering and state transitions can be unit tested.
+```text
+Target file:
+Line count:
+Symbols or test sections affected:
+Bounded ranges inspected:
+Planned targeted edit operations:
+Expected untouched sections:
+Targeted validation command:
+Whole-file replacement: no
+```
 
-## 12. Change control
+Rules:
 
-Stop and request an architectural decision before implementing any change that:
+- Search symbols first and read bounded ranges.
+- Never replace, regenerate, delete, or recreate the whole file.
+- Never transport a complete generated replacement through Bash, Python, heredoc, base64, temporary files, or wrappers.
+- Prefer focused modules when a new independent contract/helper/test can avoid enlarging a large file.
+- After one oversized or transport failure, split into smaller targeted edits.
+- After two failures on the same region, stop and report the blocker.
+- Validate every logical slice with the narrowest useful test/typecheck.
+- A change exceeding 200 lines or 25 percent of a large existing file requires parent review before further mutation.
+- Broad formatting churn, section reordering, or delete/re-add diffs are unacceptable.
 
-- modifies a published catalog schema;
-- changes canonical ID construction;
-- allows mixed 2014/2024 content;
-- changes character source-policy semantics;
-- introduces a new effect or grant category;
-- stores a derived value as authoritative state;
-- uses an Obsidian API not found in the pinned reference;
-- requires public distribution of non-free source content.
+## 7. Task completion
 
-Record accepted architecture changes in `docs/08_DECISIONS_RISKS_REFERENCES.md`.
+A task is complete only when:
 
-## 13. Completion report format
+- implementation and required runtime schemas are complete;
+- positive and negative tests cover the boundary/behavior;
+- task-specific checks pass;
+- `npm run check` passes;
+- `npm run build` passes;
+- diff review shows no unrelated scope or prohibited pattern;
+- roadmap/status and API/ADR documentation are updated only where required.
+
+Do not claim an unexecuted command passed.
+
+## 8. Change control
+
+Stop for an architectural decision before:
+
+- changing a published catalog schema outside an already accepted task;
+- changing canonical ID construction;
+- allowing mixed rulesets;
+- changing source-policy semantics;
+- introducing an unapproved effect/grant category;
+- persisting a derived value as authoritative;
+- using an Obsidian API absent from the pinned reference;
+- requiring public redistribution of non-free content.
+
+Record accepted changes in `docs/08_DECISIONS_RISKS_REFERENCES.md`.
+
+## 9. Worker restrictions
+
+A task worker must not:
+
+- select another task;
+- change roadmap or project status;
+- stage, commit, or push;
+- switch branches or change Git configuration;
+- reset, restore, clean, stash, or discard changes;
+- invoke another agent;
+- perform unrelated cleanup, dependency upgrades, or speculative refactors.
+
+## 10. Completion report
 
 ```text
 Task: <task ID and title>
@@ -198,10 +167,10 @@ Changed files:
 - ...
 
 Validation:
-- <command>: PASS/FAIL
+- <command>: PASS | FAIL
 
 Acceptance criteria:
-- [x] ...
+- [x] or [ ] ...
 
 Risks or limitations:
 - ...
@@ -212,73 +181,3 @@ Documentation updated:
 Next task:
 - <task ID>
 ```
-
-## 14. Large-file editing protocol
-
-1. Before editing an existing file, inspect its line count and locate the
-   exact symbols or sections that need modification.
-2. Do not read an entire file over 300 lines when symbol search and bounded
-   ranges can provide the required context.
-3. Do not replace an existing file over 300 lines in one Write call.
-   Use targeted Edit operations for individual logical sections.
-4. Independent new contracts, validators, helpers, or tests should be placed
-   in focused modules when this avoids expanding an already large file.
-   Preserve existing public exports through the package index.
-5. A tool-call failure containing "Unterminated string", truncated JSON, or
-   incomplete arguments is a transport failure. Do not retry the same complete
-   content through Bash, Python, base64, temporary files, or another wrapper.
-6. After one oversized mutation failure, reduce the mutation to targeted edits
-   or split the implementation into modules.
-7. After two failures on the same file region, stop and report the target,
-   attempted mutation, error, and proposed smaller operation.
-8. Bash or Python may perform a concise transformation of existing file
-   contents. They must not be used to embed and transport a complete generated
-   source file inside the command argument.
-9. Verify each logical mutation with a targeted diff and the narrowest useful
-   typecheck or test before continuing.
-
-### 14.1 Large-file mutation gate
-
-Before modifying an existing file over 300 lines, the agent must output and follow a bounded mutation plan containing:
-
-```text
-Target file:
-Line count:
-Symbols or test sections affected:
-Bounded ranges inspected:
-Planned edit operations:
-Expected untouched sections:
-Targeted validation command:
-```
-
-The agent must not begin the mutation until it has identified the exact symbols, describe blocks, fixtures, imports, or call sites being changed.
-
-For an existing file over 300 lines:
-  - whole-file replacement is prohibited;
-  - complete-file regeneration is prohibited;
-  - deleting and recreating the file is prohibited;
-  - generating the full replacement through Bash, Python, heredoc, base64, temporary files, or another transport is prohibited;
-  - the number of required edits does not justify a whole-file rewrite;
-  - test files are subject to the same rules as implementation files.
-
-A whole-file replacement may occur only when all of the following are true:
-
-  1. the file is generated output or a disposable fixture;
-  2. the active task explicitly requires regeneration;
-  3. the orchestrator records the exception before the write;
-  4. the replacement can be validated against an authoritative generator or source.
-
-If these conditions are not met, the agent must use bounded edits, add focused modules, or stop as blocked.
-
-## 15. Context-efficient execution protocol
-
-1. Read only the selected roadmap phase, active task, and phase gate unless broader roadmap context is explicitly required.
-2. Use `CONTEXT_INDEX.md` to select bounded architecture, contract, SOP, and acceptance sections.
-3. Treat `docs/PROJECT_STATUS.md` as compact current state and `docs/PROJECT_HISTORY.md` as historical reference.
-4. Do not load historical work logs during normal task execution.
-5. In phase-orchestrator mode, reread the complete phase prompt only at phase start or after context compaction.
-6. After each successful task push, retain only the compact phase ledger, task commit, validation result, unresolved risks, next task, and gate status.
-7. Review large diffs file-by-file and hunk-by-hunk. An unrestricted full diff is not required when bounded review can verify the task.
-8. Retain only compact PASS summaries for successful commands and the shortest causal excerpt for failures.
-9. For an 81,920-token model context, preserve at least 20 percent for review, repair, validation, documentation, and final reporting.
-10. Compact closed task context before the remaining reserve becomes insufficient; reconstruct authoritative state from repository files and Git afterward.
