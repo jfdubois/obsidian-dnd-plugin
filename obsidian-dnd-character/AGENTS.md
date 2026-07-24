@@ -6,7 +6,7 @@ These rules apply to every agent and every implementation task in this repositor
 
 Two execution modes are permitted.
 
-### 1.1 Single-task mode Single-task mode is the default when a user or agent assigns one roadmap task.
+### 1.1 Single-task mode is the default when a user or agent assigns one roadmap task.
 
 Single-task mode is the default when a user or agent assigns one roadmap task.
 
