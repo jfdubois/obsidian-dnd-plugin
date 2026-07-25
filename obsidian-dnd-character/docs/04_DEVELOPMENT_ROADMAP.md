@@ -188,7 +188,7 @@ Read and resolve raw source generically without generating final entities yet.
 
 - [X] **P3-T009 — Implement _versions expansion**
 
-- [ ] **P3-T010 — Detect inheritance cycles**
+- [X] **P3-T010 — Detect inheritance cycles**
 
 - [ ] **P3-T011 — Emit resolved-record debug fixtures**
   - Include source path, structured identity, inheritance chain, and resolved field inventory.

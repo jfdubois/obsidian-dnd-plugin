@@ -209,6 +209,10 @@ function createFailure(
   };
 }
 
+function formatCopyChain(chain: readonly CopyChainStep[]): string {
+  return chain.map((step) => `${step.entityName}|${step.sourceAbbr}`).join(" -> ");
+}
+
 /**
  * Finds a record by name and source across all validated files.
  * Returns the first match found, or undefined if not found.
@@ -244,7 +248,7 @@ function resolveCopyChain(
     return createFailure(
       "COPY_CHAIN_TOO_DEEP",
       "error",
-      `_copy chain exceeded maximum depth of ${MAX_COPY_DEPTH}. Chain: ${chain.map((s) => `${s.entityName}|${s.sourceAbbr}`).join(" -> ")}`,
+      `_copy chain exceeded maximum depth of ${MAX_COPY_DEPTH}. Chain: ${formatCopyChain(chain)}`,
       sourceRecord,
       copyValue,
     );
@@ -254,10 +258,14 @@ function resolveCopyChain(
 
   // Cycle detection
   if (visited.has(identityKey)) {
+    const cycleChain = [
+      ...chain,
+      { entityName: copyValue.name, sourceAbbr: copyValue.source },
+    ];
     return createFailure(
       "CIRCULAR_COPY_REFERENCE",
       "error",
-      `Circular _copy reference detected: "${identityKey}" appears multiple times in chain: ${chain.map((s) => `${s.entityName}|${s.sourceAbbr}`).join(" -> ")}`,
+      `Circular _copy reference detected: "${identityKey}" appears multiple times in chain: ${formatCopyChain(cycleChain)}`,
       sourceRecord,
       copyValue,
     );

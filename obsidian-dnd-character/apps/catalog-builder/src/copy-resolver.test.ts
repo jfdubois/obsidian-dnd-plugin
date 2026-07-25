@@ -208,6 +208,37 @@ describe("resolveCopy — failure cases", () => {
     expect(isCopyResolutionFailure(result)).toBe(true);
     if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
     expect(result.diagnostic.code).toBe("CIRCULAR_COPY_REFERENCE");
+    expect(result.diagnostic.message).toContain("B|PHB -> A|PHB -> B|PHB");
+  });
+
+  it("returns CIRCULAR_COPY_REFERENCE with the full nested cycle chain", () => {
+    const context = makeContext([
+      {
+        name: "A",
+        source: "PHB",
+        remaining: { _copy: { name: "B", source: "PHB" } },
+      },
+      {
+        name: "B",
+        source: "PHB",
+        remaining: { _copy: { name: "C", source: "PHB" } },
+      },
+      {
+        name: "C",
+        source: "PHB",
+        remaining: { _copy: { name: "B", source: "PHB" } },
+      },
+    ]);
+
+    const result = resolveCopy(
+      makeRecord("A", "PHB", { _copy: { name: "B", source: "PHB" } }),
+      context,
+    );
+
+    expect(isCopyResolutionFailure(result)).toBe(true);
+    if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
+    expect(result.diagnostic.code).toBe("CIRCULAR_COPY_REFERENCE");
+    expect(result.diagnostic.message).toContain("B|PHB -> C|PHB -> B|PHB");
   });
 
   it("resolves self-reference when _preserve is true", () => {
