@@ -1,13 +1,9 @@
 ---
-description: Run the read-only orchestration manager decision matrix
+description: Run the blind, tool-free orchestration manager calibration
 agent: dnd-calibration-manager
 subtask: false
 ---
 
-Run the complete read-only manager calibration defined in:
+Run the manager calibration embedded in the active calibration agent.
 
-```text
-obsidian-dnd-character/prompts/ORCHESTRATION_MANAGER_CASES.md
-```
-
-No repository inspection, shell command, delegation, edit, or Git action is permitted.
+Use no tools and access no repository file. Return only the required decision table for external scoring.

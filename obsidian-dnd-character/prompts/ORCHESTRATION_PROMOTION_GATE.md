@@ -4,8 +4,10 @@ Full multi-task phase execution remains disabled until every criterion passes.
 
 ## Manager calibration
 
-- [ ] Read-only manager score is 12/12.
-- [ ] No repository actions occurred during the read-only test.
+- [ ] Blind manager score is 12/12 under external review.
+- [ ] The calibration output includes all 12 actions and one-sentence reasons.
+- [ ] No tool call, repository read, shell command, delegation, edit, or Git action occurred.
+- [ ] The model did not receive or generate the answer key before external scoring.
 - [ ] Failed cases, if any, were classified before prompt changes.
 
 ## Single-task execution
