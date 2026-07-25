@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 import { describe, it, expect } from "vitest";
 import {
   readSourceManifest,
@@ -59,11 +62,17 @@ describe("readSourceManifest", () => {
   });
 
   it("throws NOT_GIT_REPO for directory without .git", () => {
-    expect(() => readSourceManifest("/tmp")).toThrow(SourceManifestError);
+    const nonGitDir = mkdtempSync(join(tmpdir(), "source-manifest-"));
+
     try {
-      readSourceManifest("/tmp");
-    } catch (error) {
-      expect((error as SourceManifestError).code).toBe("NOT_GIT_REPO");
+      expect(() => readSourceManifest(nonGitDir)).toThrow(SourceManifestError);
+      try {
+        readSourceManifest(nonGitDir);
+      } catch (error) {
+        expect((error as SourceManifestError).code).toBe("NOT_GIT_REPO");
+      }
+    } finally {
+      rmSync(nonGitDir, { recursive: true, force: true });
     }
   });
 

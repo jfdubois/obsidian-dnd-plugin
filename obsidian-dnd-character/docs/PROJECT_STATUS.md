@@ -6,11 +6,11 @@ Phase 3 — Catalog builder ingestion foundation
 
 ## Current task
 
-P3-T007-S2 — Scalar, property, text, and size operations
+P3-T007-S3 — Senses and skills operations
 
 ## Last completed task
 
-P3-T007-S1 — Shared contracts and array operations
+P3-T007-S2 — Scalar, property, text, and size operations
 
 ## Branch baseline
 
@@ -26,7 +26,7 @@ None recorded.
 
 - `npm run check`: passing at Phase 2 gate
 - `npm run build`: passing at Phase 2 gate
-- Tests: 1417 passing
+- Tests: 1465 passing
 
 ## Catalog baseline
 
@@ -44,8 +44,8 @@ None recorded.
 # Current phase ledger
 
 - Phase starting commit: 6dcc189
-- Completed Phase 3 task commits: P3-T006, P3-T007-S1
-- Current task: P3-T007-S2
+- Completed Phase 3 task commits: P3-T006, P3-T007-S1, P3-T007-S2
+- Current task: P3-T007-S3
 - P3-T007 execution mode: five committed slices; one `/phase 3` invocation per slice.
 - Current retry: 1
 - Gate status: not evaluated
@@ -54,6 +54,12 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-25 — P3-T007-S2 — Scalar, property, text, and size operations
+Summary: Added scalar, property, text, and size `_mod` execution for `maxSize`, `prefixSuffixStringProp`, `replaceTxt`, `scalarAddDc`, `scalarAddHit`, `scalarAddProp`, `scalarMultProp`, `scalarMultXp`, and `setProp`. Added resulting-state tests, malformed-payload diagnostics, unknown-mode diagnostics, and clone-preservation coverage. Repaired the source-manifest non-Git directory test to use an isolated temp directory instead of assuming `/tmp` is not a Git mount.
+Validation: `npm --prefix obsidian-dnd-character run test -- mod-scalar-text-operations.test.ts` passes (4/4 tests, EXIT 0). `npm --prefix obsidian-dnd-character run test -- source-manifest.test.ts` passes (34/34 tests, EXIT 0). `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 1465/1465 tests, EXIT 0). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: No Obsidian API use, normalized catalog contract changes, raw-source leakage, dependency updates, or future P3-T007 slice implementation introduced.
+Commit: see Git history for P3-T007-S2.
 
 2026-07-24 — P3-T006 — Implement _copy resolver
 Summary: Created copy-resolver.ts (441 lines) and copy-resolver.test.ts (616 lines, 331 new tests). Resolves _copy field using canonical reference parser, locates base entity by name+source, handles nested _copy chains with cycle detection and depth limit (20). Provides resolveCopy (discriminated result), resolveCopyOrThrow (throw API), resolveCopies (batch), and collectCopyFailures utilities.

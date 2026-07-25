@@ -171,7 +171,7 @@ Read and resolve raw source generically without generating final entities yet.
 - [ ] **P3-T007 — Implement _mod operations used by included data**
   - [X] **P3-T007-S1 — Shared contracts and array operations**
     - Modes: appendArr, appendIfNotExistsArr, insertArr, prependArr, removeArr, renameArr, replaceArr.
-  - [ ] **P3-T007-S2 — Scalar, property, text, and size operations**
+  - [X] **P3-T007-S2 — Scalar, property, text, and size operations**
     - Modes: maxSize, prefixSuffixStringProp, replaceTxt, scalarAddDc, scalarAddHit, scalarAddProp, scalarMultProp, scalarMultXp, setProp.
   - [ ] **P3-T007-S3 — Senses and skills operations**
     - Modes: addSenses, addSkills.
