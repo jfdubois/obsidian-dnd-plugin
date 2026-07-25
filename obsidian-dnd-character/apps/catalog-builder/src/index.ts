@@ -110,3 +110,34 @@ export {
   isCopyResolutionSuccess,
   isCopyResolutionFailure,
 } from "./copy-resolver";
+
+export {
+  /* Mod types */
+  type ModOperationPayload,
+  type ModAppendArr,
+  type ModAppendIfNotExistsArr,
+  type ModInsertArr,
+  type ModPrependArr,
+  type ModRemoveArr,
+  type ModRenameArr,
+  type ModReplaceArr,
+  type ModRenameEntry,
+  type ModOperationDiagnostic,
+  type ModDiagnosticCode,
+  type ModApplyResult,
+  type RawModBlock,
+  /* Mod mode registry */
+  KNOWN_MOD_MODES_SET,
+} from "./mod-types";
+
+export {
+  /* Array mod operations */
+  applyArrayModOperation,
+  execAppendArr,
+  execAppendIfNotExistsArr,
+  execInsertArr,
+  execPrependArr,
+  execRemoveArr,
+  execRenameArr,
+  execReplaceArr,
+} from "./mod-array-operations";

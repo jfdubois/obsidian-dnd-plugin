@@ -169,7 +169,7 @@ Read and resolve raw source generically without generating final entities yet.
   - Resolve base entity by structured identity.
 
 - [ ] **P3-T007 — Implement _mod operations used by included data**
-  - [ ] **P3-T007-S1 — Shared contracts and array operations**
+  - [X] **P3-T007-S1 — Shared contracts and array operations**
     - Modes: appendArr, appendIfNotExistsArr, insertArr, prependArr, removeArr, renameArr, replaceArr.
   - [ ] **P3-T007-S2 — Scalar, property, text, and size operations**
     - Modes: maxSize, prefixSuffixStringProp, replaceTxt, scalarAddDc, scalarAddHit, scalarAddProp, scalarMultProp, scalarMultXp, setProp.

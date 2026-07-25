@@ -6,11 +6,11 @@ Phase 3 — Catalog builder ingestion foundation
 
 ## Current task
 
-P3-T007-S1 — Shared contracts and array operations
+P3-T007-S2 — Scalar, property, text, and size operations
 
 ## Last completed task
 
-P3-T006 — Implement _copy resolver
+P3-T007-S1 — Shared contracts and array operations
 
 ## Branch baseline
 
@@ -44,10 +44,10 @@ None recorded.
 # Current phase ledger
 
 - Phase starting commit: 6dcc189
-- Completed Phase 3 task commits: P3-T006
-- Current task: P3-T007-S1
+- Completed Phase 3 task commits: P3-T006, P3-T007-S1
+- Current task: P3-T007-S2
 - P3-T007 execution mode: five committed slices; one `/phase 3` invocation per slice.
-- Current retry: 0
+- Current retry: 1
 - Gate status: not evaluated
 - Blocking issue: none
 
