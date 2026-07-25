@@ -1,0 +1,71 @@
+# Project command policy for actions that would execute outside the sandbox.
+# Rules are additive to AGENTS.md and the phase skill; they are not a replacement for either.
+
+prefix_rule(
+    pattern = ["git", ["status", "diff", "log", "rev-parse", "branch", "remote", "rev-list"]],
+    decision = "allow",
+    justification = "Read-only Git inspection is allowed.",
+    match = [
+        "git status --short",
+        "git diff --check",
+        "git log -10 --oneline",
+        "git rev-parse HEAD",
+        "git branch --show-current",
+        "git remote -v",
+        "git rev-list --left-right --count origin/dev...dev",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", "fetch"],
+    decision = "prompt",
+    justification = "Network synchronization requires user approval.",
+    match = ["git fetch origin dev"],
+)
+
+prefix_rule(
+    pattern = ["git", ["add", "commit", "push"]],
+    decision = "prompt",
+    justification = "Only the phase parent may publish validated task or gate changes, with approval.",
+    match = [
+        "git add -A",
+        "git commit -m chore(project): complete P3-T007 -m P3-T007",
+        "git push origin dev",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", ["reset", "clean", "restore", "stash", "rebase", "merge", "cherry-pick", "revert", "checkout", "switch", "tag"]],
+    decision = "forbidden",
+    justification = "Destructive, branch-changing, history-rewriting, and release Git actions are prohibited. Preserve the current tree and report the blocker instead.",
+    match = [
+        "git reset --hard HEAD",
+        "git clean -fd",
+        "git restore .",
+        "git stash",
+        "git rebase origin/dev",
+        "git merge main",
+        "git cherry-pick abc123",
+        "git revert abc123",
+        "git checkout main",
+        "git switch main",
+        "git tag v1.0.0",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", "push", ["--force", "-f"]],
+    decision = "forbidden",
+    justification = "Force-push is prohibited. Stop and report the synchronization problem.",
+    match = [
+        "git push --force origin dev",
+        "git push -f origin dev",
+    ],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "origin", "main"],
+    decision = "forbidden",
+    justification = "Automated agents may not push to main. An explicit release instruction is required outside this workflow.",
+    match = ["git push origin main"],
+)

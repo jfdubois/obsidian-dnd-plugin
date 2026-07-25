@@ -16,7 +16,7 @@ Use this file to locate the minimum context required for a task. Do not load eve
 | Spell filtering | query/relations/source-policy contract sections and related acceptance tests |
 | UI/sidebar/mobile | relevant product/UI architecture sections and related acceptance tests |
 | Completing one task | `AGENTS.md`, current-state portion of `docs/PROJECT_STATUS.md`, exact roadmap task and gate, task-specific rows above, current implementation/tests |
-| Executing a complete phase | OpenCode skill `dnd-phase-execution`, `AGENTS.md`, selected phase section/gate, current-state portion of project status; task-specific documents are loaded only when each task begins |
+| Executing a complete phase | Codex skill `.agents/skills/dnd-phase-execution/SKILL.md`, `AGENTS.md`, selected phase section/gate, current-state portion of project status; task-specific documents are loaded only when each task begins |
 
 ## Reference files that must remain pinned
 
