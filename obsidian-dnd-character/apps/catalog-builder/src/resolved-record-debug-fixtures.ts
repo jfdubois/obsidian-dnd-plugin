@@ -15,10 +15,10 @@ export interface ResolvedRecordDebugIdentity {
   readonly entityKind: string;
   readonly name: string;
   readonly source: string;
+  readonly [key: string]: unknown;
 }
 
 export interface ResolvedRecordDebugChainStep extends CopyChainStep {
-  readonly sourcePath: string;
   readonly identity: ResolvedRecordDebugIdentity;
 }
 
@@ -184,7 +184,10 @@ export function createResolvedRecordDebugFixture(
     };
   }
 
-  const copyResult = resolveCopy(record, context);
+  const copyResult = resolveCopy(record, context, {
+    sourceEntityKind: sourceLocation.entityKind,
+    sourcePath: sourceLocation.sourcePath,
+  });
   const isDirectRecord =
     isCopyResolutionFailure(copyResult) && copyResult.diagnostic.code === "NO_COPY_FIELD";
 
@@ -204,7 +207,10 @@ export function createResolvedRecordDebugFixture(
   }
 
   const resolvedRecord = isCopyResolutionSuccess(copyResult)
-    ? resolveCopyWithMods(record, context, { sourcePath: sourceLocation.sourcePath })
+    ? resolveCopyWithMods(record, context, {
+        sourcePath: sourceLocation.sourcePath,
+        sourceEntityKind: sourceLocation.entityKind,
+      })
     : { ok: true as const, record: cloneRecord(record), diagnostics: [] };
 
   if (!resolvedRecord.ok) {

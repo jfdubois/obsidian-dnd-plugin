@@ -154,7 +154,10 @@ function collectResolutionFailures(
   for (const [sourcePath, envelope] of Object.entries(boundary.validatedFiles)) {
     for (const collection of envelope.collections) {
       for (const record of collection.records) {
-        const copyResult = resolveCopy(record, context);
+        const copyResult = resolveCopy(record, context, {
+          sourceEntityKind: collection.entityKind,
+          sourcePath,
+        });
         if (isCopyResolutionFailure(copyResult)) {
           if (copyResult.diagnostic.code !== "NO_COPY_FIELD") {
             failures.push(
@@ -165,7 +168,10 @@ function collectResolutionFailures(
         }
 
         if (isCopyResolutionSuccess(copyResult)) {
-          const modResult = resolveCopyWithMods(toCopyModRecord(record), context, { sourcePath });
+          const modResult = resolveCopyWithMods(toCopyModRecord(record), context, {
+            sourcePath,
+            sourceEntityKind: collection.entityKind,
+          });
           if (!modResult.ok) {
             for (const diagnostic of modResult.diagnostics) {
               failures.push(createModFailure(diagnostic, sourcePath, collection.entityKind, record));

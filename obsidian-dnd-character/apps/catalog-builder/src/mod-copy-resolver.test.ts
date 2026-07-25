@@ -87,7 +87,7 @@ describe("resolveCopyWithMods dispatcher integration", () => {
     };
     const variant = makeVariant(base, mod);
 
-    const result = resolveCopyWithMods(variant, makeContext(base), { sourcePath: "source.json" });
+    const result = resolveCopyWithMods(variant, makeContext(base), { sourcePath: "source.json", sourceEntityKind: "monster" });
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected dispatcher integration to succeed");
@@ -129,7 +129,7 @@ describe("resolveCopyWithMods dispatcher integration", () => {
     const result = resolveCopyWithMods(
       makeVariant(base, { trait: { mode: "inventedMode", items: [] } }),
       makeContext(base),
-      { sourcePath: "source.json" },
+      { sourcePath: "source.json", sourceEntityKind: "monster" },
     );
 
     expect(result.ok).toBe(false);
@@ -155,7 +155,7 @@ describe("resolveCopyWithMods dispatcher integration", () => {
       trait: { mode: "appendArr" },
     });
 
-    const result = resolveCopyWithMods(variant, makeContext(base), { sourcePath: "source.json" });
+    const result = resolveCopyWithMods(variant, makeContext(base), { sourcePath: "source.json", sourceEntityKind: "monster" });
 
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected malformed payload failure");

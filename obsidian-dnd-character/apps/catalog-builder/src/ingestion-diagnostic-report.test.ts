@@ -78,7 +78,7 @@ describe("createIngestionDiagnosticReport", () => {
       entitySource: "TST",
     });
     expect(report.resolutionFailures[0]!.message).toContain(
-      "Mage|TST -> Adept|TST -> Mage|TST",
+      "Mage|TST [class] -> Adept|TST [class] -> Mage|TST [class]",
     );
   });
 

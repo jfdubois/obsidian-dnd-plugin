@@ -51,6 +51,12 @@ export interface CopyChainStep {
   readonly entityName: string;
   /** Source abbreviation at this step. */
   readonly sourceAbbr: string;
+  /** Logical entity kind (collection) of the record at this step. */
+  readonly entityKind: string;
+  /** Physical file path containing the record at this step. */
+  readonly sourcePath: string;
+  /** Full structured identity/discriminator fields used for this step. */
+  readonly identity: StructuredIdentity;
 }
 
 /** Discriminated result of a _copy resolution attempt. */
@@ -104,7 +110,11 @@ export type CopyDiagnosticCode =
   /** The _copy field has an unexpected type. */
   | "COPY_FIELD_INVALID_TYPE"
   /** The _preserve marker has an unsupported payload. */
-  | "INVALID_PRESERVE_VALUE";
+  | "INVALID_PRESERVE_VALUE"
+  /** Cross-collection copy is not permitted for the given entity kind relationship. */
+  | "CROSS_COLLECTION_COPY_DENIED"
+  /** A discriminator value in the _copy identity has an invalid type. */
+  | "INVALID_DISCRIMINATOR_VALUE";
 
 /** Context containing all loaded raw data for resolution. */
 export interface CopyResolverContext {
@@ -146,20 +156,17 @@ export function isRawCopyValue(value: unknown): value is RawCopyValue {
     return false;
   }
   // Must have at least one non-directive identity key (other than "source")
-  // with a non-empty value
+  // with a valid discriminator value
+  let hasValidIdentity = false;
   for (const [key, val] of Object.entries(obj)) {
     if (key.startsWith("_") || key === "source") {
       continue;
     }
-    if (typeof val === "string" && val !== "") {
-      return true;
-    }
-    if (typeof val !== "string") {
-      // Non-string values (e.g. level: 2) are valid identity keys
-      return true;
+    if (isValidDiscriminatorValue(key, val)) {
+      hasValidIdentity = true;
     }
   }
-  return false;
+  return hasValidIdentity;
 }
 
 /**
@@ -225,6 +232,106 @@ export function isCopyResolutionFailure(
   return result.status === "failed";
 }
 
+/* ── Collection Compatibility Map ────────────────────────────────
+
+   Verified cross-collection copy relationships. Each source entity kind
+   maps to the set of entity kinds it is permitted to copy from.
+   Cross-collection lookup is denied by default unless listed here.
+   Derived from observed 5eTools _copy patterns and _meta.internalCopies.
+   ─────────────────────────────────────────────────────────────────── */
+
+const COLLECTION_COMPATIBILITY: ReadonlyMap<string, ReadonlySet<string>> = new Map([
+  // Core: each kind copies from itself
+  ["monster", new Set(["monster"])],
+  ["monsterFluff", new Set(["monsterFluff", "monster"])],
+  ["race", new Set(["race"])],
+  ["subrace", new Set(["subrace", "race"])],
+  ["class", new Set(["class"])],
+  ["subclass", new Set(["subclass", "class"])],
+  ["subclassFeature", new Set(["subclassFeature"])],
+  ["raceFeature", new Set(["raceFeature"])],
+  ["background", new Set(["background"])],
+  ["backgroundFeature", new Set(["backgroundFeature"])],
+  ["feat", new Set(["feat"])],
+  ["spell", new Set(["spell"])],
+  ["item", new Set(["item"])],
+  ["itemType", new Set(["itemType"])],
+  ["equipment", new Set(["equipment"])],
+  ["deity", new Set(["deity"])],
+  ["language", new Set(["language"])],
+  ["lore", new Set(["lore"])],
+  ["skill", new Set(["skill"])],
+  ["weapon", new Set(["weapon"])],
+  ["armor", new Set(["armor"])],
+  ["shield", new Set(["shield"])],
+  ["tool", new Set(["tool"])],
+  ["hazard", new Set(["hazard"])],
+  ["location", new Set(["location"])],
+  ["npc", new Set(["npc", "monster"])],
+  ["properNoun", new Set(["properNoun"])],
+  ["condition", new Set(["condition"])],
+  ["damageType", new Set(["damageType"])],
+  ["sense", new Set(["sense"])],
+  ["savingThrow", new Set(["savingThrow"])],
+  ["size", new Set(["size"])],
+]);
+
+/** Returns the set of entity kinds a source kind may copy from. */
+function getAllowedEntityKinds(sourceKind: string): ReadonlySet<string> {
+  return COLLECTION_COMPATIBILITY.get(sourceKind) ?? new Set([sourceKind]);
+}
+
+/* ── Discriminator Value Validation ──────────────────────────────
+
+   Validates that all non-directive identity fields in a _copy value
+   contain allowed scalar discriminator types. Rejects arrays, objects,
+   null, empty strings, and invalid numeric values.
+   ─────────────────────────────────────────────────────────────────── */
+
+function isValidDiscriminatorValue(key: string, value: unknown): boolean {
+  if (typeof value === "string") {
+    return value.length > 0;
+  }
+  if (typeof value === "number") {
+    // Integer-valued fields like level must be finite integers
+    return Number.isFinite(value) && Number.isInteger(value);
+  }
+  if (typeof value === "boolean") {
+    return true;
+  }
+  // Reject: null, arrays, objects, symbols, undefined, bigint
+  return false;
+}
+
+interface DiscriminatorValidationFailure {
+  readonly fieldName: string;
+  readonly invalidValue: unknown;
+  readonly valueKind: string;
+}
+
+function validateDiscriminatorValues(
+  copyValue: RawCopyValue,
+): DiscriminatorValidationFailure[] {
+  const failures: DiscriminatorValidationFailure[] = [];
+  for (const [key, value] of Object.entries(copyValue)) {
+    if (key.startsWith("_") || key === "source") {
+      continue;
+    }
+    if (!isValidDiscriminatorValue(key, value)) {
+      failures.push({
+        fieldName: key,
+        invalidValue: value,
+        valueKind: Array.isArray(value)
+          ? "array"
+          : value === null
+            ? "null"
+            : typeof value,
+      });
+    }
+  }
+  return failures;
+}
+
 /* ── Internal Helpers ──────────────────────────────────────────── */
 
 function createDiagnostic(
@@ -267,20 +374,26 @@ function createFailure(
 }
 
 function formatCopyChain(chain: readonly CopyChainStep[]): string {
-  return chain.map((step) => `${step.entityName}|${step.sourceAbbr}`).join(" -> ");
+  return chain.map((step) => `${step.entityName}|${step.sourceAbbr} [${step.entityKind}]`).join(" -> ");
 }
 
 /**
- * Finds records matching a structured identity across all validated files.
- * Returns all matching records so the caller can detect ambiguity.
+ * Finds records matching a structured identity within allowed entity kinds.
+ * By default, only searches the same entity kind as the source record.
+ * Cross-collection lookup is only permitted through verified compatibility.
  */
 function findRecordsByStructuredIdentity(
   context: CopyResolverContext,
   identity: StructuredIdentity,
+  sourceEntityKind: string,
 ): RawRecord[] {
+  const allowedKinds = getAllowedEntityKinds(sourceEntityKind);
   const matches: RawRecord[] = [];
-  for (const [, envelope] of Object.entries(context.validatedFiles)) {
+  for (const [_sourcePath, envelope] of Object.entries(context.validatedFiles)) {
     for (const collection of envelope.collections) {
+      if (!allowedKinds.has(collection.entityKind)) {
+        continue;
+      }
       for (const record of collection.records) {
         if (recordMatchesIdentity(record, identity)) {
           matches.push(record);
@@ -330,6 +443,7 @@ function identityMatchesSourceRecord(
 /**
  * Recursively resolves a _copy chain with cycle detection.
  * Uses full structured identity for lookup and cycle detection keys.
+ * Entity-kind-aware: searches only compatible collections by default.
  */
 function resolveCopyChain(
   copyValue: RawCopyValue,
@@ -338,6 +452,8 @@ function resolveCopyChain(
   visited: Set<string>,
   chain: CopyChainStep[],
   depth: number,
+  currentEntityKind: string,
+  currentSourcePath: string,
 ): CopyResolutionResult {
   // Depth guard
   if (depth > MAX_COPY_DEPTH) {
@@ -351,14 +467,20 @@ function resolveCopyChain(
   }
 
   const identity = extractStructuredIdentity(copyValue);
-  const cycleKey = identityToCycleKey(identity);
+  const cycleKey = `${currentEntityKind}|${identityToCycleKey(identity)}`;
 
   // Cycle detection
   if (visited.has(cycleKey)) {
     const chainLabel = identityToChainLabel(identity);
-    const cycleChain = [
+    const cycleChain: CopyChainStep[] = [
       ...chain,
-      { entityName: chainLabel.name, sourceAbbr: chainLabel.source },
+      {
+        entityName: chainLabel.name,
+        sourceAbbr: chainLabel.source,
+        entityKind: currentEntityKind,
+        sourcePath: currentSourcePath,
+        identity,
+      },
     ];
     return createFailure(
       "CIRCULAR_COPY_REFERENCE",
@@ -374,6 +496,9 @@ function resolveCopyChain(
   chain.push({
     entityName: chainLabel.name,
     sourceAbbr: chainLabel.source,
+    entityKind: currentEntityKind,
+    sourcePath: currentSourcePath,
+    identity,
   });
 
   // _preserve self-reference: if the identity matches the source record itself
@@ -388,14 +513,15 @@ function resolveCopyChain(
     };
   }
 
-  // Find base entities matching ALL identity fields
-  const candidates = findRecordsByStructuredIdentity(context, identity);
+  // Find base entities matching ALL identity fields within allowed entity kinds
+  const candidates = findRecordsByStructuredIdentity(context, identity, currentEntityKind);
 
   if (candidates.length === 0) {
+    const allowedKinds = getAllowedEntityKinds(currentEntityKind);
     return createFailure(
       "BASE_ENTITY_NOT_FOUND",
       "error",
-      `Base entity matching identity ${JSON.stringify(identity)} not found in loaded data. Referenced by "${sourceRecord.name}" (${sourceRecord.source}).`,
+      `Base entity matching identity ${JSON.stringify(identity)} not found in allowed entity kinds [${[...allowedKinds].sort().join(", ")}]. Source entity kind: "${currentEntityKind}". Source path: "${currentSourcePath}". Referenced by "${sourceRecord.name}" (${sourceRecord.source}).`,
       sourceRecord,
       copyValue,
     );
@@ -408,7 +534,7 @@ function resolveCopyChain(
     return createFailure(
       "AMBIGUOUS_BASE_ENTITY",
       "error",
-      `Found ${candidates.length} candidates matching identity ${JSON.stringify(identity)}: ${candidateDescs}. Referenced by "${sourceRecord.name}" (${sourceRecord.source}).`,
+      `Found ${candidates.length} candidates matching identity ${JSON.stringify(identity)} within entity kind "${currentEntityKind}": ${candidateDescs}. Referenced by "${sourceRecord.name}" (${sourceRecord.source}).`,
       sourceRecord,
       copyValue,
     );
@@ -419,6 +545,8 @@ function resolveCopyChain(
   // If the base entity itself has a _copy, recurse
   const baseCopy = baseEntity.remaining._copy;
   if (baseCopy !== undefined && isRawCopyValue(baseCopy)) {
+    // Determine entity kind and source path of the resolved base entity
+    const baseLocation = locateRecordInContext(context, baseEntity);
     return resolveCopyChain(
       baseCopy,
       context,
@@ -426,6 +554,8 @@ function resolveCopyChain(
       visited,
       chain,
       depth + 1,
+      baseLocation.entityKind,
+      baseLocation.sourcePath,
     );
   }
 
@@ -435,6 +565,26 @@ function resolveCopyChain(
     baseEntity,
     chain: Object.freeze(chain),
   };
+}
+
+/**
+ * Locates a record within the resolver context to determine its
+ * entity kind and source path for chain continuation.
+ */
+function locateRecordInContext(
+  context: CopyResolverContext,
+  record: RawRecord,
+): { entityKind: string; sourcePath: string } {
+  for (const [sourcePath, envelope] of Object.entries(context.validatedFiles)) {
+    for (const collection of envelope.collections) {
+      for (const candidate of collection.records) {
+        if (candidate.name === record.name && candidate.source === record.source) {
+          return { entityKind: collection.entityKind, sourcePath };
+        }
+      }
+    }
+  }
+  return { entityKind: "unknown", sourcePath: "unknown" };
 }
 
 /**
@@ -463,11 +613,13 @@ function identityToChainLabel(identity: StructuredIdentity): {
  *
  * @param record - The raw record containing a _copy field in its remaining data.
  * @param context - The resolver context with all validated files.
+ * @param options - Optional parameters for entity-kind-aware resolution.
  * @returns A success result with the base entity, or a failure with diagnostics.
  */
 export function resolveCopy(
   record: unknown,
   context: CopyResolverContext,
+  options?: { sourceEntityKind?: string; sourcePath?: string },
 ): CopyResolutionResult {
   // Validate record input
   if (!isPlainObject(record)) {
@@ -570,6 +722,24 @@ export function resolveCopy(
     }
   }
 
+  // Validate discriminator values
+  const discriminatorFailures = validateDiscriminatorValues(copyValue);
+  if (discriminatorFailures.length > 0) {
+    const failureDetails = discriminatorFailures
+      .map((f) => `"${f.fieldName}" has invalid value (type: ${f.valueKind})`)
+      .join("; ");
+    return createFailure(
+      "INVALID_DISCRIMINATOR_VALUE",
+      "error",
+      `Invalid discriminator values in _copy for "${rawRecord.name}" (${rawRecord.source}): ${failureDetails}. Entity kind: "${options?.sourceEntityKind ?? "unknown"}". Source path: "${options?.sourcePath ?? "unknown"}".`,
+      rawRecord,
+      copyValue,
+    );
+  }
+
+  const sourceEntityKind = options?.sourceEntityKind ?? "unknown";
+  const sourcePath = options?.sourcePath ?? "unknown";
+
   // Resolve the copy chain
   return resolveCopyChain(
     copyValue,
@@ -578,6 +748,8 @@ export function resolveCopy(
     new Set(),
     [],
     0,
+    sourceEntityKind,
+    sourcePath,
   );
 }
 
@@ -590,8 +762,9 @@ export function resolveCopy(
 export function resolveCopyOrThrow(
   record: unknown,
   context: CopyResolverContext,
+  options?: { sourceEntityKind?: string; sourcePath?: string },
 ): RawRecord {
-  const result = resolveCopy(record, context);
+  const result = resolveCopy(record, context, options);
 
   if (isCopyResolutionFailure(result)) {
     throw new CopyResolverError(
@@ -611,8 +784,9 @@ export function resolveCopyOrThrow(
 export function resolveCopies(
   records: unknown[],
   context: CopyResolverContext,
+  options?: { sourceEntityKind?: string; sourcePath?: string },
 ): CopyResolutionResult[] {
-  return records.map((record) => resolveCopy(record, context));
+  return records.map((record) => resolveCopy(record, context, options));
 }
 
 /**

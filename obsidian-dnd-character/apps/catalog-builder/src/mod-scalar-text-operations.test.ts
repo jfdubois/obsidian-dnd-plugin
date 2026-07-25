@@ -29,7 +29,7 @@ function resolveVariant(base: CopyModRawRecord, mod: Record<string, unknown>) {
   const variant = makeRecord("Half-Strength Ogre", "TST", {
     _copy: { name: base.name, source: base.source, _mod: mod },
   });
-  return { result: resolveCopyWithMods(variant, makeContext(base), { sourcePath: "test.json" }), variant };
+  return { result: resolveCopyWithMods(variant, makeContext(base), { sourcePath: "test.json", sourceEntityKind: "monster" }), variant };
 }
 
 describe("resolveCopyWithMods — scalar, property, text, and size operations", () => {

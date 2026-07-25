@@ -44,6 +44,7 @@ describe("resolveCopyWithMods: addSenses", () => {
 
     const result = resolveCopyWithMods(record, makeContext([base]), {
       sourcePath: "bestiary/template.json",
+      sourceEntityKind: "monster",
     });
 
     expect(result.ok).toBe(true);
@@ -85,7 +86,7 @@ describe("resolveCopyWithMods: addSenses", () => {
           remaining: { senses: [] },
         },
       ]),
-      { sourcePath: "bestiary/template.json" },
+      { sourcePath: "bestiary/template.json", sourceEntityKind: "monster" },
     );
 
     expect(result.ok).toBe(false);
@@ -127,6 +128,7 @@ describe("resolveCopyWithMods: addSkills", () => {
 
     const result = resolveCopyWithMods(record, makeContext([base]), {
       sourcePath: "bestiary/bestiary-bgdia.json",
+      sourceEntityKind: "monster",
     });
 
     expect(result.ok).toBe(true);
@@ -168,7 +170,7 @@ describe("resolveCopyWithMods: addSkills", () => {
           remaining: { skill: {} },
         },
       ]),
-      { sourcePath: "bestiary/bestiary-bgdia.json" },
+      { sourcePath: "bestiary/bestiary-bgdia.json", sourceEntityKind: "monster" },
     );
 
     expect(result.ok).toBe(false);
@@ -210,7 +212,7 @@ describe("resolveCopyWithMods: unknown root mode", () => {
           remaining: {},
         },
       ]),
-      { sourcePath: "bestiary/custom.json" },
+      { sourcePath: "bestiary/custom.json", sourceEntityKind: "monster" },
     );
 
     expect(result.ok).toBe(false);

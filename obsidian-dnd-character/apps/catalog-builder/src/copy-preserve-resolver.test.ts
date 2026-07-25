@@ -48,7 +48,7 @@ describe("_preserve copy resolution", () => {
         marker: sample.marker,
       });
 
-      const result = resolveCopy(record, makeContext([record]));
+      const result = resolveCopy(record, makeContext([record]), { sourceEntityKind: "test" });
 
       expect(isCopyResolutionSuccess(result)).toBe(true);
       if (!isCopyResolutionSuccess(result)) throw new Error("Expected preserve resolution to succeed");
@@ -68,11 +68,11 @@ describe("_preserve copy resolution", () => {
       sourceRef: "kept",
     });
 
-    const result = resolveCopy(preserved, makeContext([preserved]));
+    const result = resolveCopy(preserved, makeContext([preserved]), { sourceEntityKind: "test" });
 
     expect(isCopyResolutionSuccess(result)).toBe(true);
     if (!isCopyResolutionSuccess(result)) throw new Error("Expected preserve resolution to succeed");
-    expect(result.chain).toEqual([{ entityName: "Alchemist", sourceAbbr: "XPHB" }]);
+    expect(result.chain).toMatchObject([{ entityName: "Alchemist", sourceAbbr: "XPHB" }]);
     expect(result.baseEntity).toEqual({
       name: "Alchemist",
       source: "XPHB",
@@ -89,7 +89,7 @@ describe("_preserve copy resolution", () => {
       _preserve: { mode: "keep" },
     });
 
-    const result = resolveCopy(malformed, makeContext([malformed]));
+    const result = resolveCopy(malformed, makeContext([malformed]), { sourceEntityKind: "test" });
 
     expect(isCopyResolutionFailure(result)).toBe(true);
     if (!isCopyResolutionFailure(result)) throw new Error("Expected preserve resolution to fail");
@@ -110,12 +110,12 @@ describe("_preserve copy resolution", () => {
       _copy: { name: "Goblin", source: "MPMM" },
     });
 
-    const result = resolveCopy(variant, makeContext([base, variant]));
+    const result = resolveCopy(variant, makeContext([base, variant]), { sourceEntityKind: "test" });
 
     expect(isCopyResolutionSuccess(result)).toBe(true);
     if (!isCopyResolutionSuccess(result)) throw new Error("Expected copy resolution to succeed");
     expect(result.baseEntity).toBe(base);
-    expect(result.chain).toEqual([{ entityName: "Goblin", sourceAbbr: "MPMM" }]);
+    expect(result.chain).toMatchObject([{ entityName: "Goblin", sourceAbbr: "MPMM" }]);
   });
 
   it("keeps missing base diagnostics for non-preserve copies", () => {
@@ -123,7 +123,7 @@ describe("_preserve copy resolution", () => {
       _copy: { name: "Missing", source: "XXX" },
     });
 
-    const result = resolveCopy(variant, makeContext([variant]));
+    const result = resolveCopy(variant, makeContext([variant]), { sourceEntityKind: "test" });
 
     expect(isCopyResolutionFailure(result)).toBe(true);
     if (!isCopyResolutionFailure(result)) throw new Error("Expected missing base failure");
@@ -145,6 +145,7 @@ describe("_preserve copy resolution", () => {
 
     const result = resolveCopyWithMods(preserved, makeContext([preserved]), {
       sourcePath: "preserve.json",
+      sourceEntityKind: "test",
     });
 
     expect(result.ok).toBe(true);

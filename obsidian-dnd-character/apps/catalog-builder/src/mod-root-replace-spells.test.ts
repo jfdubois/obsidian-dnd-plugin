@@ -60,6 +60,7 @@ describe("resolveCopyWithMods: replaceSpells", () => {
 
     const result = resolveCopyWithMods(record, makeContext([base]), {
       sourcePath: "bestiary/bestiary-bgdia.json",
+      sourceEntityKind: "monster",
     });
 
     expect(result.ok).toBe(true);
@@ -126,7 +127,7 @@ describe("resolveCopyWithMods: replaceSpells", () => {
           remaining: { spellcasting: [{ spells: { "7": { spells: ["{@spell teleport}"] } } }] },
         },
       ]),
-      { sourcePath: "bestiary/bestiary-bgdia.json" },
+      { sourcePath: "bestiary/bestiary-bgdia.json", sourceEntityKind: "monster" },
     );
 
     expect(result.ok).toBe(false);

@@ -65,6 +65,7 @@ describe("resolveCopyWithMods: addSpells", () => {
 
     const result = resolveCopyWithMods(record, makeContext([base]), {
       sourcePath: "bestiary/bestiary-cm.json",
+      sourceEntityKind: "monster",
     });
 
     expect(result.ok).toBe(true);
@@ -138,7 +139,7 @@ describe("resolveCopyWithMods: addSpells", () => {
           remaining: { spellcasting: [{ spells: { "5": { spells: [] } } }] },
         },
       ]),
-      { sourcePath: "bestiary/bestiary-cm.json" },
+      { sourcePath: "bestiary/bestiary-cm.json", sourceEntityKind: "monster" },
     );
 
     expect(result.ok).toBe(false);

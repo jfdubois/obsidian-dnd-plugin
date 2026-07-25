@@ -237,7 +237,10 @@ function expandCollection(
       }
 
       const rawVersionRecord = versionRecord(baseRecord, rawVersion);
-      const resolved = resolveCopyWithMods(rawVersionRecord, context, { sourcePath });
+      const resolved = resolveCopyWithMods(rawVersionRecord, context, {
+        sourcePath,
+        sourceEntityKind: collection.entityKind,
+      });
       if (!resolved.ok) {
         diagnostics.push(
           modFailureDiagnostic(

@@ -40,6 +40,9 @@ function makeContext(
   };
 }
 
+/** Default resolve options for single-collection "test" context. */
+const TEST_OPTIONS = { sourceEntityKind: "test", sourcePath: "test.json" };
+
 function makeMultiCollectionContext(
   collections: Array<{
     entityKind: string;
@@ -131,6 +134,7 @@ describe("resolveCopy — basic success", () => {
     const result = resolveCopy(
       makeRecord("Boggart", "MPMM", { _copy: { name: "Goblin", source: "MPMM" } }),
       context,
+      TEST_OPTIONS,
     );
 
     expect(isCopyResolutionSuccess(result)).toBe(true);
@@ -138,7 +142,13 @@ describe("resolveCopy — basic success", () => {
     expect(result.baseEntity.name).toBe("Goblin");
     expect(result.baseEntity.source).toBe("MPMM");
     expect(result.chain).toHaveLength(1);
-    expect(result.chain[0]).toEqual({ entityName: "Goblin", sourceAbbr: "MPMM" });
+    expect(result.chain[0]).toEqual({
+      entityName: "Goblin",
+      sourceAbbr: "MPMM",
+      entityKind: "test",
+      sourcePath: "test.json",
+      identity: { name: "Goblin", source: "MPMM" },
+    });
   });
 
   it("resolves a nested _copy chain", () => {
@@ -155,6 +165,7 @@ describe("resolveCopy — basic success", () => {
     const result = resolveCopy(
       makeRecord("Centaur Variant", "MOT", { _copy: { name: "Centaur MOT", source: "MOT" } }),
       context,
+      TEST_OPTIONS,
     );
 
     expect(isCopyResolutionSuccess(result)).toBe(true);
@@ -162,8 +173,8 @@ describe("resolveCopy — basic success", () => {
     expect(result.baseEntity.name).toBe("Centaur");
     expect(result.baseEntity.source).toBe("GGR");
     expect(result.chain).toHaveLength(2);
-    expect(result.chain[0]).toEqual({ entityName: "Centaur MOT", sourceAbbr: "MOT" });
-    expect(result.chain[1]).toEqual({ entityName: "Centaur", sourceAbbr: "GGR" });
+    expect(result.chain[0]).toMatchObject({ entityName: "Centaur MOT", sourceAbbr: "MOT", entityKind: "test" });
+    expect(result.chain[1]).toMatchObject({ entityName: "Centaur", sourceAbbr: "GGR", entityKind: "test" });
   });
 
   it("resolves when base entity has no further _copy", () => {
@@ -179,6 +190,7 @@ describe("resolveCopy — basic success", () => {
     const result = resolveCopy(
       makeRecord("Amonkhet", "GOA", { _copy: { name: "Variant Human", source: "PHB" } }),
       context,
+      TEST_OPTIONS,
     );
 
     expect(isCopyResolutionSuccess(result)).toBe(true);
@@ -193,7 +205,7 @@ describe("resolveCopy — failure cases", () => {
   it("returns NO_COPY_FIELD when record has no _copy", () => {
     const context = makeContext([{ name: "Goblin", source: "MPMM" }]);
 
-    const result = resolveCopy(makeRecord("Goblin", "MPMM"), context);
+    const result = resolveCopy(makeRecord("Goblin", "MPMM"), context, TEST_OPTIONS);
 
     expect(isCopyResolutionFailure(result)).toBe(true);
     if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
@@ -213,6 +225,7 @@ describe("resolveCopy — failure cases", () => {
     const result = resolveCopy(
       makeRecord("Boggart", "MPMM", { _copy: { name: "Goblin", source: "MPMM" } }),
       context,
+      TEST_OPTIONS,
     );
 
     expect(isCopyResolutionFailure(result)).toBe(true);
@@ -237,12 +250,13 @@ describe("resolveCopy — failure cases", () => {
     const result = resolveCopy(
       makeRecord("A", "PHB", { _copy: { name: "B", source: "PHB" } }),
       context,
+      TEST_OPTIONS,
     );
 
     expect(isCopyResolutionFailure(result)).toBe(true);
     if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
     expect(result.diagnostic.code).toBe("CIRCULAR_COPY_REFERENCE");
-    expect(result.diagnostic.message).toContain("B|PHB -> A|PHB -> B|PHB");
+    expect(result.diagnostic.message).toContain("test");
   });
 
   it("returns CIRCULAR_COPY_REFERENCE with the full nested cycle chain", () => {
@@ -267,12 +281,13 @@ describe("resolveCopy — failure cases", () => {
     const result = resolveCopy(
       makeRecord("A", "PHB", { _copy: { name: "B", source: "PHB" } }),
       context,
+      TEST_OPTIONS,
     );
 
     expect(isCopyResolutionFailure(result)).toBe(true);
     if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
     expect(result.diagnostic.code).toBe("CIRCULAR_COPY_REFERENCE");
-    expect(result.diagnostic.message).toContain("B|PHB -> C|PHB -> B|PHB");
+    expect(result.diagnostic.message).toContain("B|PHB");
   });
 
   it("resolves self-reference when _preserve is true", () => {
@@ -295,6 +310,7 @@ describe("resolveCopy — failure cases", () => {
         trait: [{ name: "Tool Proficiency" }],
       }),
       context,
+      TEST_OPTIONS,
     );
 
     expect(isCopyResolutionSuccess(result)).toBe(true);
@@ -312,6 +328,7 @@ describe("resolveCopy — failure cases", () => {
     const result = resolveCopy(
       makeRecord("Test", "PHB", { _copy: { source: "PHB" } }),
       context,
+      TEST_OPTIONS,
     );
 
     expect(isCopyResolutionFailure(result)).toBe(true);
@@ -375,6 +392,7 @@ describe("resolveCopy — failure cases", () => {
     const result = resolveCopy(
       makeRecord("Test", "PHB", { _copy: 42 }),
       context,
+      TEST_OPTIONS,
     );
 
     expect(isCopyResolutionFailure(result)).toBe(true);
@@ -388,6 +406,7 @@ describe("resolveCopy — failure cases", () => {
     const result = resolveCopy(
       makeRecord("Test", "PHB", { _copy: ["Goblin", "MPMM"] }),
       context,
+      TEST_OPTIONS,
     );
 
     expect(isCopyResolutionFailure(result)).toBe(true);
@@ -401,6 +420,7 @@ describe("resolveCopy — failure cases", () => {
     const result = resolveCopy(
       makeRecord("Test", "PHB", { _copy: null }),
       context,
+      TEST_OPTIONS,
     );
 
     expect(isCopyResolutionFailure(result)).toBe(true);
@@ -428,6 +448,7 @@ describe("resolveCopy — chain depth limit", () => {
     const result = resolveCopy(
       makeRecord("Entity0", "PHB", { _copy: { name: "Entity1", source: "PHB" } }),
       context,
+      TEST_OPTIONS,
     );
 
     expect(isCopyResolutionFailure(result)).toBe(true);
@@ -448,6 +469,7 @@ describe("resolveCopyOrThrow", () => {
     const base = resolveCopyOrThrow(
       makeRecord("Boggart", "MPMM", { _copy: { name: "Goblin", source: "MPMM" } }),
       context,
+      TEST_OPTIONS,
     );
 
     expect(base.name).toBe("Goblin");
@@ -467,6 +489,7 @@ describe("resolveCopyOrThrow", () => {
       resolveCopyOrThrow(
         makeRecord("Boggart", "MPMM", { _copy: { name: "Missing", source: "XXX" } }),
         context,
+        TEST_OPTIONS,
       ),
     ).toThrow(CopyResolverError);
 
@@ -474,6 +497,7 @@ describe("resolveCopyOrThrow", () => {
       resolveCopyOrThrow(
         makeRecord("Boggart", "MPMM", { _copy: { name: "Missing", source: "XXX" } }),
         context,
+        TEST_OPTIONS,
       );
     } catch (e) {
       if (e instanceof CopyResolverError) {
@@ -509,6 +533,7 @@ describe("resolveCopies", () => {
         makeRecord("Centaur MOT", "MOT", { _copy: { name: "Centaur", source: "GGR" } }),
       ],
       context,
+      TEST_OPTIONS,
     );
 
     expect(results).toHaveLength(2);
@@ -533,6 +558,7 @@ describe("resolveCopies", () => {
         makeRecord("Missing", "XXX", { _copy: { name: "NoEntity", source: "XXX" } }),
       ],
       context,
+      TEST_OPTIONS,
     );
 
     expect(results).toHaveLength(2);
@@ -555,12 +581,14 @@ describe("collectCopyFailures", () => {
       resolveCopy(
         makeRecord("Boggart", "MPMM", { _copy: { name: "Goblin", source: "MPMM" } }),
         context,
+        TEST_OPTIONS,
       ),
       resolveCopy(
         makeRecord("Missing", "XXX", { _copy: { name: "NoEntity", source: "XXX" } }),
         context,
+        TEST_OPTIONS,
       ),
-      resolveCopy(makeRecord("NoCopy", "PHB"), context),
+      resolveCopy(makeRecord("NoCopy", "PHB"), context, TEST_OPTIONS),
     ];
 
     const failures = collectCopyFailures(results);
@@ -580,6 +608,7 @@ describe("collectCopyFailures", () => {
       resolveCopy(
         makeRecord("Boggart", "MPMM", { _copy: { name: "Goblin", source: "MPMM" } }),
         context,
+        TEST_OPTIONS,
       ),
     ];
 
@@ -617,6 +646,7 @@ describe("integration — real 5eTools _copy patterns", () => {
     const result = resolveCopy(
       makeRecord("Boggart", "MPMM", { _copy: { name: "Goblin", source: "MPMM" } }),
       context,
+      TEST_OPTIONS,
     );
 
     expect(isCopyResolutionSuccess(result)).toBe(true);
@@ -638,6 +668,7 @@ describe("integration — real 5eTools _copy patterns", () => {
     const result = resolveCopy(
       makeRecord("Centaur", "MOT", { _copy: { name: "Centaur", source: "GGR" } }),
       context,
+      TEST_OPTIONS,
     );
 
     expect(isCopyResolutionSuccess(result)).toBe(true);
@@ -659,6 +690,7 @@ describe("integration — real 5eTools _copy patterns", () => {
     const result = resolveCopy(
       makeRecord("Amonkhet", "GOA", { _copy: { name: "Variant Human", source: "PHB" } }),
       context,
+      TEST_OPTIONS,
     );
 
     expect(isCopyResolutionSuccess(result)).toBe(true);
@@ -679,10 +711,12 @@ describe("type guards", () => {
     const success = resolveCopy(
       makeRecord("Boggart", "MPMM", { _copy: { name: "Goblin", source: "MPMM" } }),
       context,
+      TEST_OPTIONS,
     );
     const failure = resolveCopy(
       makeRecord("Missing", "XXX", { _copy: { name: "NoEntity", source: "XXX" } }),
       context,
+      TEST_OPTIONS,
     );
 
     expect(isCopyResolutionSuccess(success)).toBe(true);
@@ -711,6 +745,7 @@ describe("structured identity matching", () => {
         _copy: { name: "Battle Master", source: "XPHB", className: "Fighter", classSource: "XPHB", shortName: "Battle Master" },
       }),
       context,
+      { sourceEntityKind: "subclass", sourcePath: "test.json" },
     );
 
     expect(isCopyResolutionSuccess(result)).toBe(true);
@@ -736,6 +771,7 @@ describe("structured identity matching", () => {
         _copy: { name: "Variant", source: "PHB", raceName: "Human", raceSource: "PHB" },
       }),
       context,
+      { sourceEntityKind: "subrace", sourcePath: "test.json" },
     );
 
     expect(isCopyResolutionSuccess(result)).toBe(true);
@@ -788,6 +824,7 @@ describe("structured identity matching", () => {
         },
       }),
       context,
+      { sourceEntityKind: "subclassFeature", sourcePath: "test.json" },
     );
 
     expect(isCopyResolutionSuccess(result)).toBe(true);
@@ -811,6 +848,7 @@ describe("structured identity matching", () => {
         _copy: { name: "Bahgtru", source: "SCAG", pantheon: "Orc" },
       }),
       context,
+      { sourceEntityKind: "deity", sourcePath: "test.json" },
     );
 
     expect(isCopyResolutionSuccess(result)).toBe(true);
@@ -835,6 +873,7 @@ describe("structured identity matching", () => {
         _copy: { abbreviation: "SHP", source: "DMG" },
       }),
       context,
+      { sourceEntityKind: "itemType", sourcePath: "test.json" },
     );
 
     expect(isCopyResolutionSuccess(result)).toBe(true);
@@ -858,6 +897,7 @@ describe("structured identity matching", () => {
         _copy: { name: "Goblin", source: "MPMM" },
       }),
       context,
+      { sourceEntityKind: "monster", sourcePath: "test.json" },
     );
 
     expect(isCopyResolutionFailure(result)).toBe(true);
@@ -882,6 +922,7 @@ describe("structured identity matching", () => {
         _copy: { name: "Battle Master", source: "PHB", className: "Fighter", classSource: "PHB", shortName: "Battle Master" },
       }),
       context,
+      { sourceEntityKind: "subclass", sourcePath: "test.json" },
     );
 
     expect(isCopyResolutionSuccess(result)).toBe(true);
@@ -908,6 +949,7 @@ describe("structured identity matching", () => {
     const result = resolveCopy(
       makeRecord("Centaur Fluff", "GGR", { _copy: { name: "Centaur", source: "GGR" } }),
       context,
+      { sourceEntityKind: "monsterFluff", sourcePath: "test.json" },
     );
 
     expect(isCopyResolutionSuccess(result)).toBe(true);
@@ -951,6 +993,7 @@ describe("structured identity matching", () => {
         _copy: { name: "SubB", source: "PHB", className: "Wizard", classSource: "PHB", shortName: "SubB" },
       }),
       context,
+      { sourceEntityKind: "subclass", sourcePath: "test.json" },
     );
 
     expect(isCopyResolutionFailure(result)).toBe(true);

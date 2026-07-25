@@ -41,6 +41,7 @@ const SCALAR_TEXT_MODES = new Set([
 
 export interface CopyModContext {
   readonly sourcePath?: string;
+  readonly sourceEntityKind?: string;
 }
 
 export interface CopyModRawRecord {
@@ -245,7 +246,10 @@ export function resolveCopyWithMods(
   modContext: CopyModContext = {},
 ): CopyModResolutionResult {
   const copyValue = record.remaining._copy;
-  const resolved = resolveCopy(record, context);
+  const resolved = resolveCopy(record, context, {
+    sourceEntityKind: modContext.sourceEntityKind,
+    sourcePath: modContext.sourcePath,
+  });
   if (isCopyResolutionFailure(resolved)) {
     return { ok: false, diagnostics: [] };
   }

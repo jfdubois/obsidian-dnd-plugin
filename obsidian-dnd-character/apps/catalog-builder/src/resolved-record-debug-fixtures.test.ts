@@ -94,12 +94,14 @@ describe("createResolvedRecordDebugFixture", () => {
     });
     expect(fixture.inheritanceChain).toEqual([
       {
+        entityKind: "race",
         entityName: "Centaur MOT",
         sourceAbbr: "MOT",
         sourcePath: "race.json",
         identity: { entityKind: "race", name: "Centaur MOT", source: "MOT" },
       },
       {
+        entityKind: "race",
         entityName: "Centaur",
         sourceAbbr: "GGR",
         sourcePath: "race.json",
@@ -199,7 +201,7 @@ describe("createResolvedRecordDebugFixture", () => {
       identity: { name: "A", source: "TST" },
       copyDiagnostic: { code: "CIRCULAR_COPY_REFERENCE" },
     });
-    expect(result.diagnostics[0]!.message).toContain("B|TST -> A|TST -> B|TST");
+    expect(result.diagnostics[0]!.message).toContain("B|TST [class] -> A|TST [class] -> B|TST [class]");
   });
 
   it("confines raw resolved fields to cloned catalog-builder fixture payloads", () => {
