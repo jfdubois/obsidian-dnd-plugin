@@ -203,10 +203,10 @@ Read and resolve raw source generically without generating final entities yet.
 
 ### Phase 3 gate
 
-- [ ] Representative race/background/class records resolve without name exceptions.
-- [ ] Unknown source mechanics fail with actionable diagnostics.
-- [ ] No candidate structured mechanic is silently discarded before normalization or explicitly classified as unsupported.
-- [ ] Raw 5eTools fields remain confined to the catalog-builder boundary.
+- [X] Representative race/background/class records resolve without name exceptions.
+- [X] Unknown source mechanics fail with actionable diagnostics.
+- [X] No candidate structured mechanic is silently discarded before normalization or explicitly classified as unsupported.
+- [X] Raw 5eTools fields remain confined to the catalog-builder boundary.
 
 ---
 

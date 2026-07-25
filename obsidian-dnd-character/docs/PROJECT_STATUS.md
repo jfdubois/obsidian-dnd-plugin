@@ -2,15 +2,15 @@
 
 ## Current phase
 
-Phase 3 — Catalog builder ingestion foundation
+Phase 4 — Catalog normalization and publication
 
 ## Current task
 
-Phase 3 gate
+P4-T001 — Implement ruleset classifier
 
 ## Last completed task
 
-P3-T012 — Produce ingestion diagnostic report
+Phase 3 gate
 
 ## Branch baseline
 
@@ -24,8 +24,8 @@ None recorded.
 
 ## Validation baseline
 
-- `npm run check`: passing at Phase 2 gate
-- `npm run build`: passing at Phase 2 gate
+- `npm run check`: passing at Phase 3 gate
+- `npm run build`: passing at Phase 3 gate
 - Tests: 1505 passing
 
 ## Catalog baseline
@@ -43,10 +43,9 @@ None recorded.
 
 # Current phase ledger
 
-- Phase starting commit: 6dcc189
-- Completed Phase 3 task commits: P3-T006, P3-T007-S1, P3-T007-S2, P3-T007-S3, P3-T007-S4, P3-T007-S5, P3-T008, P3-T009, P3-T010, P3-T011, P3-T012
-- Current task: Phase 3 gate
-- P3-T007 execution mode: five committed slices; one `/phase 3` invocation per slice.
+- Phase starting commit: see Git history for Phase 3 gate
+- Completed Phase 4 task commits: none
+- Current task: P4-T001
 - Current retry: 0
 - Gate status: not evaluated
 - Blocking issue: none
@@ -54,6 +53,13 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-25 — Phase 3 gate — complete
+Summary: Verified all Phase 3 gate criteria. Representative race, background, and class preserve records resolve without name exceptions; unknown `_mod` mechanics report source path, entity, field target, and mode; unclaimed candidate mechanical fields are reported before normalization without narrative auto-classification; and raw 5eTools-shaped fields remain confined to catalog-builder diagnostics/fixtures.
+Validation: `npm --prefix obsidian-dnd-character exec vitest run apps/catalog-builder/src/copy-preserve-resolver.test.ts apps/catalog-builder/src/mod-copy-resolver.test.ts apps/catalog-builder/src/ingestion-diagnostic-report.test.ts apps/catalog-builder/src/resolved-record-debug-fixtures.test.ts apps/catalog-builder/src/raw-boundary.test.ts` passes (97/97 tests, EXIT 0). `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 1505/1505 tests, EXIT 0). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Limitations: Phase 3 intentionally stops at ingestion, inheritance resolution, debug fixtures, and diagnostics. Catalog normalization and publication begin in Phase 4.
+Next phase: Phase 4 — Catalog normalization and publication.
+Commit: see Git history for Phase 3 gate.
 
 2026-07-25 — P3-T012 — Produce ingestion diagnostic report
 Summary: Added a catalog-builder ingestion diagnostic report for JSON parse failures, copy and `_mod` resolution failures, field inventory by entity type, future-importer claimed fields, and unclaimed candidate mechanical fields without automatically classifying unclaimed fields as narrative.
