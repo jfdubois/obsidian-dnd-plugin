@@ -220,7 +220,7 @@ Generate a valid versioned catalog using stable contracts.
 
 - [x] **P4-T002 — Implement record-level core/source classifier**
 
-- [ ] **P4-T003 — Implement source metadata normalizer**
+- [x] **P4-T003 — Implement source metadata normalizer**
 
 - [ ] **P4-T004 — Implement semantic mapping and projection infrastructure**
   - Implement versioned, runtime-validated reviewed semantic mappings.

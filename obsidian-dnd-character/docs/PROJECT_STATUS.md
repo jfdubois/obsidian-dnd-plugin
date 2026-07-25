@@ -6,11 +6,11 @@ Phase 4 — Catalog normalization and publication
 
 ## Current task
 
-P4-T003 — Implement source metadata normalizer
+P4-T004 — Implement semantic mapping and projection infrastructure
 
 ## Last completed task
 
-P4-T002 — Implement record-level core/source classifier
+P4-T003 — Implement source metadata normalizer
 
 ## Branch baseline
 
@@ -24,9 +24,9 @@ None recorded.
 
 ## Validation baseline
 
-- `npm run check`: passing at P4-T002
-- `npm run build`: passing at P4-T002
-- Tests: 1519 passing
+- `npm run check`: passing at P4-T003
+- `npm run build`: passing at P4-T003
+- Tests: 1522 passing
 
 ## Catalog baseline
 
@@ -44,8 +44,8 @@ None recorded.
 # Current phase ledger
 
 - Phase starting commit: b3598ccf62be42eddff2eaf9302ca636762f686c
-- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002
-- Current task: P4-T003
+- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003
+- Current task: P4-T004
 - Current retry: 0
 - Gate status: not evaluated
 - Blocking issue: none
@@ -53,6 +53,12 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-25 — P4-T003 — Implement source metadata normalizer
+Summary: Added a catalog-builder source metadata normalizer that consumes ruleset and record-access classifications, emits deterministic frozen metadata grouped by ruleset/source/access, records manifest and record provenance, and reports upstream ruleset exclusions or invalid source metadata as explicit diagnostics.
+Validation: `npm --prefix obsidian-dnd-character run test -- source-metadata-normalizer.test.ts` passes (3/3 tests, EXIT 0). `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 1522/1522 tests, EXIT 0). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Source metadata normalization remains inside the catalog-builder boundary and does not change normalized catalog schemas, canonical ID construction, source-policy semantics, Obsidian API use, semantic mapping infrastructure, or entity normalizer behavior.
+Commit: see Git history for P4-T003.
 
 2026-07-25 — P4-T002 — Implement record-level core/source classifier
 Summary: Added a catalog-builder record access classifier that derives record-level core versus source access from ruleset-specific structured core markers after ruleset classification, preserves source/ruleset/record provenance, and keeps unsupported or cross-ruleset markers from granting core access.

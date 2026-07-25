@@ -182,6 +182,18 @@ export {
 } from "./record-access-classifier";
 
 export {
+  /* Source metadata normalizer types */
+  type SourceMetadataNormalizerDiagnosticCode,
+  type SourceMetadataProvenance,
+  type NormalizedSourceMetadata,
+  type SourceMetadataNormalizerDiagnostic,
+  type SourceMetadataInput,
+  type SourceMetadataNormalizerResult,
+  /* Source metadata normalizer functions */
+  normalizeSourceMetadata,
+} from "./source-metadata-normalizer";
+
+export {
   /* Mod types */
   type ModOperationPayload,
   type ModAppendArr,
