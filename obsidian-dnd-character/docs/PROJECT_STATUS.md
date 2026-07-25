@@ -24,9 +24,9 @@ None recorded.
 
 ## Validation baseline
 
-- `npm run check`: passing at Phase 3 corrective follow-up
-- `npm run build`: passing at Phase 3 corrective follow-up
-- Tests: 1615 passing
+- `npm run check`: passing at Phase 3 structured identity correction
+- `npm run build`: passing at Phase 3 structured identity correction
+- Tests: 1627 passing
 
 ## Catalog baseline
 
@@ -53,6 +53,12 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-25 — Phase 3 structured identity correction
+Summary: Replaced first-match name-and-source _copy lookup with entity-kind-aware structured identity matching and explicit ambiguity detection. Inventoried all 6 distinct _copy identity shapes across 2834 references in pinned 5eTools data. Copy resolution now matches using the complete non-directive key set from each _copy value (e.g. name+source, abbreviation+source, className+classSource+name+shortName+source, pantheon+name+source, raceName+raceSource+name+source). Ambiguous matches return AMBIGUOUS_BASE_ENTITY with all candidate paths. Cycle detection uses complete structured identity keys. Ref-parser validation is bypassed for _copy values without a 'name' field (e.g. itemType/abbreviation).
+Validation: `npm --prefix obsidian-dnd-character run test -- apps/catalog-builder/src/copy-resolver.test.ts` passes (1627/1627 tests, EXIT 0). `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 1627/1627 tests, EXIT 0). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: No normalized catalog schemas, canonical ID construction, source-policy semantics, Obsidian API use, _preserve behavior, or entity normalizer behavior modified. The copy-resolver contract is extended: lookup now returns exactly one candidate, zero candidates (BASE_ENTITY_NOT_FOUND), or multiple candidates (AMBIGUOUS_BASE_ENTITY).
+Commit: see Git history for Phase 3 structured identity correction.
 
 2026-07-25 — Phase 3 multi-collection corrective follow-up
 Summary: Repaired two defects in the Phase 3 multi-collection raw-boundary implementation. (1) `expandVersions` previously merged all expanded records into the first collection, destroying logical collection separation. Fixed by introducing per-collection expansion via `expandCollection`, so each collection's expanded records remain in their original entityKind. Version expansion now preserves collection separation, original ordering, physical filePath, non-versioned records, and input envelope immutability. Record counts are recalculated per collection and per file. (2) `INVALID_RECORD_ENVELOPE` and `NON_OBJECT_RECORD` diagnostics previously omitted logical collection identity. Fixed by adding structured `entityKind`, `recordIndex`, and optional `recordName` fields to `RawBoundaryDiagnostic`. An invalid record in one collection no longer removes or invalidates valid sibling collections.

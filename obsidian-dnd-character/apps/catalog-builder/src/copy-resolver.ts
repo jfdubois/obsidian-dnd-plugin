@@ -10,16 +10,24 @@ import {
 /* ── Copy Resolver Types ─────────────────────────────────────────
 
    The _copy field in 5eTools JSON references another entity by a
-   structured {name, source} object. This module resolves that
-   reference to the actual base entity record in the loaded raw data.
+   structured identity object. The identity always contains at minimum
+   a "source" field plus one or more non-directive identity keys
+   (e.g. "name", "className", "raceName", "abbreviation", "pantheon").
+   Keys beginning with "_" (_mod, _preserve) are directives, not identity.
+
+   This module resolves the reference to the actual base entity record
+   in the loaded raw data using structured identity matching.
 
    Resolution steps:
    1. Extract _copy field from the raw record.
    2. Parse the _copy value using the canonical reference parser.
-   3. Locate the base entity by matching parsed identity (name + source).
-   4. If the base entity itself has a _copy, recursively resolve (with
-      cycle detection and depth limit).
-   5. Return the resolved base entity or a diagnostic.
+   3. Extract structured identity (all non-directive keys).
+   4. Locate base entity by matching ALL identity fields.
+   5. If zero matches: BASE_ENTITY_NOT_FOUND.
+   6. If multiple matches: AMBIGUOUS_BASE_ENTITY (diagnostic).
+   7. If the base entity itself has a _copy, recursively resolve (with
+      cycle detection using full structured identity and depth limit).
+   8. Return the resolved base entity or a diagnostic.
 ─────────────────────────────────────────────────────────────────── */
 
 /** Maximum depth for nested _copy chain resolution. */
@@ -27,9 +35,14 @@ const MAX_COPY_DEPTH = 20;
 
 /** The raw _copy value as it appears in 5eTools data. */
 export interface RawCopyValue {
-  readonly name: string;
   readonly source: string;
   readonly [_: string]: unknown;
+}
+
+/** Non-directive identity key-value pairs extracted from a _copy value. */
+export interface StructuredIdentity {
+  readonly source: string;
+  readonly [key: string]: unknown;
 }
 
 /** A single step in a _copy resolution chain. */
@@ -82,6 +95,8 @@ export type CopyDiagnosticCode =
   | "UNPARSEABLE_COPY_REFERENCE"
   /** The referenced base entity was not found in the loaded data. */
   | "BASE_ENTITY_NOT_FOUND"
+  /** Multiple records matched the _copy identity; cannot determine unique base entity. */
+  | "AMBIGUOUS_BASE_ENTITY"
   /** A circular _copy reference was detected. */
   | "CIRCULAR_COPY_REFERENCE"
   /** The _copy chain exceeded the maximum depth. */
@@ -122,13 +137,55 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 export function isRawCopyValue(value: unknown): value is RawCopyValue {
-  return (
-    isPlainObject(value) &&
-    typeof (value as Record<string, unknown>).name === "string" &&
-    typeof (value as Record<string, unknown>).source === "string" &&
-    (value as Record<string, unknown>).name !== "" &&
-    (value as Record<string, unknown>).source !== ""
-  );
+  if (!isPlainObject(value)) {
+    return false;
+  }
+  const obj = value as Record<string, unknown>;
+  // Must have non-empty source
+  if (typeof obj.source !== "string" || obj.source === "") {
+    return false;
+  }
+  // Must have at least one non-directive identity key (other than "source")
+  // with a non-empty value
+  for (const [key, val] of Object.entries(obj)) {
+    if (key.startsWith("_") || key === "source") {
+      continue;
+    }
+    if (typeof val === "string" && val !== "") {
+      return true;
+    }
+    if (typeof val !== "string") {
+      // Non-string values (e.g. level: 2) are valid identity keys
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Extracts the structured identity from a _copy value.
+ * Returns all non-directive keys (keys not starting with "_").
+ */
+export function extractStructuredIdentity(copyValue: RawCopyValue): StructuredIdentity {
+  const identity: Record<string, unknown> = { source: copyValue.source };
+  for (const [key, value] of Object.entries(copyValue)) {
+    if (!key.startsWith("_")) {
+      identity[key] = value;
+    }
+  }
+  return identity as StructuredIdentity;
+}
+
+/**
+ * Produces a deterministic string key for cycle detection from a
+ * structured identity. Uses sorted keys to ensure stability.
+ */
+function identityToCycleKey(identity: StructuredIdentity): string {
+  const parts: string[] = [];
+  for (const key of Object.keys(identity).sort()) {
+    parts.push(`${key}=${String(identity[key])}`);
+  }
+  return parts.join("|");
 }
 
 function hasUnsupportedPreserveValue(record: RawRecord): boolean {
@@ -214,28 +271,65 @@ function formatCopyChain(chain: readonly CopyChainStep[]): string {
 }
 
 /**
- * Finds a record by name and source across all validated files.
- * Returns the first match found, or undefined if not found.
+ * Finds records matching a structured identity across all validated files.
+ * Returns all matching records so the caller can detect ambiguity.
  */
-function findRecordByNameAndSource(
+function findRecordsByStructuredIdentity(
   context: CopyResolverContext,
-  entityName: string,
-  sourceAbbr: string,
-): RawRecord | undefined {
+  identity: StructuredIdentity,
+): RawRecord[] {
+  const matches: RawRecord[] = [];
   for (const [, envelope] of Object.entries(context.validatedFiles)) {
     for (const collection of envelope.collections) {
       for (const record of collection.records) {
-        if (record.name === entityName && record.source === sourceAbbr) {
-          return record;
+        if (recordMatchesIdentity(record, identity)) {
+          matches.push(record);
         }
       }
     }
   }
-  return undefined;
+  return matches;
+}
+
+/**
+ * Checks whether a raw record matches all fields in a structured identity.
+ * The record's envelope fields (name, source) and remaining fields are
+ * checked against every non-directive key in the identity.
+ */
+function recordMatchesIdentity(
+  record: RawRecord,
+  identity: StructuredIdentity,
+): boolean {
+  for (const [key, expectedValue] of Object.entries(identity)) {
+    let actualValue: unknown;
+    if (key === "name") {
+      actualValue = record.name;
+    } else if (key === "source") {
+      actualValue = record.source;
+    } else {
+      actualValue = record.remaining[key];
+    }
+    if (actualValue !== expectedValue) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Checks if the _copy identity matches the source record itself
+ * (for _preserve self-reference handling).
+ */
+function identityMatchesSourceRecord(
+  identity: StructuredIdentity,
+  sourceRecord: RawRecord,
+): boolean {
+  return recordMatchesIdentity(sourceRecord, identity);
 }
 
 /**
  * Recursively resolves a _copy chain with cycle detection.
+ * Uses full structured identity for lookup and cycle detection keys.
  */
 function resolveCopyChain(
   copyValue: RawCopyValue,
@@ -256,33 +350,36 @@ function resolveCopyChain(
     );
   }
 
-  const identityKey = `${copyValue.name}|${copyValue.source}`;
+  const identity = extractStructuredIdentity(copyValue);
+  const cycleKey = identityToCycleKey(identity);
 
   // Cycle detection
-  if (visited.has(identityKey)) {
+  if (visited.has(cycleKey)) {
+    const chainLabel = identityToChainLabel(identity);
     const cycleChain = [
       ...chain,
-      { entityName: copyValue.name, sourceAbbr: copyValue.source },
+      { entityName: chainLabel.name, sourceAbbr: chainLabel.source },
     ];
     return createFailure(
       "CIRCULAR_COPY_REFERENCE",
       "error",
-      `Circular _copy reference detected: "${identityKey}" appears multiple times in chain: ${formatCopyChain(cycleChain)}`,
+      `Circular _copy reference detected: "${cycleKey}" appears multiple times in chain: ${formatCopyChain(cycleChain)}`,
       sourceRecord,
       copyValue,
     );
   }
 
-  visited.add(identityKey);
+  visited.add(cycleKey);
+  const chainLabel = identityToChainLabel(identity);
   chain.push({
-    entityName: copyValue.name,
-    sourceAbbr: copyValue.source,
+    entityName: chainLabel.name,
+    sourceAbbr: chainLabel.source,
   });
 
+  // _preserve self-reference: if the identity matches the source record itself
   if (
     sourceRecord.remaining._preserve === true &&
-    copyValue.name === sourceRecord.name &&
-    copyValue.source === sourceRecord.source
+    identityMatchesSourceRecord(identity, sourceRecord)
   ) {
     return {
       status: "resolved",
@@ -291,22 +388,33 @@ function resolveCopyChain(
     };
   }
 
-  // Find the base entity
-  const baseEntity = findRecordByNameAndSource(
-    context,
-    copyValue.name,
-    copyValue.source,
-  );
+  // Find base entities matching ALL identity fields
+  const candidates = findRecordsByStructuredIdentity(context, identity);
 
-  if (!baseEntity) {
+  if (candidates.length === 0) {
     return createFailure(
       "BASE_ENTITY_NOT_FOUND",
       "error",
-      `Base entity "${copyValue.name}" from source "${copyValue.source}" not found in loaded data. Referenced by "${sourceRecord.name}" (${sourceRecord.source}).`,
+      `Base entity matching identity ${JSON.stringify(identity)} not found in loaded data. Referenced by "${sourceRecord.name}" (${sourceRecord.source}).`,
       sourceRecord,
       copyValue,
     );
   }
+
+  if (candidates.length > 1) {
+    const candidateDescs = candidates
+      .map((c) => `"${c.name}" (${c.source})`)
+      .join(", ");
+    return createFailure(
+      "AMBIGUOUS_BASE_ENTITY",
+      "error",
+      `Found ${candidates.length} candidates matching identity ${JSON.stringify(identity)}: ${candidateDescs}. Referenced by "${sourceRecord.name}" (${sourceRecord.source}).`,
+      sourceRecord,
+      copyValue,
+    );
+  }
+
+  const baseEntity = candidates[0]!;
 
   // If the base entity itself has a _copy, recurse
   const baseCopy = baseEntity.remaining._copy;
@@ -327,6 +435,25 @@ function resolveCopyChain(
     baseEntity,
     chain: Object.freeze(chain),
   };
+}
+
+/**
+ * Extracts a chain label from a structured identity for display in
+ * chain step reports. Uses "name" if present, otherwise falls back
+ * to the first identity key.
+ */
+function identityToChainLabel(identity: StructuredIdentity): {
+  name: string;
+  source: string;
+} {
+  const name =
+    typeof identity.name === "string"
+      ? identity.name
+      : Object.keys(identity)
+          .filter((k) => k !== "source")
+          .map((k) => `${k}=${identity[k]}`)
+          .join(", ");
+  return { name, source: identity.source };
 }
 
 /* ── Public API ────────────────────────────────────────────────── */
@@ -399,44 +526,48 @@ export function resolveCopy(
     );
   }
 
-  // Parse the _copy reference using the canonical reference parser
-  const parsed = parseReference(copyValue, `copy:${rawRecord.name}|${rawRecord.source}`);
-
-  if (isDiagnosticParsedReference(parsed)) {
-    return createFailure(
-      parsed.code === "STRUCTURED_REF_MISSING_FIELD" ||
-        parsed.code === "MISSING_NAME" ||
-        parsed.code === "MISSING_SOURCE"
-        ? "INVALID_COPY_REFERENCE"
-        : "UNPARSEABLE_COPY_REFERENCE",
-      parsed.severity,
-      `Failed to parse _copy reference for "${rawRecord.name}": ${parsed.message}`,
-      rawRecord,
-      copyValue,
-      parsed,
-    );
-  }
-
-  // Must be a canonical reference
-  if (!isCanonicalParsedReference(parsed)) {
-    return createFailure(
-      "UNPARSEABLE_COPY_REFERENCE",
-      "error",
-      `_copy reference for "${rawRecord.name}" produced an unsupported reference kind: "${parsed.kind}". Expected canonical reference.`,
-      rawRecord,
-      copyValue,
-    );
-  }
-
   // Validate that the raw copy value is a proper RawCopyValue for chain resolution
   if (!isRawCopyValue(copyValue)) {
     return createFailure(
       "INVALID_COPY_REFERENCE",
       "error",
-      `_copy value for "${rawRecord.name}" is not a valid structured reference object with 'name' and 'source' fields`,
+      `_copy value for "${rawRecord.name}" is not a valid structured reference`,
       rawRecord,
       copyValue,
     );
+  }
+
+  // If the copy value has a 'name' field, also validate through the canonical
+  // reference parser to catch structured-reference issues early.
+  // Copy values without 'name' (e.g. itemType with only abbreviation+source)
+  // skip the ref-parser since it requires a name field.
+  if (typeof copyValue.name === "string" && copyValue.name) {
+    const parsed = parseReference(copyValue, `copy:${rawRecord.name}|${rawRecord.source}`);
+
+    if (isDiagnosticParsedReference(parsed)) {
+      return createFailure(
+        parsed.code === "STRUCTURED_REF_MISSING_FIELD" ||
+          parsed.code === "MISSING_NAME" ||
+          parsed.code === "MISSING_SOURCE"
+          ? "INVALID_COPY_REFERENCE"
+          : "UNPARSEABLE_COPY_REFERENCE",
+        parsed.severity,
+        `Failed to parse _copy reference for "${rawRecord.name}": ${parsed.message}`,
+        rawRecord,
+        copyValue,
+        parsed,
+      );
+    }
+
+    if (!isCanonicalParsedReference(parsed)) {
+      return createFailure(
+        "UNPARSEABLE_COPY_REFERENCE",
+        "error",
+        `_copy reference for "${rawRecord.name}" produced an unsupported reference kind: "${parsed.kind}". Expected canonical reference.`,
+        rawRecord,
+        copyValue,
+      );
+    }
   }
 
   // Resolve the copy chain

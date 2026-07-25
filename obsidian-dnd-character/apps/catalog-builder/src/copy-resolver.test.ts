@@ -7,6 +7,7 @@ import {
   isRawCopyValue,
   isCopyResolutionSuccess,
   isCopyResolutionFailure,
+  extractStructuredIdentity,
   CopyResolverError,
   type CopyResolutionResult,
   type CopyResolverContext,
@@ -34,6 +35,33 @@ function makeContext(
           },
         ],
         totalRecords: records.length,
+      },
+    },
+  };
+}
+
+function makeMultiCollectionContext(
+  collections: Array<{
+    entityKind: string;
+    records: Array<{ name: string; source: string; remaining?: Record<string, unknown> }>;
+  }>,
+): CopyResolverContext {
+  const fileCollections = collections.map((c) => ({
+    entityKind: c.entityKind,
+    recordCount: c.records.length,
+    records: c.records.map((r) => ({
+      name: r.name,
+      source: r.source,
+      remaining: r.remaining ?? {},
+    })),
+  }));
+  const totalRecords = fileCollections.reduce((sum, c) => sum + c.recordCount, 0);
+  return {
+    validatedFiles: {
+      "test.json": {
+        filePath: "test.json",
+        collections: fileCollections,
+        totalRecords,
       },
     },
   };
@@ -341,7 +369,7 @@ describe("resolveCopy — failure cases", () => {
     expect(result.diagnostic.code).toBe("COPY_FIELD_INVALID_TYPE");
   });
 
-  it("returns UNPARSEABLE_COPY_REFERENCE for _copy with number value", () => {
+   it("returns INVALID_COPY_REFERENCE for _copy with number value", () => {
     const context = makeContext([]);
 
     const result = resolveCopy(
@@ -351,10 +379,10 @@ describe("resolveCopy — failure cases", () => {
 
     expect(isCopyResolutionFailure(result)).toBe(true);
     if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
-    expect(result.diagnostic.code).toBe("UNPARSEABLE_COPY_REFERENCE");
+    expect(result.diagnostic.code).toBe("INVALID_COPY_REFERENCE");
   });
 
-  it("returns UNPARSEABLE_COPY_REFERENCE for _copy with array value", () => {
+  it("returns INVALID_COPY_REFERENCE for _copy with array value", () => {
     const context = makeContext([]);
 
     const result = resolveCopy(
@@ -364,10 +392,10 @@ describe("resolveCopy — failure cases", () => {
 
     expect(isCopyResolutionFailure(result)).toBe(true);
     if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
-    expect(result.diagnostic.code).toBe("UNPARSEABLE_COPY_REFERENCE");
+    expect(result.diagnostic.code).toBe("INVALID_COPY_REFERENCE");
   });
 
-  it("returns UNPARSEABLE_COPY_REFERENCE for _copy with null value", () => {
+  it("returns INVALID_COPY_REFERENCE for _copy with null value", () => {
     const context = makeContext([]);
 
     const result = resolveCopy(
@@ -377,7 +405,7 @@ describe("resolveCopy — failure cases", () => {
 
     expect(isCopyResolutionFailure(result)).toBe(true);
     if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
-    expect(result.diagnostic.code).toBe("UNPARSEABLE_COPY_REFERENCE");
+    expect(result.diagnostic.code).toBe("INVALID_COPY_REFERENCE");
   });
 });
 
@@ -661,5 +689,325 @@ describe("type guards", () => {
     expect(isCopyResolutionSuccess(failure)).toBe(false);
     expect(isCopyResolutionFailure(success)).toBe(false);
     expect(isCopyResolutionFailure(failure)).toBe(true);
+  });
+});
+
+/* ── Structured identity matching ──────────────────────────────── */
+
+describe("structured identity matching", () => {
+  it("resolves subclass copy with className and classSource discrimination", () => {
+    const context = makeMultiCollectionContext([
+      {
+        entityKind: "subclass",
+        records: [
+          { name: "Battle Master", source: "XPHB", remaining: { className: "Fighter", classSource: "XPHB", shortName: "Battle Master" } },
+          { name: "Battle Master", source: "PHB", remaining: { className: "Fighter", classSource: "PHB", shortName: "Battle Master" } },
+        ],
+      },
+    ]);
+
+    const result = resolveCopy(
+      makeRecord("Battle Master XPHB", "XPHB", {
+        _copy: { name: "Battle Master", source: "XPHB", className: "Fighter", classSource: "XPHB", shortName: "Battle Master" },
+      }),
+      context,
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.baseEntity.name).toBe("Battle Master");
+    expect(result.baseEntity.source).toBe("XPHB");
+    expect(result.baseEntity.remaining.className).toBe("Fighter");
+  });
+
+  it("resolves subrace copy with raceName and raceSource discrimination", () => {
+    const context = makeMultiCollectionContext([
+      {
+        entityKind: "subrace",
+        records: [
+          { name: "Variant", source: "PHB", remaining: { raceName: "Human", raceSource: "PHB" } },
+          { name: "Variant", source: "GOA", remaining: { raceName: "Human", raceSource: "GOA" } },
+        ],
+      },
+    ]);
+
+    const result = resolveCopy(
+      makeRecord("Amonkhet", "GOA", {
+        _copy: { name: "Variant", source: "PHB", raceName: "Human", raceSource: "PHB" },
+      }),
+      context,
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.baseEntity.name).toBe("Variant");
+    expect(result.baseEntity.source).toBe("PHB");
+  });
+
+  it("resolves subclassFeature copy with full structured identity", () => {
+    const context = makeMultiCollectionContext([
+      {
+        entityKind: "subclassFeature",
+        records: [
+          {
+            name: "Channel Divinity: Touch of Death",
+            source: "DMG",
+            remaining: {
+              className: "Cleric",
+              classSource: "PHB",
+              subclassShortName: "Death",
+              subclassSource: "DMG",
+              level: 2,
+            },
+          },
+          {
+            name: "Channel Divinity: Knowledge of the Ages",
+            source: "PHB",
+            remaining: {
+              className: "Cleric",
+              classSource: "PHB",
+              subclassShortName: "Knowledge",
+              subclassSource: "PHB",
+              level: 2,
+            },
+          },
+        ],
+      },
+    ]);
+
+    const result = resolveCopy(
+      makeRecord("Death Domain Feature", "DMG", {
+        _copy: {
+          name: "Channel Divinity: Touch of Death",
+          source: "DMG",
+          className: "Cleric",
+          classSource: "PHB",
+          subclassShortName: "Death",
+          subclassSource: "DMG",
+          level: 2,
+        },
+      }),
+      context,
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.baseEntity.name).toBe("Channel Divinity: Touch of Death");
+  });
+
+  it("resolves deity copy with pantheon discrimination", () => {
+    const context = makeMultiCollectionContext([
+      {
+        entityKind: "deity",
+        records: [
+          { name: "Bahgtru", source: "SCAG", remaining: { pantheon: "Orc" } },
+          { name: "Bahgtru", source: "GRVG", remaining: { pantheon: "Goblin" } },
+        ],
+      },
+    ]);
+
+    const result = resolveCopy(
+      makeRecord("Bahgtru Copy", "SCAG", {
+        _copy: { name: "Bahgtru", source: "SCAG", pantheon: "Orc" },
+      }),
+      context,
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.baseEntity.remaining.pantheon).toBe("Orc");
+  });
+
+  it("resolves itemType copy with abbreviation instead of name", () => {
+    const context = makeMultiCollectionContext([
+      {
+        entityKind: "itemType",
+        records: [
+          { name: "Vehicle (Air)", source: "DMG", remaining: { abbreviation: "SHP" } },
+          { name: "Vehicle (Land)", source: "DMG", remaining: { abbreviation: "VLP" } },
+        ],
+      },
+    ]);
+
+    // The _copy only uses abbreviation+source; the target record must have abbreviation
+    const result = resolveCopy(
+      makeRecord("Vehicle Type Copy", "DMG", {
+        _copy: { abbreviation: "SHP", source: "DMG" },
+      }),
+      context,
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.baseEntity.name).toBe("Vehicle (Air)");
+  });
+
+  it("returns AMBIGUOUS_BASE_ENTITY when multiple records match identity", () => {
+    const context = makeMultiCollectionContext([
+      {
+        entityKind: "monster",
+        records: [
+          { name: "Goblin", source: "MPMM" },
+          { name: "Goblin", source: "MPMM" },
+        ],
+      },
+    ]);
+
+    const result = resolveCopy(
+      makeRecord("Goblin Copy", "MPMM", {
+        _copy: { name: "Goblin", source: "MPMM" },
+      }),
+      context,
+    );
+
+    expect(isCopyResolutionFailure(result)).toBe(true);
+    if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
+    expect(result.diagnostic.code).toBe("AMBIGUOUS_BASE_ENTITY");
+    expect(result.diagnostic.message).toContain("2 candidates");
+  });
+
+  it("returns AMBIGUOUS_BASE_ENTITY when name/source match but discriminator differs", () => {
+    const context = makeMultiCollectionContext([
+      {
+        entityKind: "subclass",
+        records: [
+          { name: "Battle Master", source: "PHB", remaining: { className: "Fighter", classSource: "PHB", shortName: "Battle Master" } },
+          { name: "Battle Master", source: "PHB", remaining: { className: "Fighter", classSource: "XPHB", shortName: "Battle Master" } },
+        ],
+      },
+    ]);
+
+    const result = resolveCopy(
+      makeRecord("Battle Master Copy", "PHB", {
+        _copy: { name: "Battle Master", source: "PHB", className: "Fighter", classSource: "PHB", shortName: "Battle Master" },
+      }),
+      context,
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.baseEntity.remaining.classSource).toBe("PHB");
+  });
+
+  it("resolves cross-collection copy from monsterFluff to monster", () => {
+    const context = makeMultiCollectionContext([
+      {
+        entityKind: "monster",
+        records: [
+          { name: "Centaur", source: "GGR" },
+        ],
+      },
+      {
+        entityKind: "monsterFluff",
+        records: [
+          { name: "Centaur Fluff", source: "GGR", remaining: { _copy: { name: "Centaur", source: "GGR" } } },
+        ],
+      },
+    ]);
+
+    const result = resolveCopy(
+      makeRecord("Centaur Fluff", "GGR", { _copy: { name: "Centaur", source: "GGR" } }),
+      context,
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.baseEntity.name).toBe("Centaur");
+  });
+
+  it("detects cycle with structured identity key", () => {
+    const context = makeMultiCollectionContext([
+      {
+        entityKind: "subclass",
+        records: [
+          {
+            name: "SubA",
+            source: "PHB",
+            remaining: {
+              className: "Wizard",
+              classSource: "PHB",
+              shortName: "SubA",
+              _copy: { name: "SubB", source: "PHB", className: "Wizard", classSource: "PHB", shortName: "SubB" },
+            },
+          },
+          {
+            name: "SubB",
+            source: "PHB",
+            remaining: {
+              className: "Wizard",
+              classSource: "PHB",
+              shortName: "SubB",
+              _copy: { name: "SubA", source: "PHB", className: "Wizard", classSource: "PHB", shortName: "SubA" },
+            },
+          },
+        ],
+      },
+    ]);
+
+    const result = resolveCopy(
+      makeRecord("SubA", "PHB", {
+        className: "Wizard",
+        classSource: "PHB",
+        _copy: { name: "SubB", source: "PHB", className: "Wizard", classSource: "PHB", shortName: "SubB" },
+      }),
+      context,
+    );
+
+    expect(isCopyResolutionFailure(result)).toBe(true);
+    if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
+    expect(result.diagnostic.code).toBe("CIRCULAR_COPY_REFERENCE");
+  });
+});
+
+/* ── extractStructuredIdentity ─────────────────────────────────── */
+
+describe("extractStructuredIdentity", () => {
+  it("extracts all non-directive keys from a copy value", () => {
+    const copyValue = {
+      name: "Alchemist",
+      source: "TCE",
+      shortName: "Alchemist",
+      className: "Artificer",
+      classSource: "TCE",
+      _preserve: { page: true },
+      _mod: { entries: {} },
+    };
+
+    const identity = extractStructuredIdentity(copyValue);
+
+    expect(identity.name).toBe("Alchemist");
+    expect(identity.source).toBe("TCE");
+    expect(identity.shortName).toBe("Alchemist");
+    expect(identity.className).toBe("Artificer");
+    expect(identity.classSource).toBe("TCE");
+    expect(identity._preserve).toBeUndefined();
+    expect(identity._mod).toBeUndefined();
+  });
+
+  it("extracts abbreviation-based identity", () => {
+    const copyValue = { abbreviation: "SHP", source: "DMG" };
+
+    const identity = extractStructuredIdentity(copyValue);
+
+    expect(identity.abbreviation).toBe("SHP");
+    expect(identity.source).toBe("DMG");
+    expect(identity.name).toBeUndefined();
+  });
+
+  it("extracts identity with numeric values", () => {
+    const copyValue = {
+      name: "Channel Divinity",
+      source: "DMG",
+      className: "Cleric",
+      classSource: "PHB",
+      subclassShortName: "Death",
+      subclassSource: "DMG",
+      level: 2,
+    };
+
+    const identity = extractStructuredIdentity(copyValue);
+
+    expect(identity.level).toBe(2);
+    expect(identity.name).toBe("Channel Divinity");
   });
 });
