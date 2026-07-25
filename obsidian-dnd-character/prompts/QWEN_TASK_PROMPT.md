@@ -1,37 +1,31 @@
-# Qwen phase-execution bootstrap
+# Qwen calibration bootstrap
 
-This file is intentionally short. The complete phase workflow is provided by the project-local OpenCode skill:
+The project is currently calibrating its manager/worker workflow.
 
-```text
-dnd-phase-execution
-```
+## Read-only manager calibration
 
-When the user references this file and assigns a phase:
-
-1. load the `dnd-phase-execution` skill before any repository action;
-2. interpret the user's phase number or phase ID as the exact selected phase;
-3. execute that phase sequentially through its gate;
-4. delegate every roadmap task to a fresh `dnd-task-worker`;
-5. stop after the selected phase gate or on a blocker defined by the skill.
-
-The active workspace is:
+Use:
 
 ```text
-Git worktree: /home/jdubois/Documents/Projects/obsidian-dnd-plugin
-Project:      obsidian-dnd-character/
-Branch:       dev
+/calibrate-manager
 ```
 
-Do not reconstruct the old phase workflow from conversation history. Do not continue if the skill or `dnd-task-worker` agent is unavailable; report the missing project-local OpenCode configuration instead.
+This runs the scenario matrix without repository mutation.
 
-Preferred invocation:
+## One-task write-enabled calibration
+
+Use:
 
 ```text
 /phase 3
 ```
 
-Compatibility invocation:
+During calibration, `/phase <N>` completes at most one roadmap task and stops after its validated commit and push.
+
+The complete workflow is provided by the project-local skill:
 
 ```text
-@obsidian-dnd-character/prompts/QWEN_TASK_PROMPT.md execute Phase 3
+dnd-phase-execution
 ```
+
+Do not reconstruct the older full-phase workflow from conversation history. Full multi-task phase execution remains disabled until the promotion gate passes.
