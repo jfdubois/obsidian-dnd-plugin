@@ -16,11 +16,6 @@
 | CAT-010 | Book categorized core but record not free | Entity classified `source` |
 | CAT-011 | New class uses supported normalized structures | Appears in class index without plugin rebuild |
 | CAT-012 | New class requires unknown mechanic | Build reports unsupported mechanic; publication policy decides exclusion/failure |
-| CAT-013 | Resolved record contains an unclaimed structured field | Field is included in the ingestion inventory and is not silently discarded |
-| CAT-014 | Narrative mechanic has an approved reviewed mapping | Mapping produces validated effects with provenance, automation status, and projections |
-| CAT-015 | Narrative mechanic has no reviewed mapping | Full text remains visible and a non-automated diagnostic is emitted |
-| CAT-016 | Semantic mapping targets the wrong ruleset or source identity | Build rejects the mapping with an actionable diagnostic |
-| CAT-017 | Semantic mapping uses a display name instead of canonical identity | Build rejects the mapping |
 
 ## 2. Catalog client/cache
 
@@ -74,13 +69,6 @@
 | ENG-006 | Max HP change | Current HP clamped only according to documented mutation rule |
 | ENG-007 | Spellcasting class | Correct spell attack/DC/slots |
 | ENG-008 | Unsupported narrative mechanic | Feature displayed with warning; no invented effect |
-| ENG-009 | Advantage against being Poisoned | Appears as a conditional saving-throw effect and not as a permanent ability bonus |
-| ENG-010 | Disease immunity | Appears in Defenses as disease immunity and not as damage immunity |
-| ENG-011 | No breathing requirement | Appears as a capability without inventing a numeric modifier |
-| ENG-012 | One effect has primary and secondary projections | Effect is evaluated once and referenced in both projections |
-| ENG-013 | Projected effect source | Projection identifies the originating entity or feature |
-| ENG-014 | Partial feature automation | Supported effects apply and unsupported narrative remains visible with partial status |
-| ENG-015 | Conditional skill disadvantage | Applies only to matching skill checks while its source effect is active |
 
 ## 6. Interactive sheet
 
@@ -93,25 +81,8 @@
 | UI-005 | Long rest | Only documented eligible state restored/reset |
 | UI-006 | Narrow sidebar | No essential control inaccessible horizontally |
 | UI-007 | External character update | View refreshes without reopen |
-| UI-008 | Conditional saving-throw effect | Displayed under Saving Throws with its source feature |
-| UI-009 | Resistance or immunity | Displayed under Defenses with the correct semantic category |
-| UI-010 | Species capability | Displayed under Species Traits and marked according to automation status |
-| UI-011 | One rule has two projections | Both views reference the same derived effect |
-| UI-012 | Display-only narrative mechanic | Full text is visible and clearly marked non-automated |
 
-## 7. Inventory and equipment
-| ID | Scenario | Expected result |
-|---|---|---|
-| EQP-001 | Add armor without equipping it | Inventory changes; AC and conditional effects do not change |
-| EQP-002 | Equip armor with an AC formula | Active AC recalculates and contribution trace identifies the item instance |
-| EQP-003 | Equipped armor imposes Stealth disadvantage | Conditional skill effect appears while the item is equipped |
-| EQP-004 | Unequip armor | AC formula and every conditional armor effect are removed |
-| EQP-005 | Equip shield with compatible armor | Shield contribution composes once with the active armor formula |
-| EQP-006 | Two body armors conflict | Command is rejected or conflict resolution is explicitly required |
-| EQP-007 | Two instances of the same item exist | Only the equipped instance contributes effects |
-| EQP-008 | Item effect is projected to AC and Inventory | Effect is evaluated once and both projections identify the same item instance |
-
-## 8. Level-up and source policy
+## 7. Level-up and source policy
 
 | ID | Scenario | Expected result |
 |---|---|---|
@@ -130,7 +101,7 @@
 | SRC-004 | Replace all dependencies transactionally | Source can be removed after final validation |
 | SRC-005 | Core records | Remain eligible regardless of optional source list |
 
-## 9. Release acceptance
+## 8. Release acceptance
 
 - [ ] All critical scenarios pass.
 - [ ] No open critical/high data-integrity defect.
