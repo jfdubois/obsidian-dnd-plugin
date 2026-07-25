@@ -11,9 +11,15 @@ function makeContext(base: CopyModRawRecord): CopyResolverContext {
   return {
     validatedFiles: {
       "bestiary/template.json": {
-        entityKind: "monster",
-        recordCount: 1,
-        records: [base],
+        filePath: "bestiary/template.json",
+        collections: [
+          {
+            entityKind: "monster",
+            recordCount: 1,
+            records: [base],
+          },
+        ],
+        totalRecords: 1,
       },
     },
   };

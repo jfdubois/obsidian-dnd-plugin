@@ -152,22 +152,24 @@ function collectResolutionFailures(
   const failures: IngestionResolutionFailure[] = [];
 
   for (const [sourcePath, envelope] of Object.entries(boundary.validatedFiles)) {
-    for (const record of envelope.records) {
-      const copyResult = resolveCopy(record, context);
-      if (isCopyResolutionFailure(copyResult)) {
-        if (copyResult.diagnostic.code !== "NO_COPY_FIELD") {
-          failures.push(
-            createCopyFailure(copyResult.diagnostic, sourcePath, envelope.entityKind, record),
-          );
+    for (const collection of envelope.collections) {
+      for (const record of collection.records) {
+        const copyResult = resolveCopy(record, context);
+        if (isCopyResolutionFailure(copyResult)) {
+          if (copyResult.diagnostic.code !== "NO_COPY_FIELD") {
+            failures.push(
+              createCopyFailure(copyResult.diagnostic, sourcePath, collection.entityKind, record),
+            );
+          }
+          continue;
         }
-        continue;
-      }
 
-      if (isCopyResolutionSuccess(copyResult)) {
-        const modResult = resolveCopyWithMods(toCopyModRecord(record), context, { sourcePath });
-        if (!modResult.ok) {
-          for (const diagnostic of modResult.diagnostics) {
-            failures.push(createModFailure(diagnostic, sourcePath, envelope.entityKind, record));
+        if (isCopyResolutionSuccess(copyResult)) {
+          const modResult = resolveCopyWithMods(toCopyModRecord(record), context, { sourcePath });
+          if (!modResult.ok) {
+            for (const diagnostic of modResult.diagnostics) {
+              failures.push(createModFailure(diagnostic, sourcePath, collection.entityKind, record));
+            }
           }
         }
       }
@@ -183,13 +185,15 @@ function collectEntityInventory(
   const byEntity = new Map<string, Set<string>>();
 
   for (const envelope of Object.values(boundary.validatedFiles)) {
-    const fields = byEntity.get(envelope.entityKind) ?? new Set<string>();
-    byEntity.set(envelope.entityKind, fields);
-    fields.add("name");
-    fields.add("source");
-    for (const record of envelope.records) {
-      for (const field of Object.keys(record.remaining)) {
-        fields.add(field);
+    for (const collection of envelope.collections) {
+      const fields = byEntity.get(collection.entityKind) ?? new Set<string>();
+      byEntity.set(collection.entityKind, fields);
+      fields.add("name");
+      fields.add("source");
+      for (const record of collection.records) {
+        for (const field of Object.keys(record.remaining)) {
+          fields.add(field);
+        }
       }
     }
   }
@@ -236,7 +240,10 @@ function collectUnclaimed(
 
   for (const diagnostic of boundary.unclaimedDiagnostics) {
     const envelope = boundary.validatedFiles[diagnostic.path];
-    const record = envelope?.records[diagnostic.recordIndex];
+    const collection = envelope?.collections.find(
+      (c) => c.entityKind === diagnostic.entityKind,
+    );
+    const record = collection?.records[diagnostic.recordIndex];
     if (record === undefined) continue;
     if (FUTURE_IMPORTER_CLAIMED_FIELDS.has(diagnostic.field)) continue;
 

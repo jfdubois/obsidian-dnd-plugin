@@ -4,9 +4,15 @@ import { expandVersions, expandVersionsInFile } from "./versions-expander";
 
 function makeEnvelope(record: RawRecord): ValidatedFileEnvelope {
   return {
-    entityKind: "race",
-    records: [record],
-    recordCount: 1,
+    filePath: "races.json",
+    collections: [
+      {
+        entityKind: "race",
+        records: [record],
+        recordCount: 1,
+      },
+    ],
+    totalRecords: 1,
   };
 }
 
@@ -208,12 +214,18 @@ describe("expandVersions", () => {
 
     expect(result.ok).toBe(true);
     expect(result.validatedFiles["races.json"]).toEqual({
-      entityKind: "race",
-      recordCount: 2,
-      records: [
-        { name: "Base Race", source: "TST", remaining: { speed: 30 } },
-        { name: "Variant Race", source: "TST", remaining: { speed: 35 } },
+      filePath: "races.json",
+      collections: [
+        {
+          entityKind: "race",
+          recordCount: 2,
+          records: [
+            { name: "Base Race", source: "TST", remaining: { speed: 30 } },
+            { name: "Variant Race", source: "TST", remaining: { speed: 35 } },
+          ],
+        },
       ],
+      totalRecords: 2,
     });
   });
 });

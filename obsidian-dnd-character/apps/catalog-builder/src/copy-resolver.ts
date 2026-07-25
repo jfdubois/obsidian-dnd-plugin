@@ -223,9 +223,11 @@ function findRecordByNameAndSource(
   sourceAbbr: string,
 ): RawRecord | undefined {
   for (const [, envelope] of Object.entries(context.validatedFiles)) {
-    for (const record of envelope.records) {
-      if (record.name === entityName && record.source === sourceAbbr) {
-        return record;
+    for (const collection of envelope.collections) {
+      for (const record of collection.records) {
+        if (record.name === entityName && record.source === sourceAbbr) {
+          return record;
+        }
       }
     }
   }

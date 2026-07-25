@@ -99,23 +99,25 @@ function findRecordLocation(
 ): RecordLocation | undefined {
   if (preferredSourcePath !== undefined) {
     const preferred = context.validatedFiles[preferredSourcePath];
-    if (preferred !== undefined) {
+    if (preferred !== undefined && preferred.collections.length > 0) {
       return {
         sourcePath: preferredSourcePath,
-        entityKind: preferred.entityKind,
+        entityKind: preferred.collections[0]!.entityKind,
       };
     }
   }
 
   for (const [sourcePath, envelope] of Object.entries(context.validatedFiles)) {
-    const matchesRecord = envelope.records.some(
-      (candidate) => candidate.name === record.name && candidate.source === record.source,
-    );
-    if (matchesRecord) {
-      return {
-        sourcePath,
-        entityKind: envelope.entityKind,
-      };
+    for (const collection of envelope.collections) {
+      const matchesRecord = collection.records.some(
+        (candidate) => candidate.name === record.name && candidate.source === record.source,
+      );
+      if (matchesRecord) {
+        return {
+          sourcePath,
+          entityKind: collection.entityKind,
+        };
+      }
     }
   }
   return undefined;
@@ -126,14 +128,16 @@ function findChainStepLocation(
   step: CopyChainStep,
 ): RecordLocation | undefined {
   for (const [sourcePath, envelope] of Object.entries(context.validatedFiles)) {
-    const matchesRecord = envelope.records.some(
-      (record) => record.name === step.entityName && record.source === step.sourceAbbr,
-    );
-    if (matchesRecord) {
-      return {
-        sourcePath,
-        entityKind: envelope.entityKind,
-      };
+    for (const collection of envelope.collections) {
+      const matchesRecord = collection.records.some(
+        (record) => record.name === step.entityName && record.source === step.sourceAbbr,
+      );
+      if (matchesRecord) {
+        return {
+          sourcePath,
+          entityKind: collection.entityKind,
+        };
+      }
     }
   }
   return undefined;

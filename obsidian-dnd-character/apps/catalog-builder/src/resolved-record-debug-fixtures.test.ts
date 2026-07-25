@@ -19,9 +19,15 @@ function makeContext(
   return {
     validatedFiles: {
       [sourcePath]: {
-        entityKind,
-        recordCount: records.length,
-        records,
+        filePath: sourcePath,
+        collections: [
+          {
+            entityKind,
+            recordCount: records.length,
+            records,
+          },
+        ],
+        totalRecords: records.length,
       },
     },
   };

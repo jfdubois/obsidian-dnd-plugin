@@ -98,62 +98,62 @@ describe("validateRawBoundary — real 5eTools data", () => {
   it("books.json is validated with entity kind 'book'", () => {
     const books = result.validatedFiles["books.json"];
     expect(books).toBeDefined();
-    expect(books!.entityKind).toBe("book");
-    expect(books!.recordCount).toBeGreaterThan(0);
+    expect(books!.collections[0]!.entityKind).toBe("book");
+    expect(books!.collections[0]!.recordCount).toBeGreaterThan(0);
   });
 
   it("feats.json is validated with entity kind 'feat'", () => {
     const feats = result.validatedFiles["feats.json"];
     expect(feats).toBeDefined();
-    expect(feats!.entityKind).toBe("feat");
-    expect(feats!.recordCount).toBeGreaterThan(0);
+    expect(feats!.collections[0]!.entityKind).toBe("feat");
+    expect(feats!.collections[0]!.recordCount).toBeGreaterThan(0);
   });
 
   it("races.json is validated with entity kind 'race'", () => {
     const races = result.validatedFiles["races.json"];
     expect(races).toBeDefined();
-    expect(races!.entityKind).toBe("race");
-    expect(races!.recordCount).toBeGreaterThan(0);
+    expect(races!.collections[0]!.entityKind).toBe("race");
+    expect(races!.collections[0]!.recordCount).toBeGreaterThan(0);
   });
 
   it("backgrounds.json is validated with entity kind 'background'", () => {
     const backgrounds = result.validatedFiles["backgrounds.json"];
     expect(backgrounds).toBeDefined();
-    expect(backgrounds!.entityKind).toBe("background");
-    expect(backgrounds!.recordCount).toBeGreaterThan(0);
+    expect(backgrounds!.collections[0]!.entityKind).toBe("background");
+    expect(backgrounds!.collections[0]!.recordCount).toBeGreaterThan(0);
   });
 
   it("actions.json is validated with entity kind 'action'", () => {
     const actions = result.validatedFiles["actions.json"];
     expect(actions).toBeDefined();
-    expect(actions!.entityKind).toBe("action");
-    expect(actions!.recordCount).toBeGreaterThan(0);
+    expect(actions!.collections[0]!.entityKind).toBe("action");
+    expect(actions!.collections[0]!.recordCount).toBeGreaterThan(0);
   });
 
   it("deities.json is validated with entity kind 'deity'", () => {
     const deities = result.validatedFiles["deities.json"];
     expect(deities).toBeDefined();
-    expect(deities!.entityKind).toBe("deity");
-    expect(deities!.recordCount).toBeGreaterThan(0);
+    expect(deities!.collections[0]!.entityKind).toBe("deity");
+    expect(deities!.collections[0]!.recordCount).toBeGreaterThan(0);
   });
 
   it("languages.json is validated with entity kind 'language'", () => {
     const languages = result.validatedFiles["languages.json"];
     expect(languages).toBeDefined();
-    expect(languages!.entityKind).toBe("language");
-    expect(languages!.recordCount).toBeGreaterThan(0);
+    expect(languages!.collections[0]!.entityKind).toBe("language");
+    expect(languages!.collections[0]!.recordCount).toBeGreaterThan(0);
   });
 
   it("skills.json is validated", () => {
     const skills = result.validatedFiles["skills.json"];
     expect(skills).toBeDefined();
-    expect(skills!.entityKind).toBe("skill");
+    expect(skills!.collections[0]!.entityKind).toBe("skill");
   });
 
   it("senses.json is validated", () => {
     const senses = result.validatedFiles["senses.json"];
     expect(senses).toBeDefined();
-    expect(senses!.entityKind).toBe("sense");
+    expect(senses!.collections[0]!.entityKind).toBe("sense");
   });
 
   it("spells in nested directory are validated", () => {
@@ -162,7 +162,7 @@ describe("validateRawBoundary — real 5eTools data", () => {
     );
     expect(spellFiles.length).toBeGreaterThan(0);
     for (const file of spellFiles) {
-      expect(result.validatedFiles[file]!.entityKind).toBe("spell");
+      expect(result.validatedFiles[file]!.collections[0]!.entityKind).toBe("spell");
     }
   });
 
@@ -172,19 +172,21 @@ describe("validateRawBoundary — real 5eTools data", () => {
     );
     expect(classFiles.length).toBeGreaterThan(0);
     for (const file of classFiles) {
-      expect(result.validatedFiles[file]!.entityKind).toBe("class");
+      expect(result.validatedFiles[file]!.collections[0]!.entityKind).toBe("class");
     }
   });
 
   it("each record has name and source", () => {
     for (const [, envelope] of Object.entries(result.validatedFiles)) {
-      for (const record of envelope.records) {
-        expect(record.name).toBeDefined();
-        expect(typeof record.name).toBe("string");
-        expect(record.name.length).toBeGreaterThan(0);
-        expect(record.source).toBeDefined();
-        expect(typeof record.source).toBe("string");
-        expect(record.source.length).toBeGreaterThan(0);
+      for (const collection of envelope.collections) {
+        for (const record of collection.records) {
+          expect(record.name).toBeDefined();
+          expect(typeof record.name).toBe("string");
+          expect(record.name.length).toBeGreaterThan(0);
+          expect(record.source).toBeDefined();
+          expect(typeof record.source).toBe("string");
+          expect(record.source.length).toBeGreaterThan(0);
+        }
       }
     }
   });
@@ -215,7 +217,9 @@ describe("validateRawBoundary — real 5eTools data", () => {
   it("total records count matches sum of record counts", () => {
     let sum = 0;
     for (const envelope of Object.values(result.validatedFiles)) {
-      sum += envelope.recordCount;
+      for (const collection of envelope.collections) {
+        sum += collection.recordCount;
+      }
     }
     expect(result.summary.totalRecords).toBe(sum);
   });
@@ -235,9 +239,9 @@ describe("validateRawBoundary — record envelope validation", () => {
 
     expect(result.summary.validFiles).toBe(1);
     expect(result.summary.invalidFiles).toBe(0);
-    expect(result.validatedFiles["test.json"]!.recordCount).toBe(1);
-    expect(result.validatedFiles["test.json"]!.records[0]!.name).toBe("Tough");
-    expect(result.validatedFiles["test.json"]!.records[0]!.source).toBe("PHB");
+    expect(result.validatedFiles["test.json"]!.collections[0]!.recordCount).toBe(1);
+    expect(result.validatedFiles["test.json"]!.collections[0]!.records[0]!.name).toBe("Tough");
+    expect(result.validatedFiles["test.json"]!.collections[0]!.records[0]!.source).toBe("PHB");
   });
 
   it("rejects record with missing name", () => {
@@ -362,11 +366,11 @@ describe("validateRawBoundary — record envelope validation", () => {
     });
 
     expect(result.summary.validFiles).toBe(1);
-    expect(result.validatedFiles["test.json"]!.recordCount).toBe(2);
-    expect(result.validatedFiles["test.json"]!.records[0]!.name).toBe(
+    expect(result.validatedFiles["test.json"]!.collections[0]!.recordCount).toBe(2);
+    expect(result.validatedFiles["test.json"]!.collections[0]!.records[0]!.name).toBe(
       "Valid Feat",
     );
-    expect(result.validatedFiles["test.json"]!.records[1]!.name).toBe(
+    expect(result.validatedFiles["test.json"]!.collections[0]!.records[1]!.name).toBe(
       "Another Valid",
     );
 
@@ -388,7 +392,7 @@ describe("validateRawBoundary — file envelope validation", () => {
     });
 
     expect(result.summary.invalidFiles).toBe(0);
-    expect(result.validatedFiles["test.json"]!.entityKind).toBe("feat");
+    expect(result.validatedFiles["test.json"]!.collections[0]!.entityKind).toBe("feat");
   });
 
   it("accepts envelope with _meta and entity key", () => {
@@ -400,7 +404,7 @@ describe("validateRawBoundary — file envelope validation", () => {
     });
 
     expect(result.summary.invalidFiles).toBe(0);
-    expect(result.validatedFiles["test.json"]!.entityKind).toBe("feat");
+    expect(result.validatedFiles["test.json"]!.collections[0]!.entityKind).toBe("feat");
   });
 
   it("rejects non-object top level", () => {
@@ -447,7 +451,7 @@ describe("validateRawBoundary — file envelope validation", () => {
     expect(result.summary.invalidFiles).toBe(1);
   });
 
-  it("accepts multiple array-valued keys, uses first as primary", () => {
+  it("accepts multiple array-valued keys, returns all as collections", () => {
     const result = validateRawBoundary({
       "multi.json": {
         feat: [{ name: "A", source: "PHB" }],
@@ -457,12 +461,15 @@ describe("validateRawBoundary — file envelope validation", () => {
 
     expect(result.summary.validFiles).toBe(1);
     expect(result.summary.invalidFiles).toBe(0);
-    // First array key becomes the primary entity kind
-    expect(result.validatedFiles["multi.json"]!.entityKind).toBe("feat");
-    expect(result.validatedFiles["multi.json"]!.recordCount).toBe(1);
+    // Both array keys become independent collections
+    expect(result.validatedFiles["multi.json"]!.collections.length).toBe(2);
+    const entityKinds = result.validatedFiles["multi.json"]!.collections.map((c) => c.entityKind);
+    expect(entityKinds).toContain("feat");
+    expect(entityKinds).toContain("race");
+    expect(result.validatedFiles["multi.json"]!.totalRecords).toBe(2);
   });
 
-  it("uses _meta.internalCopies to determine primary entity kind", () => {
+  it("returns all collections regardless of _meta.internalCopies", () => {
     const result = validateRawBoundary({
       "races.json": {
         _meta: { internalCopies: ["race", "subrace"] },
@@ -472,8 +479,11 @@ describe("validateRawBoundary — file envelope validation", () => {
     });
 
     expect(result.summary.validFiles).toBe(1);
-    expect(result.validatedFiles["races.json"]!.entityKind).toBe("race");
-    expect(result.validatedFiles["races.json"]!.recordCount).toBe(1);
+    expect(result.validatedFiles["races.json"]!.collections.length).toBe(2);
+    const entityKinds = result.validatedFiles["races.json"]!.collections.map((c) => c.entityKind);
+    expect(entityKinds).toContain("race");
+    expect(entityKinds).toContain("subrace");
+    expect(result.validatedFiles["races.json"]!.totalRecords).toBe(2);
   });
 
   it("accepts empty records array with warning", () => {
@@ -484,7 +494,7 @@ describe("validateRawBoundary — file envelope validation", () => {
     });
 
     expect(result.summary.validFiles).toBe(1);
-    expect(result.validatedFiles["empty-records.json"]!.recordCount).toBe(0);
+    expect(result.validatedFiles["empty-records.json"]!.collections[0]!.recordCount).toBe(0);
     const warningDiag = result.diagnostics.find(
       (d) => d.code === "EMPTY_RECORDS_ARRAY",
     );
@@ -616,7 +626,7 @@ describe("validateRawBoundary — remaining raw data", () => {
       },
     });
 
-    const record = result.validatedFiles["test.json"]!.records[0]!;
+    const record = result.validatedFiles["test.json"]!.collections[0]!.records[0]!;
     expect(record.name).toBe("Tough");
     expect(record.source).toBe("PHB");
     expect(record.remaining.page).toBe(170);
@@ -630,7 +640,7 @@ describe("validateRawBoundary — remaining raw data", () => {
       },
     });
 
-    const record = result.validatedFiles["test.json"]!.records[0]!;
+    const record = result.validatedFiles["test.json"]!.collections[0]!.records[0]!;
     expect(record.remaining.name).toBeUndefined();
     expect(record.remaining.source).toBeUndefined();
   });
@@ -672,9 +682,9 @@ describe("validateRawBoundary — per-file error isolation", () => {
     });
 
     expect(result.summary.validFiles).toBe(3);
-    expect(result.validatedFiles["feats.json"]!.entityKind).toBe("feat");
-    expect(result.validatedFiles["races.json"]!.entityKind).toBe("race");
-    expect(result.validatedFiles["spells.json"]!.entityKind).toBe("spell");
+    expect(result.validatedFiles["feats.json"]!.collections[0]!.entityKind).toBe("feat");
+    expect(result.validatedFiles["races.json"]!.collections[0]!.entityKind).toBe("race");
+    expect(result.validatedFiles["spells.json"]!.collections[0]!.entityKind).toBe("spell");
   });
 });
 
@@ -712,7 +722,7 @@ describe("validateRawBoundary — edge cases", () => {
       },
     });
 
-    const record = result.validatedFiles["test.json"]!.records[0]!;
+    const record = result.validatedFiles["test.json"]!.collections[0]!.records[0]!;
     expect(record.remaining.entries).toBeDefined();
     expect(Array.isArray(record.remaining.entries)).toBe(true);
     expect(record.remaining.prerequisite).toBeDefined();
@@ -725,7 +735,7 @@ describe("validateRawBoundary — edge cases", () => {
       },
     });
 
-    const record = result.validatedFiles["test.json"]!.records[0]!;
+    const record = result.validatedFiles["test.json"]!.collections[0]!.records[0]!;
     expect(Object.keys(record.remaining).length).toBe(0);
   });
 
@@ -737,7 +747,7 @@ describe("validateRawBoundary — edge cases", () => {
     });
 
     expect(result.summary.validFiles).toBe(1);
-    const record = result.validatedFiles["test.json"]!.records[0]!;
+    const record = result.validatedFiles["test.json"]!.collections[0]!.records[0]!;
     expect(record.name).toBe("Feat: Special Characters");
   });
 
@@ -753,7 +763,7 @@ describe("validateRawBoundary — edge cases", () => {
     });
 
     expect(result.summary.validFiles).toBe(1);
-    expect(result.validatedFiles["large.json"]!.recordCount).toBe(500);
+    expect(result.validatedFiles["large.json"]!.collections[0]!.recordCount).toBe(500);
   });
 
   it("handles file with _meta and additional metadata keys", () => {
@@ -766,7 +776,7 @@ describe("validateRawBoundary — edge cases", () => {
     });
 
     expect(result.summary.validFiles).toBe(1);
-    expect(result.validatedFiles["test.json"]!.entityKind).toBe("feat");
+    expect(result.validatedFiles["test.json"]!.collections[0]!.entityKind).toBe("feat");
   });
 
   it("unclaimed diagnostics include correct path", () => {
@@ -920,19 +930,42 @@ describe("validateRawBoundary — integration with real data", () => {
       (d) => d.code === "INVALID_RECORD_ENVELOPE",
     );
 
-    const coreFiles = [
+    // Core files with single collections should have no record envelope errors
+    const singleCollectionFiles = [
       "books.json",
       "feats.json",
-      "races.json",
       "backgrounds.json",
     ];
 
-    for (const file of coreFiles) {
+    for (const file of singleCollectionFiles) {
       if (loaded.files[file] !== undefined) {
         const fileHasError = recordErrors.some((d) => d.path === file);
         expect(fileHasError).toBe(false);
       }
     }
+  });
+
+  it("races.json: subrace templates without name are expected", () => {
+    const loaded = loadRawJsonFiles(FIVEETOOLS_PATH);
+    const result = validateRawBoundary(loaded.files);
+
+    const racesEnvelope = result.validatedFiles["races.json"];
+    expect(racesEnvelope).toBeDefined();
+    expect(racesEnvelope!.collections.length).toBe(2);
+
+    // The subrace collection has some template records without name fields
+    // These are filtered out during validation, but most subrace records are valid
+    const subraceCol = racesEnvelope!.collections.find(
+      (c) => c.entityKind === "subrace",
+    );
+    expect(subraceCol).toBeDefined();
+    expect(subraceCol!.recordCount).toBeGreaterThan(0);
+
+    // Some subrace records are templates without name fields (expected)
+    const subraceErrors = result.diagnostics.filter(
+      (d) => d.code === "INVALID_RECORD_ENVELOPE" && d.path === "races.json",
+    );
+    expect(subraceErrors.length).toBeGreaterThan(0);
   });
 
   it("real feat records have expected fields in remaining", () => {
@@ -941,12 +974,188 @@ describe("validateRawBoundary — integration with real data", () => {
 
     const feats = result.validatedFiles["feats.json"];
     expect(feats).toBeDefined();
-    expect(feats!.records.length).toBeGreaterThan(0);
+    expect(feats!.collections[0]!.records.length).toBeGreaterThan(0);
 
-    const firstFeat = feats!.records[0]!;
+    const firstFeat = feats!.collections[0]!.records[0]!;
     expect(firstFeat.name).toBeDefined();
     expect(firstFeat.source).toBeDefined();
     expect(firstFeat.remaining.entries).toBeDefined();
+  });
+});
+
+/* ── Multi-collection behavior tests ───────────────────────────── */
+
+describe("validateRawBoundary — multi-collection behavior", () => {
+  it("race/subrace file: both collections present with correct counts", () => {
+    const result = validateRawBoundary({
+      "races.json": {
+        _meta: { internalCopies: ["race", "subrace"] },
+        race: [
+          { name: "Human", source: "PHB" },
+          { name: "Elf", source: "PHB" },
+        ],
+        subrace: [
+          { name: "High Elf", source: "PHB" },
+        ],
+      },
+    });
+
+    expect(result.summary.validFiles).toBe(1);
+    expect(result.validatedFiles["races.json"]!.collections.length).toBe(2);
+    const raceCol = result.validatedFiles["races.json"]!.collections.find(
+      (c) => c.entityKind === "race",
+    );
+    const subraceCol = result.validatedFiles["races.json"]!.collections.find(
+      (c) => c.entityKind === "subrace",
+    );
+    expect(raceCol).toBeDefined();
+    expect(raceCol!.recordCount).toBe(2);
+    expect(subraceCol).toBeDefined();
+    expect(subraceCol!.recordCount).toBe(1);
+    expect(result.validatedFiles["races.json"]!.totalRecords).toBe(3);
+  });
+
+  it("class/subclass file: all four collections present", () => {
+    const result = validateRawBoundary({
+      "class-barbarian.json": {
+        _meta: { internalCopies: ["class", "subclass"] },
+        class: [{ name: "Barbarian", source: "PHB" }],
+        subclass: [
+          { name: "Path of the Berserker", source: "PHB" },
+          { name: "Path of the Totem Warrior", source: "PHB" },
+        ],
+        classFeature: [{ name: "Rage", source: "PHB" }],
+        subclassFeature: [{ name: "Frenzy", source: "PHB" }],
+      },
+    });
+
+    expect(result.summary.validFiles).toBe(1);
+    expect(result.validatedFiles["class-barbarian.json"]!.collections.length).toBe(4);
+    const entityKinds = result.validatedFiles["class-barbarian.json"]!.collections.map(
+      (c) => c.entityKind,
+    );
+    expect(entityKinds).toContain("class");
+    expect(entityKinds).toContain("subclass");
+    expect(entityKinds).toContain("classFeature");
+    expect(entityKinds).toContain("subclassFeature");
+    expect(result.validatedFiles["class-barbarian.json"]!.totalRecords).toBe(5);
+  });
+
+  it("combined totals: totalRecords sums across all collections in all files", () => {
+    const result = validateRawBoundary({
+      "feats.json": {
+        feat: [
+          { name: "Tough", source: "PHB" },
+          { name: "Great Weapon Master", source: "PHB" },
+        ],
+      },
+      "races.json": {
+        race: [{ name: "Human", source: "PHB" }],
+        subrace: [
+          { name: "Mountain Dwarf", source: "PHB" },
+          { name: "Hill Dwarf", source: "PHB" },
+        ],
+      },
+    });
+
+    expect(result.summary.totalRecords).toBe(5);
+    const envelopeTotal = result.validatedFiles["feats.json"]!.totalRecords +
+      result.validatedFiles["races.json"]!.totalRecords;
+    expect(envelopeTotal).toBe(5);
+  });
+
+  it("field inventory accumulates across all collections", () => {
+    const result = validateRawBoundary({
+      "multi.json": {
+        feat: [{ name: "Tough", source: "PHB", page: 170 }],
+        race: [{ name: "Human", source: "PHB", size: "Medium" }],
+      },
+    });
+
+    expect(result.fieldInventory.knownRaw).toContain("page");
+    expect(result.fieldInventory.knownRaw).toContain("size");
+  });
+
+  it("invalid collection does not erase valid sibling collections", () => {
+    const result = validateRawBoundary({
+      "multi.json": {
+        feat: [{ name: "Tough", source: "PHB" }],
+        race: [{ source: "PHB" }], // missing name
+      },
+    });
+
+    expect(result.summary.validFiles).toBe(1);
+    const featCol = result.validatedFiles["multi.json"]!.collections.find(
+      (c) => c.entityKind === "feat",
+    );
+    const raceCol = result.validatedFiles["multi.json"]!.collections.find(
+      (c) => c.entityKind === "race",
+    );
+    expect(featCol).toBeDefined();
+    expect(featCol!.recordCount).toBe(1);
+    expect(raceCol).toBeDefined();
+    expect(raceCol!.recordCount).toBe(0);
+  });
+
+  it("empty collection emits EMPTY_RECORDS_ARRAY warning", () => {
+    const result = validateRawBoundary({
+      "multi.json": {
+        feat: [{ name: "Tough", source: "PHB" }],
+        race: [],
+      },
+    });
+
+    expect(result.summary.validFiles).toBe(1);
+    const emptyDiags = result.diagnostics.filter(
+      (d) => d.code === "EMPTY_RECORDS_ARRAY",
+    );
+    expect(emptyDiags.length).toBe(1);
+    expect(emptyDiags[0]!.message).toContain("race");
+  });
+
+  it("_meta.internalCopies is neutral (does not filter collections)", () => {
+    const result = validateRawBoundary({
+      "races.json": {
+        _meta: { internalCopies: ["race"] },
+        race: [{ name: "Human", source: "PHB" }],
+        subrace: [{ name: "High Elf", source: "PHB" }],
+      },
+    });
+
+    expect(result.summary.validFiles).toBe(1);
+    expect(result.validatedFiles["races.json"]!.collections.length).toBe(2);
+    const entityKinds = result.validatedFiles["races.json"]!.collections.map(
+      (c) => c.entityKind,
+    );
+    expect(entityKinds).toContain("race");
+    expect(entityKinds).toContain("subrace");
+  });
+
+  it("single-collection file backward compatibility", () => {
+    const result = validateRawBoundary({
+      "feats.json": {
+        feat: [{ name: "Tough", source: "PHB" }],
+      },
+    });
+
+    expect(result.summary.validFiles).toBe(1);
+    expect(result.validatedFiles["feats.json"]!.collections.length).toBe(1);
+    expect(result.validatedFiles["feats.json"]!.collections[0]!.entityKind).toBe("feat");
+    expect(result.validatedFiles["feats.json"]!.collections[0]!.recordCount).toBe(1);
+  });
+
+  it("totalCollections in summary tracks all collections across files", () => {
+    const result = validateRawBoundary({
+      "feats.json": {
+        feat: [{ name: "Tough", source: "PHB" }],
+      },
+      "races.json": {
+        race: [{ name: "Human", source: "PHB" }],
+        subrace: [{ name: "High Elf", source: "PHB" }],
+      },
+    });
+
+    expect(result.summary.totalCollections).toBe(3);
   });
 });
 

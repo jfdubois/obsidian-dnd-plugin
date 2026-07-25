@@ -5,7 +5,7 @@ import {
 } from "./mod-copy-resolver";
 import type { ModOperationDiagnostic } from "./mod-types";
 import type { DiagnosticSeverity } from "./raw-loader";
-import type { RawRecord, ValidatedFileEnvelope } from "./raw-boundary";
+import type { RawRecord, ValidatedCollection, ValidatedFileEnvelope } from "./raw-boundary";
 
 export type VersionExpansionDiagnosticCode =
   | "INVALID_VERSIONS_PAYLOAD"
@@ -66,6 +66,16 @@ function cloneUnknown(value: unknown): unknown {
 }
 
 function baseWithoutVersions(record: RawRecord): RawRecord {
+  const remaining = cloneObject(record.remaining);
+  delete remaining._versions;
+  return {
+    name: record.name,
+    source: record.source,
+    remaining,
+  };
+}
+
+function ensureNoVersions(record: RawRecord): RawRecord {
   const remaining = cloneObject(record.remaining);
   delete remaining._versions;
   return {
@@ -173,73 +183,72 @@ export function expandVersionsInFile(
   const records: RawRecord[] = [];
   const diagnostics: VersionExpansionDiagnostic[] = [];
 
-  for (const record of envelope.records) {
-    const baseRecord = baseWithoutVersions(record);
-    records.push(baseRecord);
-    const rawVersions = record.remaining._versions;
-    if (rawVersions === undefined) {
-      continue;
-    }
-    if (!Array.isArray(rawVersions)) {
-      diagnostics.push(
-        diagnostic(
-          "INVALID_VERSIONS_PAYLOAD",
-          `_versions for "${record.name}" (${record.source}) must be an array`,
-          sourcePath,
-          envelope.entityKind,
-          record,
-          rawVersions,
-        ),
-      );
-      continue;
-    }
-
-    const context: CopyResolverContext = {
-      validatedFiles: {
-        [sourcePath]: {
-          entityKind: envelope.entityKind,
-          recordCount: 1,
-          records: [baseRecord],
-        },
-      },
-    };
-
-    rawVersions.forEach((rawVersion, index) => {
-      if (
-        !isPlainObject(rawVersion) ||
-        !isNonEmptyString(rawVersion.name) ||
-        !isNonEmptyString(rawVersion.source)
-      ) {
+  for (const collection of envelope.collections) {
+    for (const record of collection.records) {
+      const baseRecord = baseWithoutVersions(record);
+      records.push(baseRecord);
+      const rawVersions = record.remaining._versions;
+      if (rawVersions === undefined) {
+        continue;
+      }
+      if (!Array.isArray(rawVersions)) {
         diagnostics.push(
           diagnostic(
-            "INVALID_VERSION_RECORD",
-            `_versions[${index}] for "${record.name}" (${record.source}) must be an object with non-empty name and source`,
+            "INVALID_VERSIONS_PAYLOAD",
+            `_versions for "${record.name}" (${record.source}) must be an array`,
             sourcePath,
-            envelope.entityKind,
+            collection.entityKind,
             record,
-            rawVersion,
-            index,
+            rawVersions,
           ),
         );
-        return;
+        continue;
       }
 
-      const rawVersionRecord = versionRecord(baseRecord, rawVersion);
-      const resolved = resolveCopyWithMods(rawVersionRecord, context, { sourcePath });
-      if (!resolved.ok) {
-        diagnostics.push(
-          modFailureDiagnostic(
-            sourcePath,
-            envelope.entityKind,
-            record,
-            index,
-            resolved.diagnostics,
-          ),
-        );
-        return;
-      }
-      records.push(mergeVersionFields(resolved.record, rawVersion));
-    });
+      const context: CopyResolverContext = {
+        validatedFiles: {
+          [sourcePath]: envelope,
+        },
+      };
+
+      rawVersions.forEach((rawVersion, index) => {
+        if (
+          !isPlainObject(rawVersion) ||
+          !isNonEmptyString(rawVersion.name) ||
+          !isNonEmptyString(rawVersion.source)
+        ) {
+          diagnostics.push(
+            diagnostic(
+              "INVALID_VERSION_RECORD",
+              `_versions[${index}] for "${record.name}" (${record.source}) must be an object with non-empty name and source`,
+              sourcePath,
+              collection.entityKind,
+              record,
+              rawVersion,
+              index,
+            ),
+          );
+          return;
+        }
+
+        const rawVersionRecord = versionRecord(baseRecord, rawVersion);
+        const resolved = resolveCopyWithMods(rawVersionRecord, context, { sourcePath });
+        if (!resolved.ok) {
+          diagnostics.push(
+            modFailureDiagnostic(
+              sourcePath,
+              collection.entityKind,
+              record,
+              index,
+              resolved.diagnostics,
+            ),
+          );
+          return;
+        }
+        const cleaned = ensureNoVersions(resolved.record);
+        records.push(mergeVersionFields(cleaned, rawVersion));
+      });
+    }
   }
 
   return Object.freeze({
@@ -258,10 +267,32 @@ export function expandVersions(
   for (const [sourcePath, envelope] of Object.entries(validatedFiles)) {
     const expanded = expandVersionsInFile(envelope, sourcePath);
     diagnostics.push(...expanded.diagnostics);
+
+    // Build expanded collections: merge expanded records into the first collection
+    // (preserving the collection structure)
+    const expandedCollections: ValidatedCollection[] = [];
+    let remainingExpanded = [...expanded.records];
+    for (const collection of envelope.collections) {
+      if (remainingExpanded.length === 0) {
+        expandedCollections.push({
+          entityKind: collection.entityKind,
+          records: [],
+          recordCount: 0,
+        });
+      } else {
+        expandedCollections.push({
+          entityKind: collection.entityKind,
+          records: remainingExpanded,
+          recordCount: remainingExpanded.length,
+        });
+        remainingExpanded = [];
+      }
+    }
+
     expandedFiles[sourcePath] = {
-      entityKind: envelope.entityKind,
-      records: [...expanded.records],
-      recordCount: expanded.records.length,
+      filePath: envelope.filePath,
+      collections: expandedCollections,
+      totalRecords: expandedCollections.reduce((sum, c) => sum + c.recordCount, 0),
     };
   }
 

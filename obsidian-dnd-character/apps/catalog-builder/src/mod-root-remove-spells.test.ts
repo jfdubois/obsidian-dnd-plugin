@@ -7,9 +7,15 @@ function makeContext(records: CopyModRawRecord[]): CopyResolverContext {
   return {
     validatedFiles: {
       "test.json": {
-        entityKind: "monster",
-        recordCount: records.length,
-        records,
+        filePath: "test.json",
+        collections: [
+          {
+            entityKind: "monster",
+            recordCount: records.length,
+            records,
+          },
+        ],
+        totalRecords: records.length,
       },
     },
   };

@@ -21,13 +21,19 @@ function makeContext(
   return {
     validatedFiles: {
       "test.json": {
-        entityKind: "test",
-        recordCount: records.length,
-        records: records.map((r) => ({
-          name: r.name,
-          source: r.source,
-          remaining: r.remaining ?? {},
-        })),
+        filePath: "test.json",
+        collections: [
+          {
+            entityKind: "test",
+            recordCount: records.length,
+            records: records.map((r) => ({
+              name: r.name,
+              source: r.source,
+              remaining: r.remaining ?? {},
+            })),
+          },
+        ],
+        totalRecords: records.length,
       },
     },
   };

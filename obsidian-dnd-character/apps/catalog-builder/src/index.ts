@@ -44,6 +44,7 @@ export {
   type FieldClassification,
   type UnclaimedFieldDiagnostic,
   type RawRecord,
+  type ValidatedCollection,
   type ValidatedFileEnvelope,
   type RawBoundaryDiagnostic,
   type FieldInventory,
