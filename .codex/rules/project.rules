@@ -1,5 +1,7 @@
-# Project command policy for actions that would execute outside the sandbox.
-# Rules are additive to AGENTS.md and the phase skill; they are not a replacement for either.
+# Project command policy for actions that execute outside the workspace sandbox.
+# These narrow allow rules support unattended phase execution even when the active
+# Codex session uses approval_policy = "never". Project instructions and the phase
+# skill still control when each command may be used.
 
 prefix_rule(
     pattern = ["git", ["status", "diff", "log", "rev-parse", "branch", "remote", "rev-list"]],
@@ -8,6 +10,7 @@ prefix_rule(
     match = [
         "git status --short",
         "git diff --check",
+        "git diff --cached --check",
         "git log -10 --oneline",
         "git rev-parse HEAD",
         "git branch --show-current",
@@ -17,21 +20,34 @@ prefix_rule(
 )
 
 prefix_rule(
-    pattern = ["git", "fetch"],
-    decision = "prompt",
-    justification = "Network synchronization requires user approval.",
+    pattern = ["git", "fetch", "origin", "dev"],
+    decision = "allow",
+    justification = "Allow the phase parent to refresh origin/dev during mandatory preflight without prompting.",
     match = ["git fetch origin dev"],
 )
 
 prefix_rule(
-    pattern = ["git", ["add", "commit", "push"]],
-    decision = "prompt",
-    justification = "Only the phase parent may publish validated task or gate changes, with approval.",
+    pattern = ["git", "add", "-A"],
+    decision = "allow",
+    justification = "Allow the phase parent to stage the already-reviewed active task or gate diff.",
+    match = ["git add -A"],
+)
+
+prefix_rule(
+    pattern = ["git", "commit", "-m"],
+    decision = "allow",
+    justification = "Allow the phase parent to create the required atomic task or phase-gate commit after validation and staged-diff review.",
     match = [
-        "git add -A",
         "git commit -m chore(project): complete P3-T007 -m P3-T007",
-        "git push origin dev",
+        "git commit -m chore(project): complete phase 3 gate -m Phase 3 gate",
     ],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "origin", "dev"],
+    decision = "allow",
+    justification = "Allow the phase parent to push validated task and gate commits only to origin/dev.",
+    match = ["git push origin dev"],
 )
 
 prefix_rule(
@@ -51,6 +67,13 @@ prefix_rule(
         "git switch main",
         "git tag v1.0.0",
     ],
+)
+
+prefix_rule(
+    pattern = ["git", "commit", "--amend"],
+    decision = "forbidden",
+    justification = "Amending task or gate commits is prohibited; create a new explicit repair commit instead.",
+    match = ["git commit --amend"],
 )
 
 prefix_rule(

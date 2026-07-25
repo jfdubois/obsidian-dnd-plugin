@@ -149,7 +149,7 @@ The worker owns implementation discovery.
 
 ## 5. Preflight
 
-Run one grouped preflight command:
+Run local read-only checks first:
 
 ```bash
 pwd
@@ -160,23 +160,37 @@ git log -10 --oneline
 git config --get user.name
 git config --get user.email
 git remote -v
+git rev-parse HEAD
+```
+
+Run remote synchronization as its own command so the execution policy can match
+and allow the exact operation:
+
+```bash
 git fetch origin dev
+```
+
+Then verify synchronization and capture the authoritative starting commit:
+
+```bash
 git rev-list --left-right --count origin/dev...dev
 git rev-parse HEAD
 ```
 
 Require:
 
-- record the exact final `git rev-parse HEAD` output as the phase `Starting commit`; do not substitute an older phase commit, status-file value, or another line from `git log`;
+- the synchronization result is exactly `0 0` (the output may be tab-separated);
+- record the final `git rev-parse HEAD` output as the phase `Starting commit`; do not substitute an older phase commit, status-file value, or another line from `git log`;
 - current directory and Git root are `/home/jdubois/Documents/Projects/obsidian-dnd-plugin`;
 - branch is exactly `dev`;
 - working tree is clean;
-- local `dev` and `origin/dev` are synchronized;
 - Git name/email and `origin` exist;
 - required control documents and selected phase exist;
 - phase tasks and gate are explicit.
 
-Do not change Git identity. If a requirement fails, stop before delegation.
+The repository rule allows only the exact `git fetch origin dev` command outside
+the sandbox. Do not wrap it in a larger shell script or substitute another fetch
+form. Do not change Git identity. If any requirement fails, stop before delegation.
 
 Report once:
 
