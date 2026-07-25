@@ -194,7 +194,7 @@ Read and resolve raw source generically without generating final entities yet.
   - Include source path, structured identity, inheritance chain, and resolved field inventory.
   - Confirm that raw fields remain confined to catalog-builder fixtures.
 
-- [ ] **P3-T012 — Produce ingestion diagnostic report**
+- [X] **P3-T012 — Produce ingestion diagnostic report**
   - Report parse and resolution failures.
   - Inventory observed structured fields by entity type.
   - Identify fields claimed by a future importer.

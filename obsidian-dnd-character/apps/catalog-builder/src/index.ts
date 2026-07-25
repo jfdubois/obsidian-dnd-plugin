@@ -126,6 +126,20 @@ export {
 } from "./resolved-record-debug-fixtures";
 
 export {
+  /* Ingestion diagnostic report types */
+  type EntityFieldInventoryReport,
+  type IngestionDiagnosticReport,
+  type IngestionDiagnosticReportInput,
+  type IngestionParseFailure,
+  type IngestionResolutionFailure,
+  type StructuredValueKind,
+  type UnclaimedCandidateMechanicalField,
+  type UnclaimedFieldReport,
+  /* Ingestion diagnostic report functions */
+  createIngestionDiagnosticReport,
+} from "./ingestion-diagnostic-report";
+
+export {
   /* Version expansion types */
   type VersionExpansionDiagnosticCode,
   type VersionExpansionDiagnostic,

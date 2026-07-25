@@ -6,11 +6,11 @@ Phase 3 — Catalog builder ingestion foundation
 
 ## Current task
 
-P3-T012 — Produce ingestion diagnostic report
+Phase 3 gate
 
 ## Last completed task
 
-P3-T011 — Emit resolved-record debug fixtures
+P3-T012 — Produce ingestion diagnostic report
 
 ## Branch baseline
 
@@ -26,7 +26,7 @@ None recorded.
 
 - `npm run check`: passing at Phase 2 gate
 - `npm run build`: passing at Phase 2 gate
-- Tests: 1498 passing
+- Tests: 1505 passing
 
 ## Catalog baseline
 
@@ -44,16 +44,22 @@ None recorded.
 # Current phase ledger
 
 - Phase starting commit: 6dcc189
-- Completed Phase 3 task commits: P3-T006, P3-T007-S1, P3-T007-S2, P3-T007-S3, P3-T007-S4, P3-T007-S5, P3-T008, P3-T009, P3-T010, P3-T011
-- Current task: P3-T012
+- Completed Phase 3 task commits: P3-T006, P3-T007-S1, P3-T007-S2, P3-T007-S3, P3-T007-S4, P3-T007-S5, P3-T008, P3-T009, P3-T010, P3-T011, P3-T012
+- Current task: Phase 3 gate
 - P3-T007 execution mode: five committed slices; one `/phase 3` invocation per slice.
-- Current retry: 1
+- Current retry: 0
 - Gate status: not evaluated
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-25 — P3-T012 — Produce ingestion diagnostic report
+Summary: Added a catalog-builder ingestion diagnostic report for JSON parse failures, copy and `_mod` resolution failures, field inventory by entity type, future-importer claimed fields, and unclaimed candidate mechanical fields without automatically classifying unclaimed fields as narrative.
+Validation: `npm --prefix obsidian-dnd-character exec vitest run apps/catalog-builder/src/ingestion-diagnostic-report.test.ts` passes (7/7 tests, EXIT 0). `npm --prefix obsidian-dnd-character exec vitest run apps/catalog-builder/src/mod-copy-resolver.test.ts apps/catalog-builder/src/resolved-record-debug-fixtures.test.ts apps/catalog-builder/src/copy-resolver.test.ts apps/catalog-builder/src/versions-expander.test.ts` passes (53/53 tests, EXIT 0). `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 1505/1505 tests, EXIT 0). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Diagnostic reporting remains inside the catalog-builder boundary. Future-importer claims are report-local and do not change normalized catalog contracts, raw-boundary policy, source redistribution, or Obsidian API use.
+Commit: see Git history for P3-T012.
 
 2026-07-25 — P3-T011 — Emit resolved-record debug fixtures
 Summary: Added in-memory catalog-builder resolved-record debug fixtures with source path, structured identity, inheritance chain, resolved field inventory, cloned resolved raw payloads, and diagnostic-only cycle handling. Exported fixture types/functions from the catalog-builder boundary.
