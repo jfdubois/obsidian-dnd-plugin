@@ -216,7 +216,7 @@ Read and resolve raw source generically without generating final entities yet.
 
 Generate a valid versioned catalog using stable contracts.
 
-- [ ] **P4-T001 — Implement ruleset classifier**
+- [x] **P4-T001 — Implement ruleset classifier**
 
 - [ ] **P4-T002 — Implement record-level core/source classifier**
 

@@ -6,11 +6,11 @@ Phase 4 — Catalog normalization and publication
 
 ## Current task
 
-P4-T001 — Implement ruleset classifier
+P4-T002 — Implement record-level core/source classifier
 
 ## Last completed task
 
-Phase 3 gate
+P4-T001 — Implement ruleset classifier
 
 ## Branch baseline
 
@@ -24,9 +24,9 @@ None recorded.
 
 ## Validation baseline
 
-- `npm run check`: passing at Phase 3 gate
-- `npm run build`: passing at Phase 3 gate
-- Tests: 1505 passing
+- `npm run check`: passing at P4-T001
+- `npm run build`: passing at P4-T001
+- Tests: 1512 passing
 
 ## Catalog baseline
 
@@ -43,9 +43,9 @@ None recorded.
 
 # Current phase ledger
 
-- Phase starting commit: see Git history for Phase 3 gate
-- Completed Phase 4 task commits: none
-- Current task: P4-T001
+- Phase starting commit: b3598ccf62be42eddff2eaf9302ca636762f686c
+- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001
+- Current task: P4-T002
 - Current retry: 0
 - Gate status: not evaluated
 - Blocking issue: none
@@ -53,6 +53,12 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-25 — P4-T001 — Implement ruleset classifier
+Summary: Added a catalog-builder ruleset classifier foundation with reviewed source-to-ruleset mappings for 2014 and 2024 core source abbreviations, deterministic batch classification, represented-ruleset reporting, included-ruleset filtering, and explicit diagnostics for invalid, unknown, or excluded sources.
+Validation: `npm --prefix obsidian-dnd-character exec vitest run apps/catalog-builder/src/ruleset-classifier.test.ts` passes (7/7 tests, EXIT 0). `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 1512/1512 tests, EXIT 0). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Ruleset classification remains inside the catalog-builder boundary and does not change normalized catalog schemas, canonical ID construction, source-policy semantics, Obsidian API use, or later Phase 4 normalizer behavior. The reviewed source map is intentionally limited to PHB/DMG/MM and XPHB/XDMG/XMM until later source metadata work expands classification.
+Commit: see Git history for P4-T001.
 
 2026-07-25 — Phase 3 gate — complete
 Summary: Verified all Phase 3 gate criteria. Representative race, background, and class preserve records resolve without name exceptions; unknown `_mod` mechanics report source path, entity, field target, and mode; unclaimed candidate mechanical fields are reported before normalization without narrative auto-classification; and raw 5eTools-shaped fields remain confined to catalog-builder diagnostics/fixtures.

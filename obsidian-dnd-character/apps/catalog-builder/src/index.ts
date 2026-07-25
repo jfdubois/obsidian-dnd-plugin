@@ -151,6 +151,24 @@ export {
 } from "./versions-expander";
 
 export {
+  /* Ruleset classifier types */
+  type RulesetClassificationMethod,
+  type RulesetSourceClassification,
+  type RulesetClassificationDiagnosticCode,
+  type RulesetClassificationDiagnostic,
+  type RulesetRecordClassification,
+  type RulesetClassificationResult,
+  type RulesetRecordInput,
+  type RulesetClassifierOptions,
+  type RulesetClassificationBatchResult,
+  /* Ruleset classifier registry */
+  RULESET_SOURCE_CLASSIFICATIONS,
+  /* Ruleset classifier functions */
+  classifyRecordRuleset,
+  classifyResolvedRecordRulesets,
+} from "./ruleset-classifier";
+
+export {
   /* Mod types */
   type ModOperationPayload,
   type ModAppendArr,
