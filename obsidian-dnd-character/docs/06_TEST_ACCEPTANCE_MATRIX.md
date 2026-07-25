@@ -6,8 +6,10 @@
 |---|---|---|
 | CAT-001 | Same source commit and config built twice | Same normalized content/checksums except explicitly excluded timestamps |
 | CAT-002 | Record uses `_copy` | Fully resolved before normalization |
-| CAT-003 | Record uses supported `_mod` | Modification applied and covered by fixture |
-| CAT-004 | Unknown `_mod` operation | Build fails with source path and entity identity |
+| CAT-003 | Record uses supported `_mod` | Operation is applied to a cloned resolved record and the exact resulting record matches the fixture |
+| CAT-003A | Supported `_mod` has malformed parameters | Build fails with source path, entity identity, field target, mode, and parameter diagnostic |
+| CAT-003B | `_mod` is applied to a resolved base record | Original base record remains unchanged |
+| CAT-004 | Unknown `_mod` operation | Build fails with source path, entity identity, field target, and unknown mode |
 | CAT-005 | Copy cycle | Build fails with cycle chain |
 | CAT-006 | Duplicate canonical ID | Publication blocked |
 | CAT-007 | Unresolved included reference | Publication blocked |

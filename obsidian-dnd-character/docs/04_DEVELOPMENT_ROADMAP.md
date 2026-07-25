@@ -135,7 +135,7 @@ For each task:
 
 Read and resolve raw source generically without generating final entities yet.
 
-- [ ] **P3-T000 — Extend semantic effect and sheet-projection contracts**
+- [X] **P3-T000 — Extend semantic effect and sheet-projection contracts**
   - Add automation-status types.
   - Add sheet-projection types.
   - Add effect provenance.
@@ -146,26 +146,26 @@ Read and resolve raw source generically without generating final entities yet.
   - Update architecture, requirements, SOP, decision register, and acceptance matrix.
   - Accept: npm run check and npm run build pass; existing effects are migrated; representative synthetic fixtures validate conditional saving-throw, defense, capability, and feature projections.
 
-- [ ] **P3-T001 — Implement builder configuration**
+- [X] **P3-T001 — Implement builder configuration**
   - Clone path, output path, included rulesets, content policy, build mode.
 
-- [ ] **P3-T002 — Implement source manifest reader**
+- [X] **P3-T002 — Implement source manifest reader**
   - Verify Git repository and capture commit.
 
-- [ ] **P3-T003 — Implement raw JSON loader**
+- [X] **P3-T003 — Implement raw JSON loader**
   - Safe path handling, parse diagnostics, file inventory.
 
-- [ ] **P3-T004 — Implement raw boundary validation**
+- [X] **P3-T004 — Implement raw boundary validation**
   - Accept raw values as unknown.
   - Validate file and record envelopes before use.
   - Preserve builder-only resolved data required by later importers.
   - Prevent raw fields from crossing into normalized catalog contracts.
   - Record unclaimed structured fields instead of silently discarding them.
 
-- [ ] **P3-T005 — Implement canonical reference parser**
+- [X] **P3-T005 — Implement canonical reference parser**
   - Parse pipe-delimited entity references into structured keys.
 
-- [ ] **P3-T006 — Implement _copy resolver**
+- [X] **P3-T006 — Implement _copy resolver**
   - Resolve base entity by structured identity.
 
 - [ ] **P3-T007 — Implement _mod operations used by included data**
