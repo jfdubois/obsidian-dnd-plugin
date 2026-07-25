@@ -6,7 +6,7 @@ Phase 3 — Catalog builder ingestion foundation
 
 ## Current task
 
-P3-T007 — Implement _mod operations used by included data
+P3-T007-S1 — Shared contracts and array operations
 
 ## Last completed task
 
@@ -41,11 +41,12 @@ None recorded.
 - Minimum app version: not selected.
 - Plugin version: not initialized.
 
-## Current phase ledger
+# Current phase ledger
 
 - Phase starting commit: 6dcc189
 - Completed Phase 3 task commits: P3-T006
-- Current task: P3-T007
+- Current task: P3-T007-S1
+- P3-T007 execution mode: five committed slices; one `/phase 3` invocation per slice.
 - Current retry: 0
 - Gate status: not evaluated
 - Blocking issue: none

@@ -169,8 +169,20 @@ Read and resolve raw source generically without generating final entities yet.
   - Resolve base entity by structured identity.
 
 - [ ] **P3-T007 — Implement _mod operations used by included data**
-  - Each supported operation requires fixtures and tests.
-  - Unknown operations fail the build.
+  - [ ] **P3-T007-S1 — Shared contracts and array operations**
+    - Modes: appendArr, appendIfNotExistsArr, insertArr, prependArr, removeArr, renameArr, replaceArr.
+  - [ ] **P3-T007-S2 — Scalar, property, text, and size operations**
+    - Modes: maxSize, prefixSuffixStringProp, replaceTxt, scalarAddDc, scalarAddHit, scalarAddProp, scalarMultProp, scalarMultXp, setProp.
+  - [ ] **P3-T007-S3 — Senses and skills operations**
+    - Modes: addSenses, addSkills.
+  - [ ] **P3-T007-S4 — Spell operations**
+    - Modes: addSpells, removeSpells, replaceSpells.
+  - [ ] **P3-T007-S5 — Dispatcher, cloning, diagnostics, and _copy integration**
+    - Apply every supported operation after _copy resolution.
+    - Preserve the original base/input record.
+    - Unknown and malformed operations fail with actionable diagnostics.
+  - Each slice requires resulting-state and malformed-payload tests.
+  - P3-T007 is complete only after all five slices and CAT-003, CAT-003A, CAT-003B, and CAT-004 pass.
 
 - [ ] **P3-T008 — Implement _preserve behavior**
 

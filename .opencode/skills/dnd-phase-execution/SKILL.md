@@ -1,15 +1,20 @@
 ---
 name: dnd-phase-execution
-description: Execute exactly one task from a selected Obsidian D&D roadmap phase with a hard early-delegation gate, independent parent review, validation, commit, push, and immediate stop. Use for `/phase <number>` during orchestration calibration.
+description: Execute exactly one roadmap task or one declared task slice from a selected Obsidian D&D phase with hard early delegation, independent review, validation, commit, push, and immediate stop. Use for `/phase <number>` during calibration.
 ---
 
-# D&D single-task execution
+# D&D single-unit execution
 
 ## 1. Outcome
 
-Complete at most one roadmap task from the phase selected by the user.
+Complete at most one execution unit from the phase selected by the user.
 
-The parent coordinates. The worker discovers and implements. Do not accumulate implementation context in the parent before delegation.
+An execution unit is:
+
+- one ordinary roadmap task; or
+- one roadmap slice explicitly listed beneath an oversized task.
+
+P3-T007 is an oversized task and is executed as five slices. Never run more than one slice per `/phase 3` invocation.
 
 ## 2. Workspace
 
@@ -19,41 +24,24 @@ Project root: /home/jdubois/Documents/Projects/obsidian-dnd-plugin/obsidian-dnd-
 Branch:       dev
 ```
 
-Run Git commands from the Git root. Run project scripts with:
+Run Git from the Git root. Run project scripts with:
 
 ```bash
 npm --prefix obsidian-dnd-character run <script>
 ```
 
-## 3. Hard pre-delegation budget
+## 3. Pre-delegation budget
 
-After loading this skill, the parent may use exactly these repository operations before the first worker:
+After loading this skill, perform exactly four repository operations before the worker:
 
 1. grouped Git preflight;
 2. bounded selected-phase extraction;
-3. bounded current-status header read;
-4. bounded task-capsule read when a capsule is named below.
+3. bounded project-status header read;
+4. bounded capsule read for the selected task or slice.
 
-Do not add discovery operations. Do not use Read, Glob, Grep, List, or LSP. They are intentionally denied to the parent.
+Do not use parent Read, Glob, Grep, List, or LSP. Do not inspect implementation, tests, raw data, package files, architecture, contracts, SOP, or acceptance documents. Do not run an inventory command in the parent.
 
-The parent must not inspect:
-
-```text
-obsidian-dnd-character/apps/
-obsidian-dnd-character/packages/
-external/
-obsidian-dnd-character/references/
-```
-
-The parent must not run source inventory commands. Inventory commands belong in the worker capsule and are executed by the worker.
-
-If any prohibited pre-delegation action occurs, stop with:
-
-```text
-Status: delegation-protocol-failure
-Reason: <prohibited operation>
-Repository mutation: none
-```
+A breach before mutation ends the run as `delegation-protocol-failure`.
 
 ## 4. Preflight
 
@@ -72,21 +60,11 @@ git rev-list --left-right --count origin/dev...dev
 git rev-parse HEAD
 ```
 
-Require:
+Require the configured root, branch `dev`, clean tree, synchronized `origin/dev`, Git identity, and origin. Record the final hash as `Starting commit`.
 
-- current directory and Git root match the configured Git root;
-- branch is exactly `dev`;
-- working tree is clean;
-- local `dev` and `origin/dev` are synchronized;
-- Git identity and `origin` exist.
+## 5. Select one execution unit
 
-If any condition fails, stop before delegation.
-
-Record the final `git rev-parse HEAD` value as `Starting commit`.
-
-## 5. Bounded task selection
-
-Extract only the selected phase. Substitute the assigned phase number for `<N>`:
+Extract only the assigned phase:
 
 ```bash
 awk '
@@ -96,61 +74,39 @@ awk '
 ' obsidian-dnd-character/docs/04_DEVELOPMENT_ROADMAP.md
 ```
 
-Read only the compact current-state header:
+Read only:
 
 ```bash
-sed -n '1,45p' obsidian-dnd-character/docs/PROJECT_STATUS.md
+sed -n '1,55p' obsidian-dnd-character/docs/PROJECT_STATUS.md
 ```
 
-From those outputs:
+Selection rules:
 
-1. preserve completed tasks;
-2. select the first incomplete task in roadmap order;
-3. confirm every earlier task in the phase is complete;
-4. do not inspect implementation to confirm completion;
-5. do not read the phase gate beyond what the bounded phase extraction already returned.
+1. Find the first incomplete top-level task.
+2. If that task contains incomplete executable slices, select its first incomplete slice.
+3. Confirm all prior tasks and prior slices are complete.
+4. Select nothing else.
 
-## 6. Task capsule
+### P3-T007 capsule mapping
 
-For P3-T007, read only:
+| Slice | Capsule |
+|---|---|
+| P3-T007-S1 | `obsidian-dnd-character/prompts/P3_T007_S1_ARRAY.md` |
+| P3-T007-S2 | `obsidian-dnd-character/prompts/P3_T007_S2_SCALAR_TEXT.md` |
+| P3-T007-S3 | `obsidian-dnd-character/prompts/P3_T007_S3_SENSE_SKILL.md` |
+| P3-T007-S4 | `obsidian-dnd-character/prompts/P3_T007_S4_SPELLS.md` |
+| P3-T007-S5 | `obsidian-dnd-character/prompts/P3_T007_S5_INTEGRATION.md` |
 
-```bash
-sed -n '1,260p' obsidian-dnd-character/prompts/P3_T007_TASK_CAPSULE.md
-```
+Read only the selected capsule with `sed -n '1,260p'` as operation four.
 
-Use that file as the task-specific capsule. Do not open the SOP, acceptance matrix, architecture, contracts, context index, source files, tests, or raw source in the parent.
+## 6. Delegate immediately
 
-Construct the worker message from:
-
-- the selected roadmap task text already extracted;
-- the task capsule;
-- these exact roots:
-
-```text
-Git working root: /home/jdubois/Documents/Projects/obsidian-dnd-plugin
-Project source root: /home/jdubois/Documents/Projects/obsidian-dnd-plugin/obsidian-dnd-character
-Command working directory: /home/jdubois/Documents/Projects/obsidian-dnd-plugin
-```
-
-The worker message must state:
-
-- implement exactly one task;
-- read `obsidian-dnd-character/AGENTS.md` and task-specific documents named by the capsule;
-- run any approved inventory command itself;
-- discover relevant source, tests, line counts, symbols, and bounded ranges;
-- leave all changes unstaged and uncommitted;
-- return the required structured report and completion evidence.
-
-Do not predict filenames, APIs, implementation modules, or changed files.
-
-## 7. Delegation receipt
-
-Immediately before invoking the worker, output once:
+Output:
 
 ```text
 Delegation gate
 Phase: <phase>
-Task: <task ID and title>
+Execution unit: <task or slice ID and title>
 Starting commit: <hash>
 Parent repository operations after skill load: 4
 Parent source/test/raw reads: 0
@@ -158,21 +114,22 @@ Parent inventory commands: 0
 Worker: fresh dnd-task-worker
 ```
 
-Then invoke one fresh `dnd-task-worker` immediately. Do not perform another parent repository operation first.
+Invoke one fresh worker with the capsule content and exact roots. Do not perform another repository operation first.
 
-## 8. Empty invocation
+## 7. Empty or crashed worker
 
-If the worker returns no structured report:
+After a worker crash, missing report, or connection loss:
 
-1. run `git status --short`;
-2. if the tree is clean, allow one fresh replacement invocation using the same capsule and the shortest failure note;
-3. if the replacement also returns no report and no changes, stop blocked.
+1. run `git status --short` and `git diff --stat`;
+2. if the tree is clean, classify as `REPLACE_INVOCATION` and permit one fresh replacement worker;
+3. if the tree is modified, preserve all changes, review the diff, and classify as repair or partial;
+4. never reset, restore, clean, or stash.
 
-An empty invocation does not consume the repair attempt.
+A clean failed invocation does not consume the repair attempt.
 
-## 9. Parent review after worker return
+## 8. Parent review
 
-Only after the worker returns, run:
+After worker return, run compact metadata:
 
 ```bash
 git status --short
@@ -182,129 +139,74 @@ git diff --numstat
 git diff --name-only
 ```
 
-Review changed files individually with bounded diffs:
+Review changed files individually with bounded diffs. Confirm:
 
-```bash
-git diff -- <changed-path>
-```
+- changes match only the selected slice;
+- roadmap/status were not changed by the worker;
+- each assigned mode has an execution symbol, resulting-state test, and malformed test;
+- no parser-only completion;
+- no unauthorized scan, denied-command continuation, shell mutation, oversized new file, raw leakage, protected `any`, entity-name branch, or unrelated refactor.
 
-Use `sed -n` only for a specific bounded range when a diff requires surrounding context. Do not begin broad repository discovery after the worker.
+Do not require modes assigned to future slices.
 
-Confirm:
+## 9. Repair
 
-- every change belongs to the active task;
-- the worker did not change roadmap or project status;
-- behavior requirements have execution symbols;
-- tests assert resulting state/output, not only parsing or recognition;
-- positive and malformed/negative coverage exists;
-- task-specific acceptance evidence is complete;
-- no raw-source leakage, protected `any`, entity-name branch, narrative inference, undocumented Obsidian API, unrelated refactor, generated output, or dependency change was introduced;
-- existing large files were changed through localized diffs rather than replacement.
+Allow at most one fresh repair worker for the selected slice. Provide only the failed finding, changed files, exact correction, and behavior that must remain unchanged.
 
-For P3-T007, require evidence that every supported inventoried `_mod` mode:
+If still incomplete, stop partial with changes preserved.
 
-- validates its payload;
-- executes against a cloned resolved record;
-- preserves the original record;
-- has a before/after behavior assertion;
-- has malformed-payload coverage;
-- produces actionable failure for unknown modes.
+## 10. Validation
 
-Parser-only, registry-only, type-only, or recognition-only work is partial.
-
-## 10. Repair
-
-Allow at most one fresh repair worker.
-
-Give it only:
-
-- task ID;
-- changed files;
-- exact failed command or review finding;
-- shortest useful error excerpt;
-- exact correction required;
-- behavior that must remain unchanged.
-
-If repair remains incomplete, stop with uncommitted changes preserved.
-
-## 11. Independent validation
-
-Run focused checks identified in the worker report, then:
+Run the focused command from the slice capsule, then:
 
 ```bash
 npm --prefix obsidian-dnd-character run check
 npm --prefix obsidian-dnd-character run build
 ```
 
-Worker-reported validation is not sufficient.
+For S1-S4, project-wide checks must pass before the slice commit. For S5, also verify CAT-003, CAT-003A, CAT-003B, and CAT-004 across all 21 modes.
 
-The task is accepted only when parent review, focused validation, project check, build, and acceptance evidence all pass.
+## 11. Documentation and commit
 
-## 12. Documentation, commit, and push
+After an accepted slice:
 
-Only after acceptance:
+- mark only that slice complete in the roadmap;
+- update current status to the next incomplete slice;
+- do not mark P3-T007 complete for S1-S4.
 
-1. mark only the active task complete in the roadmap;
-2. update compact project status;
-3. update API or ADR documents only when the task requires them.
-
-Review before staging:
-
-```bash
-git status --short
-git diff --check
-git diff --stat
-git diff --numstat
-git diff --name-only
-```
-
-Then:
+Commit S1-S4 as:
 
 ```bash
 git add -A
 git diff --cached --check
 git diff --cached --stat
-git diff --cached --numstat
 git diff --cached --name-only
-git commit -m "chore(project): complete <TASK-ID>" -m "<TASK-ID>"
+git commit -m "chore(project): complete <SLICE-ID>" -m "<SLICE-ID>"
 git push origin dev
 ```
 
-Verify:
+For S5, after all full-task acceptance checks pass:
+
+- mark S5 and P3-T007 complete;
+- update status to P3-T008;
+- commit:
 
 ```bash
-git log -1 --format='%h %an <%ae> %s'
-git status --short
-git rev-list --left-right --count origin/dev...dev
+git commit -m "chore(project): complete P3-T007" -m "P3-T007"
+git push origin dev
 ```
 
-Require configured author, clean tree, and synchronized branch.
+Verify clean tree and synchronized branch. Stop after the commit. Do not start the next slice or task.
 
-If commit or push fails, stop. Do not start another task.
-
-## 13. Stop after one task
-
-After one successful commit and push:
-
-- do not inspect or announce the next task;
-- do not evaluate the phase gate;
-- do not delegate again;
-- return the report and stop.
-
-## 14. Final report
+## 12. Final report
 
 ```text
-Calibration task run
+Calibration execution
 Phase: <phase>
-Task: <task ID and title>
+Execution unit: <ID and title>
 Status: complete | blocked | partial | delegation-protocol-failure
 Starting commit: <hash>
 Ending commit: <hash>
-
-Delegation gate:
-- parent repository operations before worker: 4
-- parent source/test/raw reads: 0
-- parent inventory commands: 0
 
 Worker attempts:
 - original: <result>
@@ -312,19 +214,13 @@ Worker attempts:
 - repair: <result or none>
 
 Validation:
-- focused checks: PASS | FAIL | NOT AVAILABLE
-- npm --prefix obsidian-dnd-character run check: PASS | FAIL
-- npm --prefix obsidian-dnd-character run build: PASS | FAIL
+- focused: PASS | FAIL | NOT AVAILABLE
+- check: PASS | FAIL
+- build: PASS | FAIL
 
 Commit:
 - <hash or none>
 
-Working tree:
-- clean | uncommitted changes
-
-Remote synchronization:
-- synchronized | not synchronized
-
-Blocking decision required:
-- ... | none
+Next execution unit:
+- <ID or none>
 ```
