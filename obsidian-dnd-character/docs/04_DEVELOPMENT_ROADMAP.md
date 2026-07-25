@@ -184,7 +184,7 @@ Read and resolve raw source generically without generating final entities yet.
   - Each slice requires resulting-state and malformed-payload tests.
   - P3-T007 is complete only after all five slices and CAT-003, CAT-003A, CAT-003B, and CAT-004 pass.
 
-- [ ] **P3-T008 — Implement _preserve behavior**
+- [X] **P3-T008 — Implement _preserve behavior**
 
 - [ ] **P3-T009 — Implement _versions expansion**
 

@@ -210,23 +210,35 @@ describe("resolveCopy — failure cases", () => {
     expect(result.diagnostic.code).toBe("CIRCULAR_COPY_REFERENCE");
   });
 
-  it("returns CIRCULAR_COPY_REFERENCE for self-reference", () => {
+  it("resolves self-reference when _preserve is true", () => {
     const context = makeContext([
       {
         name: "Alchemist",
         source: "XPHB",
-        remaining: { _copy: { name: "Alchemist", source: "XPHB" }, _preserve: true },
+        remaining: {
+          _copy: { name: "Alchemist", source: "XPHB" },
+          _preserve: true,
+          trait: [{ name: "Tool Proficiency" }],
+        },
       },
     ]);
 
     const result = resolveCopy(
-      makeRecord("Alchemist", "XPHB", { _copy: { name: "Alchemist", source: "XPHB" }, _preserve: true }),
+      makeRecord("Alchemist", "XPHB", {
+        _copy: { name: "Alchemist", source: "XPHB" },
+        _preserve: true,
+        trait: [{ name: "Tool Proficiency" }],
+      }),
       context,
     );
 
-    expect(isCopyResolutionFailure(result)).toBe(true);
-    if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
-    expect(result.diagnostic.code).toBe("CIRCULAR_COPY_REFERENCE");
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.baseEntity).toEqual({
+      name: "Alchemist",
+      source: "XPHB",
+      remaining: { trait: [{ name: "Tool Proficiency" }] },
+    });
   });
 
   it("returns INVALID_COPY_REFERENCE for _copy with missing name", () => {

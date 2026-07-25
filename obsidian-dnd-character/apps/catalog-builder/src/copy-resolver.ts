@@ -87,7 +87,9 @@ export type CopyDiagnosticCode =
   /** The _copy chain exceeded the maximum depth. */
   | "COPY_CHAIN_TOO_DEEP"
   /** The _copy field has an unexpected type. */
-  | "COPY_FIELD_INVALID_TYPE";
+  | "COPY_FIELD_INVALID_TYPE"
+  /** The _preserve marker has an unsupported payload. */
+  | "INVALID_PRESERVE_VALUE";
 
 /** Context containing all loaded raw data for resolution. */
 export interface CopyResolverContext {
@@ -127,6 +129,31 @@ export function isRawCopyValue(value: unknown): value is RawCopyValue {
     (value as Record<string, unknown>).name !== "" &&
     (value as Record<string, unknown>).source !== ""
   );
+}
+
+function hasUnsupportedPreserveValue(record: RawRecord): boolean {
+  const preserveValue = record.remaining._preserve;
+  return preserveValue !== undefined && preserveValue !== true;
+}
+
+function copyRemainingWithoutCopyDirectives(
+  remaining: Record<string, unknown>,
+): Record<string, unknown> {
+  const copied: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(remaining)) {
+    if (key !== "_copy" && key !== "_preserve") {
+      copied[key] = value;
+    }
+  }
+  return copied;
+}
+
+function preservedRecord(record: RawRecord): RawRecord {
+  return {
+    name: record.name,
+    source: record.source,
+    remaining: copyRemainingWithoutCopyDirectives(record.remaining),
+  };
 }
 
 export function isCopyResolutionSuccess(
@@ -242,6 +269,18 @@ function resolveCopyChain(
     sourceAbbr: copyValue.source,
   });
 
+  if (
+    sourceRecord.remaining._preserve === true &&
+    copyValue.name === sourceRecord.name &&
+    copyValue.source === sourceRecord.source
+  ) {
+    return {
+      status: "resolved",
+      baseEntity: preservedRecord(sourceRecord),
+      chain: Object.freeze(chain),
+    };
+  }
+
   // Find the base entity
   const baseEntity = findRecordByNameAndSource(
     context,
@@ -327,6 +366,16 @@ export function resolveCopy(
     source: recordObj.source as string,
     remaining: (recordObj.remaining ?? {}) as Record<string, unknown>,
   };
+
+  if (hasUnsupportedPreserveValue(rawRecord)) {
+    return createFailure(
+      "INVALID_PRESERVE_VALUE",
+      "error",
+      `_preserve for "${rawRecord.name}" (${rawRecord.source}) must be the literal boolean true when present`,
+      rawRecord,
+      rawRecord.remaining._preserve,
+    );
+  }
 
   // Check for _copy field
   const copyValue = rawRecord.remaining._copy;
