@@ -169,6 +169,19 @@ export {
 } from "./ruleset-classifier";
 
 export {
+  /* Record access classifier types */
+  type ContentAccess,
+  type RecordAccessClassificationMethod,
+  type CoreAccessMarkerField,
+  type CoreAccessMarker,
+  type RecordAccessClassification,
+  type RecordAccessBatchResult,
+  /* Record access classifier functions */
+  classifyRecordAccess,
+  classifyResolvedRecordAccess,
+} from "./record-access-classifier";
+
+export {
   /* Mod types */
   type ModOperationPayload,
   type ModAppendArr,

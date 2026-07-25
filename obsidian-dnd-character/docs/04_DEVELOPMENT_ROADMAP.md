@@ -218,7 +218,7 @@ Generate a valid versioned catalog using stable contracts.
 
 - [x] **P4-T001 — Implement ruleset classifier**
 
-- [ ] **P4-T002 — Implement record-level core/source classifier**
+- [x] **P4-T002 — Implement record-level core/source classifier**
 
 - [ ] **P4-T003 — Implement source metadata normalizer**
 

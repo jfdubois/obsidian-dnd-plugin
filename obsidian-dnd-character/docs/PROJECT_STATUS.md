@@ -6,11 +6,11 @@ Phase 4 — Catalog normalization and publication
 
 ## Current task
 
-P4-T002 — Implement record-level core/source classifier
+P4-T003 — Implement source metadata normalizer
 
 ## Last completed task
 
-P4-T001 — Implement ruleset classifier
+P4-T002 — Implement record-level core/source classifier
 
 ## Branch baseline
 
@@ -24,9 +24,9 @@ None recorded.
 
 ## Validation baseline
 
-- `npm run check`: passing at P4-T001
-- `npm run build`: passing at P4-T001
-- Tests: 1512 passing
+- `npm run check`: passing at P4-T002
+- `npm run build`: passing at P4-T002
+- Tests: 1519 passing
 
 ## Catalog baseline
 
@@ -44,8 +44,8 @@ None recorded.
 # Current phase ledger
 
 - Phase starting commit: b3598ccf62be42eddff2eaf9302ca636762f686c
-- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001
-- Current task: P4-T002
+- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002
+- Current task: P4-T003
 - Current retry: 0
 - Gate status: not evaluated
 - Blocking issue: none
@@ -53,6 +53,12 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-25 — P4-T002 — Implement record-level core/source classifier
+Summary: Added a catalog-builder record access classifier that derives record-level core versus source access from ruleset-specific structured core markers after ruleset classification, preserves source/ruleset/record provenance, and keeps unsupported or cross-ruleset markers from granting core access.
+Validation: `npm --prefix obsidian-dnd-character exec vitest run apps/catalog-builder/src/record-access-classifier.test.ts` passes (7/7 tests, EXIT 0). `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 1519/1519 tests, EXIT 0). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Record access classification remains inside the catalog-builder boundary and does not change normalized catalog schemas, canonical ID construction, source-policy semantics, Obsidian API use, or later Phase 4 normalizer behavior. The classifier is not wired into catalog publication yet; later Phase 4 tasks will consume the exported foundation.
+Commit: see Git history for P4-T002.
 
 2026-07-25 — P4-T001 — Implement ruleset classifier
 Summary: Added a catalog-builder ruleset classifier foundation with reviewed source-to-ruleset mappings for 2014 and 2024 core source abbreviations, deterministic batch classification, represented-ruleset reporting, included-ruleset filtering, and explicit diagnostics for invalid, unknown, or excluded sources.
