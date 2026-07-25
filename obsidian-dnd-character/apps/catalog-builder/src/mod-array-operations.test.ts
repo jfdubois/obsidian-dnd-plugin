@@ -166,10 +166,22 @@ describe("applyArrayModOperation: renameArr", () => {
     }
   });
 
-  it("rejects payload with non-array renames", () => {
+  it("accepts inventoried single-object renames payload", () => {
+    const field = [{ name: "Parry (Duelist Only)" }];
+    const result = applyArrayModOperation(field, {
+      mode: "renameArr",
+      renames: { rename: "Parry (Duelist Only)", with: "Parry" },
+    });
+    expect(Array.isArray(result)).toBe(true);
+    if (Array.isArray(result)) {
+      expect(result).toEqual([{ name: "Parry" }]);
+    }
+  });
+
+  it("rejects malformed renames object", () => {
     const result = applyArrayModOperation([], {
       mode: "renameArr",
-      renames: { rename: "A", with: "B" },
+      renames: { rename: "A" },
     } as unknown);
     expect(Array.isArray(result)).toBe(false);
   });

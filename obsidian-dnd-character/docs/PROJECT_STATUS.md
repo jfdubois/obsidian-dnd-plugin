@@ -6,11 +6,11 @@ Phase 3 — Catalog builder ingestion foundation
 
 ## Current task
 
-P3-T007-S5 — Dispatcher, cloning, diagnostics, and _copy integration
+P3-T008 — Implement _preserve behavior
 
 ## Last completed task
 
-P3-T007-S4 — Spell operations
+P3-T007-S5 — Dispatcher, cloning, diagnostics, and _copy integration
 
 ## Branch baseline
 
@@ -26,7 +26,7 @@ None recorded.
 
 - `npm run check`: passing at Phase 2 gate
 - `npm run build`: passing at Phase 2 gate
-- Tests: 1476 passing
+- Tests: 1480 passing
 
 ## Catalog baseline
 
@@ -44,8 +44,8 @@ None recorded.
 # Current phase ledger
 
 - Phase starting commit: 6dcc189
-- Completed Phase 3 task commits: P3-T006, P3-T007-S1, P3-T007-S2, P3-T007-S3, P3-T007-S4
-- Current task: P3-T007-S5
+- Completed Phase 3 task commits: P3-T006, P3-T007-S1, P3-T007-S2, P3-T007-S3, P3-T007-S4, P3-T007-S5
+- Current task: P3-T008
 - P3-T007 execution mode: five committed slices; one `/phase 3` invocation per slice.
 - Current retry: 1
 - Gate status: not evaluated
@@ -54,6 +54,12 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-25 — P3-T007-S5 — Dispatcher, cloning, diagnostics, and _copy integration
+Summary: Completed `_mod` dispatcher integration across supported array, scalar/text, root, and spell operation families after `_copy` resolution. Added CAT-003/CAT-003A/CAT-003B/CAT-004 integration coverage for cloned resolved-record application, base/input preservation, malformed diagnostics, unknown-mode diagnostics, and inventoried single-object `renameArr` payloads.
+Validation: `npm --prefix obsidian-dnd-character run test -- apps/catalog-builder/src/mod-copy-resolver.test.ts apps/catalog-builder/src/mod-array-operations.test.ts apps/catalog-builder/src/mod-array-executors.test.ts apps/catalog-builder/src/mod-root-operations.test.ts apps/catalog-builder/src/mod-root-add-spells.test.ts apps/catalog-builder/src/mod-root-remove-spells.test.ts apps/catalog-builder/src/mod-root-replace-spells.test.ts apps/catalog-builder/src/mod-scalar-text-operations.test.ts` passes (63/63 tests, EXIT 0). `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 1480/1480 tests, EXIT 0). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: No Obsidian API use, normalized catalog contract changes, raw-source leakage, dependency updates, or future Phase 3 task implementation introduced.
+Commit: see Git history for P3-T007-S5.
 
 2026-07-25 — P3-T007-S4 — Spell operations
 Summary: Added `_mod` execution for `addSpells`, `removeSpells`, and `replaceSpells`, split spell validation/execution into focused modules, and covered exact resulting spellcasting state, malformed payload diagnostics, and original base/input preservation for each spell mode.

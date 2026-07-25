@@ -161,11 +161,12 @@ function validateRenameArr(raw: unknown): ModRenameArr | ModOperationDiagnostic 
   if (r.mode !== "renameArr") {
     return createDiagnostic("INVALID_MOD_PAYLOAD", `renameArr mode mismatch: got "${r.mode}"`, raw);
   }
-  if (r.renames === undefined || r.renames === null || !Array.isArray(r.renames)) {
-    return createDiagnostic("INVALID_MOD_PAYLOAD", "renameArr requires 'renames' array", raw);
+  if (r.renames === undefined || r.renames === null) {
+    return createDiagnostic("INVALID_MOD_PAYLOAD", "renameArr requires 'renames'", raw);
   }
+  const rawEntries = Array.isArray(r.renames) ? r.renames : [r.renames];
   const entries: ModRenameEntry[] = [];
-  for (const entry of r.renames) {
+  for (const entry of rawEntries) {
     if (!isPlainObject(entry)) {
       return createDiagnostic("INVALID_MOD_PAYLOAD", "renameArr renames entries must be objects", raw);
     }

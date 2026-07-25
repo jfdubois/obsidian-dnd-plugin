@@ -168,7 +168,7 @@ Read and resolve raw source generically without generating final entities yet.
 - [X] **P3-T006 — Implement _copy resolver**
   - Resolve base entity by structured identity.
 
-- [ ] **P3-T007 — Implement _mod operations used by included data**
+- [X] **P3-T007 — Implement _mod operations used by included data**
   - [X] **P3-T007-S1 — Shared contracts and array operations**
     - Modes: appendArr, appendIfNotExistsArr, insertArr, prependArr, removeArr, renameArr, replaceArr.
   - [X] **P3-T007-S2 — Scalar, property, text, and size operations**
@@ -177,7 +177,7 @@ Read and resolve raw source generically without generating final entities yet.
     - Modes: addSenses, addSkills.
   - [X] **P3-T007-S4 — Spell operations**
     - Modes: addSpells, removeSpells, replaceSpells.
-  - [ ] **P3-T007-S5 — Dispatcher, cloning, diagnostics, and _copy integration**
+  - [X] **P3-T007-S5 — Dispatcher, cloning, diagnostics, and _copy integration**
     - Apply every supported operation after _copy resolution.
     - Preserve the original base/input record.
     - Unknown and malformed operations fail with actionable diagnostics.
