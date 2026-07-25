@@ -71,7 +71,15 @@ export interface ModAddSkills {
 
 export interface ModAddSpells {
   readonly mode: "addSpells";
-  readonly spells: Record<string, readonly string[]>;
+  readonly additions: Record<string, ModSpellAddGroup>;
+}
+
+export type ModSpellAddGroup =
+  | readonly string[]
+  | Record<string, ModSpellLevelAddition>;
+
+export interface ModSpellLevelAddition {
+  readonly spells: readonly string[];
 }
 
 /* ── appendArr ─────────────────────────────────────────────────── */
@@ -131,8 +139,12 @@ export interface ModRemoveArr {
 
 export interface ModRemoveSpells {
   readonly mode: "removeSpells";
-  readonly daily: Record<string, readonly string[]>;
+  readonly removals: Record<string, ModSpellRemoveGroup>;
 }
+
+export type ModSpellRemoveGroup =
+  | readonly string[]
+  | Record<string, readonly string[]>;
 
 /* ── renameArr ─────────────────────────────────────────────────── */
 
@@ -158,8 +170,12 @@ export interface ModReplaceArr {
 
 export interface ModReplaceSpells {
   readonly mode: "replaceSpells";
-  readonly spells: Record<string, readonly ModSpellReplacement[][]>;
+  readonly replacements: Record<string, ModSpellReplaceGroup>;
 }
+
+export type ModSpellReplaceGroup =
+  | readonly ModSpellReplacement[]
+  | Record<string, readonly ModSpellReplacement[]>;
 
 export interface ModSpellReplacement {
   readonly replace: string;

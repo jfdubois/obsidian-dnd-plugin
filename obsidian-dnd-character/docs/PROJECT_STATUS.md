@@ -6,11 +6,11 @@ Phase 3 — Catalog builder ingestion foundation
 
 ## Current task
 
-P3-T007-S4 — Spell operations
+P3-T007-S5 — Dispatcher, cloning, diagnostics, and _copy integration
 
 ## Last completed task
 
-P3-T007-S3 — Senses and skills operations
+P3-T007-S4 — Spell operations
 
 ## Branch baseline
 
@@ -26,7 +26,7 @@ None recorded.
 
 - `npm run check`: passing at Phase 2 gate
 - `npm run build`: passing at Phase 2 gate
-- Tests: 1470 passing
+- Tests: 1476 passing
 
 ## Catalog baseline
 
@@ -44,8 +44,8 @@ None recorded.
 # Current phase ledger
 
 - Phase starting commit: 6dcc189
-- Completed Phase 3 task commits: P3-T006, P3-T007-S1, P3-T007-S2, P3-T007-S3
-- Current task: P3-T007-S4
+- Completed Phase 3 task commits: P3-T006, P3-T007-S1, P3-T007-S2, P3-T007-S3, P3-T007-S4
+- Current task: P3-T007-S5
 - P3-T007 execution mode: five committed slices; one `/phase 3` invocation per slice.
 - Current retry: 1
 - Gate status: not evaluated
@@ -54,6 +54,12 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-25 — P3-T007-S4 — Spell operations
+Summary: Added `_mod` execution for `addSpells`, `removeSpells`, and `replaceSpells`, split spell validation/execution into focused modules, and covered exact resulting spellcasting state, malformed payload diagnostics, and original base/input preservation for each spell mode.
+Validation: `npm --prefix obsidian-dnd-character run test -- apps/catalog-builder/src/mod-root-add-spells.test.ts apps/catalog-builder/src/mod-root-remove-spells.test.ts apps/catalog-builder/src/mod-root-replace-spells.test.ts apps/catalog-builder/src/mod-root-operations.test.ts` passes (11/11 tests, EXIT 0). `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 1476/1476 tests, EXIT 0). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: No Obsidian API use, normalized catalog contract changes, raw-source leakage, dependency updates, or future Phase 3 task implementation introduced. S4 required two review repairs: module split to keep final files under 300 lines and exact input-record preservation assertions.
+Commit: see Git history for P3-T007-S4.
 
 2026-07-25 — P3-T007-S3 — Senses and skills operations
 Summary: Added root-level `_mod` execution for `addSenses` and `addSkills`, including payload validation, contextual malformed-payload diagnostics, cloned resolved-record application, original base/input preservation tests, and unknown-mode diagnostic coverage.

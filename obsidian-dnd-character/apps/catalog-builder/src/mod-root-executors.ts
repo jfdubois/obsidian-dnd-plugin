@@ -69,3 +69,9 @@ export function execAddSkills(
   record.skill = skill;
   return undefined;
 }
+
+export {
+  execAddSpells,
+  execRemoveSpells,
+  execReplaceSpells,
+} from "./mod-root-spell-executors";

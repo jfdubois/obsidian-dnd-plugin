@@ -7,7 +7,15 @@ import type {
 import {
   execAddSenses,
   execAddSkills,
+  execAddSpells,
+  execRemoveSpells,
+  execReplaceSpells,
 } from "./mod-root-executors";
+import {
+  validateAddSpells,
+  validateRemoveSpells,
+  validateReplaceSpells,
+} from "./mod-root-spell-operations";
 
 function isString(value: unknown): value is string {
   return typeof value === "string";
@@ -106,6 +114,21 @@ export function applyRootModOperation(
       if ("code" in validated) return validated;
       return execAddSkills(record, validated);
     }
+    case "addSpells": {
+      const validated = validateAddSpells(rawPayload);
+      if ("code" in validated) return validated;
+      return execAddSpells(record, validated);
+    }
+    case "removeSpells": {
+      const validated = validateRemoveSpells(rawPayload);
+      if ("code" in validated) return validated;
+      return execRemoveSpells(record, validated);
+    }
+    case "replaceSpells": {
+      const validated = validateReplaceSpells(rawPayload);
+      if ("code" in validated) return validated;
+      return execReplaceSpells(record, validated);
+    }
     default:
       return createDiagnostic("UNKNOWN_MOD_MODE", `Unknown mod mode: "${mode}"`, rawPayload);
   }
@@ -114,4 +137,7 @@ export function applyRootModOperation(
 export {
   execAddSenses,
   execAddSkills,
+  execAddSpells,
+  execRemoveSpells,
+  execReplaceSpells,
 } from "./mod-root-executors";

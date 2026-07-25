@@ -175,7 +175,7 @@ Read and resolve raw source generically without generating final entities yet.
     - Modes: maxSize, prefixSuffixStringProp, replaceTxt, scalarAddDc, scalarAddHit, scalarAddProp, scalarMultProp, scalarMultXp, setProp.
   - [X] **P3-T007-S3 — Senses and skills operations**
     - Modes: addSenses, addSkills.
-  - [ ] **P3-T007-S4 — Spell operations**
+  - [X] **P3-T007-S4 — Spell operations**
     - Modes: addSpells, removeSpells, replaceSpells.
   - [ ] **P3-T007-S5 — Dispatcher, cloning, diagnostics, and _copy integration**
     - Apply every supported operation after _copy resolution.

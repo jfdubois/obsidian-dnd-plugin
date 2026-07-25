@@ -22,6 +22,9 @@ const ARRAY_MODES = new Set([
 const ROOT_MODES = new Set([
   "addSenses",
   "addSkills",
+  "addSpells",
+  "removeSpells",
+  "replaceSpells",
 ]);
 
 const SCALAR_TEXT_MODES = new Set([
