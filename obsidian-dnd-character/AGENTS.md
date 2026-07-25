@@ -20,9 +20,9 @@ Use when one roadmap task is assigned.
 
 ### Phase-orchestrator mode
 
-Use only when the user explicitly assigns a complete phase through the repository-local `dnd-phase-execution` Codex skill.
+Use only when the user explicitly assigns a complete phase through the `dnd-phase-execution` OpenCode skill.
 
-- One fresh Codex custom agent named `dnd_task_worker` per task.
+- One fresh `dnd-task-worker` per task.
 - Workers never update roadmap/status, stage, commit, push, switch branches, or invoke agents.
 - The parent independently reviews, validates, documents, commits, and pushes each task.
 - Reload durable repository state between tasks.

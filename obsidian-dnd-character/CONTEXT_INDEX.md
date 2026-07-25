@@ -16,7 +16,7 @@ Use this file to locate the minimum context required for a task. Do not load eve
 | Spell filtering | query/relations/source-policy contract sections and related acceptance tests |
 | UI/sidebar/mobile | relevant product/UI architecture sections and related acceptance tests |
 | Completing one task | `AGENTS.md`, current-state portion of `docs/PROJECT_STATUS.md`, exact roadmap task and gate, task-specific rows above, current implementation/tests |
-| Executing a complete phase | Codex skill `.agents/skills/dnd-phase-execution/SKILL.md`, `AGENTS.md`, selected phase section/gate, current-state portion of project status; task-specific documents are loaded only when each task begins |
+| Executing a complete phase | OpenCode skill `dnd-phase-execution`, `AGENTS.md`, selected phase section/gate, current-state portion of project status; task-specific documents are loaded only when each task begins |
 
 ## Reference files that must remain pinned
 
@@ -39,3 +39,11 @@ references/
 ```
 
 Do not load an entire reference fixture or the full raw 5eTools repository unless the active task requires a targeted portion.
+
+## Qwen context limits
+
+- Treat the rows above as an explicit whitelist, not a suggested full-document read chain.
+- Before the first edit, load at most two task-area documents beyond `AGENTS.md`, the exact task capsule, and current status unless a concrete conflict requires another source.
+- Use bounded sections from architecture, contracts, SOP, and acceptance documents.
+- Never load `docs/PROJECT_HISTORY.md` during normal task or phase execution.
+- Never preload unrelated phases, complete reference fixtures, or the full 5eTools tree.

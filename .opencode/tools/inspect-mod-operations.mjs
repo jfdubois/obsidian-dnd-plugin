@@ -3,7 +3,9 @@ import { extname, join, relative, resolve } from "node:path";
 
 const inputRoot = process.argv[2];
 if (!inputRoot) {
-  console.error("Usage: node .opencode/tools/inspect-mod-operations.mjs <data-root>");
+  console.error(
+    "Usage: node obsidian-dnd-character/scripts/inspect-mod-operations.mjs <data-root>",
+  );
   process.exit(2);
 }
 
@@ -41,9 +43,13 @@ function inspectModValue(value, file, objectPath) {
   if (!value || typeof value !== "object" || Array.isArray(value)) return;
 
   for (const [field, operationValue] of Object.entries(value)) {
-    const operations = Array.isArray(operationValue) ? operationValue : [operationValue];
+    const operations = Array.isArray(operationValue)
+      ? operationValue
+      : [operationValue];
     for (const operation of operations) {
-      if (!operation || typeof operation !== "object" || Array.isArray(operation)) continue;
+      if (!operation || typeof operation !== "object" || Array.isArray(operation)) {
+        continue;
+      }
       const mode = operation.mode;
       if (typeof mode === "string") {
         recordOperation(mode, operation, file, objectPath, field);
