@@ -288,6 +288,11 @@ Invoke a fresh `dnd-task-worker` immediately. Never resume or reuse a prior task
 
 The worker must leave changes uncommitted and unstaged.
 
+If a worker reads an existing file over 300 lines without bounded ranges, or
+exceeds the discovery budget before the first edit without a concrete blocker,
+terminate that worker before repository mutation and start a fresh replacement.
+A worker terminated before mutation does not consume a repair attempt.
+
 If the worker returns no structured report:
 
 - inspect `git status --short`;
