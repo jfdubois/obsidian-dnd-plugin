@@ -11,17 +11,38 @@ metadata:
 
 Use this skill only when the user explicitly assigns a complete roadmap phase.
 
-## 1. Workspace
+## 1. Workspace roots
 
-OpenCode runs from the Git worktree root:
+The Git and OpenCode working root is:
 
 ```text
 /home/jdubois/Documents/Projects/obsidian-dnd-plugin
 ```
 
-The active project is `obsidian-dnd-character/`.
+The application project source root is:
 
-Run Git commands from the worktree root. Run project scripts with:
+```text
+/home/jdubois/Documents/Projects/obsidian-dnd-plugin/obsidian-dnd-character
+```
+
+Delegated workers must run repository-level tools and Git-relative commands from the Git working root.
+
+Project source paths begin with:
+
+```text
+obsidian-dnd-character/
+```
+
+Repository support paths begin directly at the Git working root:
+
+```text
+.opencode/
+external/
+```
+
+Do not reinterpret `.opencode/` or `external/` as children of `obsidian-dnd-character/`.
+
+Run Git commands from the Git working root. Run project scripts with:
 
 ```bash
 npm --prefix obsidian-dnd-character run <script>
@@ -196,7 +217,9 @@ If no incomplete task is ready, stop as blocked.
 Prepare only:
 
 ```text
-Project root:
+Git working root:
+Project source root:
+Command working directory:
 Phase and task:
 Dependencies confirmed:
 Exact roadmap requirements:
@@ -219,20 +242,6 @@ Discover relevant implementation files, tests, raw-source examples, line counts,
 symbols, bounded ranges, expected changes, and risks before editing. The parent
 has intentionally not pre-read them.
 ```
-For replacement or retry workers after a discovery-protocol violation:
-
-- Do not repeat broad discovery.
-- Before the first edit, allow at most:
-  1. the approved inventory command;
-  2. one file listing;
-  3. one line-count command;
-  4. bounded symbol searches in relevant large files;
-  5. bounded reads around only the located symbols;
-  6. one bounded read of an existing test pattern;
-  7. one read of the package index.
-- Do not read package manifests, TypeScript configuration, complete large files,
-  or unrelated tests unless a concrete blocker requires it.
-- Produce the evidence plan and module split, then begin editing.
 
 Set `Worker hard limits` to:
 
@@ -256,11 +265,33 @@ Any deferred roadmap requirement forces status partial.
 
 Do not predict new filenames, public APIs, implementation structure, or expected changed files. Do not list large files unless their relevance is explicitly stated in the roadmap or current status. Always supply the exact task-area root from the stable workspace map.
 
-For `P3-T007`, supply this approved read-only inventory command:
+Every worker capsule must distinguish these roots exactly:
+
+```text
+Git working root:
+/home/jdubois/Documents/Projects/obsidian-dnd-plugin
+
+Project source root:
+/home/jdubois/Documents/Projects/obsidian-dnd-plugin/obsidian-dnd-character
+
+Command working directory:
+/home/jdubois/Documents/Projects/obsidian-dnd-plugin
+```
+
+For `P3-T007`, supply this approved read-only inventory command and require it to run exactly once from the Git working root:
 
 ```bash
 node .opencode/tools/inspect-mod-operations.mjs external/5etools-src/data
 ```
+
+Also include the equivalent absolute command in the capsule:
+
+```bash
+node /home/jdubois/Documents/Projects/obsidian-dnd-plugin/.opencode/tools/inspect-mod-operations.mjs \
+  /home/jdubois/Documents/Projects/obsidian-dnd-plugin/external/5etools-src/data
+```
+
+If the relative command fails because the worker is in the wrong directory, retry once with the exact absolute command. If the absolute command fails, stop as blocked. Do not replace it with `find`, recursive `grep`, Python, or another inventory mechanism.
 
 For `P3-T007`, also include this exact semantic definition of done:
 
@@ -273,6 +304,27 @@ malformed-payload coverage. Unknown modes must fail with actionable diagnostics.
 ```
 
 The worker must use the approved inventory once instead of constructing ad hoc recursive grep, Python, or shell-pipeline inventories.
+
+When an approved command fails because a referenced repository path is missing:
+
+1. compare the command working directory with the capsule's Git working root;
+2. retry once using the exact absolute paths supplied by the capsule;
+3. if the absolute command fails, stop as blocked;
+4. do not begin fallback source discovery.
+
+For replacement or retry workers after a discovery-protocol violation:
+
+- Do not repeat broad discovery.
+- Before the first edit, allow at most:
+  1. the approved inventory command;
+  2. one file listing;
+  3. one line-count command;
+  4. bounded symbol searches in relevant large files;
+  5. bounded reads around only the located symbols;
+  6. one bounded read of an existing test pattern;
+  7. one read of the package index.
+- Do not read package manifests, TypeScript configuration, complete large files, or unrelated tests unless a concrete blocker requires it.
+- Produce the evidence plan and module split, then begin editing.
 
 Report once:
 
@@ -288,10 +340,7 @@ Invoke a fresh `dnd-task-worker` immediately. Never resume or reuse a prior task
 
 The worker must leave changes uncommitted and unstaged.
 
-If a worker reads an existing file over 300 lines without bounded ranges, or
-exceeds the discovery budget before the first edit without a concrete blocker,
-terminate that worker before repository mutation and start a fresh replacement.
-A worker terminated before mutation does not consume a repair attempt.
+If a worker reads an existing file over 300 lines without bounded ranges, or exceeds the discovery budget before the first edit without a concrete blocker, terminate that worker before repository mutation and start a fresh replacement. A worker terminated before mutation does not consume a repair attempt.
 
 If the worker returns no structured report:
 
