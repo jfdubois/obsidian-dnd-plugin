@@ -18,6 +18,14 @@ const KNOWN_RAW_FIELDS_SET: ReadonlySet<string> = new Set([
   "srd",
   "basicRules",
   "otherSources",
+
+  /* ── 5eTools internal resolution fields ────────────────────── */
+  "_copy",
+  "_mod",
+  "_preserve",
+  "_versions",
+  "_meta",
+  "apply",
   "referenceSources",
   "reprintedAs",
   "hasFluff",

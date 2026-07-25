@@ -110,3 +110,44 @@ export {
   isCopyResolutionSuccess,
   isCopyResolutionFailure,
 } from "./copy-resolver";
+
+export {
+  /* Mod operation types */
+  type AppendArrMod,
+  type PrependArrMod,
+  type AppendIfNotExistsArrMod,
+  type InsertArrMod,
+  type RemoveArrMod,
+  type RenameArrMod,
+  type ReplaceArrMod,
+  type ReplaceTxtMod,
+  type AddSpellsMod,
+  type RemoveSpellsMod,
+  type ReplaceSpellsMod,
+  type AddSensesMod,
+  type AddSkillsMod,
+  type ScalarAddDcMod,
+  type ScalarAddHitMod,
+  type ScalarAddPropMod,
+  type ScalarMultPropMod,
+  type ScalarMultXpMod,
+  type MaxSizeMod,
+  type SetPropMod,
+  type PrefixSuffixStringPropMod,
+  type KnownModOperation,
+  type RawModOperation,
+  type RawModBlock,
+  type ParsedModBlock,
+  type ParsedModOperation,
+  type UnknownModDiagnostic,
+  /* Known mod modes registry */
+  KNOWN_MOD_OPERATION_MODES,
+  /* Parsing functions */
+  parseModOperation,
+  parseModBlock,
+  /* Type guards */
+  isKnownModMode,
+  isKnownModOperation,
+  isUnknownModDiagnostic,
+  isRawModBlock,
+} from "./mod-parser";
