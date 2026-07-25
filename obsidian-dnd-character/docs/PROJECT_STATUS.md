@@ -24,9 +24,9 @@ None recorded.
 
 ## Validation baseline
 
-- `npm run check`: passing at P4-T004
-- `npm run build`: passing at P4-T004
-- Tests: 1591 passing
+- `npm run check`: passing at Phase 3 corrective follow-up
+- `npm run build`: passing at Phase 3 corrective follow-up
+- Tests: 1615 passing
 
 ## Catalog baseline
 
@@ -53,6 +53,12 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-25 — Phase 3 multi-collection corrective follow-up
+Summary: Repaired two defects in the Phase 3 multi-collection raw-boundary implementation. (1) `expandVersions` previously merged all expanded records into the first collection, destroying logical collection separation. Fixed by introducing per-collection expansion via `expandCollection`, so each collection's expanded records remain in their original entityKind. Version expansion now preserves collection separation, original ordering, physical filePath, non-versioned records, and input envelope immutability. Record counts are recalculated per collection and per file. (2) `INVALID_RECORD_ENVELOPE` and `NON_OBJECT_RECORD` diagnostics previously omitted logical collection identity. Fixed by adding structured `entityKind`, `recordIndex`, and optional `recordName` fields to `RawBoundaryDiagnostic`. An invalid record in one collection no longer removes or invalidates valid sibling collections.
+Validation: `npm --prefix obsidian-dnd-character run test -- apps/catalog-builder/src/versions-expander.test.ts apps/catalog-builder/src/raw-boundary.test.ts` passes (104/104 tests, EXIT 0). `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 1615/1615 tests, EXIT 0). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Physical-file/logical-collection contract confirmed: a single physical JSON file may contain multiple logical collections (race/subrace, class/subclass/classFeature/subclassFeature). Each collection is identified by its entityKind key and validated, expanded, and diagnosed independently. No records cross collection boundaries during version expansion. No normalized catalog schemas, canonical ID construction, source-policy semantics, Obsidian API use, structured _copy identity matching, _preserve behavior, semantic mappings, or entity normalizers were modified.
+Commit: see Git history for Phase 3 ingestion corrective follow-up.
 
 2026-07-25 — P4-T004 — Implement semantic mapping and projection infrastructure
 Summary: Added catalog-builder semantic mapping and projection infrastructure with versioned, runtime-validated reviewed semantic mappings keyed by canonical entity ID and ruleset, default projections by normalized mechanic type (covering all 18 RuleEffectType values), detection helpers for display-name branching and executable content, registry validation with duplicate and schema-version checks, single and batch resolution with diagnostics, and frozen output types.

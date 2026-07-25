@@ -214,6 +214,9 @@ export interface RawBoundaryDiagnostic {
   severity: DiagnosticSeverity;
   message: string;
   path: string;
+  entityKind?: string;
+  recordIndex?: number;
+  recordName?: string;
 }
 
 export interface FieldInventory {
@@ -437,11 +440,14 @@ export function validateRawBoundary(
             severity: "error",
             message: `File "${filePath}": record at index ${i} in "${entityKind}" collection is not an object (got ${typeof raw}).`,
             path: filePath,
+            entityKind: entityKind as string,
+            recordIndex: i,
           });
           continue;
         }
 
         const recordResult = parseRecordEnvelope(raw, i);
+        const rawRecord = raw as Record<string, unknown>;
 
         if (!recordResult.valid) {
           fileHasErrors = true;
@@ -451,6 +457,9 @@ export function validateRawBoundary(
               severity: "error",
               message: `File "${filePath}": ${error}`,
               path: filePath,
+              entityKind: entityKind as string,
+              recordIndex: i,
+              recordName: isNonEmptyString(rawRecord.name) ? rawRecord.name as string : undefined,
             });
           }
           continue;

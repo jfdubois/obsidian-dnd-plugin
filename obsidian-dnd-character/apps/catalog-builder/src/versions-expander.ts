@@ -176,85 +176,105 @@ function modFailureDiagnostic(
   });
 }
 
+interface CollectionExpansionResult {
+  records: RawRecord[];
+  diagnostics: VersionExpansionDiagnostic[];
+}
+
+function expandCollection(
+  collection: ValidatedCollection,
+  envelope: ValidatedFileEnvelope,
+  sourcePath: string,
+): CollectionExpansionResult {
+  const records: RawRecord[] = [];
+  const diagnostics: VersionExpansionDiagnostic[] = [];
+
+  for (const record of collection.records) {
+    const baseRecord = baseWithoutVersions(record);
+    records.push(baseRecord);
+    const rawVersions = record.remaining._versions;
+    if (rawVersions === undefined) {
+      continue;
+    }
+    if (!Array.isArray(rawVersions)) {
+      diagnostics.push(
+        diagnostic(
+          "INVALID_VERSIONS_PAYLOAD",
+          `_versions for "${record.name}" (${record.source}) must be an array`,
+          sourcePath,
+          collection.entityKind,
+          record,
+          rawVersions,
+        ),
+      );
+      continue;
+    }
+
+    const context: CopyResolverContext = {
+      validatedFiles: {
+        [sourcePath]: envelope,
+      },
+    };
+
+    rawVersions.forEach((rawVersion, index) => {
+      if (
+        !isPlainObject(rawVersion) ||
+        !isNonEmptyString(rawVersion.name) ||
+        !isNonEmptyString(rawVersion.source)
+      ) {
+        diagnostics.push(
+          diagnostic(
+            "INVALID_VERSION_RECORD",
+            `_versions[${index}] for "${record.name}" (${record.source}) must be an object with non-empty name and source`,
+            sourcePath,
+            collection.entityKind,
+            record,
+            rawVersion,
+            index,
+          ),
+        );
+        return;
+      }
+
+      const rawVersionRecord = versionRecord(baseRecord, rawVersion);
+      const resolved = resolveCopyWithMods(rawVersionRecord, context, { sourcePath });
+      if (!resolved.ok) {
+        diagnostics.push(
+          modFailureDiagnostic(
+            sourcePath,
+            collection.entityKind,
+            record,
+            index,
+            resolved.diagnostics,
+          ),
+        );
+        return;
+      }
+      const cleaned = ensureNoVersions(resolved.record);
+      records.push(mergeVersionFields(cleaned, rawVersion));
+    });
+  }
+
+  return { records, diagnostics };
+}
+
 export function expandVersionsInFile(
   envelope: ValidatedFileEnvelope,
   sourcePath: string,
 ): VersionExpansionResult {
-  const records: RawRecord[] = [];
-  const diagnostics: VersionExpansionDiagnostic[] = [];
+  const allRecords: RawRecord[] = [];
+  const allDiagnostics: VersionExpansionDiagnostic[] = [];
 
   for (const collection of envelope.collections) {
-    for (const record of collection.records) {
-      const baseRecord = baseWithoutVersions(record);
-      records.push(baseRecord);
-      const rawVersions = record.remaining._versions;
-      if (rawVersions === undefined) {
-        continue;
-      }
-      if (!Array.isArray(rawVersions)) {
-        diagnostics.push(
-          diagnostic(
-            "INVALID_VERSIONS_PAYLOAD",
-            `_versions for "${record.name}" (${record.source}) must be an array`,
-            sourcePath,
-            collection.entityKind,
-            record,
-            rawVersions,
-          ),
-        );
-        continue;
-      }
-
-      const context: CopyResolverContext = {
-        validatedFiles: {
-          [sourcePath]: envelope,
-        },
-      };
-
-      rawVersions.forEach((rawVersion, index) => {
-        if (
-          !isPlainObject(rawVersion) ||
-          !isNonEmptyString(rawVersion.name) ||
-          !isNonEmptyString(rawVersion.source)
-        ) {
-          diagnostics.push(
-            diagnostic(
-              "INVALID_VERSION_RECORD",
-              `_versions[${index}] for "${record.name}" (${record.source}) must be an object with non-empty name and source`,
-              sourcePath,
-              collection.entityKind,
-              record,
-              rawVersion,
-              index,
-            ),
-          );
-          return;
-        }
-
-        const rawVersionRecord = versionRecord(baseRecord, rawVersion);
-        const resolved = resolveCopyWithMods(rawVersionRecord, context, { sourcePath });
-        if (!resolved.ok) {
-          diagnostics.push(
-            modFailureDiagnostic(
-              sourcePath,
-              collection.entityKind,
-              record,
-              index,
-              resolved.diagnostics,
-            ),
-          );
-          return;
-        }
-        const cleaned = ensureNoVersions(resolved.record);
-        records.push(mergeVersionFields(cleaned, rawVersion));
-      });
-    }
+    const result = expandCollection(collection, envelope, sourcePath);
+    allRecords.push(...result.records);
+    allDiagnostics.push(...result.diagnostics);
   }
 
   return Object.freeze({
-    ok: diagnostics.length === 0,
-    records,
-    diagnostics,
+    ok: allDiagnostics.length === 0,
+    records: allRecords,
+    diagnostics: allDiagnostics,
   });
 }
 
@@ -265,28 +285,17 @@ export function expandVersions(
   const diagnostics: VersionExpansionDiagnostic[] = [];
 
   for (const [sourcePath, envelope] of Object.entries(validatedFiles)) {
-    const expanded = expandVersionsInFile(envelope, sourcePath);
-    diagnostics.push(...expanded.diagnostics);
-
-    // Build expanded collections: merge expanded records into the first collection
-    // (preserving the collection structure)
     const expandedCollections: ValidatedCollection[] = [];
-    let remainingExpanded = [...expanded.records];
+
     for (const collection of envelope.collections) {
-      if (remainingExpanded.length === 0) {
-        expandedCollections.push({
-          entityKind: collection.entityKind,
-          records: [],
-          recordCount: 0,
-        });
-      } else {
-        expandedCollections.push({
-          entityKind: collection.entityKind,
-          records: remainingExpanded,
-          recordCount: remainingExpanded.length,
-        });
-        remainingExpanded = [];
-      }
+      const result = expandCollection(collection, envelope, sourcePath);
+      diagnostics.push(...result.diagnostics);
+
+      expandedCollections.push({
+        entityKind: collection.entityKind,
+        records: result.records,
+        recordCount: result.records.length,
+      });
     }
 
     expandedFiles[sourcePath] = {

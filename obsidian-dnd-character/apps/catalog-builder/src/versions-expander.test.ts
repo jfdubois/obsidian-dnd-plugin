@@ -228,4 +228,354 @@ describe("expandVersions", () => {
       totalRecords: 2,
     });
   });
+
+  /* ── Collection separation tests ─────────────────────────────── */
+
+  it("preserves collection separation: race and subrace remain distinct after expansion", () => {
+    const envelope: ValidatedFileEnvelope = {
+      filePath: "races.json",
+      collections: [
+        {
+          entityKind: "race",
+          records: [
+            {
+              name: "Human",
+              source: "PHB",
+              remaining: {
+                speed: 30,
+                _versions: [{ name: "Variant Human", source: "PHB", speed: 35 }],
+              },
+            },
+          ],
+          recordCount: 1,
+        },
+        {
+          entityKind: "subrace",
+          records: [
+            {
+              name: "High Elf",
+              source: "PHB",
+              remaining: {
+                speed: 30,
+                _versions: [{ name: "Wood Elf", source: "PHB", speed: 35 }],
+              },
+            },
+          ],
+          recordCount: 1,
+        },
+      ],
+      totalRecords: 2,
+    };
+
+    const result = expandVersions({ "races.json": envelope });
+
+    expect(result.ok).toBe(true);
+    const expanded = result.validatedFiles["races.json"];
+    expect(expanded!.collections.length).toBe(2);
+
+    const raceCol = expanded!.collections.find((c) => c.entityKind === "race");
+    const subraceCol = expanded!.collections.find((c) => c.entityKind === "subrace");
+
+    expect(raceCol).toBeDefined();
+    expect(raceCol!.recordCount).toBe(2);
+    expect(raceCol!.records.map((r) => r.name)).toEqual(["Human", "Variant Human"]);
+
+    expect(subraceCol).toBeDefined();
+    expect(subraceCol!.recordCount).toBe(2);
+    expect(subraceCol!.records.map((r) => r.name)).toEqual(["High Elf", "Wood Elf"]);
+
+    expect(expanded!.totalRecords).toBe(4);
+  });
+
+  it("versioned race records remain in race collection", () => {
+    const envelope: ValidatedFileEnvelope = {
+      filePath: "races.json",
+      collections: [
+        {
+          entityKind: "race",
+          records: [
+            {
+              name: "Elf",
+              source: "PHB",
+              remaining: {
+                _versions: [{ name: "Dark Elf", source: "PHB" }],
+              },
+            },
+          ],
+          recordCount: 1,
+        },
+        {
+          entityKind: "subrace",
+          records: [
+            {
+              name: "High Elf",
+              source: "PHB",
+              remaining: {},
+            },
+          ],
+          recordCount: 1,
+        },
+      ],
+      totalRecords: 2,
+    };
+
+    const result = expandVersions({ "races.json": envelope });
+    const expanded = result.validatedFiles["races.json"];
+
+    const raceCol = expanded!.collections.find((c) => c.entityKind === "race");
+    expect(raceCol!.records.map((r) => r.name)).toEqual(["Elf", "Dark Elf"]);
+
+    const subraceCol = expanded!.collections.find((c) => c.entityKind === "subrace");
+    expect(subraceCol!.records.map((r) => r.name)).toEqual(["High Elf"]);
+  });
+
+  it("versioned subrace records remain in subrace collection", () => {
+    const envelope: ValidatedFileEnvelope = {
+      filePath: "races.json",
+      collections: [
+        {
+          entityKind: "race",
+          records: [
+            { name: "Dwarf", source: "PHB", remaining: {} },
+          ],
+          recordCount: 1,
+        },
+        {
+          entityKind: "subrace",
+          records: [
+            {
+              name: "Hill Dwarf",
+              source: "PHB",
+              remaining: {
+                _versions: [{ name: "Mountain Dwarf", source: "PHB" }],
+              },
+            },
+          ],
+          recordCount: 1,
+        },
+      ],
+      totalRecords: 2,
+    };
+
+    const result = expandVersions({ "races.json": envelope });
+    const expanded = result.validatedFiles["races.json"];
+
+    const raceCol = expanded!.collections.find((c) => c.entityKind === "race");
+    expect(raceCol!.records.map((r) => r.name)).toEqual(["Dwarf"]);
+
+    const subraceCol = expanded!.collections.find((c) => c.entityKind === "subrace");
+    expect(subraceCol!.records.map((r) => r.name)).toEqual(["Hill Dwarf", "Mountain Dwarf"]);
+  });
+
+  it("class file keeps class, subclass, classFeature, and subclassFeature separate", () => {
+    const envelope: ValidatedFileEnvelope = {
+      filePath: "class-barbarian.json",
+      collections: [
+        {
+          entityKind: "class",
+          records: [
+            {
+              name: "Barbarian",
+              source: "PHB",
+              remaining: {
+                _versions: [{ name: "Barbarian (UA)", source: "UA" }],
+              },
+            },
+          ],
+          recordCount: 1,
+        },
+        {
+          entityKind: "subclass",
+          records: [
+            {
+              name: "Berserker",
+              source: "PHB",
+              remaining: {
+                _versions: [{ name: "Berserker (UA)", source: "UA" }],
+              },
+            },
+          ],
+          recordCount: 1,
+        },
+        {
+          entityKind: "classFeature",
+          records: [
+            { name: "Rage", source: "PHB", remaining: {} },
+          ],
+          recordCount: 1,
+        },
+        {
+          entityKind: "subclassFeature",
+          records: [
+            { name: "Frenzy", source: "PHB", remaining: {} },
+          ],
+          recordCount: 1,
+        },
+      ],
+      totalRecords: 4,
+    };
+
+    const result = expandVersions({ "class-barbarian.json": envelope });
+    const expanded = result.validatedFiles["class-barbarian.json"];
+
+    expect(expanded!.collections.length).toBe(4);
+
+    const classCol = expanded!.collections.find((c) => c.entityKind === "class");
+    expect(classCol!.records.map((r) => r.name)).toEqual(["Barbarian", "Barbarian (UA)"]);
+
+    const subclassCol = expanded!.collections.find((c) => c.entityKind === "subclass");
+    expect(subclassCol!.records.map((r) => r.name)).toEqual(["Berserker", "Berserker (UA)"]);
+
+    const classFeatureCol = expanded!.collections.find((c) => c.entityKind === "classFeature");
+    expect(classFeatureCol!.records.map((r) => r.name)).toEqual(["Rage"]);
+
+    const subclassFeatureCol = expanded!.collections.find((c) => c.entityKind === "subclassFeature");
+    expect(subclassFeatureCol!.records.map((r) => r.name)).toEqual(["Frenzy"]);
+
+    expect(expanded!.totalRecords).toBe(6);
+  });
+
+  it("empty collections remain empty after expansion", () => {
+    const envelope: ValidatedFileEnvelope = {
+      filePath: "races.json",
+      collections: [
+        {
+          entityKind: "race",
+          records: [
+            { name: "Human", source: "PHB", remaining: {} },
+          ],
+          recordCount: 1,
+        },
+        {
+          entityKind: "subrace",
+          records: [],
+          recordCount: 0,
+        },
+      ],
+      totalRecords: 1,
+    };
+
+    const result = expandVersions({ "races.json": envelope });
+    const expanded = result.validatedFiles["races.json"];
+
+    const raceCol = expanded!.collections.find((c) => c.entityKind === "race");
+    expect(raceCol!.recordCount).toBe(1);
+
+    const subraceCol = expanded!.collections.find((c) => c.entityKind === "subrace");
+    expect(subraceCol!.recordCount).toBe(0);
+    expect(subraceCol!.records).toEqual([]);
+  });
+
+  it("non-versioned records remain unchanged", () => {
+    const originalRecord: RawRecord = {
+      name: "Human",
+      source: "PHB",
+      remaining: { speed: 30, size: "Medium" },
+    };
+
+    const envelope: ValidatedFileEnvelope = {
+      filePath: "races.json",
+      collections: [
+        {
+          entityKind: "race",
+          records: [originalRecord],
+          recordCount: 1,
+        },
+      ],
+      totalRecords: 1,
+    };
+
+    const result = expandVersions({ "races.json": envelope });
+    const expanded = result.validatedFiles["races.json"];
+
+    const raceCol = expanded!.collections.find((c) => c.entityKind === "race");
+    const expandedRecord = raceCol!.records[0]!;
+    expect(expandedRecord.name).toBe("Human");
+    expect(expandedRecord.source).toBe("PHB");
+    expect(expandedRecord.remaining.speed).toBe(30);
+    expect(expandedRecord.remaining.size).toBe("Medium");
+  });
+
+  it("input envelope and records remain unmodified after expansion", () => {
+    const versionedRecord: RawRecord = {
+      name: "Aasimar",
+      source: "MPMM",
+      remaining: {
+        speed: 30,
+        _versions: [{ name: "Necrotic Aasimar", source: "MPMM" }],
+      },
+    };
+
+    const envelope: ValidatedFileEnvelope = {
+      filePath: "races.json",
+      collections: [
+        {
+          entityKind: "race",
+          records: [versionedRecord],
+          recordCount: 1,
+        },
+      ],
+      totalRecords: 1,
+    };
+
+    expandVersions({ "races.json": envelope });
+
+    // Original record still has _versions
+    expect(versionedRecord.remaining._versions).toBeDefined();
+    expect(versionedRecord.remaining.speed).toBe(30);
+    // Original envelope unchanged
+    expect(envelope.totalRecords).toBe(1);
+    expect(envelope.collections[0]!.recordCount).toBe(1);
+    expect(envelope.collections[0]!.records.length).toBe(1);
+  });
+
+  it("recordCount and totalRecords are correct after expansion", () => {
+    const envelope: ValidatedFileEnvelope = {
+      filePath: "races.json",
+      collections: [
+        {
+          entityKind: "race",
+          records: [
+            {
+              name: "Human",
+              source: "PHB",
+              remaining: {
+                _versions: [
+                  { name: "Variant Human", source: "PHB" },
+                  { name: "Custom Human", source: "UA" },
+                ],
+              },
+            },
+            { name: "Elf", source: "PHB", remaining: {} },
+          ],
+          recordCount: 2,
+        },
+        {
+          entityKind: "subrace",
+          records: [
+            {
+              name: "High Elf",
+              source: "PHB",
+              remaining: {
+                _versions: [{ name: "Wood Elf", source: "PHB" }],
+              },
+            },
+          ],
+          recordCount: 1,
+        },
+      ],
+      totalRecords: 3,
+    };
+
+    const result = expandVersions({ "races.json": envelope });
+    const expanded = result.validatedFiles["races.json"];
+
+    const raceCol = expanded!.collections.find((c) => c.entityKind === "race");
+    expect(raceCol!.recordCount).toBe(4); // Human + 2 variants + Elf
+
+    const subraceCol = expanded!.collections.find((c) => c.entityKind === "subrace");
+    expect(subraceCol!.recordCount).toBe(2); // High Elf + Wood Elf
+
+    expect(expanded!.totalRecords).toBe(6);
+  });
 });

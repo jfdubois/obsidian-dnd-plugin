@@ -1159,3 +1159,110 @@ describe("validateRawBoundary — multi-collection behavior", () => {
   });
 });
 
+/* ── Diagnostic logical collection identity tests ────────────────── */
+
+describe("validateRawBoundary — diagnostic logical collection identity", () => {
+  it("invalid record in subrace reports entityKind: subrace", () => {
+    const result = validateRawBoundary({
+      "races.json": {
+        race: [{ name: "Human", source: "PHB" }],
+        subrace: [{ source: "PHB" }],
+      },
+    });
+
+    const diag = result.diagnostics.find(
+      (d) => d.code === "INVALID_RECORD_ENVELOPE",
+    );
+    expect(diag).toBeDefined();
+    expect(diag!.entityKind).toBe("subrace");
+  });
+
+  it("invalid record in subclassFeature reports entityKind: subclassFeature", () => {
+    const result = validateRawBoundary({
+      "class-barbarian.json": {
+        class: [{ name: "Barbarian", source: "PHB" }],
+        subclassFeature: [{ source: "PHB" }],
+      },
+    });
+
+    const diag = result.diagnostics.find(
+      (d) => d.code === "INVALID_RECORD_ENVELOPE",
+    );
+    expect(diag).toBeDefined();
+    expect(diag!.entityKind).toBe("subclassFeature");
+  });
+
+  it("diagnostic still reports the physical file path", () => {
+    const result = validateRawBoundary({
+      "races.json": {
+        subrace: [{ source: "PHB" }],
+      },
+    });
+
+    const diag = result.diagnostics.find(
+      (d) => d.code === "INVALID_RECORD_ENVELOPE",
+    );
+    expect(diag).toBeDefined();
+    expect(diag!.path).toBe("races.json");
+  });
+
+  it("diagnostic reports the correct record index", () => {
+    const result = validateRawBoundary({
+      "races.json": {
+        subrace: [
+          { name: "Valid", source: "PHB" },
+          { source: "PHB" },
+          { name: "Also Valid", source: "PHB" },
+        ],
+      },
+    });
+
+    const diag = result.diagnostics.find(
+      (d) => d.code === "INVALID_RECORD_ENVELOPE",
+    );
+    expect(diag).toBeDefined();
+    expect(diag!.recordIndex).toBe(1);
+  });
+
+  it("diagnostic reports the record name when malformed record has valid name field", () => {
+    const result = validateRawBoundary({
+      "races.json": {
+        subrace: [{ name: "Malformed Subrace" }],
+      },
+    });
+
+    const diag = result.diagnostics.find(
+      (d) => d.code === "INVALID_RECORD_ENVELOPE",
+    );
+    expect(diag).toBeDefined();
+    expect(diag!.recordName).toBe("Malformed Subrace");
+  });
+
+  it("invalid record in one collection does not remove or invalidate valid sibling collections", () => {
+    const result = validateRawBoundary({
+      "multi.json": {
+        feat: [{ name: "Tough", source: "PHB" }],
+        race: [{ name: "Human", source: "PHB" }],
+        subrace: [{ source: "PHB" }],
+      },
+    });
+
+    expect(result.summary.validFiles).toBe(1);
+
+    const featCol = result.validatedFiles["multi.json"]!.collections.find(
+      (c) => c.entityKind === "feat",
+    );
+    expect(featCol!.recordCount).toBe(1);
+
+    const raceCol = result.validatedFiles["multi.json"]!.collections.find(
+      (c) => c.entityKind === "race",
+    );
+    expect(raceCol!.recordCount).toBe(1);
+
+    const subraceCol = result.validatedFiles["multi.json"]!.collections.find(
+      (c) => c.entityKind === "subrace",
+    );
+    expect(subraceCol!.recordCount).toBe(0);
+  });
+});
+
