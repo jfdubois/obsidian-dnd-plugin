@@ -223,3 +223,57 @@ export {
   execRenameArr,
   execReplaceArr,
 } from "./mod-array-operations";
+
+export {
+  /* Semantic mapping types */
+  type MappingVersion,
+  type SemanticMappingKey,
+  type SemanticMappingEntry,
+  type SemanticMappingRegistry,
+  type SemanticMappingDiagnosticCode,
+  type SemanticMappingDiagnostic,
+  type MappingMethod,
+  type SemanticMappingResult,
+  /* Semantic mapping schema version */
+  SEMANTIC_MAPPING_SCHEMA_VERSION,
+  /* Semantic mapping guards */
+  isMappingVersion,
+  isSemanticMappingKey,
+  isSemanticMappingEntry,
+  isSemanticMappingRegistry,
+  /* Semantic mapping detection */
+  detectDisplayNameBranch,
+  detectExecutableContent,
+  /* Semantic mapping validation */
+  validateSemanticMappingEntry,
+  validateSemanticMappingRegistry,
+  /* Semantic mapping factory */
+  createSemanticMappingRegistry,
+} from "./semantic-mapping";
+
+export {
+  /* Semantic mapping resolution types */
+  type SemanticMappingBatchInput,
+  type SemanticMappingBatchResult,
+  /* Semantic mapping resolution */
+  resolveSemanticMapping,
+  resolveSemanticMappings,
+} from "./semantic-mapping-resolution";
+
+export {
+  /* Projection types */
+  type MechanicProjection,
+  type ProjectionDiagnosticCode,
+  type ProjectionDiagnostic,
+  type ProjectionResult,
+  /* Default projections registry */
+  DEFAULT_PROJECTIONS,
+  /* Projection guards */
+  isMechanicProjection,
+  /* Projection resolution */
+  getDefaultProjection,
+  createDefaultEffectPresentation,
+  /* Projection validation */
+  validateProjectionAssignment,
+  validateDefaultProjections,
+} from "./projection-defaults";

@@ -6,11 +6,11 @@ Phase 4 — Catalog normalization and publication
 
 ## Current task
 
-P4-T004 — Implement semantic mapping and projection infrastructure
+P4-T005 — Implement species normalizer
 
 ## Last completed task
 
-P4-T003 — Implement source metadata normalizer
+P4-T004 — Implement semantic mapping and projection infrastructure
 
 ## Branch baseline
 
@@ -24,9 +24,9 @@ None recorded.
 
 ## Validation baseline
 
-- `npm run check`: passing at P4-T003
-- `npm run build`: passing at P4-T003
-- Tests: 1522 passing
+- `npm run check`: passing at P4-T004
+- `npm run build`: passing at P4-T004
+- Tests: 1591 passing
 
 ## Catalog baseline
 
@@ -44,8 +44,8 @@ None recorded.
 # Current phase ledger
 
 - Phase starting commit: b3598ccf62be42eddff2eaf9302ca636762f686c
-- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003
-- Current task: P4-T004
+- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004
+- Current task: P4-T005
 - Current retry: 0
 - Gate status: not evaluated
 - Blocking issue: none
@@ -53,6 +53,12 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-25 — P4-T004 — Implement semantic mapping and projection infrastructure
+Summary: Added catalog-builder semantic mapping and projection infrastructure with versioned, runtime-validated reviewed semantic mappings keyed by canonical entity ID and ruleset, default projections by normalized mechanic type (covering all 18 RuleEffectType values), detection helpers for display-name branching and executable content, registry validation with duplicate and schema-version checks, single and batch resolution with diagnostics, and frozen output types.
+Validation: `npm --prefix obsidian-dnd-character run test -- apps/catalog-builder/src/semantic-mapping.test.ts apps/catalog-builder/src/semantic-mapping-resolution.test.ts apps/catalog-builder/src/projection-defaults.test.ts` passes (1591/1591 tests, EXIT 0). `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 1591/1591 tests, EXIT 0). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Semantic mapping and projection infrastructure remains inside the catalog-builder boundary and does not change normalized catalog schemas, canonical ID construction, source-policy semantics, Obsidian API use, or entity normalizer behavior. Shared foundation for downstream Phase 4 entity normalizers.
+Commit: see Git history for P4-T004.
 
 2026-07-25 — P4-T003 — Implement source metadata normalizer
 Summary: Added a catalog-builder source metadata normalizer that consumes ruleset and record-access classifications, emits deterministic frozen metadata grouped by ruleset/source/access, records manifest and record provenance, and reports upstream ruleset exclusions or invalid source metadata as explicit diagnostics.

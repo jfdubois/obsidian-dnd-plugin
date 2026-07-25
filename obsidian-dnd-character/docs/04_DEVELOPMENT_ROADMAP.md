@@ -222,7 +222,7 @@ Generate a valid versioned catalog using stable contracts.
 
 - [x] **P4-T003 — Implement source metadata normalizer**
 
-- [ ] **P4-T004 — Implement semantic mapping and projection infrastructure**
+- [x] **P4-T004 — Implement semantic mapping and projection infrastructure**
   - Implement versioned, runtime-validated reviewed semantic mappings.
   - Key mappings by canonical entity or feature ID and ruleset.
   - Record structured or reviewed-mapping provenance.
