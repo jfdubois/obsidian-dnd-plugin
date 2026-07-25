@@ -168,7 +168,7 @@ Read and resolve raw source generically without generating final entities yet.
 - [x] **P3-T006 — Implement _copy resolver**
   - Resolve base entity by structured identity.
 
-- [x] **P3-T007 — Implement _mod operations used by included data**
+- [ ] **P3-T007 — Implement _mod operations used by included data**
   - Each supported operation requires fixtures and tests.
   - Unknown operations fail the build.
 
