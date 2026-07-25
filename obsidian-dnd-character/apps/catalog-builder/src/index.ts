@@ -112,6 +112,20 @@ export {
 } from "./copy-resolver";
 
 export {
+  /* Resolved-record debug fixture types */
+  type ResolvedRecordDebugIdentity,
+  type ResolvedRecordDebugChainStep,
+  type ResolvedRecordFieldInventory,
+  type ResolvedRecordDebugFixture,
+  type ResolvedRecordDebugDiagnostic,
+  type ResolvedRecordDebugFixtureResult,
+  type ResolvedRecordDebugFixtureOptions,
+  /* Resolved-record debug fixture functions */
+  collectResolvedFieldInventory,
+  createResolvedRecordDebugFixture,
+} from "./resolved-record-debug-fixtures";
+
+export {
   /* Version expansion types */
   type VersionExpansionDiagnosticCode,
   type VersionExpansionDiagnostic,

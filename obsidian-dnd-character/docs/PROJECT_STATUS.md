@@ -6,11 +6,11 @@ Phase 3 — Catalog builder ingestion foundation
 
 ## Current task
 
-P3-T011 — Emit resolved-record debug fixtures
+P3-T012 — Produce ingestion diagnostic report
 
 ## Last completed task
 
-P3-T010 — Detect inheritance cycles
+P3-T011 — Emit resolved-record debug fixtures
 
 ## Branch baseline
 
@@ -26,7 +26,7 @@ None recorded.
 
 - `npm run check`: passing at Phase 2 gate
 - `npm run build`: passing at Phase 2 gate
-- Tests: 1492 passing
+- Tests: 1498 passing
 
 ## Catalog baseline
 
@@ -44,8 +44,8 @@ None recorded.
 # Current phase ledger
 
 - Phase starting commit: 6dcc189
-- Completed Phase 3 task commits: P3-T006, P3-T007-S1, P3-T007-S2, P3-T007-S3, P3-T007-S4, P3-T007-S5, P3-T008, P3-T009, P3-T010
-- Current task: P3-T011
+- Completed Phase 3 task commits: P3-T006, P3-T007-S1, P3-T007-S2, P3-T007-S3, P3-T007-S4, P3-T007-S5, P3-T008, P3-T009, P3-T010, P3-T011
+- Current task: P3-T012
 - P3-T007 execution mode: five committed slices; one `/phase 3` invocation per slice.
 - Current retry: 1
 - Gate status: not evaluated
@@ -54,6 +54,12 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-25 — P3-T011 — Emit resolved-record debug fixtures
+Summary: Added in-memory catalog-builder resolved-record debug fixtures with source path, structured identity, inheritance chain, resolved field inventory, cloned resolved raw payloads, and diagnostic-only cycle handling. Exported fixture types/functions from the catalog-builder boundary.
+Validation: `npm --prefix obsidian-dnd-character run test -- apps/catalog-builder/src/resolved-record-debug-fixtures.test.ts` passes (6/6 tests, EXIT 0). `npm --prefix obsidian-dnd-character run test -- apps/catalog-builder/src/copy-resolver.test.ts apps/catalog-builder/src/mod-copy-resolver.test.ts apps/catalog-builder/src/versions-expander.test.ts` passes (47/47 tests, EXIT 0). `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 1498/1498 tests, EXIT 0). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Debug fixtures are in-memory catalog-builder outputs only; no filesystem writing or P3-T012 diagnostic-report generation was added. No Obsidian API use, normalized catalog contract changes, raw-source leakage, or dependency updates introduced.
+Commit: see Git history for P3-T011.
 
 2026-07-25 — P3-T010 — Detect inheritance cycles
 Summary: Updated `_copy` cycle diagnostics to include the closing repeated identity in direct and nested inheritance cycle chains, satisfying CAT-005 cycle-chain evidence while preserving ordinary `_copy`, `_preserve`, and `_versions` behavior.
