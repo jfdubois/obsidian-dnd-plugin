@@ -219,6 +219,20 @@ Discover relevant implementation files, tests, raw-source examples, line counts,
 symbols, bounded ranges, expected changes, and risks before editing. The parent
 has intentionally not pre-read them.
 ```
+For replacement or retry workers after a discovery-protocol violation:
+
+- Do not repeat broad discovery.
+- Before the first edit, allow at most:
+  1. the approved inventory command;
+  2. one file listing;
+  3. one line-count command;
+  4. bounded symbol searches in relevant large files;
+  5. bounded reads around only the located symbols;
+  6. one bounded read of an existing test pattern;
+  7. one read of the package index.
+- Do not read package manifests, TypeScript configuration, complete large files,
+  or unrelated tests unless a concrete blocker requires it.
+- Produce the evidence plan and module split, then begin editing.
 
 Set `Worker hard limits` to:
 
