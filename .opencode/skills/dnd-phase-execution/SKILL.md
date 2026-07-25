@@ -1,6 +1,6 @@
 ---
 name: dnd-phase-execution
-description: Execute exactly one Obsidian D&D roadmap phase with immediate delegation to disposable task workers, bounded parent context, independent validation, atomic task commits, pushes to dev, rehydration between tasks, and a separate phase-gate commit.
+description: Execute exactly one Obsidian D&D roadmap phase with immediate delegation to disposable task workers, bounded parent context, semantic completion evidence, independent validation, atomic task commits, pushes to dev, rehydration between tasks, and a separate phase-gate commit.
 compatibility: opencode
 metadata:
   project: obsidian-dnd-character
@@ -184,7 +184,8 @@ Inside the bounded phase section:
 2. select the first incomplete task in roadmap order;
 3. confirm earlier tasks and explicit dependencies are complete;
 4. copy only the task's written requirements and applicable shared phase criteria;
-5. identify task-area documents from `CONTEXT_INDEX.md` without opening them in the parent.
+5. identify task-area documents from `CONTEXT_INDEX.md` without opening them in the parent;
+6. identify applicable acceptance cases from `docs/06_TEST_ACCEPTANCE_MATRIX.md` and include their exact IDs and expected results in the worker capsule.
 
 Do not inspect implementation, tests, fixtures, raw source, or reference data before the worker.
 
@@ -200,6 +201,7 @@ Phase and task:
 Dependencies confirmed:
 Exact roadmap requirements:
 Applicable phase acceptance criteria:
+Applicable acceptance cases from docs/06_TEST_ACCEPTANCE_MATRIX.md:
 Task-area documents from CONTEXT_INDEX.md:
 Exact task-area root from the stable workspace map:
 Approved read-only inventory command, when applicable:
@@ -207,6 +209,7 @@ Required validation:
 Explicit exclusions:
 Worker discovery requirement:
 Worker hard limits:
+Semantic completion requirement:
 ```
 
 Set `Worker discovery requirement` to:
@@ -220,10 +223,21 @@ has intentionally not pre-read them.
 Set `Worker hard limits` to:
 
 ```text
-Use bounded reads for every existing file over 300 lines. Keep new files focused
-and normally at or below 300 lines; split multi-family work before writing. Never
-use shell-based file creation or transport workarounds. After one transport failure,
-split the mutation; after a second transport failure, stop as blocked.
+Use bounded reads for every existing file over 300 lines. Every new implementation
+or test file must remain at or below 300 lines unless this capsule explicitly
+records an exception before the first write. Split multi-family work before writing.
+Never use shell-based file creation or transport workarounds. After one transport
+failure, split the mutation; after a second transport failure, stop as blocked.
+```
+
+Set `Semantic completion requirement` to:
+
+```text
+Parser, registry, interface, discriminator, type-guard, shape-recognition, and
+mode-enumeration work is partial unless the task explicitly requires only those
+artifacts. For behavior tasks, every required item must have an execution symbol,
+a positive behavior test asserting resulting state/output, and a negative test.
+Any deferred roadmap requirement forces status partial.
 ```
 
 Do not predict new filenames, public APIs, implementation structure, or expected changed files. Do not list large files unless their relevance is explicitly stated in the roadmap or current status. Always supply the exact task-area root from the stable workspace map.
@@ -234,7 +248,17 @@ For `P3-T007`, supply this approved read-only inventory command:
 node .opencode/tools/inspect-mod-operations.mjs external/5etools-src/data
 ```
 
-The worker must use this once instead of constructing ad hoc recursive grep, Python, or shell-pipeline inventories.
+For `P3-T007`, also include this exact semantic definition of done:
+
+```text
+P3-T007 is not complete with parsing, type declarations, mode registration, or
+shape recognition alone. Every supported inventoried _mod mode must validate its
+required payload, execute against a cloned resolved record after _copy resolution,
+preserve the original base/input record, and have a before/after behavior test plus
+malformed-payload coverage. Unknown modes must fail with actionable diagnostics.
+```
+
+The worker must use the approved inventory once instead of constructing ad hoc recursive grep, Python, or shell-pipeline inventories.
 
 Report once:
 
@@ -279,9 +303,41 @@ Confirm:
 - no commit, generated output, secret, unrelated dependency update, or future-task implementation exists;
 - dependency direction and runtime validation rules are preserved;
 - no undocumented Obsidian API, raw-source leakage, protected `any`, entity-name branch, persisted derived value, silent replacement, or narrative inference was added;
-- positive and negative tests exist where required.
+- positive and negative tests exist where required;
+- every applicable acceptance case has named implementation and behavior-test evidence.
 
-For every changed existing file over 300 lines, confirm:
+Passing typecheck, lint, tests, and build is necessary but not sufficient.
+
+For inventory-driven tasks, require this evidence table:
+
+```text
+| Inventory item | Implementation symbol | Positive behavior test | Negative test |
+|---|---|---|---|
+```
+
+Reject the worker result when:
+
+- tests only demonstrate parsing, recognition, registration, discriminator narrowing, type guards, or shape acceptance;
+- required behavior is deferred or described as future work;
+- no implementation function produces the required state change or output;
+- an acceptance criterion lacks a corresponding implementation symbol and behavior assertion;
+- an inventoried item is absent from the evidence table;
+- an operation is cast to a discriminated union without operation-specific runtime payload validation;
+- a new implementation or test file exceeds 300 lines without explicit capsule authorization before the first write.
+
+Before documentation or commit, inspect at least one actual resulting-state assertion per operation family and confirm the tests compare the resulting record/output rather than only the parsed operation.
+
+For `P3-T007`, verify all of the following before acceptance:
+
+1. every supported inventoried mode has an execution handler;
+2. every handler applies to a cloned resolved record;
+3. the original base/input record is unchanged;
+4. every mode has a before/after behavior test;
+5. every mode has malformed-payload or negative coverage;
+6. unknown modes fail with actionable diagnostics;
+7. parser-only or registry-only coverage is not counted as implementation evidence.
+
+For every changed existing file over 300 lines, also confirm:
 
 - the worker stated the bounded plan before editing;
 - the diff is localized;
@@ -320,11 +376,11 @@ npm --prefix obsidian-dnd-character run build
 
 Do not invent scripts, suppress failures, or rely only on worker-reported results.
 
-A task is complete only when focused checks, check, build, acceptance criteria, and parent review all pass.
+A task is complete only when focused checks, check, build, acceptance criteria, semantic completion evidence, and parent review all pass.
 
 ## 11. Task documentation
 
-Only after validation:
+Only after validation and semantic parent review:
 
 1. mark the active roadmap task complete;
 2. update `docs/PROJECT_STATUS.md` without rewriting unrelated history;
@@ -336,6 +392,8 @@ The status entry must contain date, task ID/title, concise summary, validation r
 ```text
 Commit: see Git history for <TASK-ID>.
 ```
+
+Do not document parser-only work as implementation of a behavior task.
 
 ## 12. Task commit and push
 

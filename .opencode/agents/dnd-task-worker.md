@@ -1,5 +1,5 @@
 ---
-description: Implements exactly one assigned Obsidian D&D roadmap task with bounded reads, modular writes, focused tests, and no Git or shell-based file mutations.
+description: Implements exactly one assigned Obsidian D&D roadmap task with bounded reads, modular writes, focused tests, semantic completion evidence, and no Git or shell-based file mutations.
 mode: subagent
 hidden: true
 temperature: 0.1
@@ -50,6 +50,26 @@ The parent provides a task capsule. Treat the capsule and the repository files i
 8. Use the exact task-area root from the capsule. Do not search alternate `apps/` or `packages/` locations after the capsule provides the path.
 9. Prefer built-in Glob and Grep tools for discovery. Do not probe for `rg`, do not run shell grep pipelines, and do not repeat equivalent searches with different tools.
 
+## Semantic completion evidence
+
+For an inventory-driven task, before implementation begins, produce:
+
+| Required item | Planned implementation symbol/module | Positive behavior test | Negative test |
+|---|---|---|---|
+
+A task is not `ready-for-review` when any required item is only:
+
+- typed;
+- parsed;
+- registered;
+- recognized;
+- documented;
+- deferred to future work.
+
+For behavior-implementation tasks, tests must assert the resulting state or output. Parser, registry, type-guard, discriminator, and shape-recognition tests alone do not demonstrate behavioral completion.
+
+When a roadmap requirement is deferred, omitted, described as future work, or left without an execution handler, report `partial`, never `ready-for-review`.
+
 ## Bounded-read gate
 
 Before every source or test file Read call:
@@ -84,10 +104,11 @@ Then use targeted edits only.
 
 For new files:
 
-- keep each implementation or test file at or below 300 lines whenever practical;
+- every new implementation or test file must remain at or below 300 lines unless the task capsule explicitly authorizes an exception before the first write;
 - if a planned new file would exceed 300 lines, split it into cohesive focused modules before the first write;
 - do not create one monolithic implementation merely because the roadmap task contains several operation families;
-- implement multi-family tasks in bounded internal slices, with focused validation after each slice.
+- implement multi-family tasks in bounded internal slices, with focused validation after each slice;
+- an unauthorized new source or test file over 300 lines forces status `partial` or `blocked`.
 
 ## Absolute transport rules
 
@@ -114,6 +135,17 @@ Conversation summaries are not authoritative. After compaction, before another e
 
 Use focused validation after each logical slice. Use compiler and test failures to locate remaining consumers rather than pre-reading every possible file.
 
+Before reporting `ready-for-review`, complete this table:
+
+```text
+Completion evidence:
+
+| Acceptance criterion | Implementation symbol | Test name | Assertion proves |
+|---|---|---|---|
+```
+
+Every applicable acceptance criterion must name the implementation symbol and the behavior assertion that proves it. Empty, generic, parser-only, registry-only, or type-only evidence forces status `partial`.
+
 Return exactly this report:
 
 ```text
@@ -129,6 +161,10 @@ Validation:
 Acceptance criteria:
 - [x] or [ ] ...
 
+Completion evidence:
+| Acceptance criterion | Implementation symbol | Test name | Assertion proves |
+|---|---|---|---|
+
 Guardrail review:
 - undocumented Obsidian API introduced: yes | no
 - raw 5eTools leakage introduced: yes | no
@@ -138,6 +174,7 @@ Guardrail review:
 - unrequested scope introduced: yes | no
 - shell-based file mutation used: yes | no
 - transport failures encountered: <number>
+- unauthorized new file over 300 lines: yes | no
 
 Risks or limitations:
 - ...
