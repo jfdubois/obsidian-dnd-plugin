@@ -112,6 +112,17 @@ export {
 } from "./copy-resolver";
 
 export {
+  /* Version expansion types */
+  type VersionExpansionDiagnosticCode,
+  type VersionExpansionDiagnostic,
+  type VersionExpansionResult,
+  type VersionExpansionFilesResult,
+  /* Version expansion functions */
+  expandVersions,
+  expandVersionsInFile,
+} from "./versions-expander";
+
+export {
   /* Mod types */
   type ModOperationPayload,
   type ModAppendArr,

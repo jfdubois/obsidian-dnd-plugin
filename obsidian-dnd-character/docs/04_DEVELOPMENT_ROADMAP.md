@@ -186,7 +186,7 @@ Read and resolve raw source generically without generating final entities yet.
 
 - [X] **P3-T008 — Implement _preserve behavior**
 
-- [ ] **P3-T009 — Implement _versions expansion**
+- [X] **P3-T009 — Implement _versions expansion**
 
 - [ ] **P3-T010 — Detect inheritance cycles**
 

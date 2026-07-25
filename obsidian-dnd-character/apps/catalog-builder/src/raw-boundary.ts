@@ -22,6 +22,7 @@ const KNOWN_RAW_FIELDS_SET: ReadonlySet<string> = new Set([
   "reprintedAs",
   "hasFluff",
   "hasFluffImages",
+  "_versions",
 
   /* ── Size / speed / physical ───────────────────────────────── */
   "size",
