@@ -4,6 +4,7 @@ import {
   type CopyResolverContext,
 } from "./copy-resolver";
 import { applyArrayModOperation } from "./mod-array-operations";
+import { applyRootModOperation } from "./mod-root-operations";
 import { applyScalarTextModOperation } from "./mod-scalar-text-operations";
 import type { ModOperationDiagnostic } from "./mod-types";
 import type { DiagnosticSeverity } from "./raw-loader";
@@ -16,6 +17,11 @@ const ARRAY_MODES = new Set([
   "removeArr",
   "renameArr",
   "replaceArr",
+]);
+
+const ROOT_MODES = new Set([
+  "addSenses",
+  "addSkills",
 ]);
 
 const SCALAR_TEXT_MODES = new Set([
@@ -176,6 +182,30 @@ function applyModBlock(
           record[fieldTarget] = applied;
         } else {
           diagnostics.push(enrichDiagnostic(applied, sourceRecord, fieldTarget, mode, sourcePath));
+        }
+        continue;
+      }
+
+      if (ROOT_MODES.has(mode)) {
+        if (fieldTarget !== "_") {
+          diagnostics.push(
+            diagnostic(
+              "MOD_FIELD_TARGET_MISSING",
+              `${mode} must target "_"`,
+              sourceRecord,
+              fieldTarget,
+              mode,
+              sourcePath,
+              rawOperation,
+            ),
+          );
+          continue;
+        }
+        const rootDiagnostic = applyRootModOperation(record, rawOperation);
+        if (rootDiagnostic !== undefined) {
+          diagnostics.push(
+            enrichDiagnostic(rootDiagnostic, sourceRecord, fieldTarget, mode, sourcePath),
+          );
         }
         continue;
       }

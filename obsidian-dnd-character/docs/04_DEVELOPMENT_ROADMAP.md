@@ -173,7 +173,7 @@ Read and resolve raw source generically without generating final entities yet.
     - Modes: appendArr, appendIfNotExistsArr, insertArr, prependArr, removeArr, renameArr, replaceArr.
   - [X] **P3-T007-S2 — Scalar, property, text, and size operations**
     - Modes: maxSize, prefixSuffixStringProp, replaceTxt, scalarAddDc, scalarAddHit, scalarAddProp, scalarMultProp, scalarMultXp, setProp.
-  - [ ] **P3-T007-S3 — Senses and skills operations**
+  - [X] **P3-T007-S3 — Senses and skills operations**
     - Modes: addSenses, addSkills.
   - [ ] **P3-T007-S4 — Spell operations**
     - Modes: addSpells, removeSpells, replaceSpells.
