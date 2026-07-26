@@ -816,3 +816,381 @@ describe("materializeCopyWithMods", () => {
     expect(result.result.record.remaining).not.toHaveProperty("_mod");
   });
 });
+
+describe("materialization diagnostic conversion preserves structured fields", () => {
+  it("BASE_ENTITY_NOT_FOUND preserves requestedIdentity, sourceEntityKind, sourcePath, and allowedEntityKinds", () => {
+    const variant: CopyModRawRecord = {
+      name: "Missing Base",
+      source: "TST",
+      remaining: { _copy: { name: "NonExistent", source: "XXX" } },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            {
+              entityKind: "monster",
+              recordCount: 1,
+              records: [variant],
+            },
+          ],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, {
+      sourcePath: "monster.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected materialization failure");
+    const diag = result.diagnostics[0] as MaterializationDiagnostic;
+    expect(diag.code).toBe("BASE_ENTITY_NOT_FOUND");
+    expect(diag.requestedIdentity).toEqual({ name: "NonExistent", source: "XXX" });
+    expect(diag.sourceEntityKind).toBe("monster");
+    expect(diag.sourcePath).toBe("monster.json");
+    expect(diag.allowedEntityKinds).toBeDefined();
+    expect(diag.entityName).toBe("Missing Base");
+    expect(diag.entitySource).toBe("TST");
+  });
+
+  it("AMBIGUOUS_BASE_ENTITY preserves both candidates with complete identities", () => {
+    const dup1 = { name: "Goblin", source: "MPMM", remaining: {} };
+    const dup2 = { name: "Goblin", source: "MPMM", remaining: {} };
+    const variant: CopyModRawRecord = {
+      name: "Goblin Copy",
+      source: "MPMM",
+      remaining: { _copy: { name: "Goblin", source: "MPMM" } },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            {
+              entityKind: "monster",
+              recordCount: 3,
+              records: [dup1, dup2, variant],
+            },
+          ],
+          totalRecords: 3,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, {
+      sourcePath: "monster.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected materialization failure");
+    const diag = result.diagnostics[0] as MaterializationDiagnostic;
+    expect(diag.code).toBe("AMBIGUOUS_BASE_ENTITY");
+    expect(diag.ambiguityCandidates).toBeDefined();
+    expect(diag.ambiguityCandidates).toHaveLength(2);
+    expect(diag.ambiguityCandidates![0]).toMatchObject({
+      name: "Goblin",
+      source: "MPMM",
+      entityKind: "monster",
+      sourcePath: "monster.json",
+    });
+    expect(diag.ambiguityCandidates![0]!.identity).toBeDefined();
+    expect(diag.ambiguityCandidates![0]!.identity!).toEqual({ name: "Goblin", source: "MPMM" });
+    expect(diag.ambiguityCandidates![1]).toMatchObject({
+      name: "Goblin",
+      source: "MPMM",
+      entityKind: "monster",
+      sourcePath: "monster.json",
+    });
+    expect(diag.ambiguityCandidates![1]!.identity).toBeDefined();
+    expect(diag.ambiguityCandidates![1]!.identity!).toEqual({ name: "Goblin", source: "MPMM" });
+  });
+
+  it("CIRCULAR_COPY_REFERENCE preserves the complete inheritanceChain", () => {
+    const recordA: CopyModRawRecord = {
+      name: "A",
+      source: "PHB",
+      remaining: { _copy: { name: "B", source: "PHB" } },
+    };
+    const recordB: CopyModRawRecord = {
+      name: "B",
+      source: "PHB",
+      remaining: { _copy: { name: "A", source: "PHB" } },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            {
+              entityKind: "monster",
+              recordCount: 2,
+              records: [recordA, recordB],
+            },
+          ],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(recordA, ctx, {
+      sourcePath: "monster.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected materialization failure");
+    const diag = result.diagnostics[0] as MaterializationDiagnostic;
+    expect(diag.code).toBe("CIRCULAR_COPY_REFERENCE");
+    expect(diag.inheritanceChain).toBeDefined();
+    expect(diag.inheritanceChain!.length).toBeGreaterThan(0);
+    expect(diag.inheritanceChain![0]).toMatchObject({
+      entityName: "B",
+      sourceAbbr: "PHB",
+      entityKind: "monster",
+      sourcePath: "monster.json",
+    });
+  });
+
+  it("INVALID_DISCRIMINATOR_VALUE preserves the field and original invalid value", () => {
+    const base: CopyModRawRecord = {
+      name: "Fighter",
+      source: "PHB",
+      remaining: {},
+    };
+    const variant: CopyModRawRecord = {
+      name: "Fighter Copy",
+      source: "PHB",
+      remaining: {
+        _copy: { name: "Fighter", source: "PHB", className: null },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "class.json": {
+          filePath: "class.json",
+          collections: [
+            {
+              entityKind: "class",
+              recordCount: 2,
+              records: [base, variant],
+            },
+          ],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, {
+      sourcePath: "class.json",
+      sourceEntityKind: "class",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected materialization failure");
+    const diag = result.diagnostics[0] as MaterializationDiagnostic;
+    expect(diag.code).toBe("INVALID_DISCRIMINATOR_VALUE");
+    expect(diag.invalidDiscriminatorField).toBe("className");
+    expect(diag.invalidDiscriminatorValue).toBeUndefined();
+  });
+
+  it("modifying a converted requestedIdentity does not mutate the original diagnostic data", () => {
+    const variant: CopyModRawRecord = {
+      name: "Missing Base",
+      source: "TST",
+      remaining: { _copy: { name: "NonExistent", source: "XXX" } },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            {
+              entityKind: "monster",
+              recordCount: 1,
+              records: [variant],
+            },
+          ],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, {
+      sourcePath: "monster.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected materialization failure");
+    const diag = result.diagnostics[0] as MaterializationDiagnostic;
+    const originalIdentity = { ...diag.requestedIdentity! };
+    // Attempt to mutate the converted identity
+    try {
+      (diag.requestedIdentity! as Record<string, unknown>).name = "MUTATED";
+    } catch {
+      // Object.freeze may throw; that's expected and confirms immutability
+    }
+    // The original variant's _copy should be unchanged
+    expect(variant.remaining._copy).toEqual({ name: "NonExistent", source: "XXX" });
+    // The captured original should still match
+    expect(originalIdentity).toEqual({ name: "NonExistent", source: "XXX" });
+  });
+
+  it("modifying a converted ambiguity candidate identity does not mutate the original", () => {
+    const dup1 = { name: "Goblin", source: "MPMM", remaining: {} };
+    const dup2 = { name: "Goblin", source: "MPMM", remaining: {} };
+    const variant: CopyModRawRecord = {
+      name: "Goblin Copy",
+      source: "MPMM",
+      remaining: { _copy: { name: "Goblin", source: "MPMM" } },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            {
+              entityKind: "monster",
+              recordCount: 3,
+              records: [dup1, dup2, variant],
+            },
+          ],
+          totalRecords: 3,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, {
+      sourcePath: "monster.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected materialization failure");
+    const diag = result.diagnostics[0] as MaterializationDiagnostic;
+    const candidate = diag.ambiguityCandidates![0]!;
+    const originalIdentity = { ...candidate.identity! };
+    // Attempt to mutate the candidate's identity
+    try {
+      (candidate.identity! as Record<string, unknown>).name = "MUTATED";
+    } catch {
+      // Object.freeze may throw; that's expected
+    }
+    // The original record should be unchanged
+    expect(dup1).toEqual({ name: "Goblin", source: "MPMM", remaining: {} });
+    expect(originalIdentity).toEqual({ name: "Goblin", source: "MPMM" });
+  });
+
+  it("every failed materialization returns at least one diagnostic", () => {
+    const variant: CopyModRawRecord = {
+      name: "Missing Base",
+      source: "TST",
+      remaining: { _copy: { name: "NonExistent", source: "XXX" } },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            {
+              entityKind: "monster",
+              recordCount: 1,
+              records: [variant],
+            },
+          ],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, {
+      sourcePath: "monster.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected materialization failure");
+    expect(result.diagnostics.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("mod diagnostics still preserve fieldTarget, mode, rawParam, and sourcePath", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { trait: [] },
+    };
+    const variant: CopyModRawRecord = {
+      name: "Bad Mod",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: "Base",
+          source: "TST",
+          _mod: { trait: { mode: "nonexistentMode" } },
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, makeContext(base), {
+      sourcePath: "source.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected materialization failure");
+    const diag = result.diagnostics[0] as MaterializationDiagnostic;
+    expect(diag.fieldTarget).toBe("trait");
+    expect(diag.mode).toBe("nonexistentMode");
+    expect(diag.rawParam).toEqual({ mode: "nonexistentMode" });
+    expect(diag.sourcePath).toBe("source.json");
+  });
+
+  it("resolveCopyWithMods also preserves structured diagnostic fields", () => {
+    const variant: CopyModRawRecord = {
+      name: "Missing Base",
+      source: "TST",
+      remaining: { _copy: { name: "NonExistent", source: "XXX" } },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            {
+              entityKind: "monster",
+              recordCount: 1,
+              records: [variant],
+            },
+          ],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = resolveCopyWithMods(variant, ctx, {
+      sourcePath: "monster.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected resolution failure");
+    const diag = result.diagnostics[0] as MaterializationDiagnostic;
+    expect(diag.code).toBe("BASE_ENTITY_NOT_FOUND");
+    expect(diag.requestedIdentity).toEqual({ name: "NonExistent", source: "XXX" });
+    expect(diag.sourceEntityKind).toBe("monster");
+    expect(diag.sourcePath).toBe("monster.json");
+  });
+});

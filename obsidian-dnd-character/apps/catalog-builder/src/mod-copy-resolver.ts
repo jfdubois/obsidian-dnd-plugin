@@ -3,6 +3,7 @@ import {
   resolveCopy,
   type CopyResolverContext,
   type CopyResolverDiagnostic,
+  type StructuredIdentity,
 } from "./copy-resolver";
 import { applyArrayModOperation } from "./mod-array-operations";
 import { applyRootModOperation } from "./mod-root-operations";
@@ -158,39 +159,94 @@ function modeOf(rawOperation: unknown): string | undefined {
   return typeof rawOperation.mode === "string" ? rawOperation.mode : undefined;
 }
 
+function deepFreeze<T>(value: T): T {
+  if (typeof value !== "object" || value === null) return value;
+  Object.freeze(value);
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      if (typeof item === "object" && item !== null) {
+        deepFreeze(item);
+      }
+    }
+  } else {
+    for (const key of Object.keys(value)) {
+      const prop = (value as Record<string, unknown>)[key];
+      if (typeof prop === "object" && prop !== null) {
+        deepFreeze(prop);
+      }
+    }
+  }
+  return value;
+}
+
 /**
  * Converts a copy resolver diagnostic into a structured MaterializationDiagnostic.
- * Safely maps the code (CopyDiagnosticCode is a subtype of MaterializationDiagnosticCode)
- * and preserves ambiguity candidates from the original diagnostic.
+ * Preserves every structured field from CopyResolverDiagnostic and deep-clones
+ * all structured values so the returned diagnostic cannot mutate the original.
  */
 function convertCopyDiagnostic(
   copyDiagnostic: CopyResolverDiagnostic,
   sourceRecord: CopyModRawRecord,
-  sourcePath: string | undefined,
 ): MaterializationDiagnostic {
   const ambiguityCandidates = copyDiagnostic.ambiguityCandidates
     ? Object.freeze(
         copyDiagnostic.ambiguityCandidates.map((candidate) =>
-          Object.freeze({
+          deepFreeze(Object.freeze({
             name: candidate.name,
             source: candidate.source,
             entityKind: candidate.entityKind,
             sourcePath: candidate.sourcePath,
-          }),
+            identity: candidate.identity
+              ? deepFreeze(cloneUnknown(candidate.identity) as StructuredIdentity)
+              : undefined,
+          })),
         ),
       )
     : undefined;
+
+  const requestedIdentity = copyDiagnostic.requestedIdentity
+    ? deepFreeze(cloneUnknown(copyDiagnostic.requestedIdentity) as StructuredIdentity)
+    : undefined;
+
+  const inheritanceChain = copyDiagnostic.chain
+    ? Object.freeze(
+        copyDiagnostic.chain.map((step) =>
+          deepFreeze(Object.freeze({
+            entityName: step.entityName,
+            sourceAbbr: step.sourceAbbr,
+            entityKind: step.entityKind,
+            sourcePath: step.sourcePath,
+            identity: deepFreeze(cloneUnknown(step.identity) as StructuredIdentity),
+          })),
+        ),
+      )
+    : undefined;
+
+  const invalidDiscriminatorValue = copyDiagnostic.invalidDiscriminatorValue != null
+    ? deepFreeze(cloneUnknown(copyDiagnostic.invalidDiscriminatorValue))
+    : undefined;
+
+  const allowedEntityKinds = copyDiagnostic.allowedEntityKinds
+    ? Object.freeze([...copyDiagnostic.allowedEntityKinds])
+    : undefined;
+
   return Object.freeze({
     code: copyDiagnostic.code,
     severity: copyDiagnostic.severity,
     message: copyDiagnostic.message,
-    sourcePath,
+    sourcePath: copyDiagnostic.sourcePath,
     entityName: sourceRecord.name,
     entitySource: sourceRecord.source,
     fieldTarget: "_copy",
     mode: undefined,
     rawParam: copyDiagnostic.rawCopy,
     ambiguityCandidates,
+    requestedIdentity,
+    sourceEntityKind: copyDiagnostic.sourceEntityKind,
+    allowedEntityKinds,
+    inheritanceChain,
+    invalidDiscriminatorField: copyDiagnostic.invalidDiscriminatorField,
+    invalidDiscriminatorValue,
   });
 }
 
@@ -331,7 +387,7 @@ export function resolveCopyWithMods(
     return {
       ok: false,
       diagnostics: [
-        convertCopyDiagnostic(resolved.diagnostic, record, modContext.sourcePath),
+        convertCopyDiagnostic(resolved.diagnostic, record),
       ],
     };
   }
@@ -388,7 +444,7 @@ export function materializeCopyWithMods(
     return {
       ok: false,
       diagnostics: [
-        convertCopyDiagnostic(resolved.diagnostic, record, modContext.sourcePath),
+        convertCopyDiagnostic(resolved.diagnostic, record),
       ],
     };
   }

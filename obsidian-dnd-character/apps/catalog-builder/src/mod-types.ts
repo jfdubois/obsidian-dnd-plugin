@@ -273,7 +273,7 @@ export type ModDiagnosticCode =
    carry either code type without unsafe casting.
 ───────────────────────────────────────────────────────────────────── */
 
-import type { CopyDiagnosticCode } from "./copy-resolver";
+import type { CopyDiagnosticCode, StructuredIdentity } from "./copy-resolver";
 
 /** Raw record shape used by the copy+mod materialization pipeline. */
 export interface CopyModRawRecord {
@@ -296,6 +296,18 @@ export interface MaterializationDiagnostic {
   readonly rawParam?: unknown;
   /** Candidates matched during AMBIGUOUS_BASE_ENTITY. */
   readonly ambiguityCandidates?: readonly MaterializationAmbiguityCandidate[];
+  /** The requested structured identity from the _copy value. */
+  readonly requestedIdentity?: StructuredIdentity;
+  /** Source entity kind (collection) of the record that initiated resolution. */
+  readonly sourceEntityKind?: string;
+  /** Allowed entity kinds for the source entity kind. */
+  readonly allowedEntityKinds?: readonly string[];
+  /** Inheritance chain built up to the point of failure. */
+  readonly inheritanceChain?: readonly CopyChainStep[];
+  /** Invalid discriminator field for INVALID_DISCRIMINATOR_VALUE. */
+  readonly invalidDiscriminatorField?: string;
+  /** Invalid discriminator value for INVALID_DISCRIMINATOR_VALUE. */
+  readonly invalidDiscriminatorValue?: unknown;
 }
 
 export interface MaterializationAmbiguityCandidate {
@@ -303,6 +315,8 @@ export interface MaterializationAmbiguityCandidate {
   readonly source: string;
   readonly entityKind: string;
   readonly sourcePath: string;
+  /** Complete structured identity from the copy resolver. */
+  readonly identity?: StructuredIdentity;
 }
 
 /* ── Materialized resolved record contract ───────────────────────
