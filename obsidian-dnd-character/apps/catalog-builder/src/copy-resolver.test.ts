@@ -231,6 +231,12 @@ describe("resolveCopy — failure cases", () => {
     expect(isCopyResolutionFailure(result)).toBe(true);
     if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
     expect(result.diagnostic.code).toBe("BASE_ENTITY_NOT_FOUND");
+    expect(result.diagnostic.requestedIdentity).toEqual({ name: "Goblin", source: "MPMM" });
+    expect(result.diagnostic.sourceEntityKind).toBe("test");
+    expect(result.diagnostic.sourcePath).toBe("test.json");
+    expect(result.diagnostic.allowedEntityKinds).toBeDefined();
+    expect(Array.isArray(result.diagnostic.chain)).toBe(true);
+    expect(result.diagnostic.chain!.length).toBeGreaterThan(0);
   });
 
   it("returns CIRCULAR_COPY_REFERENCE for direct cycle", () => {
@@ -257,6 +263,11 @@ describe("resolveCopy — failure cases", () => {
     if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
     expect(result.diagnostic.code).toBe("CIRCULAR_COPY_REFERENCE");
     expect(result.diagnostic.message).toContain("test");
+    expect(result.diagnostic.requestedIdentity).toEqual({ name: "B", source: "PHB" });
+    expect(result.diagnostic.sourceEntityKind).toBe("test");
+    expect(result.diagnostic.sourcePath).toBe("test.json");
+    expect(Array.isArray(result.diagnostic.chain)).toBe(true);
+    expect(result.diagnostic.chain!.length).toBeGreaterThan(0);
   });
 
   it("returns CIRCULAR_COPY_REFERENCE with the full nested cycle chain", () => {
@@ -904,6 +915,18 @@ describe("structured identity matching", () => {
     if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
     expect(result.diagnostic.code).toBe("AMBIGUOUS_BASE_ENTITY");
     expect(result.diagnostic.message).toContain("2 candidates");
+    expect(result.diagnostic.requestedIdentity).toEqual({ name: "Goblin", source: "MPMM" });
+    expect(result.diagnostic.sourceEntityKind).toBe("monster");
+    expect(result.diagnostic.sourcePath).toBe("test.json");
+    expect(result.diagnostic.ambiguityCandidates).toBeDefined();
+    expect(result.diagnostic.ambiguityCandidates!.length).toBe(2);
+    expect(result.diagnostic.ambiguityCandidates![0]).toEqual(
+      expect.objectContaining({
+        name: "Goblin",
+        source: "MPMM",
+        entityKind: "monster",
+      }),
+    );
   });
 
   it("returns AMBIGUOUS_BASE_ENTITY when name/source match but discriminator differs", () => {
@@ -1241,5 +1264,130 @@ describe("AMBIGUOUS_BASE_ENTITY structured identity", () => {
     expect(isCopyResolutionSuccess(result)).toBe(true);
     if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
     expect(result.chain[0]!.entityKind).toBe("monster");
+  });
+});
+
+describe("INVALID_DISCRIMINATOR_VALUE structured diagnostic", () => {
+  it("includes invalid discriminator field and value in diagnostic", () => {
+    const context = makeContext([
+      { name: "Fighter", source: "PHB" },
+    ]);
+
+    const result = resolveCopy(
+      makeRecord("Fighter Copy", "PHB", {
+        _copy: { name: "Fighter", source: "PHB", className: null },
+      }),
+      context,
+      { sourceEntityKind: "test", sourcePath: "test.json" },
+    );
+
+    expect(isCopyResolutionFailure(result)).toBe(true);
+    if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
+    expect(result.diagnostic.code).toBe("INVALID_DISCRIMINATOR_VALUE");
+    expect(result.diagnostic.invalidDiscriminatorField).toBe("className");
+    expect(result.diagnostic.invalidDiscriminatorValue).toBeNull();
+  });
+});
+
+describe("structured diagnostic on success", () => {
+  it("returns empty diagnostic array on successful resolution", () => {
+    const context = makeContext([
+      { name: "Goblin", source: "MPMM" },
+    ]);
+
+    const result = resolveCopy(
+      makeRecord("Goblin Copy", "MPMM", { _copy: { name: "Goblin", source: "MPMM" } }),
+      context,
+      TEST_OPTIONS,
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+  });
+});
+
+describe("no unsafe casts in diagnostics", () => {
+  it("BASE_ENTITY_NOT_FOUND diagnostic has no unsafe cast artifacts", () => {
+    const context = makeContext([
+      {
+        name: "Boggart",
+        source: "MPMM",
+        remaining: { _copy: { name: "Goblin", source: "MPMM" } },
+      },
+    ]);
+
+    const result = resolveCopy(
+      makeRecord("Boggart", "MPMM", { _copy: { name: "Goblin", source: "MPMM" } }),
+      context,
+      TEST_OPTIONS,
+    );
+
+    expect(isCopyResolutionFailure(result)).toBe(true);
+    if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
+    expect(result.diagnostic.code).toBe("BASE_ENTITY_NOT_FOUND");
+    expect(result.diagnostic.requestedIdentity).toBeDefined();
+    expect(result.diagnostic.sourceEntityKind).toBeDefined();
+    expect(result.diagnostic.sourcePath).toBeDefined();
+    expect(result.diagnostic.allowedEntityKinds).toBeDefined();
+    expect(Array.isArray(result.diagnostic.chain)).toBe(true);
+    expect(result.diagnostic.chain!.length).toBeGreaterThan(0);
+  });
+
+  it("CIRCULAR_COPY_REFERENCE diagnostic has chain data", () => {
+    const context = makeContext([
+      {
+        name: "A",
+        source: "PHB",
+        remaining: { _copy: { name: "B", source: "PHB" } },
+      },
+      {
+        name: "B",
+        source: "PHB",
+        remaining: { _copy: { name: "A", source: "PHB" } },
+      },
+    ]);
+
+    const result = resolveCopy(
+      makeRecord("A", "PHB", { _copy: { name: "B", source: "PHB" } }),
+      context,
+      TEST_OPTIONS,
+    );
+
+    expect(isCopyResolutionFailure(result)).toBe(true);
+    if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
+    expect(result.diagnostic.code).toBe("CIRCULAR_COPY_REFERENCE");
+    expect(result.diagnostic.chain).toBeDefined();
+    expect(Array.isArray(result.diagnostic.chain)).toBe(true);
+    expect(result.diagnostic.chain!.length).toBeGreaterThan(0);
+  });
+
+  it("AMBIGUOUS_BASE_ENTITY diagnostic has ambiguity candidates", () => {
+    const context = makeMultiCollectionContext([
+      {
+        entityKind: "monster",
+        records: [
+          { name: "Goblin", source: "MPMM" },
+          { name: "Goblin", source: "MPMM" },
+        ],
+      },
+    ]);
+
+    const result = resolveCopy(
+      makeRecord("Goblin Copy", "MPMM", {
+        _copy: { name: "Goblin", source: "MPMM" },
+      }),
+      context,
+      { sourceEntityKind: "monster", sourcePath: "test.json" },
+    );
+
+    expect(isCopyResolutionFailure(result)).toBe(true);
+    if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
+    expect(result.diagnostic.code).toBe("AMBIGUOUS_BASE_ENTITY");
+    expect(result.diagnostic.ambiguityCandidates).toBeDefined();
+    expect(result.diagnostic.ambiguityCandidates!.length).toBe(2);
+    expect(result.diagnostic.ambiguityCandidates![0]).toHaveProperty("name");
+    expect(result.diagnostic.ambiguityCandidates![0]).toHaveProperty("source");
+    expect(result.diagnostic.ambiguityCandidates![0]).toHaveProperty("entityKind");
+    expect(result.diagnostic.ambiguityCandidates![0]).toHaveProperty("sourcePath");
+    expect(result.diagnostic.ambiguityCandidates![0]).toHaveProperty("identity");
   });
 });

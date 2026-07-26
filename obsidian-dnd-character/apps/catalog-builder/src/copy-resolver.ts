@@ -79,6 +79,15 @@ export interface CopyResolutionFailure {
   readonly diagnostic: CopyResolverDiagnostic;
 }
 
+/** A single ambiguity candidate in an AMBIGUOUS_BASE_ENTITY diagnostic. */
+export interface AmbiguityCandidate {
+  readonly name: string;
+  readonly source: string;
+  readonly entityKind: string;
+  readonly sourcePath: string;
+  readonly identity: StructuredIdentity;
+}
+
 /** Diagnosis emitted when _copy resolution fails. */
 export interface CopyResolverDiagnostic {
   readonly code: CopyDiagnosticCode;
@@ -90,6 +99,21 @@ export interface CopyResolverDiagnostic {
   readonly rawCopy?: unknown;
   /** Reference parsing diagnostic, if the failure originated there. */
   readonly parseDiagnostic?: ReferenceDiagnostic;
+  /** The requested structured identity from the _copy value. */
+  readonly requestedIdentity?: StructuredIdentity;
+  /** Source entity kind (collection) of the record that initiated resolution. */
+  readonly sourceEntityKind?: string;
+  /** Physical file path of the source record. */
+  readonly sourcePath?: string;
+  /** Allowed entity kinds for the source entity kind. */
+  readonly allowedEntityKinds?: readonly string[];
+  /** Inheritance chain built up to the point of failure. */
+  readonly chain?: readonly CopyChainStep[];
+  /** Candidates matched during AMBIGUOUS_BASE_ENTITY. */
+  readonly ambiguityCandidates?: readonly AmbiguityCandidate[];
+  /** Invalid discriminator field and value for INVALID_DISCRIMINATOR_VALUE. */
+  readonly invalidDiscriminatorField?: string;
+  readonly invalidDiscriminatorValue?: unknown;
 }
 
 export type CopyDiagnosticCode =
@@ -193,6 +217,16 @@ function identityToCycleKey(identity: StructuredIdentity): string {
     parts.push(`${key}=${String(identity[key])}`);
   }
   return parts.join("|");
+}
+
+function getRecordIdentity(record: RawRecord): StructuredIdentity {
+  const identity: Record<string, unknown> = { name: record.name, source: record.source };
+  for (const [key, value] of Object.entries(record.remaining)) {
+    if (!key.startsWith("_")) {
+      identity[key] = value;
+    }
+  }
+  return identity as StructuredIdentity;
 }
 
 function hasUnsupportedPreserveValue(record: RawRecord): boolean {
@@ -341,6 +375,14 @@ function createDiagnostic(
   sourceRecord?: RawRecord,
   rawCopy?: unknown,
   parseDiagnostic?: ReferenceDiagnostic,
+  requestedIdentity?: StructuredIdentity,
+  sourceEntityKind?: string,
+  sourcePath?: string,
+  allowedEntityKinds?: readonly string[],
+  chain?: readonly CopyChainStep[],
+  ambiguityCandidates?: readonly AmbiguityCandidate[],
+  invalidDiscriminatorField?: string,
+  invalidDiscriminatorValue?: unknown,
 ): CopyResolverDiagnostic {
   return {
     code,
@@ -349,6 +391,14 @@ function createDiagnostic(
     sourceRecord,
     rawCopy,
     parseDiagnostic,
+    requestedIdentity,
+    sourceEntityKind,
+    sourcePath,
+    allowedEntityKinds,
+    chain,
+    ambiguityCandidates,
+    invalidDiscriminatorField,
+    invalidDiscriminatorValue,
   };
 }
 
@@ -359,6 +409,14 @@ function createFailure(
   sourceRecord?: RawRecord,
   rawCopy?: unknown,
   parseDiagnostic?: ReferenceDiagnostic,
+  requestedIdentity?: StructuredIdentity,
+  sourceEntityKind?: string,
+  sourcePath?: string,
+  allowedEntityKinds?: readonly string[],
+  chain?: readonly CopyChainStep[],
+  ambiguityCandidates?: readonly AmbiguityCandidate[],
+  invalidDiscriminatorField?: string,
+  invalidDiscriminatorValue?: unknown,
 ): CopyResolutionFailure {
   return {
     status: "failed",
@@ -369,6 +427,14 @@ function createFailure(
       sourceRecord,
       rawCopy,
       parseDiagnostic,
+      requestedIdentity,
+      sourceEntityKind,
+      sourcePath,
+      allowedEntityKinds,
+      chain,
+      ambiguityCandidates,
+      invalidDiscriminatorField,
+      invalidDiscriminatorValue,
     ),
   };
 }
@@ -462,6 +528,8 @@ function resolveCopyChain(
   currentEntityKind: string,
   currentSourcePath: string,
 ): CopyResolutionResult {
+  const identity = extractStructuredIdentity(copyValue);
+
   // Depth guard
   if (depth > MAX_COPY_DEPTH) {
     return createFailure(
@@ -470,10 +538,12 @@ function resolveCopyChain(
       `_copy chain exceeded maximum depth of ${MAX_COPY_DEPTH}. Chain: ${formatCopyChain(chain)}`,
       sourceRecord,
       copyValue,
+      undefined,
+      identity,
+      currentEntityKind,
+      currentSourcePath,
     );
   }
-
-  const identity = extractStructuredIdentity(copyValue);
   const cycleKey = `${currentEntityKind}|${identityToCycleKey(identity)}`;
 
   // Cycle detection
@@ -495,6 +565,12 @@ function resolveCopyChain(
       `Circular _copy reference detected: "${cycleKey}" appears multiple times in chain: ${formatCopyChain(cycleChain)}`,
       sourceRecord,
       copyValue,
+      undefined,
+      identity,
+      currentEntityKind,
+      currentSourcePath,
+      undefined,
+      Object.freeze(cycleChain),
     );
   }
 
@@ -531,6 +607,12 @@ function resolveCopyChain(
       `Base entity matching identity ${JSON.stringify(identity)} not found in allowed entity kinds [${[...allowedKinds].sort().join(", ")}]. Source entity kind: "${currentEntityKind}". Source path: "${currentSourcePath}". Referenced by "${sourceRecord.name}" (${sourceRecord.source}).`,
       sourceRecord,
       copyValue,
+      undefined,
+      identity,
+      currentEntityKind,
+      currentSourcePath,
+      Object.freeze([...allowedKinds]),
+      Object.freeze(chain),
     );
   }
 
@@ -538,12 +620,26 @@ function resolveCopyChain(
     const candidateDescs = candidates
       .map((c) => `"${c.record.name}" (${c.record.source}) [${c.entityKind}] at "${c.sourcePath}"`)
       .join(", ");
+    const ambiguityCandidates: AmbiguityCandidate[] = candidates.map((c) => ({
+      name: c.record.name,
+      source: c.record.source,
+      entityKind: c.entityKind,
+      sourcePath: c.sourcePath,
+      identity: getRecordIdentity(c.record),
+    }));
     return createFailure(
       "AMBIGUOUS_BASE_ENTITY",
       "error",
       `Found ${candidates.length} candidates matching identity ${JSON.stringify(identity)} within entity kind "${currentEntityKind}": ${candidateDescs}. Referenced by "${sourceRecord.name}" (${sourceRecord.source}).`,
       sourceRecord,
       copyValue,
+      undefined,
+      identity,
+      currentEntityKind,
+      currentSourcePath,
+      undefined,
+      Object.freeze(chain),
+      Object.freeze(ambiguityCandidates),
     );
   }
 
@@ -615,6 +711,10 @@ export function resolveCopy(
       `Expected a record object for _copy resolution, got ${typeof record}`,
       undefined,
       record,
+      undefined,
+      undefined,
+      options?.sourceEntityKind,
+      options?.sourcePath,
     );
   }
 
@@ -633,6 +733,10 @@ export function resolveCopy(
       `Record is missing required 'name' or 'source' envelope fields`,
       undefined,
       record,
+      undefined,
+      undefined,
+      options?.sourceEntityKind,
+      options?.sourcePath,
     );
   }
 
@@ -649,6 +753,10 @@ export function resolveCopy(
       `_preserve for "${rawRecord.name}" (${rawRecord.source}) must be the literal boolean true when present`,
       rawRecord,
       rawRecord.remaining._preserve,
+      undefined,
+      undefined,
+      options?.sourceEntityKind,
+      options?.sourcePath,
     );
   }
 
@@ -661,6 +769,11 @@ export function resolveCopy(
       "warning",
       `Record "${rawRecord.name}" (${rawRecord.source}) has no _copy field`,
       rawRecord,
+      undefined,
+      undefined,
+      undefined,
+      options?.sourceEntityKind,
+      options?.sourcePath,
     );
   }
 
@@ -672,6 +785,10 @@ export function resolveCopy(
       `_copy value for "${rawRecord.name}" is not a valid structured reference`,
       rawRecord,
       copyValue,
+      undefined,
+      undefined,
+      options?.sourceEntityKind,
+      options?.sourcePath,
     );
   }
 
@@ -694,6 +811,9 @@ export function resolveCopy(
         rawRecord,
         copyValue,
         parsed,
+        undefined,
+        options?.sourceEntityKind,
+        options?.sourcePath,
       );
     }
 
@@ -704,6 +824,10 @@ export function resolveCopy(
         `_copy reference for "${rawRecord.name}" produced an unsupported reference kind: "${parsed.kind}". Expected canonical reference.`,
         rawRecord,
         copyValue,
+        undefined,
+        undefined,
+        options?.sourceEntityKind,
+        options?.sourcePath,
       );
     }
   }
@@ -720,6 +844,15 @@ export function resolveCopy(
       `Invalid discriminator values in _copy for "${rawRecord.name}" (${rawRecord.source}): ${failureDetails}. Entity kind: "${options?.sourceEntityKind ?? "unknown"}". Source path: "${options?.sourcePath ?? "unknown"}".`,
       rawRecord,
       copyValue,
+      undefined,
+      undefined,
+      options?.sourceEntityKind,
+      options?.sourcePath,
+      undefined,
+      undefined,
+      undefined,
+      discriminatorFailures[0]?.fieldName,
+      discriminatorFailures[0]?.invalidValue,
     );
   }
 

@@ -11,10 +11,9 @@ import type {
   CopyModRawRecord,
   MaterializationDiagnostic,
   MaterializedResolvedRecord,
-  MaterializationDiagnosticCode,
   ModOperationDiagnostic,
 } from "./mod-types";
-import type { DiagnosticSeverity } from "./raw-loader";
+
 
 // Re-export for backward compatibility
 export type { CopyModRawRecord } from "./mod-types";
@@ -120,7 +119,7 @@ function diagnostic(
 ): ModOperationDiagnostic {
   return Object.freeze({
     code,
-    severity: "error" as DiagnosticSeverity,
+    severity: "error",
     message,
     sourcePath,
     entityName: sourceRecord.name,
@@ -161,16 +160,28 @@ function modeOf(rawOperation: unknown): string | undefined {
 
 /**
  * Converts a copy resolver diagnostic into a structured MaterializationDiagnostic.
- * Drops copy-resolver-specific fields (sourceRecord, parseDiagnostic) that do not
- * belong on the materialized output contract.
+ * Safely maps the code (CopyDiagnosticCode is a subtype of MaterializationDiagnosticCode)
+ * and preserves ambiguity candidates from the original diagnostic.
  */
-function toMaterializationDiagnostic(
+function convertCopyDiagnostic(
   copyDiagnostic: CopyResolverDiagnostic,
   sourceRecord: CopyModRawRecord,
   sourcePath: string | undefined,
 ): MaterializationDiagnostic {
+  const ambiguityCandidates = copyDiagnostic.ambiguityCandidates
+    ? Object.freeze(
+        copyDiagnostic.ambiguityCandidates.map((candidate) =>
+          Object.freeze({
+            name: candidate.name,
+            source: candidate.source,
+            entityKind: candidate.entityKind,
+            sourcePath: candidate.sourcePath,
+          }),
+        ),
+      )
+    : undefined;
   return Object.freeze({
-    code: copyDiagnostic.code as MaterializationDiagnosticCode,
+    code: copyDiagnostic.code,
     severity: copyDiagnostic.severity,
     message: copyDiagnostic.message,
     sourcePath,
@@ -179,6 +190,7 @@ function toMaterializationDiagnostic(
     fieldTarget: "_copy",
     mode: undefined,
     rawParam: copyDiagnostic.rawCopy,
+    ambiguityCandidates,
   });
 }
 
@@ -186,13 +198,13 @@ function toMaterializationDiagnostic(
  * Converts a mod operation diagnostic into a MaterializationDiagnostic.
  * Safe because ModDiagnosticCode is a subtype of MaterializationDiagnosticCode.
  */
-function toMaterializationDiagnostics(
+function convertModDiagnostic(
   modDiagnostics: readonly ModOperationDiagnostic[],
 ): readonly MaterializationDiagnostic[] {
   return Object.freeze(
     modDiagnostics.map((diag) =>
       Object.freeze({
-        code: diag.code as MaterializationDiagnosticCode,
+        code: diag.code,
         severity: diag.severity,
         message: diag.message,
         sourcePath: diag.sourcePath,
@@ -319,7 +331,7 @@ export function resolveCopyWithMods(
     return {
       ok: false,
       diagnostics: [
-        toMaterializationDiagnostic(resolved.diagnostic, record, modContext.sourcePath),
+        convertCopyDiagnostic(resolved.diagnostic, record, modContext.sourcePath),
       ],
     };
   }
@@ -376,7 +388,7 @@ export function materializeCopyWithMods(
     return {
       ok: false,
       diagnostics: [
-        toMaterializationDiagnostic(resolved.diagnostic, record, modContext.sourcePath),
+        convertCopyDiagnostic(resolved.diagnostic, record, modContext.sourcePath),
       ],
     };
   }
@@ -394,7 +406,7 @@ export function materializeCopyWithMods(
 
   let diagnostics: readonly MaterializationDiagnostic[] = [];
   if (isPlainObject(copyValue) && copyValue._mod !== undefined) {
-    diagnostics = toMaterializationDiagnostics(
+    diagnostics = convertModDiagnostic(
       applyModBlock(
         clonedBase.remaining,
         record,
@@ -413,8 +425,8 @@ export function materializeCopyWithMods(
     return {
       ok: false,
       diagnostics: [Object.freeze({
-        code: "INVALID_COPY_REFERENCE" as MaterializationDiagnosticCode,
-        severity: "error" as DiagnosticSeverity,
+        code: "INVALID_COPY_REFERENCE",
+    severity: "error",
         message: `Successful materialization requires non-"unknown" sourceEntityKind and sourcePath`,
         sourcePath: modContext.sourcePath,
         entityName: record.name,

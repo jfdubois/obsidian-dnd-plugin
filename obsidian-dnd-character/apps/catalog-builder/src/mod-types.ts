@@ -294,6 +294,15 @@ export interface MaterializationDiagnostic {
   readonly fieldTarget?: string;
   readonly mode?: string;
   readonly rawParam?: unknown;
+  /** Candidates matched during AMBIGUOUS_BASE_ENTITY. */
+  readonly ambiguityCandidates?: readonly MaterializationAmbiguityCandidate[];
+}
+
+export interface MaterializationAmbiguityCandidate {
+  readonly name: string;
+  readonly source: string;
+  readonly entityKind: string;
+  readonly sourcePath: string;
 }
 
 /* ── Materialized resolved record contract ───────────────────────

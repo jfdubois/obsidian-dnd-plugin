@@ -91,6 +91,7 @@ export {
 
 export {
   /* Copy resolver types */
+  type AmbiguityCandidate,
   type RawCopyValue,
   type CopyChainStep,
   type CopyResolutionResult,
