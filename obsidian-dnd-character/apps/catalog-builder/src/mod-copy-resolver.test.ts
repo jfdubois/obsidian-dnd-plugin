@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import type { CopyResolverContext } from "./copy-resolver";
-import { resolveCopyWithMods, type CopyModRawRecord } from "./mod-copy-resolver";
+import {
+  materializeCopyWithMods,
+  resolveCopyWithMods,
+  type CopyModRawRecord,
+} from "./mod-copy-resolver";
+import type { MaterializationDiagnostic } from "./mod-types";
 
 function makeContext(base: CopyModRawRecord): CopyResolverContext {
   return {
@@ -178,5 +183,299 @@ describe("resolveCopyWithMods dispatcher integration", () => {
         },
       },
     });
+  });
+});
+
+describe("materializeCopyWithMods", () => {
+  it("returns MaterializedResolvedRecord with inheritance chain on success", () => {
+    const base: CopyModRawRecord = {
+      name: "Goblin",
+      source: "MPMM",
+      remaining: { size: "S", trait: [] },
+    };
+    const variant: CopyModRawRecord = {
+      name: "Boggart",
+      source: "MPMM",
+      remaining: { _copy: { name: "Goblin", source: "MPMM" } },
+    };
+
+    const result = materializeCopyWithMods(variant, makeContext(base), {
+      sourcePath: "source.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected materialization success");
+    expect(result.result.record.name).toBe("Boggart");
+    expect(result.result.record.source).toBe("MPMM");
+    expect(result.result.record.remaining.size).toBe("S");
+    expect(result.result.inheritanceChain).toHaveLength(1);
+    expect(result.result.inheritanceChain[0]).toEqual({
+      entityName: "Goblin",
+      sourceAbbr: "MPMM",
+      entityKind: "monster",
+      sourcePath: "source.json",
+      identity: { name: "Goblin", source: "MPMM" },
+    });
+    expect(result.result.diagnostics).toHaveLength(0);
+  });
+
+  it("returns empty inheritance chain for direct record with no _copy", () => {
+    const direct: CopyModRawRecord = {
+      name: "Human",
+      source: "PHB",
+      remaining: { size: "M", entries: ["Adaptable"] },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "race.json": {
+          filePath: "race.json",
+          collections: [
+            {
+              entityKind: "race",
+              recordCount: 1,
+              records: [direct],
+            },
+          ],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(direct, ctx, {
+      sourcePath: "race.json",
+      sourceEntityKind: "race",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected materialization failure for direct record");
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "NO_COPY_FIELD",
+      entityName: "Human",
+      entitySource: "PHB",
+    });
+  });
+
+  it("propagates copy resolution failure as MaterializationDiagnostic", () => {
+    const variant: CopyModRawRecord = {
+      name: "Missing Base",
+      source: "TST",
+      remaining: { _copy: { name: "NonExistent", source: "XXX" } },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            {
+              entityKind: "monster",
+              recordCount: 1,
+              records: [variant],
+            },
+          ],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, {
+      sourcePath: "monster.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected materialization failure");
+    expect(result.diagnostics).toHaveLength(1);
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "BASE_ENTITY_NOT_FOUND",
+      entityName: "Missing Base",
+      entitySource: "TST",
+      fieldTarget: "_copy",
+    });
+  });
+
+  it("propagates mod failure as MaterializationDiagnostic", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { trait: [] },
+    };
+    const variant: CopyModRawRecord = {
+      name: "Bad Mod",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: "Base",
+          source: "TST",
+          _mod: { trait: { mode: "nonexistentMode" } },
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, makeContext(base), {
+      sourcePath: "source.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected materialization failure");
+    expect(result.diagnostics).toHaveLength(1);
+    const diag = result.diagnostics[0] as MaterializationDiagnostic;
+    expect(diag.code).toBe("UNKNOWN_MOD_MODE");
+    expect(diag.entityName).toBe("Bad Mod");
+    expect(diag.fieldTarget).toBe("trait");
+    expect(diag.mode).toBe("nonexistentMode");
+  });
+
+  it("preserves exact CopyChainStep fields in inheritance chain", () => {
+    const base: CopyModRawRecord = {
+      name: "Centaur",
+      source: "GGR",
+      remaining: { size: "L" },
+    };
+    const middle: CopyModRawRecord = {
+      name: "Centaur MOT",
+      source: "MOT",
+      remaining: { _copy: { name: "Centaur", source: "GGR" } },
+    };
+    const variant: CopyModRawRecord = {
+      name: "Centaur Variant",
+      source: "MOT",
+      remaining: { _copy: { name: "Centaur MOT", source: "MOT" } },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            {
+              entityKind: "monster",
+              recordCount: 3,
+              records: [base, middle, variant],
+            },
+          ],
+          totalRecords: 3,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, {
+      sourcePath: "monster.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected materialization success");
+    expect(result.result.inheritanceChain).toHaveLength(2);
+    expect(result.result.inheritanceChain[0]).toMatchObject({
+      entityName: "Centaur MOT",
+      sourceAbbr: "MOT",
+      entityKind: "monster",
+      sourcePath: "monster.json",
+    });
+    expect(result.result.inheritanceChain[1]).toMatchObject({
+      entityName: "Centaur",
+      sourceAbbr: "GGR",
+      entityKind: "monster",
+      sourcePath: "monster.json",
+    });
+  });
+
+  it("includes mod diagnostics in failure result", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { trait: [] },
+    };
+    const variant: CopyModRawRecord = {
+      name: "Multi Mod Fail",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: "Base",
+          source: "TST",
+          _mod: {
+            _: [{ mode: "addSenses", senses: { type: "darkvision", range: 60 } }],
+            trait: { mode: "inventedMode" },
+          },
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, makeContext(base), {
+      sourcePath: "source.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected materialization failure");
+    expect(result.diagnostics.length).toBeGreaterThanOrEqual(1);
+    const unknownMode = result.diagnostics.find((d) => d.code === "UNKNOWN_MOD_MODE");
+    expect(unknownMode).toBeDefined();
+    if (unknownMode) {
+      expect(unknownMode.fieldTarget).toBe("trait");
+      expect(unknownMode.mode).toBe("inventedMode");
+    }
+  });
+
+  it("result record is independent clone (mutation safety)", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { trait: [{ name: "Original" }] },
+    };
+    const variant: CopyModRawRecord = {
+      name: "Variant",
+      source: "TST",
+      remaining: { _copy: { name: "Base", source: "TST" } },
+    };
+
+    const result = materializeCopyWithMods(variant, makeContext(base), {
+      sourcePath: "source.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected materialization success");
+    const traits = result.result.record.remaining.trait as { name: string }[];
+    if (!Array.isArray(traits)) throw new Error("Expected trait array");
+    traits.push({ name: "Injected" });
+    expect(base.remaining.trait).toEqual([{ name: "Original" }]);
+  });
+
+  it("materialized record carries correct diagnostics type", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { trait: [] },
+    };
+    const variant: CopyModRawRecord = {
+      name: "Variant",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: "Base",
+          source: "TST",
+          _mod: { trait: { mode: "appendArr", items: { name: "Added" } } },
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, makeContext(base), {
+      sourcePath: "source.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected materialization success");
+    expect(Array.isArray(result.result.diagnostics)).toBe(true);
+    expect(result.result.diagnostics).toHaveLength(0);
+    // Verify the record has the applied mod
+    expect(result.result.record.remaining.trait).toEqual([
+      { name: "Added" },
+    ]);
   });
 });

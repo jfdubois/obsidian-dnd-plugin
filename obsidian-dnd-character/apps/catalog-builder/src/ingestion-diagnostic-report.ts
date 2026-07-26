@@ -9,7 +9,7 @@ import {
 import { resolveCopyWithMods, type CopyModRawRecord } from "./mod-copy-resolver";
 import { KNOWN_RAW_FIELDS, type RawBoundaryResult, type RawRecord } from "./raw-boundary";
 import type { DiagnosticSeverity, RawLoaderDiagnostic, RawLoadResult } from "./raw-loader";
-import type { ModOperationDiagnostic } from "./mod-types";
+import type { MaterializationDiagnostic } from "./mod-types";
 
 export interface IngestionDiagnosticReportInput {
   readonly rawLoadResult?: Pick<RawLoadResult, "diagnostics">;
@@ -24,7 +24,7 @@ export interface IngestionParseFailure {
 }
 
 export interface IngestionResolutionFailure {
-  readonly code: CopyDiagnosticCode | ModOperationDiagnostic["code"];
+  readonly code: CopyDiagnosticCode | MaterializationDiagnostic["code"];
   readonly severity: DiagnosticSeverity;
   readonly message: string;
   readonly sourcePath: string;
@@ -35,7 +35,7 @@ export interface IngestionResolutionFailure {
   readonly mode?: string;
   readonly rawParam?: unknown;
   readonly copyDiagnostic?: CopyResolverDiagnostic;
-  readonly modDiagnostic?: ModOperationDiagnostic;
+  readonly modDiagnostic?: MaterializationDiagnostic;
 }
 
 export interface EntityFieldInventoryReport {
@@ -123,7 +123,7 @@ function createCopyFailure(
 }
 
 function createModFailure(
-  diagnostic: ModOperationDiagnostic,
+  diagnostic: MaterializationDiagnostic,
   sourcePath: string,
   entityType: string,
   record: RawRecord,

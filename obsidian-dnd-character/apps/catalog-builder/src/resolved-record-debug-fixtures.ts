@@ -123,25 +123,7 @@ function findRecordLocation(
   return undefined;
 }
 
-function findChainStepLocation(
-  context: CopyResolverContext,
-  step: CopyChainStep,
-): RecordLocation | undefined {
-  for (const [sourcePath, envelope] of Object.entries(context.validatedFiles)) {
-    for (const collection of envelope.collections) {
-      const matchesRecord = collection.records.some(
-        (record) => record.name === step.entityName && record.source === step.sourceAbbr,
-      );
-      if (matchesRecord) {
-        return {
-          sourcePath,
-          entityKind: collection.entityKind,
-        };
-      }
-    }
-  }
-  return undefined;
-}
+
 
 function createIdentity(
   record: CopyModRawRecord,
@@ -228,18 +210,14 @@ export function createResolvedRecordDebugFixture(
   }
 
   const inheritanceChain = isCopyResolutionSuccess(copyResult)
-    ? copyResult.chain.map((step) => {
-        const location = findChainStepLocation(context, step) ?? sourceLocation;
-        return {
-          ...step,
-          sourcePath: location.sourcePath,
-          identity: {
-            entityKind: location.entityKind,
-            name: step.entityName,
-            source: step.sourceAbbr,
-          },
-        };
-      })
+    ? copyResult.chain.map((step) => ({
+        ...step,
+        identity: {
+          entityKind: step.entityKind,
+          name: step.entityName,
+          source: step.sourceAbbr,
+        },
+      }))
     : [];
   const clonedResolvedRecord = cloneRecord(resolvedRecord.record);
 

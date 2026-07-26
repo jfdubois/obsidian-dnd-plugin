@@ -536,7 +536,7 @@ function resolveCopyChain(
 
   if (candidates.length > 1) {
     const candidateDescs = candidates
-      .map((c) => `"${c.record.name}" (${c.record.source})`)
+      .map((c) => `"${c.record.name}" (${c.record.source}) [${c.entityKind}] at "${c.sourcePath}"`)
       .join(", ");
     return createFailure(
       "AMBIGUOUS_BASE_ENTITY",

@@ -237,4 +237,176 @@ describe("createResolvedRecordDebugFixture", () => {
     expect(base.remaining.classFeatures).toEqual(["Spellcasting|Wizard|PHB|1"]);
     expect(variant.remaining).toEqual({ _copy: { name: "Wizard", source: "PHB" } });
   });
+
+  it("uses exact CopyChainStep entityKind and sourcePath in inheritance chain (not rediscovered)", () => {
+    const base: TestRecord = {
+      name: "Goblin",
+      source: "MPMM",
+      remaining: { size: "S" },
+    };
+    const variant: TestRecord = {
+      name: "Boggart",
+      source: "MPMM",
+      remaining: { _copy: { name: "Goblin", source: "MPMM" } },
+    };
+
+    const fixture = fixtureOrThrow(
+      createResolvedRecordDebugFixture(
+        variant,
+        makeContext("monster.json", "monster", [base, variant]),
+      ),
+    );
+
+    expect(fixture.inheritanceChain).toHaveLength(1);
+    const step = fixture.inheritanceChain[0]!;
+    expect(step.entityKind).toBe("monster");
+    expect(step.sourcePath).toBe("monster.json");
+    expect(step.entityName).toBe("Goblin");
+    expect(step.sourceAbbr).toBe("MPMM");
+  });
+
+  it("preserves CopyChainStep sourcePath across multi-step chains", () => {
+    const base: TestRecord = {
+      name: "Centaur",
+      source: "GGR",
+      remaining: { size: "L" },
+    };
+    const middle: TestRecord = {
+      name: "Centaur MOT",
+      source: "MOT",
+      remaining: { _copy: { name: "Centaur", source: "GGR" } },
+    };
+    const variant: TestRecord = {
+      name: "Centaur Variant",
+      source: "MOT",
+      remaining: { _copy: { name: "Centaur MOT", source: "MOT" } },
+    };
+
+    const fixture = fixtureOrThrow(
+      createResolvedRecordDebugFixture(
+        variant,
+        makeContext("monster.json", "monster", [base, middle, variant]),
+      ),
+    );
+
+    expect(fixture.inheritanceChain).toHaveLength(2);
+    expect(fixture.inheritanceChain[0]!.sourcePath).toBe("monster.json");
+    expect(fixture.inheritanceChain[1]!.sourcePath).toBe("monster.json");
+    expect(fixture.inheritanceChain[0]!.entityKind).toBe("monster");
+    expect(fixture.inheritanceChain[1]!.entityKind).toBe("monster");
+  });
+
+  it("returns diagnostic with sourcePath when copy resolution fails", () => {
+    const variant: TestRecord = {
+      name: "Missing Base",
+      source: "TST",
+      remaining: { _copy: { name: "NonExistent", source: "XXX" } },
+    };
+
+    const result = createResolvedRecordDebugFixture(
+      variant,
+      makeContext("monster.json", "monster", [variant]),
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "COPY_RESOLUTION_FAILED",
+      sourcePath: "monster.json",
+      identity: { name: "Missing Base", source: "TST" },
+    });
+  });
+
+  it("accepts explicit sourcePath option and uses it as location", () => {
+    const record: TestRecord = {
+      name: "Human",
+      source: "PHB",
+      remaining: { entries: ["Adaptable"] },
+    };
+
+    const fixture = fixtureOrThrow(
+      createResolvedRecordDebugFixture(
+        record,
+        makeContext("race.json", "race", [record]),
+        { sourcePath: "race.json" },
+      ),
+    );
+
+    expect(fixture.sourcePath).toBe("race.json");
+    expect(fixture.identity.entityKind).toBe("race");
+  });
+
+  it("identity matches exact entityKind from source location, not name-based lookup", () => {
+    const ctx = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            {
+              entityKind: "monster",
+              recordCount: 2,
+              records: [
+                { name: "Goblin", source: "MPMM", remaining: {} },
+                { name: "Boggart", source: "MPMM", remaining: { _copy: { name: "Goblin", source: "MPMM" } } },
+              ],
+            },
+          ],
+          totalRecords: 2,
+        },
+        "monsterFluff.json": {
+          filePath: "monsterFluff.json",
+          collections: [
+            {
+              entityKind: "monsterFluff",
+              recordCount: 1,
+              records: [
+                { name: "Goblin", source: "MPMM", remaining: { lore: "Cunning creature" } },
+              ],
+            },
+          ],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const variant: TestRecord = {
+      name: "Boggart",
+      source: "MPMM",
+      remaining: { _copy: { name: "Goblin", source: "MPMM" } },
+    };
+
+    const result = createResolvedRecordDebugFixture(variant, ctx, { sourcePath: "monster.json" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    expect(result.fixture.identity.entityKind).toBe("monster");
+    expect(result.fixture.sourcePath).toBe("monster.json");
+  });
+
+  it("debug fixture resolved record is independent from source records", () => {
+    const base: TestRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { trait: [{ name: "Original" }] },
+    };
+    const variant: TestRecord = {
+      name: "Variant",
+      source: "TST",
+      remaining: { _copy: { name: "Base", source: "TST" } },
+    };
+
+    const fixture = fixtureOrThrow(
+      createResolvedRecordDebugFixture(
+        variant,
+        makeContext("monster.json", "monster", [base, variant]),
+      ),
+    );
+
+    const traits = fixture.resolvedRecord.remaining.trait as { name: string }[];
+    if (!Array.isArray(traits)) throw new Error("Expected trait array");
+    traits.push({ name: "Injected" });
+
+    expect(base.remaining.trait).toEqual([{ name: "Original" }]);
+    expect(variant.remaining).toEqual({ _copy: { name: "Base", source: "TST" } });
+  });
 });

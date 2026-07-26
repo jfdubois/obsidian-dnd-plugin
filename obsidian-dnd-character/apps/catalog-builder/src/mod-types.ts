@@ -266,6 +266,54 @@ export type ModDiagnosticCode =
   | "MOD_FIELD_TARGET_MISSING"
   | "MOD_EXECUTION_ERROR";
 
+/* ── Materialization diagnostic union ────────────────────────────
+
+   The copy resolver emits CopyDiagnosticCode values. The mod resolver
+   emits ModDiagnosticCode values. Materialization diagnostics must
+   carry either code type without unsafe casting.
+───────────────────────────────────────────────────────────────────── */
+
+import type { CopyDiagnosticCode } from "./copy-resolver";
+
+/** Raw record shape used by the copy+mod materialization pipeline. */
+export interface CopyModRawRecord {
+  readonly name: string;
+  readonly source: string;
+  readonly remaining: Record<string, unknown>;
+}
+
+export type MaterializationDiagnosticCode = CopyDiagnosticCode | ModDiagnosticCode;
+
+export interface MaterializationDiagnostic {
+  readonly code: MaterializationDiagnosticCode;
+  readonly severity: DiagnosticSeverity;
+  readonly message: string;
+  readonly sourcePath?: string;
+  readonly entityName?: string;
+  readonly entitySource?: string;
+  readonly fieldTarget?: string;
+  readonly mode?: string;
+  readonly rawParam?: unknown;
+}
+
+/* ── Materialized resolved record contract ───────────────────────
+
+   The authoritative output of copy+mod materialization. Carries the
+   final record, the inheritance chain, and any diagnostics emitted
+   during resolution. Replaces the informal record+diagnostics tuple.
+───────────────────────────────────────────────────────────────────── */
+
+import type { CopyChainStep } from "./copy-resolver";
+
+export interface MaterializedResolvedRecord {
+  /** The final materialized record with all _copy and _mod applied. */
+  readonly record: CopyModRawRecord;
+  /** Ordered inheritance chain from immediate base to root. */
+  readonly inheritanceChain: readonly CopyChainStep[];
+  /** Diagnostics emitted during materialization (warnings only on success). */
+  readonly diagnostics: readonly MaterializationDiagnostic[];
+}
+
 export interface ModApplyResult {
   readonly record: Record<string, unknown>;
   readonly diagnostics: readonly ModOperationDiagnostic[];

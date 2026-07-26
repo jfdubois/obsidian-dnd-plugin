@@ -6,8 +6,16 @@ import {
 import { applyArrayModOperation } from "./mod-array-operations";
 import { applyRootModOperation } from "./mod-root-operations";
 import { applyScalarTextModOperation } from "./mod-scalar-text-operations";
-import { type ModOperationDiagnostic } from "./mod-types";
+import type {
+  CopyModRawRecord,
+  MaterializationDiagnostic,
+  MaterializedResolvedRecord,
+  ModOperationDiagnostic,
+} from "./mod-types";
 import type { DiagnosticSeverity } from "./raw-loader";
+
+// Re-export for backward compatibility
+export type { CopyModRawRecord } from "./mod-types";
 
 const ARRAY_MODES = new Set([
   "appendArr",
@@ -44,21 +52,15 @@ export interface CopyModContext {
   readonly sourceEntityKind?: string;
 }
 
-export interface CopyModRawRecord {
-  readonly name: string;
-  readonly source: string;
-  readonly remaining: Record<string, unknown>;
-}
-
 export type CopyModResolutionResult =
   | {
       readonly ok: true;
       readonly record: CopyModRawRecord;
-      readonly diagnostics: readonly ModOperationDiagnostic[];
+      readonly diagnostics: readonly MaterializationDiagnostic[];
     }
   | {
       readonly ok: false;
-      readonly diagnostics: readonly ModOperationDiagnostic[];
+      readonly diagnostics: readonly MaterializationDiagnostic[];
     };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -255,7 +257,7 @@ export function resolveCopyWithMods(
       ok: false,
       diagnostics: [
         Object.freeze({
-          code: resolved.diagnostic.code as ModOperationDiagnostic["code"],
+          code: resolved.diagnostic.code,
           severity: resolved.diagnostic.severity,
           message: resolved.diagnostic.message,
           sourcePath: modContext.sourcePath,
@@ -264,7 +266,7 @@ export function resolveCopyWithMods(
           fieldTarget: "_copy",
           mode: undefined,
           rawParam: resolved.diagnostic.rawCopy,
-        }) as ModOperationDiagnostic,
+        }) as MaterializationDiagnostic,
       ],
     };
   }
@@ -297,5 +299,77 @@ export function resolveCopyWithMods(
     ok: true,
     record: { name: record.name, source: record.source, remaining: clonedBase.remaining },
     diagnostics: [],
+  };
+}
+
+/**
+ * Materializes a copy+mod record into the authoritative MaterializedResolvedRecord contract.
+ * Includes the inheritance chain, final record, and all diagnostics.
+ */
+export function materializeCopyWithMods(
+  record: CopyModRawRecord,
+  context: CopyResolverContext,
+  modContext: CopyModContext = {},
+):
+  | { readonly ok: true; readonly result: MaterializedResolvedRecord }
+  | { readonly ok: false; readonly diagnostics: readonly MaterializationDiagnostic[] } {
+  const copyValue = record.remaining._copy;
+  const resolved = resolveCopy(record, context, {
+    sourceEntityKind: modContext.sourceEntityKind,
+    sourcePath: modContext.sourcePath,
+  });
+
+  if (isCopyResolutionFailure(resolved)) {
+    return {
+      ok: false,
+      diagnostics: [
+        Object.freeze({
+          code: resolved.diagnostic.code,
+          severity: resolved.diagnostic.severity,
+          message: resolved.diagnostic.message,
+          sourcePath: modContext.sourcePath,
+          entityName: record.name,
+          entitySource: record.source,
+          fieldTarget: "_copy",
+          mode: undefined,
+          rawParam: resolved.diagnostic.rawCopy,
+        }) as MaterializationDiagnostic,
+      ],
+    };
+  }
+
+  const chain = resolved.chain;
+  const clonedBase = cloneRecord(resolved.baseEntity);
+
+  // Apply direct-field overlay: copy derived fields that are non-null into the cloned base
+  for (const [key, value] of Object.entries(record.remaining)) {
+    if (key.startsWith("_")) continue;
+    if (value !== null && value !== undefined) {
+      clonedBase.remaining[key] = cloneUnknown(value);
+    }
+  }
+
+  let diagnostics: readonly MaterializationDiagnostic[] = [];
+  if (isPlainObject(copyValue) && copyValue._mod !== undefined) {
+    // Safe: ModDiagnosticCode is a subset of MaterializationDiagnosticCode
+    diagnostics = applyModBlock(
+      clonedBase.remaining,
+      record,
+      copyValue._mod,
+      modContext.sourcePath,
+    ) as readonly MaterializationDiagnostic[];
+  }
+
+  if (diagnostics.length > 0) {
+    return { ok: false, diagnostics };
+  }
+
+  return {
+    ok: true,
+    result: {
+      record: { name: record.name, source: record.source, remaining: clonedBase.remaining },
+      inheritanceChain: chain,
+      diagnostics,
+    },
   };
 }

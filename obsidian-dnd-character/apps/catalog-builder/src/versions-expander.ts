@@ -3,7 +3,7 @@ import {
   resolveCopyWithMods,
   type CopyModRawRecord,
 } from "./mod-copy-resolver";
-import type { ModOperationDiagnostic } from "./mod-types";
+import type { MaterializationDiagnostic } from "./mod-types";
 import type { DiagnosticSeverity } from "./raw-loader";
 import type { RawRecord, ValidatedCollection, ValidatedFileEnvelope } from "./raw-boundary";
 
@@ -24,7 +24,7 @@ export interface VersionExpansionDiagnostic {
   readonly fieldTarget?: string;
   readonly mode?: string;
   readonly rawPayload?: unknown;
-  readonly modDiagnostics?: readonly ModOperationDiagnostic[];
+  readonly modDiagnostics?: readonly MaterializationDiagnostic[];
 }
 
 export interface VersionExpansionResult {
@@ -157,7 +157,7 @@ function modFailureDiagnostic(
   entityKind: string,
   sourceRecord: RawRecord,
   versionIndex: number,
-  modDiagnostics: readonly ModOperationDiagnostic[],
+  modDiagnostics: readonly MaterializationDiagnostic[],
 ): VersionExpansionDiagnostic {
   const first = modDiagnostics[0];
   return Object.freeze({

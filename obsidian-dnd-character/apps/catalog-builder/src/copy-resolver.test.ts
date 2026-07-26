@@ -1054,3 +1054,192 @@ describe("extractStructuredIdentity", () => {
     expect(identity.name).toBe("Channel Divinity");
   });
 });
+
+/* ── AMBIGUOUS_BASE_ENTITY structured identity ─────────────────── */
+
+describe("AMBIGUOUS_BASE_ENTITY structured identity", () => {
+  it("includes entity kind and source path in ambiguous diagnostic message", () => {
+    const context = makeMultiCollectionContext([
+      {
+        entityKind: "monster",
+        records: [
+          { name: "Goblin", source: "MPMM" },
+          { name: "Goblin", source: "MPMM" },
+        ],
+      },
+    ]);
+
+    const result = resolveCopy(
+      makeRecord("Goblin Copy", "MPMM", {
+        _copy: { name: "Goblin", source: "MPMM" },
+      }),
+      context,
+      { sourceEntityKind: "monster", sourcePath: "test.json" },
+    );
+
+    expect(isCopyResolutionFailure(result)).toBe(true);
+    if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
+    expect(result.diagnostic.code).toBe("AMBIGUOUS_BASE_ENTITY");
+    expect(result.diagnostic.message).toContain("monster");
+    expect(result.diagnostic.message).toContain("test.json");
+  });
+
+  it("lists all candidate details in ambiguous diagnostic", () => {
+    const context = makeMultiCollectionContext([
+      {
+        entityKind: "subclass",
+        records: [
+          { name: "Battle Master", source: "PHB", remaining: { className: "Fighter", classSource: "PHB", shortName: "Battle Master" } },
+          { name: "Battle Master", source: "PHB", remaining: { className: "Fighter", classSource: "PHB", shortName: "Battle Master" } },
+          { name: "Battle Master", source: "PHB", remaining: { className: "Fighter", classSource: "PHB", shortName: "Battle Master" } },
+        ],
+      },
+    ]);
+
+    const result = resolveCopy(
+      makeRecord("BM Copy", "PHB", {
+        _copy: { name: "Battle Master", source: "PHB", className: "Fighter", classSource: "PHB", shortName: "Battle Master" },
+      }),
+      context,
+      { sourceEntityKind: "subclass", sourcePath: "test.json" },
+    );
+
+    expect(isCopyResolutionFailure(result)).toBe(true);
+    if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
+    expect(result.diagnostic.code).toBe("AMBIGUOUS_BASE_ENTITY");
+    expect(result.diagnostic.message).toContain("3 candidates");
+  });
+
+  it("resolves uniquely when structured identity disambiguates", () => {
+    const context = makeMultiCollectionContext([
+      {
+        entityKind: "subclass",
+        records: [
+          { name: "Battle Master", source: "PHB", remaining: { className: "Fighter", classSource: "PHB", shortName: "Battle Master" } },
+          { name: "Battle Master", source: "XPHB", remaining: { className: "Fighter", classSource: "XPHB", shortName: "Battle Master" } },
+        ],
+      },
+    ]);
+
+    const result = resolveCopy(
+      makeRecord("BM Copy", "PHB", {
+        _copy: { name: "Battle Master", source: "PHB", className: "Fighter", classSource: "PHB", shortName: "Battle Master" },
+      }),
+      context,
+      { sourceEntityKind: "subclass", sourcePath: "test.json" },
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.baseEntity.source).toBe("PHB");
+  });
+
+  it("copy chain uses exact sourcePath from resolution, not name-based rediscovery", () => {
+    const ctx = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            {
+              entityKind: "monster",
+              recordCount: 2,
+              records: [
+                { name: "Goblin", source: "MPMM", remaining: {} },
+                { name: "Boggart", source: "MPMM", remaining: { _copy: { name: "Goblin", source: "MPMM" } } },
+              ],
+            },
+          ],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = resolveCopy(
+      makeRecord("Boggart", "MPMM", { _copy: { name: "Goblin", source: "MPMM" } }),
+      ctx,
+      { sourceEntityKind: "monster", sourcePath: "monster.json" },
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.chain).toHaveLength(1);
+    expect(result.chain[0]!.sourcePath).toBe("monster.json");
+    expect(result.chain[0]!.entityKind).toBe("monster");
+  });
+
+  it("copy chain preserves entityKind across cross-collection resolution", () => {
+    const ctx = {
+      validatedFiles: {
+        "test.json": {
+          filePath: "test.json",
+          collections: [
+            {
+              entityKind: "monster",
+              recordCount: 1,
+              records: [
+                { name: "Centaur", source: "GGR", remaining: {} },
+              ],
+            },
+            {
+              entityKind: "monsterFluff",
+              recordCount: 1,
+              records: [
+                { name: "Centaur Fluff", source: "GGR", remaining: { _copy: { name: "Centaur", source: "GGR" } } },
+              ],
+            },
+          ],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = resolveCopy(
+      makeRecord("Centaur Fluff", "GGR", { _copy: { name: "Centaur", source: "GGR" } }),
+      ctx,
+      { sourceEntityKind: "monsterFluff", sourcePath: "test.json" },
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.chain).toHaveLength(1);
+    expect(result.chain[0]!.entityKind).toBe("monsterFluff");
+    expect(result.chain[0]!.sourcePath).toBe("test.json");
+  });
+
+  it("requires sourceEntityKind for multi-collection context to resolve correctly", () => {
+    const ctx = {
+      validatedFiles: {
+        "test.json": {
+          filePath: "test.json",
+          collections: [
+            {
+              entityKind: "monster",
+              recordCount: 1,
+              records: [
+                { name: "Goblin", source: "MPMM", remaining: {} },
+              ],
+            },
+            {
+              entityKind: "monsterFluff",
+              recordCount: 1,
+              records: [
+                { name: "Goblin", source: "MPMM", remaining: { lore: "Cunning" } },
+              ],
+            },
+          ],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = resolveCopy(
+      makeRecord("Goblin Copy", "MPMM", { _copy: { name: "Goblin", source: "MPMM" } }),
+      ctx,
+      { sourceEntityKind: "monster", sourcePath: "test.json" },
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.chain[0]!.entityKind).toBe("monster");
+  });
+});
