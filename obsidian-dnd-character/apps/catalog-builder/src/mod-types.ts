@@ -306,22 +306,31 @@ export interface MaterializationDiagnostic {
 import type { CopyChainStep } from "./copy-resolver";
 
 export interface MaterializedResolvedRecord {
+  /** Identity of the derived record being materialized. */
+  readonly identity: {
+    readonly name: string;
+    readonly source: string;
+    readonly entityKind: string;
+    readonly sourcePath: string;
+    readonly discriminators: Record<string, unknown>;
+  };
   /** The final materialized record with all _copy and _mod applied. */
   readonly record: CopyModRawRecord;
   /** Ordered inheritance chain from immediate base to root. */
   readonly inheritanceChain: readonly CopyChainStep[];
-  /** Diagnostics emitted during materialization (warnings only on success). */
-  readonly diagnostics: readonly MaterializationDiagnostic[];
-  /** Entity kind of the derived record being materialized. */
-  readonly derivedEntityKind: string;
-  /** Identity of the terminal base entity after full chain resolution. */
-  readonly terminalBaseIdentity: {
-    readonly entityName: string;
-    readonly sourceAbbr: string;
+  /** Terminal base entity from the exact final CopyChainStep. */
+  readonly terminalBase: {
+    readonly name: string;
+    readonly source: string;
     readonly entityKind: string;
+    readonly sourcePath: string;
+    readonly identity: Record<string, unknown>;
   };
-  /** True when the source record carried a _preserve: true marker. Deferred metadata only—does not affect materialization execution. */
-  readonly deferredPreserve: boolean;
+  /** Metadata emitted during materialization. */
+  readonly metadata: {
+    readonly deferredPreserve: unknown;
+    readonly diagnostics: readonly MaterializationDiagnostic[];
+  };
 }
 
 export interface ModApplyResult {

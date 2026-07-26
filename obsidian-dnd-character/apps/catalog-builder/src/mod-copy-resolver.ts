@@ -50,8 +50,8 @@ const SCALAR_TEXT_MODES = new Set([
 ]);
 
 export interface CopyModContext {
-  readonly sourcePath?: string;
-  readonly sourceEntityKind?: string;
+  readonly sourcePath: string;
+  readonly sourceEntityKind: string;
 }
 
 export type CopyModResolutionResult =
@@ -84,7 +84,7 @@ function cloneRecord(record: CopyModRawRecord): CopyModRawRecord {
 function stripCopyDirectives(remaining: Record<string, unknown>): Record<string, unknown> {
   const stripped: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(remaining)) {
-    if (key !== "_copy" && key !== "_preserve") {
+    if (key !== "_copy" && key !== "_preserve" && key !== "_mod") {
       stripped[key] = value;
     }
   }
@@ -308,7 +308,7 @@ function applyModBlock(
 export function resolveCopyWithMods(
   record: CopyModRawRecord,
   context: CopyResolverContext,
-  modContext: CopyModContext = {},
+  modContext: CopyModContext,
 ): CopyModResolutionResult {
   const copyValue = record.remaining._copy;
   const resolved = resolveCopy(record, context, {
@@ -362,7 +362,7 @@ export function resolveCopyWithMods(
 export function materializeCopyWithMods(
   record: CopyModRawRecord,
   context: CopyResolverContext,
-  modContext: CopyModContext = {},
+  modContext: CopyModContext,
 ):
   | { readonly ok: true; readonly result: MaterializedResolvedRecord }
   | { readonly ok: false; readonly diagnostics: readonly MaterializationDiagnostic[] } {
@@ -408,19 +408,81 @@ export function materializeCopyWithMods(
     return { ok: false, diagnostics };
   }
 
+  // Reject if context fields would produce "unknown" in the result
+  if (modContext.sourceEntityKind === "unknown" || modContext.sourcePath === "unknown") {
+    return {
+      ok: false,
+      diagnostics: [Object.freeze({
+        code: "INVALID_COPY_REFERENCE" as MaterializationDiagnosticCode,
+        severity: "error" as DiagnosticSeverity,
+        message: `Successful materialization requires non-"unknown" sourceEntityKind and sourcePath`,
+        sourcePath: modContext.sourcePath,
+        entityName: record.name,
+        entitySource: record.source,
+        fieldTarget: "_copy",
+        mode: undefined,
+        rawParam: undefined,
+      })],
+    };
+  }
+
+  // Extract structured discriminators from the derived record's _copy value
+  const discriminators: Record<string, unknown> = {};
+  if (isPlainObject(copyValue)) {
+    for (const [key, value] of Object.entries(copyValue)) {
+      if (!key.startsWith("_")) {
+        discriminators[key] = value;
+      }
+    }
+  }
+
+  // Terminal base from the exact final CopyChainStep
+  const lastStep = chain.length > 0 ? chain[chain.length - 1]! : null;
+  const terminalBase: {
+    readonly name: string;
+    readonly source: string;
+    readonly entityKind: string;
+    readonly sourcePath: string;
+    readonly identity: Record<string, unknown>;
+  } = lastStep
+    ? {
+        name: lastStep.entityName,
+        source: lastStep.sourceAbbr,
+        entityKind: lastStep.entityKind,
+        sourcePath: lastStep.sourcePath,
+        identity: lastStep.identity as Record<string, unknown>,
+      }
+    : {
+        name: resolved.baseEntity.name,
+        source: resolved.baseEntity.source,
+        entityKind: modContext.sourceEntityKind,
+        sourcePath: modContext.sourcePath,
+        identity: {},
+      };
+
+  // Read deferred preserve from _copy._preserve and deep-clone it
+  let deferredPreserve: unknown = undefined;
+  if (isPlainObject(copyValue) && copyValue._preserve !== undefined) {
+    deferredPreserve = cloneUnknown(copyValue._preserve);
+  }
+
   return {
     ok: true,
     result: {
+      identity: {
+        name: record.name,
+        source: record.source,
+        entityKind: modContext.sourceEntityKind,
+        sourcePath: modContext.sourcePath,
+        discriminators,
+      },
       record: { name: record.name, source: record.source, remaining: stripCopyDirectives(clonedBase.remaining) },
       inheritanceChain: chain,
-      diagnostics,
-      derivedEntityKind: modContext.sourceEntityKind ?? "unknown",
-      terminalBaseIdentity: {
-        entityName: resolved.baseEntity.name,
-        sourceAbbr: resolved.baseEntity.source,
-        entityKind: chain.length > 0 ? chain[chain.length - 1]!.entityKind : (modContext.sourceEntityKind ?? "unknown"),
+      terminalBase,
+      metadata: {
+        deferredPreserve,
+        diagnostics,
       },
-      deferredPreserve: record.remaining._preserve === true,
     },
   };
 }
