@@ -24,9 +24,9 @@ None recorded.
 
 ## Validation baseline
 
-- `npm run check`: passing at Phase 3 structured identity correction
-- `npm run build`: passing at Phase 3 structured identity correction
-- Tests: 1627 passing
+- `npm run check`: passing at Prompt 3A-4 resolved-record debug fixture location handling
+- `npm run build`: passing at Prompt 3A-4 resolved-record debug fixture location handling
+- Tests: 1679 passing
 
 ## Catalog baseline
 
@@ -53,6 +53,11 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-26 — Prompt 3A-4 — Resolved-record debug fixture location handling
+Summary: Replaced loose first-match source path discovery in resolved-record debug fixtures with strict path-and-entity-kind location. `ResolvedRecordDebugFixtureOptions.sourcePath` and `sourceEntityKind` are now required. Lookup uses exact object identity first, then structured identity within the specified collection. Chain entries carry stored `CopyChainStep` values (`entityKind`, `sourcePath`, `identity`) directly without rediscovery from `RawBoundaryFile`. Terminal base trace sourced from `MaterializedResolvedRecord.terminalBase`. Diagnostic codes `SOURCE_ENTITY_KIND_REQUIRED`, `INVALID_SOURCE_ENTITY_KIND`, and `SOURCE_RECORD_NOT_FOUND` added. All 12 existing tests updated and passing.
+Validation: `npm --prefix obsidian-dnd-character run test -- apps/catalog-builder/src/resolved-record-debug-fixtures.test.ts` passes (12/12 tests, EXIT 0). `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 1679/1679 tests, EXIT 0). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Debug fixtures remain in-memory catalog-builder outputs only. No normalized catalog schemas, canonical ID construction, source-policy semantics, Obsidian API use, semantic mappings, or entity normalizer behavior modified.
 
 2026-07-25 — Phase 3 structured identity correction
 Summary: Replaced first-match name-and-source _copy lookup with entity-kind-aware structured identity matching and explicit ambiguity detection. Inventoried all 6 distinct _copy identity shapes across 2834 references in pinned 5eTools data. Copy resolution now matches using the complete non-directive key set from each _copy value (e.g. name+source, abbreviation+source, className+classSource+name+shortName+source, pantheon+name+source, raceName+raceSource+name+source). Ambiguous matches return AMBIGUOUS_BASE_ENTITY with all candidate paths. Cycle detection uses complete structured identity keys. Ref-parser validation is bypassed for _copy values without a 'name' field (e.g. itemType/abbreviation).

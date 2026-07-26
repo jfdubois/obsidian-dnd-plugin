@@ -159,6 +159,96 @@ function modeOf(rawOperation: unknown): string | undefined {
   return typeof rawOperation.mode === "string" ? rawOperation.mode : undefined;
 }
 
+/**
+ * Sets of field names that require an explicit _preserve directive to be copied
+ * from the base during a _copy merge. Matches 5eTools _MERGE_REQUIRES_PRESERVE_BASE.
+ */
+const MERGE_REQUIRES_PRESERVE = new Set([
+  "page",
+  "otherSources",
+  "referenceSources",
+  "srd",
+  "srd52",
+  "basicRules",
+  "basicRules2024",
+  "reprintedAs",
+  "hasFluff",
+  "hasFluffImages",
+  "hasToken",
+  "tokenCredit",
+  "tokenCustom",
+  "foundryTokenScale",
+  "altArt",
+  "_versions",
+]);
+
+/**
+ * Applies the 5eTools-compatible direct-field overlay merge.
+ *
+ * Semantics (matches 5eTools utils.js getCopy, lines 6168-6178):
+ * - Iterate over BASE keys.
+ * - If derived has exactly null for that key → delete from result.
+ * - If derived is absent (undefined) for that key → copy from base, unless
+ *   the key is preserve-gated and _preserve doesn't allow it.
+ * - If derived has any other value → leave derived value as-is.
+ * - Derived non-directive keys NOT in the base are kept as-is.
+ */
+function applyDirectFieldOverlay(
+  baseRemaining: Record<string, unknown>,
+  derivedRemaining: Record<string, unknown>,
+  copyValue: unknown,
+): void {
+  // First, overlay derived non-directive fields onto the base clone.
+  // This handles derived keys that exist or don't exist in the base.
+  for (const [key, value] of Object.entries(derivedRemaining)) {
+    if (key.startsWith("_")) continue;
+    if (value === null || value === undefined) continue;
+    baseRemaining[key] = cloneUnknown(value);
+  }
+
+  // Then, iterate over BASE keys to handle gap-fill and null-as-delete.
+  // This matches the upstream iteration direction (utils.js:6171-6177).
+  const preserveAllowance = computePreserveAllowance(copyValue);
+
+  for (const key of Object.keys(baseRemaining)) {
+    const derivedValue = derivedRemaining[key];
+
+    // If derived explicitly set this base key to null → delete from result
+    if (derivedValue === null) {
+      delete baseRemaining[key];
+      continue;
+    }
+
+    // If derived doesn't have this key (undefined) → copy from base, unless preserve-gated
+    if (derivedValue === undefined) {
+      if (MERGE_REQUIRES_PRESERVE.has(key)) {
+        if (!preserveAllowance.has("*") && !preserveAllowance.has(key)) {
+          delete baseRemaining[key];
+        }
+      }
+      // Otherwise base value stays (it's already in baseRemaining)
+    }
+    // If derived has a non-null, non-undefined value → already overlaid above; leave as-is
+  }
+}
+
+function computePreserveAllowance(copyValue: unknown): Set<string> {
+  const allowed = new Set<string>();
+  if (isPlainObject(copyValue) && isPlainObject(copyValue._preserve)) {
+    const preserve = copyValue._preserve as Record<string, unknown>;
+    if (preserve["*"] !== undefined) {
+      // Wildcard: all preserve-gated fields are allowed
+      allowed.add("*");
+    }
+    for (const [key, value] of Object.entries(preserve)) {
+      if (key !== "*" && value != null) {
+        allowed.add(key);
+      }
+    }
+  }
+  return allowed;
+}
+
 function deepFreeze<T>(value: T): T {
   if (typeof value !== "object" || value === null) return value;
   Object.freeze(value);
@@ -392,14 +482,7 @@ export function resolveCopyWithMods(
     };
   }
   const clonedBase = cloneRecord(resolved.baseEntity);
-  // Apply direct-field overlay: copy derived fields that are non-null into the cloned base
-  // This matches 5eTools behavior where the derived record's own fields take precedence
-  for (const [key, value] of Object.entries(record.remaining)) {
-    if (key.startsWith("_")) continue; // Skip directives (_copy, _preserve, _mod)
-    if (value !== null && value !== undefined) {
-      clonedBase.remaining[key] = cloneUnknown(value);
-    }
-  }
+  applyDirectFieldOverlay(clonedBase.remaining, record.remaining, copyValue);
   if (!isPlainObject(copyValue) || copyValue._mod === undefined) {
     return {
       ok: true,
@@ -452,13 +535,7 @@ export function materializeCopyWithMods(
   const chain = resolved.chain;
   const clonedBase = cloneRecord(resolved.baseEntity);
 
-  // Apply direct-field overlay: copy derived fields that are non-null into the cloned base
-  for (const [key, value] of Object.entries(record.remaining)) {
-    if (key.startsWith("_")) continue;
-    if (value !== null && value !== undefined) {
-      clonedBase.remaining[key] = cloneUnknown(value);
-    }
-  }
+  applyDirectFieldOverlay(clonedBase.remaining, record.remaining, copyValue);
 
   let diagnostics: readonly MaterializationDiagnostic[] = [];
   if (isPlainObject(copyValue) && copyValue._mod !== undefined) {

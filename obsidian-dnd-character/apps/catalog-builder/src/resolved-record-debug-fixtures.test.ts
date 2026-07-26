@@ -49,7 +49,11 @@ describe("createResolvedRecordDebugFixture", () => {
     };
 
     const fixture = fixtureOrThrow(
-      createResolvedRecordDebugFixture(record, makeContext("race.json", "race", [record])),
+      createResolvedRecordDebugFixture(
+        record,
+        makeContext("race.json", "race", [record]),
+        { sourcePath: "race.json", sourceEntityKind: "race" },
+      ),
     );
 
     expect(fixture.sourcePath).toBe("race.json");
@@ -84,6 +88,7 @@ describe("createResolvedRecordDebugFixture", () => {
       createResolvedRecordDebugFixture(
         variant,
         makeContext("race.json", "race", [base, middle, variant]),
+        { sourcePath: "race.json", sourceEntityKind: "race" },
       ),
     );
 
@@ -146,6 +151,7 @@ describe("createResolvedRecordDebugFixture", () => {
       createResolvedRecordDebugFixture(
         variant,
         makeContext("background.json", "background", [base, variant]),
+        { sourcePath: "background.json", sourceEntityKind: "background" },
       ),
     );
 
@@ -169,6 +175,9 @@ describe("createResolvedRecordDebugFixture", () => {
 
     const result = createResolvedRecordDebugFixture(record, {
       validatedFiles: {},
+    }, {
+      sourcePath: "missing.json",
+      sourceEntityKind: "race",
     });
 
     expect(result.ok).toBe(false);
@@ -177,7 +186,7 @@ describe("createResolvedRecordDebugFixture", () => {
       code: "SOURCE_PATH_NOT_FOUND",
       identity: { name: "Detached", source: "TST" },
     });
-    expect(result.diagnostics[0]!.message).toContain("Could not locate source path");
+    expect(result.diagnostics[0]!.message).toContain("not found in validated files");
   });
 
   it("keeps copy cycle failures diagnostic-only and includes the cycle chain", () => {
@@ -195,6 +204,7 @@ describe("createResolvedRecordDebugFixture", () => {
     const result = createResolvedRecordDebugFixture(
       a,
       makeContext("class.json", "class", [a, b]),
+      { sourcePath: "class.json", sourceEntityKind: "class" },
     );
 
     expect(result.ok).toBe(false);
@@ -202,8 +212,8 @@ describe("createResolvedRecordDebugFixture", () => {
     expect(result.diagnostics[0]).toMatchObject({
       code: "COPY_RESOLUTION_FAILED",
       sourcePath: "class.json",
+      sourceEntityKind: "class",
       identity: { name: "A", source: "TST" },
-      copyDiagnostic: { code: "CIRCULAR_COPY_REFERENCE" },
     });
     expect(result.diagnostics[0]!.message).toContain("B|TST [class] -> A|TST [class] -> B|TST [class]");
   });
@@ -227,6 +237,7 @@ describe("createResolvedRecordDebugFixture", () => {
       createResolvedRecordDebugFixture(
         variant,
         makeContext("class.json", "class", [base, variant]),
+        { sourcePath: "class.json", sourceEntityKind: "class" },
       ),
     );
     const classFeatures = fixture.resolvedRecord.remaining.classFeatures;
@@ -254,6 +265,7 @@ describe("createResolvedRecordDebugFixture", () => {
       createResolvedRecordDebugFixture(
         variant,
         makeContext("monster.json", "monster", [base, variant]),
+        { sourcePath: "monster.json", sourceEntityKind: "monster" },
       ),
     );
 
@@ -286,6 +298,7 @@ describe("createResolvedRecordDebugFixture", () => {
       createResolvedRecordDebugFixture(
         variant,
         makeContext("monster.json", "monster", [base, middle, variant]),
+        { sourcePath: "monster.json", sourceEntityKind: "monster" },
       ),
     );
 
@@ -306,6 +319,7 @@ describe("createResolvedRecordDebugFixture", () => {
     const result = createResolvedRecordDebugFixture(
       variant,
       makeContext("monster.json", "monster", [variant]),
+      { sourcePath: "monster.json", sourceEntityKind: "monster" },
     );
 
     expect(result.ok).toBe(false);
@@ -328,7 +342,7 @@ describe("createResolvedRecordDebugFixture", () => {
       createResolvedRecordDebugFixture(
         record,
         makeContext("race.json", "race", [record]),
-        { sourcePath: "race.json" },
+        { sourcePath: "race.json", sourceEntityKind: "race" },
       ),
     );
 
@@ -375,7 +389,7 @@ describe("createResolvedRecordDebugFixture", () => {
       remaining: { _copy: { name: "Goblin", source: "MPMM" } },
     };
 
-    const result = createResolvedRecordDebugFixture(variant, ctx, { sourcePath: "monster.json" });
+    const result = createResolvedRecordDebugFixture(variant, ctx, { sourcePath: "monster.json", sourceEntityKind: "monster" });
 
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected success");
@@ -399,6 +413,7 @@ describe("createResolvedRecordDebugFixture", () => {
       createResolvedRecordDebugFixture(
         variant,
         makeContext("monster.json", "monster", [base, variant]),
+        { sourcePath: "monster.json", sourceEntityKind: "monster" },
       ),
     );
 

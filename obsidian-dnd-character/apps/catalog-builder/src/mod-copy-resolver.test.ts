@@ -1194,3 +1194,310 @@ describe("materialization diagnostic conversion preserves structured fields", ()
     expect(diag.sourcePath).toBe("monster.json");
   });
 });
+
+describe("direct-field overlay merge semantics (5eTools alignment)", () => {
+  it("derived array replaces base array (no merge)", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { trait: [{ name: "Base Trait" }] },
+    };
+    const variant: CopyModRawRecord = {
+      name: "Variant",
+      source: "TST",
+      remaining: {
+        _copy: { name: "Base", source: "TST" },
+        trait: [{ name: "Derived Trait" }],
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = resolveCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    expect(result.record.remaining.trait).toEqual([{ name: "Derived Trait" }]);
+  });
+
+  it("derived object replaces base object (no merge)", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { skill: { arcana: "+4", stealth: "+2" } },
+    };
+    const variant: CopyModRawRecord = {
+      name: "Variant",
+      source: "TST",
+      remaining: {
+        _copy: { name: "Base", source: "TST" },
+        skill: { arcana: "+6" },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = resolveCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    expect(result.record.remaining.skill).toEqual({ arcana: "+6" });
+    expect(result.record.remaining.skill).not.toHaveProperty("stealth");
+  });
+
+  it("derived null deletes base field from result", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { size: "M", speed: 30, trait: [] },
+    };
+    const variant: CopyModRawRecord = {
+      name: "Variant",
+      source: "TST",
+      remaining: {
+        _copy: { name: "Base", source: "TST" },
+        speed: null,
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = resolveCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    expect(result.record.remaining).not.toHaveProperty("speed");
+    expect(result.record.remaining.size).toBe("M");
+    expect(result.record.remaining.trait).toEqual([]);
+  });
+
+  it("base fields absent in derived are gap-filled from base", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { size: "M", speed: 30, trait: [{ name: "Base Trait" }] },
+    };
+    const variant: CopyModRawRecord = {
+      name: "Variant",
+      source: "TST",
+      remaining: {
+        _copy: { name: "Base", source: "TST" },
+        size: "L",
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = resolveCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    expect(result.record.remaining.size).toBe("L");
+    expect(result.record.remaining.speed).toBe(30);
+    expect(result.record.remaining.trait).toEqual([{ name: "Base Trait" }]);
+  });
+
+  it("preserve-gated base fields are deleted without explicit _preserve", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { size: "M", srd: true, hasToken: true },
+    };
+    const variant: CopyModRawRecord = {
+      name: "Variant",
+      source: "TST",
+      remaining: {
+        _copy: { name: "Base", source: "TST" },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = resolveCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    expect(result.record.remaining.size).toBe("M");
+    expect(result.record.remaining).not.toHaveProperty("srd");
+    expect(result.record.remaining).not.toHaveProperty("hasToken");
+  });
+
+  it("preserve-gated base fields are copied with _preserve wildcard", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { size: "M", srd: true, hasToken: true },
+    };
+    const variant: CopyModRawRecord = {
+      name: "Variant",
+      source: "TST",
+      remaining: {
+        _copy: { name: "Base", source: "TST", _preserve: { "*": true } },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = resolveCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    expect(result.record.remaining.size).toBe("M");
+    expect(result.record.remaining.srd).toBe(true);
+    expect(result.record.remaining.hasToken).toBe(true);
+  });
+
+  it("preserve-gated base fields are copied with per-field _preserve", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { size: "M", srd: true, hasToken: true },
+    };
+    const variant: CopyModRawRecord = {
+      name: "Variant",
+      source: "TST",
+      remaining: {
+        _copy: { name: "Base", source: "TST", _preserve: { srd: true } },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = resolveCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    expect(result.record.remaining.size).toBe("M");
+    expect(result.record.remaining.srd).toBe(true);
+    expect(result.record.remaining).not.toHaveProperty("hasToken");
+  });
+
+  it("derived scalar replaces base scalar", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { size: "M", speed: 30, cr: 1 },
+    };
+    const variant: CopyModRawRecord = {
+      name: "Variant",
+      source: "TST",
+      remaining: {
+        _copy: { name: "Base", source: "TST" },
+        size: "L",
+        speed: 40,
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = resolveCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    expect(result.record.remaining.size).toBe("L");
+    expect(result.record.remaining.speed).toBe(40);
+    expect(result.record.remaining.cr).toBe(1);
+  });
+
+  it("materializeCopyWithMods applies same merge semantics as resolveCopyWithMods", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { size: "M", speed: 30, trait: [{ name: "Base Trait" }], srd: true },
+    };
+    const variant: CopyModRawRecord = {
+      name: "Variant",
+      source: "TST",
+      remaining: {
+        _copy: { name: "Base", source: "TST" },
+        size: "L",
+        speed: null,
+        trait: [{ name: "Derived Trait" }],
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    const r = result.result.record.remaining;
+    expect(r.size).toBe("L");
+    expect(r).not.toHaveProperty("speed");
+    expect(r.trait).toEqual([{ name: "Derived Trait" }]);
+    expect(r).not.toHaveProperty("srd");
+  });
+});
