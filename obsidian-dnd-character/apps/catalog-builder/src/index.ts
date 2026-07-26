@@ -209,9 +209,22 @@ export {
   type ModDiagnosticCode,
   type ModApplyResult,
   type RawModBlock,
+  type MaterializationDiagnostic,
+  type MaterializationDiagnosticCode,
+  type MaterializedResolvedRecord,
+  type CopyModRawRecord,
   /* Mod mode registry */
   KNOWN_MOD_MODES_SET,
 } from "./mod-types";
+
+export {
+  /* Mod copy resolver types */
+  type CopyModContext,
+  type CopyModResolutionResult,
+  /* Mod copy resolver functions */
+  resolveCopyWithMods,
+  materializeCopyWithMods,
+} from "./mod-copy-resolver";
 
 export {
   /* Array mod operations */

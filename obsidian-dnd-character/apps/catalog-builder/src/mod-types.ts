@@ -312,6 +312,16 @@ export interface MaterializedResolvedRecord {
   readonly inheritanceChain: readonly CopyChainStep[];
   /** Diagnostics emitted during materialization (warnings only on success). */
   readonly diagnostics: readonly MaterializationDiagnostic[];
+  /** Entity kind of the derived record being materialized. */
+  readonly derivedEntityKind: string;
+  /** Identity of the terminal base entity after full chain resolution. */
+  readonly terminalBaseIdentity: {
+    readonly entityName: string;
+    readonly sourceAbbr: string;
+    readonly entityKind: string;
+  };
+  /** True when the source record carried a _preserve: true marker. Deferred metadata only—does not affect materialization execution. */
+  readonly deferredPreserve: boolean;
 }
 
 export interface ModApplyResult {

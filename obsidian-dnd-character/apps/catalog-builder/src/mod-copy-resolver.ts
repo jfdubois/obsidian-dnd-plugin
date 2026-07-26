@@ -2,6 +2,7 @@ import {
   isCopyResolutionFailure,
   resolveCopy,
   type CopyResolverContext,
+  type CopyResolverDiagnostic,
 } from "./copy-resolver";
 import { applyArrayModOperation } from "./mod-array-operations";
 import { applyRootModOperation } from "./mod-root-operations";
@@ -10,6 +11,7 @@ import type {
   CopyModRawRecord,
   MaterializationDiagnostic,
   MaterializedResolvedRecord,
+  MaterializationDiagnosticCode,
   ModOperationDiagnostic,
 } from "./mod-types";
 import type { DiagnosticSeverity } from "./raw-loader";
@@ -73,6 +75,20 @@ function cloneRecord(record: CopyModRawRecord): CopyModRawRecord {
     source: record.source,
     remaining: cloneObject(record.remaining),
   };
+}
+
+/**
+ * Strips copy directives (_copy, _preserve) from a record's remaining fields.
+ * These are resolution-time directives and should not appear in the materialized output.
+ */
+function stripCopyDirectives(remaining: Record<string, unknown>): Record<string, unknown> {
+  const stripped: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(remaining)) {
+    if (key !== "_copy" && key !== "_preserve") {
+      stripped[key] = value;
+    }
+  }
+  return stripped;
 }
 
 function cloneObject(record: Record<string, unknown>): Record<string, unknown> {
@@ -141,6 +157,53 @@ function modeOf(rawOperation: unknown): string | undefined {
     return undefined;
   }
   return typeof rawOperation.mode === "string" ? rawOperation.mode : undefined;
+}
+
+/**
+ * Converts a copy resolver diagnostic into a structured MaterializationDiagnostic.
+ * Drops copy-resolver-specific fields (sourceRecord, parseDiagnostic) that do not
+ * belong on the materialized output contract.
+ */
+function toMaterializationDiagnostic(
+  copyDiagnostic: CopyResolverDiagnostic,
+  sourceRecord: CopyModRawRecord,
+  sourcePath: string | undefined,
+): MaterializationDiagnostic {
+  return Object.freeze({
+    code: copyDiagnostic.code as MaterializationDiagnosticCode,
+    severity: copyDiagnostic.severity,
+    message: copyDiagnostic.message,
+    sourcePath,
+    entityName: sourceRecord.name,
+    entitySource: sourceRecord.source,
+    fieldTarget: "_copy",
+    mode: undefined,
+    rawParam: copyDiagnostic.rawCopy,
+  });
+}
+
+/**
+ * Converts a mod operation diagnostic into a MaterializationDiagnostic.
+ * Safe because ModDiagnosticCode is a subtype of MaterializationDiagnosticCode.
+ */
+function toMaterializationDiagnostics(
+  modDiagnostics: readonly ModOperationDiagnostic[],
+): readonly MaterializationDiagnostic[] {
+  return Object.freeze(
+    modDiagnostics.map((diag) =>
+      Object.freeze({
+        code: diag.code as MaterializationDiagnosticCode,
+        severity: diag.severity,
+        message: diag.message,
+        sourcePath: diag.sourcePath,
+        entityName: diag.entityName,
+        entitySource: diag.entitySource,
+        fieldTarget: diag.fieldTarget,
+        mode: diag.mode,
+        rawParam: diag.rawParam,
+      }),
+    ),
+  );
 }
 
 function applyModBlock(
@@ -256,17 +319,7 @@ export function resolveCopyWithMods(
     return {
       ok: false,
       diagnostics: [
-        Object.freeze({
-          code: resolved.diagnostic.code,
-          severity: resolved.diagnostic.severity,
-          message: resolved.diagnostic.message,
-          sourcePath: modContext.sourcePath,
-          entityName: record.name,
-          entitySource: record.source,
-          fieldTarget: "_copy",
-          mode: undefined,
-          rawParam: resolved.diagnostic.rawCopy,
-        }) as MaterializationDiagnostic,
+        toMaterializationDiagnostic(resolved.diagnostic, record, modContext.sourcePath),
       ],
     };
   }
@@ -282,7 +335,7 @@ export function resolveCopyWithMods(
   if (!isPlainObject(copyValue) || copyValue._mod === undefined) {
     return {
       ok: true,
-      record: { name: record.name, source: record.source, remaining: clonedBase.remaining },
+      record: { name: record.name, source: record.source, remaining: stripCopyDirectives(clonedBase.remaining) },
       diagnostics: [],
     };
   }
@@ -297,7 +350,7 @@ export function resolveCopyWithMods(
   }
   return {
     ok: true,
-    record: { name: record.name, source: record.source, remaining: clonedBase.remaining },
+    record: { name: record.name, source: record.source, remaining: stripCopyDirectives(clonedBase.remaining) },
     diagnostics: [],
   };
 }
@@ -323,17 +376,7 @@ export function materializeCopyWithMods(
     return {
       ok: false,
       diagnostics: [
-        Object.freeze({
-          code: resolved.diagnostic.code,
-          severity: resolved.diagnostic.severity,
-          message: resolved.diagnostic.message,
-          sourcePath: modContext.sourcePath,
-          entityName: record.name,
-          entitySource: record.source,
-          fieldTarget: "_copy",
-          mode: undefined,
-          rawParam: resolved.diagnostic.rawCopy,
-        }) as MaterializationDiagnostic,
+        toMaterializationDiagnostic(resolved.diagnostic, record, modContext.sourcePath),
       ],
     };
   }
@@ -351,13 +394,14 @@ export function materializeCopyWithMods(
 
   let diagnostics: readonly MaterializationDiagnostic[] = [];
   if (isPlainObject(copyValue) && copyValue._mod !== undefined) {
-    // Safe: ModDiagnosticCode is a subset of MaterializationDiagnosticCode
-    diagnostics = applyModBlock(
-      clonedBase.remaining,
-      record,
-      copyValue._mod,
-      modContext.sourcePath,
-    ) as readonly MaterializationDiagnostic[];
+    diagnostics = toMaterializationDiagnostics(
+      applyModBlock(
+        clonedBase.remaining,
+        record,
+        copyValue._mod,
+        modContext.sourcePath,
+      ),
+    );
   }
 
   if (diagnostics.length > 0) {
@@ -367,9 +411,16 @@ export function materializeCopyWithMods(
   return {
     ok: true,
     result: {
-      record: { name: record.name, source: record.source, remaining: clonedBase.remaining },
+      record: { name: record.name, source: record.source, remaining: stripCopyDirectives(clonedBase.remaining) },
       inheritanceChain: chain,
       diagnostics,
+      derivedEntityKind: modContext.sourceEntityKind ?? "unknown",
+      terminalBaseIdentity: {
+        entityName: resolved.baseEntity.name,
+        sourceAbbr: resolved.baseEntity.source,
+        entityKind: chain.length > 0 ? chain[chain.length - 1]!.entityKind : (modContext.sourceEntityKind ?? "unknown"),
+      },
+      deferredPreserve: record.remaining._preserve === true,
     },
   };
 }

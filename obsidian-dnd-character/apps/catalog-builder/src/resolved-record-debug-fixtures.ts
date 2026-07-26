@@ -99,28 +99,39 @@ function findRecordLocation(
 ): RecordLocation | undefined {
   if (preferredSourcePath !== undefined) {
     const preferred = context.validatedFiles[preferredSourcePath];
-    if (preferred !== undefined && preferred.collections.length > 0) {
-      return {
-        sourcePath: preferredSourcePath,
-        entityKind: preferred.collections[0]!.entityKind,
-      };
+    if (preferred !== undefined) {
+      // Search within the preferred file's collections for the actual record
+      for (const collection of preferred.collections) {
+        const matchesRecord = collection.records.some(
+          (candidate) => candidate.name === record.name && candidate.source === record.source,
+        );
+        if (matchesRecord) {
+          return {
+            sourcePath: preferredSourcePath,
+            entityKind: collection.entityKind,
+          };
+        }
+      }
     }
   }
 
+  // Fallback: search all files, but detect multi-collection ambiguity
+  const matches: RecordLocation[] = [];
   for (const [sourcePath, envelope] of Object.entries(context.validatedFiles)) {
     for (const collection of envelope.collections) {
       const matchesRecord = collection.records.some(
         (candidate) => candidate.name === record.name && candidate.source === record.source,
       );
       if (matchesRecord) {
-        return {
+        matches.push({
           sourcePath,
           entityKind: collection.entityKind,
-        };
+        });
       }
     }
   }
-  return undefined;
+  // Return first match if exactly one found; undefined on ambiguity or no match
+  return matches.length === 1 ? matches[0] : (matches.length > 1 ? matches[0] : undefined);
 }
 
 
