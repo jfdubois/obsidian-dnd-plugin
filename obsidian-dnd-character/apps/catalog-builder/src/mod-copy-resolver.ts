@@ -6,7 +6,7 @@ import {
 import { applyArrayModOperation } from "./mod-array-operations";
 import { applyRootModOperation } from "./mod-root-operations";
 import { applyScalarTextModOperation } from "./mod-scalar-text-operations";
-import type { ModOperationDiagnostic } from "./mod-types";
+import { type ModOperationDiagnostic } from "./mod-types";
 import type { DiagnosticSeverity } from "./raw-loader";
 
 const ARRAY_MODES = new Set([
@@ -251,11 +251,38 @@ export function resolveCopyWithMods(
     sourcePath: modContext.sourcePath,
   });
   if (isCopyResolutionFailure(resolved)) {
-    return { ok: false, diagnostics: [] };
+    return {
+      ok: false,
+      diagnostics: [
+        Object.freeze({
+          code: resolved.diagnostic.code as ModOperationDiagnostic["code"],
+          severity: resolved.diagnostic.severity,
+          message: resolved.diagnostic.message,
+          sourcePath: modContext.sourcePath,
+          entityName: record.name,
+          entitySource: record.source,
+          fieldTarget: "_copy",
+          mode: undefined,
+          rawParam: resolved.diagnostic.rawCopy,
+        }) as ModOperationDiagnostic,
+      ],
+    };
   }
   const clonedBase = cloneRecord(resolved.baseEntity);
+  // Apply direct-field overlay: copy derived fields that are non-null into the cloned base
+  // This matches 5eTools behavior where the derived record's own fields take precedence
+  for (const [key, value] of Object.entries(record.remaining)) {
+    if (key.startsWith("_")) continue; // Skip directives (_copy, _preserve, _mod)
+    if (value !== null && value !== undefined) {
+      clonedBase.remaining[key] = cloneUnknown(value);
+    }
+  }
   if (!isPlainObject(copyValue) || copyValue._mod === undefined) {
-    return { ok: true, record: clonedBase, diagnostics: [] };
+    return {
+      ok: true,
+      record: { name: record.name, source: record.source, remaining: clonedBase.remaining },
+      diagnostics: [],
+    };
   }
   const diagnostics = applyModBlock(
     clonedBase.remaining,
@@ -266,5 +293,9 @@ export function resolveCopyWithMods(
   if (diagnostics.length > 0) {
     return { ok: false, diagnostics };
   }
-  return { ok: true, record: clonedBase, diagnostics: [] };
+  return {
+    ok: true,
+    record: { name: record.name, source: record.source, remaining: clonedBase.remaining },
+    diagnostics: [],
+  };
 }

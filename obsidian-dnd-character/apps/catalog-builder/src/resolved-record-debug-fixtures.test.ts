@@ -108,7 +108,11 @@ describe("createResolvedRecordDebugFixture", () => {
         identity: { entityKind: "race", name: "Centaur", source: "GGR" },
       },
     ]);
-    expect(fixture.resolvedRecord).toEqual(base);
+    expect(fixture.resolvedRecord).toEqual({
+      name: "Centaur Variant",
+      source: "MOT",
+      remaining: { entries: ["Charge"], size: "M" },
+    });
     expect(fixture.resolvedFieldInventory.remaining).toEqual(["entries", "size"]);
   });
 

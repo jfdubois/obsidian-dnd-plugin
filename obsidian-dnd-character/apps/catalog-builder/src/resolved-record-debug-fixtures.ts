@@ -247,7 +247,7 @@ export function createResolvedRecordDebugFixture(
     ok: true,
     fixture: {
       sourcePath: sourceLocation.sourcePath,
-      identity: createIdentity(record, sourceLocation),
+      identity: createIdentity(clonedResolvedRecord, sourceLocation),
       inheritanceChain,
       resolvedFieldInventory: collectResolvedFieldInventory(clonedResolvedRecord),
       resolvedRecord: clonedResolvedRecord,

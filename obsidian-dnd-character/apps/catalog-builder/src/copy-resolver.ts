@@ -377,26 +377,33 @@ function formatCopyChain(chain: readonly CopyChainStep[]): string {
   return chain.map((step) => `${step.entityName}|${step.sourceAbbr} [${step.entityKind}]`).join(" -> ");
 }
 
+interface LocatedRecord {
+  readonly record: RawRecord;
+  readonly entityKind: string;
+  readonly sourcePath: string;
+}
+
 /**
  * Finds records matching a structured identity within allowed entity kinds.
  * By default, only searches the same entity kind as the source record.
  * Cross-collection lookup is only permitted through verified compatibility.
+ * Returns located records with their entity kind and source path.
  */
 function findRecordsByStructuredIdentity(
   context: CopyResolverContext,
   identity: StructuredIdentity,
   sourceEntityKind: string,
-): RawRecord[] {
+): LocatedRecord[] {
   const allowedKinds = getAllowedEntityKinds(sourceEntityKind);
-  const matches: RawRecord[] = [];
-  for (const [_sourcePath, envelope] of Object.entries(context.validatedFiles)) {
+  const matches: LocatedRecord[] = [];
+  for (const [sourcePath, envelope] of Object.entries(context.validatedFiles)) {
     for (const collection of envelope.collections) {
       if (!allowedKinds.has(collection.entityKind)) {
         continue;
       }
       for (const record of collection.records) {
         if (recordMatchesIdentity(record, identity)) {
-          matches.push(record);
+          matches.push({ record, entityKind: collection.entityKind, sourcePath });
         }
       }
     }
@@ -529,7 +536,7 @@ function resolveCopyChain(
 
   if (candidates.length > 1) {
     const candidateDescs = candidates
-      .map((c) => `"${c.name}" (${c.source})`)
+      .map((c) => `"${c.record.name}" (${c.record.source})`)
       .join(", ");
     return createFailure(
       "AMBIGUOUS_BASE_ENTITY",
@@ -540,13 +547,12 @@ function resolveCopyChain(
     );
   }
 
-  const baseEntity = candidates[0]!;
+  const matched = candidates[0]!;
+  const baseEntity = matched.record;
 
-  // If the base entity itself has a _copy, recurse
+  // If the base entity itself has a _copy, recurse using the located entity kind and source path
   const baseCopy = baseEntity.remaining._copy;
   if (baseCopy !== undefined && isRawCopyValue(baseCopy)) {
-    // Determine entity kind and source path of the resolved base entity
-    const baseLocation = locateRecordInContext(context, baseEntity);
     return resolveCopyChain(
       baseCopy,
       context,
@@ -554,8 +560,8 @@ function resolveCopyChain(
       visited,
       chain,
       depth + 1,
-      baseLocation.entityKind,
-      baseLocation.sourcePath,
+      matched.entityKind,
+      matched.sourcePath,
     );
   }
 
@@ -565,26 +571,6 @@ function resolveCopyChain(
     baseEntity,
     chain: Object.freeze(chain),
   };
-}
-
-/**
- * Locates a record within the resolver context to determine its
- * entity kind and source path for chain continuation.
- */
-function locateRecordInContext(
-  context: CopyResolverContext,
-  record: RawRecord,
-): { entityKind: string; sourcePath: string } {
-  for (const [sourcePath, envelope] of Object.entries(context.validatedFiles)) {
-    for (const collection of envelope.collections) {
-      for (const candidate of collection.records) {
-        if (candidate.name === record.name && candidate.source === record.source) {
-          return { entityKind: collection.entityKind, sourcePath };
-        }
-      }
-    }
-  }
-  return { entityKind: "unknown", sourcePath: "unknown" };
 }
 
 /**
