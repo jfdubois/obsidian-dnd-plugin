@@ -5,9 +5,7 @@ import {
   type RawBoundaryResult,
 } from "./raw-boundary";
 import { loadRawJsonFiles } from "./raw-loader";
-
-const FIVEETOOLS_PATH =
-  "/home/jdubois/Documents/Projects/obsidian-dnd-plugin/external/5etools-src";
+import { pinnedFiveEToolsPath } from "./test-pinned-source-path";
 
 /* ── KNOWN_RAW_FIELDS registry tests ───────────────────────────── */
 
@@ -75,7 +73,7 @@ describe("validateRawBoundary — real 5eTools data", () => {
   let result: RawBoundaryResult;
 
   beforeAll(() => {
-    const loaded = loadRawJsonFiles(FIVEETOOLS_PATH);
+    const loaded = loadRawJsonFiles(pinnedFiveEToolsPath());
     result = validateRawBoundary(loaded.files);
   });
 
@@ -887,7 +885,7 @@ describe("RawBoundaryResult structure", () => {
 
 describe("validateRawBoundary — integration with real data", () => {
   it("full pipeline: load then validate", () => {
-    const loaded = loadRawJsonFiles(FIVEETOOLS_PATH);
+    const loaded = loadRawJsonFiles(pinnedFiveEToolsPath());
     expect(loaded.summary.successfullyParsed).toBeGreaterThan(0);
 
     const result = validateRawBoundary(loaded.files);
@@ -896,7 +894,7 @@ describe("validateRawBoundary — integration with real data", () => {
   });
 
   it("real data: core files have no envelope errors", () => {
-    const loaded = loadRawJsonFiles(FIVEETOOLS_PATH);
+    const loaded = loadRawJsonFiles(pinnedFiveEToolsPath());
     const result = validateRawBoundary(loaded.files);
 
     const envelopeErrors = result.diagnostics.filter(
@@ -923,7 +921,7 @@ describe("validateRawBoundary — integration with real data", () => {
   });
 
   it("real data: core files have no record envelope errors", () => {
-    const loaded = loadRawJsonFiles(FIVEETOOLS_PATH);
+    const loaded = loadRawJsonFiles(pinnedFiveEToolsPath());
     const result = validateRawBoundary(loaded.files);
 
     const recordErrors = result.diagnostics.filter(
@@ -946,7 +944,7 @@ describe("validateRawBoundary — integration with real data", () => {
   });
 
   it("races.json: subrace templates without name are expected", () => {
-    const loaded = loadRawJsonFiles(FIVEETOOLS_PATH);
+    const loaded = loadRawJsonFiles(pinnedFiveEToolsPath());
     const result = validateRawBoundary(loaded.files);
 
     const racesEnvelope = result.validatedFiles["races.json"];
@@ -969,7 +967,7 @@ describe("validateRawBoundary — integration with real data", () => {
   });
 
   it("real feat records have expected fields in remaining", () => {
-    const loaded = loadRawJsonFiles(FIVEETOOLS_PATH);
+    const loaded = loadRawJsonFiles(pinnedFiveEToolsPath());
     const result = validateRawBoundary(loaded.files);
 
     const feats = result.validatedFiles["feats.json"];

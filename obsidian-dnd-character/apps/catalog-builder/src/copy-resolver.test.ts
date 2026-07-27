@@ -15,9 +15,7 @@ import {
 } from "./copy-resolver";
 import { loadRawJsonFiles } from "./raw-loader";
 import { validateRawBoundary } from "./raw-boundary";
-
-const FIVEETOOLS_PATH =
-  "/home/jdubois/Documents/Projects/obsidian-dnd-plugin/external/5etools-src";
+import { pinnedFiveEToolsPath } from "./test-pinned-source-path";
 
 /* ── Helpers ───────────────────────────────────────────────────── */
 
@@ -1886,7 +1884,7 @@ describe("source-role-aware canonical copy lookup", () => {
   });
 
   it("selects the pinned canonical Alchemist record over class/foundry.json", () => {
-    const loaded = loadRawJsonFiles(FIVEETOOLS_PATH);
+    const loaded = loadRawJsonFiles(pinnedFiveEToolsPath());
     const boundary = validateRawBoundary(loaded.files);
 
     const result = resolveCopy(

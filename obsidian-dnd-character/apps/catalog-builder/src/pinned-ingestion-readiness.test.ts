@@ -13,9 +13,9 @@ import { readSourceManifest } from "./source-manifest";
 import { KNOWN_MOD_MODES_SET } from "./mod-types";
 import { materializeCopyWithMods } from "./mod-copy-resolver";
 import { expandVersions } from "./versions-expander";
+import { pinnedFiveEToolsPath, pinnedFiveEToolsRevision } from "./test-pinned-source-path";
 
-const FIVEETOOLS_PATH = "/home/jdubois/Documents/Projects/obsidian-dnd-plugin/external/5etools-src";
-const PINNED_COMMIT = "3c5d9d3175ca9637132011c75efd73aad7a2364d";
+const PINNED_COMMIT = pinnedFiveEToolsRevision();
 const CONSUMED_DIRECTIVES = [
   "_copy",
   "_mod",
@@ -67,7 +67,7 @@ function loadContext(): {
   readonly loadedFileCount: number;
   readonly records: readonly LocatedRecord[];
 } {
-  const loaded = loadRawJsonFiles(FIVEETOOLS_PATH);
+  const loaded = loadRawJsonFiles(pinnedFiveEToolsPath());
   expect(loaded.diagnostics.filter((diagnostic) => diagnostic.severity === "error")).toEqual([]);
   const boundary = validateRawBoundary(loaded.files);
   expect(Object.keys(boundary.validatedFiles).length).toBeGreaterThan(0);
@@ -288,7 +288,7 @@ function expectNoConsumedDirectives(record: RawRecord): void {
 
 describe("pinned 5eTools ingestion readiness", () => {
   it("verifies the pinned source revision and clean inspection worktree", () => {
-    const manifest = readSourceManifest(FIVEETOOLS_PATH);
+    const manifest = readSourceManifest(pinnedFiveEToolsPath());
     expect(manifest.commitHash).toBe(PINNED_COMMIT);
   });
 

@@ -1,11 +1,9 @@
-import { describe, it, expect } from "vitest";
+import { beforeAll, describe, it, expect } from "vitest";
 import { loadRawJsonFiles } from "./raw-loader";
 import { mkdirSync, writeFileSync, rmSync, chmodSync } from "fs";
 import { resolve } from "path";
 import { tmpdir } from "os";
-
-const FIVEETOOLS_PATH =
-  "/home/jdubois/Documents/Projects/obsidian-dnd-plugin/external/5etools-src";
+import { pinnedFiveEToolsPath } from "./test-pinned-source-path";
 
 /* ── Helpers ───────────────────────────────────────────────────── */
 
@@ -26,8 +24,14 @@ function cleanupDir(dir: string): void {
 /* ── Positive tests with real 5eTools clone ────────────────────── */
 
 describe("loadRawJsonFiles — real 5eTools clone", () => {
+  let fiveEToolsPath: string;
+
+  beforeAll(() => {
+    fiveEToolsPath = pinnedFiveEToolsPath();
+  });
+
   it("loads all JSON files from the real 5eTools data directory", () => {
-    const result = loadRawJsonFiles(FIVEETOOLS_PATH);
+    const result = loadRawJsonFiles(fiveEToolsPath);
 
     expect(result.summary.totalFound).toBeGreaterThan(0);
     expect(result.summary.successfullyParsed).toBeGreaterThan(0);
@@ -36,7 +40,7 @@ describe("loadRawJsonFiles — real 5eTools clone", () => {
   });
 
   it("returns races.json with expected structure", () => {
-    const result = loadRawJsonFiles(FIVEETOOLS_PATH);
+    const result = loadRawJsonFiles(fiveEToolsPath);
     const racesData = result.files["races.json"];
 
     expect(racesData).toBeDefined();
@@ -48,7 +52,7 @@ describe("loadRawJsonFiles — real 5eTools clone", () => {
   });
 
   it("returns backgrounds.json with expected structure", () => {
-    const result = loadRawJsonFiles(FIVEETOOLS_PATH);
+    const result = loadRawJsonFiles(fiveEToolsPath);
     const bgData = result.files["backgrounds.json"];
 
     expect(bgData).toBeDefined();
@@ -60,7 +64,7 @@ describe("loadRawJsonFiles — real 5eTools clone", () => {
   });
 
   it("returns class files from nested directory", () => {
-    const result = loadRawJsonFiles(FIVEETOOLS_PATH);
+    const result = loadRawJsonFiles(fiveEToolsPath);
 
     const classFiles = Object.keys(result.files).filter((k) =>
       k.startsWith("class/")
@@ -70,7 +74,7 @@ describe("loadRawJsonFiles — real 5eTools clone", () => {
   });
 
   it("uses forward-slash relative paths", () => {
-    const result = loadRawJsonFiles(FIVEETOOLS_PATH);
+    const result = loadRawJsonFiles(fiveEToolsPath);
     const keys = Object.keys(result.files);
 
     for (const key of keys) {
@@ -79,7 +83,7 @@ describe("loadRawJsonFiles — real 5eTools clone", () => {
   });
 
   it("includes discovery info diagnostic", () => {
-    const result = loadRawJsonFiles(FIVEETOOLS_PATH);
+    const result = loadRawJsonFiles(fiveEToolsPath);
     const infoDiagnostics = result.diagnostics.filter(
       (d) => d.severity === "info" && d.code === "DISCOVERY_COMPLETE"
     );
@@ -88,7 +92,7 @@ describe("loadRawJsonFiles — real 5eTools clone", () => {
   });
 
   it("returns unknown-typed parsed values", () => {
-    const result = loadRawJsonFiles(FIVEETOOLS_PATH);
+    const result = loadRawJsonFiles(fiveEToolsPath);
     const firstKey = Object.keys(result.files)[0];
     expect(firstKey).toBeDefined();
 
@@ -98,7 +102,7 @@ describe("loadRawJsonFiles — real 5eTools clone", () => {
   });
 
   it("total found equals successfully parsed when no errors", () => {
-    const result = loadRawJsonFiles(FIVEETOOLS_PATH);
+    const result = loadRawJsonFiles(fiveEToolsPath);
     expect(result.summary.totalFound).toBe(result.summary.successfullyParsed);
   });
 });
@@ -329,7 +333,7 @@ describe("loadRawJsonFiles — nested directories", () => {
 
 describe("RawLoadResult structure", () => {
   it("result has all required fields", () => {
-    const result = loadRawJsonFiles(FIVEETOOLS_PATH);
+    const result = loadRawJsonFiles(pinnedFiveEToolsPath());
 
     expect(result).toHaveProperty("files");
     expect(result).toHaveProperty("diagnostics");

@@ -9,11 +9,14 @@ import {
 } from "./ruleset-classifier";
 import { createSourceManifest } from "./source-manifest";
 import { normalizeSourceMetadata } from "./source-metadata-normalizer";
+import { pinnedFiveEToolsRevision } from "./test-pinned-source-path";
+
+const PINNED_REVISION = pinnedFiveEToolsRevision();
 
 const sourceManifest = createSourceManifest({
   clonePath: "/repo/external/5etools-src",
-  commitHash: "3c5d9d3175ca9637132011c75efd73aad7a2364d",
-  shortHash: "3c5d9d3",
+  commitHash: PINNED_REVISION,
+  shortHash: PINNED_REVISION.slice(0, 7),
   subject: "Source fixture commit",
   date: "2024-01-01T00:00:00+00:00",
 });
@@ -77,8 +80,8 @@ describe("normalizeSourceMetadata", () => {
     expect(result.metadata[0]?.provenance).toHaveLength(2);
     expect(result.metadata[0]?.provenance[0]).toMatchObject({
       sourceManifest: {
-        commitHash: "3c5d9d3175ca9637132011c75efd73aad7a2364d",
-        shortHash: "3c5d9d3",
+        commitHash: PINNED_REVISION,
+        shortHash: PINNED_REVISION.slice(0, 7),
         date: "2024-01-01T00:00:00+00:00",
       },
       sourcePath: "class/class.json",

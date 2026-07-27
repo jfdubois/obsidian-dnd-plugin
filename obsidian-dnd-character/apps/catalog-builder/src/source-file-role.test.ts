@@ -2,9 +2,7 @@ import { describe, expect, it } from "vitest";
 import { loadRawJsonFiles } from "./raw-loader";
 import { validateRawBoundary } from "./raw-boundary";
 import { classifySourceFileRole } from "./source-file-role";
-
-const FIVEETOOLS_PATH =
-  "/home/jdubois/Documents/Projects/obsidian-dnd-plugin/external/5etools-src";
+import { pinnedFiveEToolsPath } from "./test-pinned-source-path";
 
 describe("classifySourceFileRole", () => {
   it("classifies pinned Foundry platform augmentation paths", () => {
@@ -40,7 +38,7 @@ describe("classifySourceFileRole", () => {
   });
 
   it("keeps platform augmentation present in raw-boundary inventory", () => {
-    const loaded = loadRawJsonFiles(FIVEETOOLS_PATH);
+    const loaded = loadRawJsonFiles(pinnedFiveEToolsPath());
     const result = validateRawBoundary(loaded.files);
     const foundry = result.validatedFiles["class/foundry.json"];
 

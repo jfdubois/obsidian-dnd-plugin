@@ -1,20 +1,29 @@
 import { mkdtempSync, rmSync } from "fs";
 import { tmpdir } from "os";
-import { join } from "path";
-import { describe, it, expect } from "vitest";
+import { dirname, join, resolve } from "path";
+import { fileURLToPath } from "url";
+import { beforeAll, describe, it, expect } from "vitest";
 import {
   readSourceManifest,
   createSourceManifest,
   isSourceManifest,
   SourceManifestError,
 } from "./source-manifest";
+import { pinnedFiveEToolsPath, pinnedFiveEToolsRevision } from "./test-pinned-source-path";
 
-const FIVEETOOLS_PATH =
-  "/home/jdubois/Documents/Projects/obsidian-dnd-plugin/external/5etools-src";
+const here = dirname(fileURLToPath(import.meta.url));
+const repositoryRoot = resolve(here, "../../..");
+const PINNED_REVISION = pinnedFiveEToolsRevision();
 
 describe("readSourceManifest", () => {
+  let fiveEToolsPath: string;
+
+  beforeAll(() => {
+    fiveEToolsPath = pinnedFiveEToolsPath();
+  });
+
   it("succeeds with the real 5eTools clone", () => {
-    const manifest = readSourceManifest(FIVEETOOLS_PATH);
+    const manifest = readSourceManifest(fiveEToolsPath);
     expect(manifest.clonePath).toContain("5etools-src");
     expect(manifest.commitHash).toBeDefined();
     expect(manifest.shortHash).toBeDefined();
@@ -23,30 +32,30 @@ describe("readSourceManifest", () => {
   });
 
   it("returns expected commit hash", () => {
-    const manifest = readSourceManifest(FIVEETOOLS_PATH);
-    expect(manifest.commitHash).toBe("3c5d9d3175ca9637132011c75efd73aad7a2364d");
+    const manifest = readSourceManifest(fiveEToolsPath);
+    expect(manifest.commitHash).toBe(PINNED_REVISION);
   });
 
   it("returns expected short hash", () => {
-    const manifest = readSourceManifest(FIVEETOOLS_PATH);
-    expect(manifest.shortHash).toBe("3c5d9d3");
+    const manifest = readSourceManifest(fiveEToolsPath);
+    expect(manifest.shortHash).toBe(PINNED_REVISION.slice(0, 7));
   });
 
   it("returns non-empty subject", () => {
-    const manifest = readSourceManifest(FIVEETOOLS_PATH);
+    const manifest = readSourceManifest(fiveEToolsPath);
     expect(manifest.subject).toBeTypeOf("string");
     expect(manifest.subject.length).toBeGreaterThan(0);
   });
 
   it("returns non-empty ISO 8601 date", () => {
-    const manifest = readSourceManifest(FIVEETOOLS_PATH);
+    const manifest = readSourceManifest(fiveEToolsPath);
     expect(manifest.date).toBeTypeOf("string");
     expect(manifest.date.length).toBeGreaterThan(0);
     expect(() => new Date(manifest.date)).not.toThrow();
   });
 
   it("returns a frozen manifest", () => {
-    const manifest = readSourceManifest(FIVEETOOLS_PATH);
+    const manifest = readSourceManifest(fiveEToolsPath);
     expect(Object.isFrozen(manifest)).toBe(true);
   });
 
@@ -77,15 +86,12 @@ describe("readSourceManifest", () => {
   });
 
   it("throws NOT_GIT_REPO for a file path", () => {
+    const packageJsonPath = resolve(repositoryRoot, "package.json");
     expect(() =>
-      readSourceManifest(
-        "/home/jdubois/Documents/Projects/obsidian-dnd-plugin/obsidian-dnd-character/package.json",
-      ),
+      readSourceManifest(packageJsonPath),
     ).toThrow(SourceManifestError);
     try {
-      readSourceManifest(
-        "/home/jdubois/Documents/Projects/obsidian-dnd-plugin/obsidian-dnd-character/package.json",
-      );
+      readSourceManifest(packageJsonPath);
     } catch (error) {
       expect((error as SourceManifestError).code).toBe("NOT_GIT_REPO");
     }
@@ -117,8 +123,8 @@ describe("SourceManifestError", () => {
 describe("isSourceManifest", () => {
   const validManifest = createSourceManifest({
     clonePath: "/some/path",
-    commitHash: "3c5d9d3175ca9637132011c75efd73aad7a2364d",
-    shortHash: "3c5d9d3",
+    commitHash: PINNED_REVISION,
+    shortHash: PINNED_REVISION.slice(0, 7),
     subject: "Some commit message",
     date: "2024-01-01T00:00:00+00:00",
   });
@@ -151,7 +157,7 @@ describe("isSourceManifest", () => {
     expect(
       isSourceManifest({
         clonePath: "/some/path",
-        commitHash: "3c5d9d3175ca9637132011c75efd73aad7a2364d",
+        commitHash: PINNED_REVISION,
       }),
     ).toBe(false);
   });
@@ -190,7 +196,7 @@ describe("isSourceManifest", () => {
     expect(
       isSourceManifest({
         ...validManifest,
-        commitHash: "3c5d9d3175ca9637132011c75efd73aad7a2364d00",
+        commitHash: PINNED_REVISION + "00",
       }),
     ).toBe(false);
   });
@@ -272,14 +278,14 @@ describe("createSourceManifest", () => {
   it("creates a valid manifest", () => {
     const manifest = createSourceManifest({
       clonePath: "/some/path",
-      commitHash: "3c5d9d3175ca9637132011c75efd73aad7a2364d",
-      shortHash: "3c5d9d3",
+      commitHash: PINNED_REVISION,
+      shortHash: PINNED_REVISION.slice(0, 7),
       subject: "Some commit message",
       date: "2024-01-01T00:00:00+00:00",
     });
     expect(manifest.clonePath).toBe("/some/path");
-    expect(manifest.commitHash).toBe("3c5d9d3175ca9637132011c75efd73aad7a2364d");
-    expect(manifest.shortHash).toBe("3c5d9d3");
+    expect(manifest.commitHash).toBe(PINNED_REVISION);
+    expect(manifest.shortHash).toBe(PINNED_REVISION.slice(0, 7));
     expect(manifest.subject).toBe("Some commit message");
     expect(manifest.date).toBe("2024-01-01T00:00:00+00:00");
   });
@@ -287,8 +293,8 @@ describe("createSourceManifest", () => {
   it("produces a frozen object", () => {
     const manifest = createSourceManifest({
       clonePath: "/some/path",
-      commitHash: "3c5d9d3175ca9637132011c75efd73aad7a2364d",
-      shortHash: "3c5d9d3",
+      commitHash: PINNED_REVISION,
+      shortHash: PINNED_REVISION.slice(0, 7),
       subject: "Some commit message",
       date: "2024-01-01T00:00:00+00:00",
     });
@@ -298,8 +304,8 @@ describe("createSourceManifest", () => {
   it("factory output passes validator", () => {
     const manifest = createSourceManifest({
       clonePath: "/some/path",
-      commitHash: "3c5d9d3175ca9637132011c75efd73aad7a2364d",
-      shortHash: "3c5d9d3",
+      commitHash: PINNED_REVISION,
+      shortHash: PINNED_REVISION.slice(0, 7),
       subject: "Some commit message",
       date: "2024-01-01T00:00:00+00:00",
     });
