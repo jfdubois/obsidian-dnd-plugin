@@ -32,6 +32,39 @@ function makeContext(base: CopyModRawRecord): CopyResolverContext {
   };
 }
 
+function makeTemplateContext(
+  records: readonly CopyModRawRecord[],
+  templates: readonly CopyModRawRecord[],
+  templateKind = "monsterTemplate",
+): CopyResolverContext {
+  return {
+    validatedFiles: {
+      "source.json": {
+        filePath: "source.json",
+        collections: [
+          { entityKind: "monster", recordCount: records.length, records: [...records] },
+        ],
+        totalRecords: records.length,
+      },
+      "template.json": {
+        filePath: "template.json",
+        collections: [
+          { entityKind: templateKind, recordCount: templates.length, records: [...templates] },
+        ],
+        totalRecords: templates.length,
+      },
+    },
+  };
+}
+
+function templateRecord(
+  name: string,
+  source: string,
+  apply: Record<string, unknown>,
+): CopyModRawRecord {
+  return { name, source, remaining: { apply } };
+}
+
 function makeVariant(base: CopyModRawRecord, mod: Record<string, unknown>): CopyModRawRecord {
   return {
     name: "Resolved Variant",
@@ -942,6 +975,280 @@ describe("materializeCopyWithMods", () => {
     if (!result.ok) throw new Error("Expected materialization success");
     expect(result.result.record.remaining).not.toHaveProperty("_copy");
     expect(result.result.record.remaining).not.toHaveProperty("_mod");
+  });
+});
+
+describe("copy template materialization", () => {
+  it("resolves monster templates by trimmed case-insensitive identity and preserves template order", () => {
+    const base: CopyModRawRecord = { name: "Base", source: "SRC", remaining: { trait: [] } };
+    const variant: CopyModRawRecord = {
+      name: "Variant",
+      source: "SRC",
+      remaining: {
+        _copy: {
+          name: "Base",
+          source: "SRC",
+          _templates: [
+            { name: " first ", source: " tmp " },
+            { name: "SECOND", source: "TMP" },
+          ],
+        },
+      },
+    };
+    const result = materializeCopyWithMods(
+      variant,
+      makeTemplateContext(
+        [base],
+        [
+          templateRecord("First", "TMP", { _mod: { trait: { mode: "appendArr", items: "first" } } }),
+          templateRecord("Second", "TMP", { _mod: { trait: { mode: "appendArr", items: "second" } } }),
+        ],
+      ),
+      { sourcePath: "source.json", sourceEntityKind: "monster" },
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected template materialization success");
+    expect(result.result.record.remaining.trait).toEqual(["first", "second"]);
+    expect(result.result.metadata.appliedTemplates.map((item) => item.name)).toEqual(["First", "Second"]);
+  });
+
+  it("resolves legendary-group templates from the authoritative collection", () => {
+    const base: CopyModRawRecord = { name: "Base Group", source: "SRC", remaining: { lairActions: [] } };
+    const variant: CopyModRawRecord = {
+      name: "Variant Group",
+      source: "SRC",
+      remaining: { _copy: { name: "Base Group", source: "SRC", _templates: [{ name: "Shadow Dragon", source: "FTD" }] } },
+    };
+    const context = {
+      validatedFiles: {
+        "groups.json": {
+          filePath: "groups.json",
+          collections: [{ entityKind: "legendaryGroup", recordCount: 1, records: [base] }],
+          totalRecords: 1,
+        },
+        "template.json": {
+          filePath: "template.json",
+          collections: [{
+            entityKind: "legendaryGroupTemplate",
+            recordCount: 1,
+            records: [templateRecord("Shadow Dragon", "FTD", {
+              _mod: { lairActions: { mode: "appendArr", items: "shadow" } },
+            })],
+          }],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, context, {
+      sourcePath: "groups.json",
+      sourceEntityKind: "legendaryGroup",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected legendary group template success");
+    expect(result.result.record.remaining.lairActions).toEqual(["shadow"]);
+  });
+
+  it("reports unsupported, missing, ambiguous, malformed reference, and malformed record template failures", () => {
+    const base: CopyModRawRecord = { name: "Base", source: "SRC", remaining: {} };
+    const missing = materializeCopyWithMods(
+      { name: "Variant", source: "SRC", remaining: { _copy: { name: "Base", source: "SRC", _templates: [{ name: "Missing", source: "TMP" }] } } },
+      makeTemplateContext([base], []),
+      { sourcePath: "source.json", sourceEntityKind: "monster" },
+    );
+    const unsupported = materializeCopyWithMods(
+      { name: "Race Variant", source: "SRC", remaining: { _copy: { name: "Base", source: "SRC", _templates: [{ name: "First", source: "TMP" }] } } },
+      { validatedFiles: { "source.json": { filePath: "source.json", collections: [{ entityKind: "race", recordCount: 1, records: [base] }], totalRecords: 1 } } },
+      { sourcePath: "source.json", sourceEntityKind: "race" },
+    );
+    const ambiguous = materializeCopyWithMods(
+      { name: "Variant", source: "SRC", remaining: { _copy: { name: "Base", source: "SRC", _templates: [{ name: "First", source: "TMP" }] } } },
+      makeTemplateContext([base], [
+        templateRecord("First", "TMP", { _root: { size: "M" } }),
+        templateRecord(" first ", "tmp", { _root: { size: "S" } }),
+      ]),
+      { sourcePath: "source.json", sourceEntityKind: "monster" },
+    );
+    const malformedReference = materializeCopyWithMods(
+      { name: "Variant", source: "SRC", remaining: { _copy: { name: "Base", source: "SRC", _templates: [{ name: "First", source: "TMP", extra: true }] } } },
+      makeTemplateContext([base], [templateRecord("First", "TMP", { _root: { size: "M" } })]),
+      { sourcePath: "source.json", sourceEntityKind: "monster" },
+    );
+    const malformedRecord = materializeCopyWithMods(
+      { name: "Variant", source: "SRC", remaining: { _copy: { name: "Base", source: "SRC", _templates: [{ name: "First", source: "TMP" }] } } },
+      makeTemplateContext([base], [{ name: "First", source: "TMP", remaining: { apply: { unsupported: true } } }]),
+      { sourcePath: "source.json", sourceEntityKind: "monster" },
+    );
+
+    for (const result of [missing, unsupported, ambiguous, malformedReference, malformedRecord]) {
+      expect(result.ok).toBe(false);
+    }
+    expect(!missing.ok && missing.diagnostics[0]).toMatchObject({ code: "TEMPLATE_NOT_FOUND", templateReferenceIndex: 0 });
+    expect(!unsupported.ok && unsupported.diagnostics[0]).toMatchObject({ code: "TEMPLATE_ENTITY_KIND_UNSUPPORTED" });
+    expect(!ambiguous.ok && ambiguous.diagnostics[0]).toMatchObject({ code: "TEMPLATE_AMBIGUOUS" });
+    if (ambiguous.ok) throw new Error("Expected ambiguity failure");
+    expect(ambiguous.diagnostics[0]?.templateCandidates).toHaveLength(2);
+    expect(!malformedReference.ok && malformedReference.diagnostics[0]).toMatchObject({ code: "TEMPLATE_REFERENCE_INVALID" });
+    expect(!malformedRecord.ok && malformedRecord.diagnostics[0]).toMatchObject({ code: "TEMPLATE_RECORD_INVALID" });
+  });
+
+  it("merges own mods before template mods and applies template roots after preserve inheritance", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "SRC",
+      remaining: { trait: [], page: 7, size: "M", type: "base", speed: 30 },
+    };
+    const variant: CopyModRawRecord = {
+      name: "Variant",
+      source: "SRC",
+      remaining: {
+        _copy: {
+          name: "Base",
+          source: "SRC",
+          _preserve: { "*": true },
+          _templates: [{ name: "First", source: "TMP" }, { name: "Second", source: "TMP" }],
+          _mod: { trait: { mode: "appendArr", items: "own" } },
+        },
+        size: "L",
+        type: null,
+      },
+    };
+
+    const result = materializeCopyWithMods(
+      variant,
+      makeTemplateContext([base], [
+        templateRecord("First", "TMP", {
+          _root: { page: 9, size: "S", type: "templated", speed: 40 },
+          _mod: { trait: { mode: "appendArr", items: "first" } },
+        }),
+        templateRecord("Second", "TMP", {
+          _mod: { trait: { mode: "appendArr", items: "second" } },
+        }),
+      ]),
+      { sourcePath: "source.json", sourceEntityKind: "monster" },
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected merge success");
+    expect(result.result.record.remaining).toMatchObject({
+      trait: ["own", "first", "second"],
+      page: 9,
+      size: "L",
+      speed: 40,
+    });
+    expect(result.result.record.remaining).not.toHaveProperty("type");
+  });
+
+  it("cleans directives, freezes provenance, and leaves inputs and template records unchanged", () => {
+    const base: CopyModRawRecord = { name: "Base", source: "SRC", remaining: { trait: [] } };
+    const template = templateRecord("First", "TMP", { _mod: { trait: { mode: "appendArr", items: "first" } } });
+    const variant: CopyModRawRecord = {
+      name: "Variant",
+      source: "SRC",
+      remaining: { _copy: { name: "Base", source: "SRC", _templates: [{ name: "First", source: "TMP" }] } },
+    };
+    const before = JSON.stringify({ base, template, variant });
+
+    const result = materializeCopyWithMods(
+      variant,
+      makeTemplateContext([base], [template]),
+      { sourcePath: "source.json", sourceEntityKind: "monster" },
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected provenance success");
+    expect(result.result.record.remaining).not.toHaveProperty("_templates");
+    expect(result.result.record.remaining).not.toHaveProperty("_copy");
+    expect(result.result.record.remaining).not.toHaveProperty("_mod");
+    expect(result.result.record.remaining).not.toHaveProperty("_preserve");
+    expect(result.result.metadata.appliedTemplates).toEqual([
+      { name: "First", source: "TMP", entityKind: "monsterTemplate", sourcePath: "template.json" },
+    ]);
+    expect(Object.isFrozen(result.result.metadata.appliedTemplates)).toBe(true);
+    expect(Object.isFrozen(result.result.metadata.appliedTemplates[0])).toBe(true);
+    expect(result.result.metadata.appliedTemplates[0]).not.toHaveProperty("apply");
+    expect(JSON.stringify({ base, template, variant })).toBe(before);
+  });
+
+  it("materializes same-collection copied template records before applying them", () => {
+    const base: CopyModRawRecord = { name: "Base", source: "SRC", remaining: { type: "base" } };
+    const parentTemplate = templateRecord("Mountain Dwarf", "PHB", {
+      _root: { type: { type: "humanoid", tags: [{ tag: "dwarf", prefix: "Mountain" }] } },
+    });
+    const copiedTemplate: CopyModRawRecord = {
+      name: "Hill Dwarf",
+      source: "PHB",
+      remaining: {
+        _copy: {
+          name: "Mountain Dwarf",
+          source: "PHB",
+          _mod: {
+            _: {
+              mode: "setProp",
+              prop: "apply._root.type",
+              value: { type: "humanoid", tags: [{ tag: "dwarf", prefix: "Hill" }] },
+            },
+          },
+        },
+      },
+    };
+    const variant: CopyModRawRecord = {
+      name: "Variant",
+      source: "SRC",
+      remaining: { _copy: { name: "Base", source: "SRC", _templates: [{ name: "Hill Dwarf", source: "PHB" }] } },
+    };
+
+    const result = materializeCopyWithMods(
+      variant,
+      makeTemplateContext([base], [parentTemplate, copiedTemplate]),
+      { sourcePath: "source.json", sourceEntityKind: "monster" },
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected copied template success");
+    expect(result.result.record.remaining.type).toEqual({
+      type: "humanoid",
+      tags: [{ tag: "dwarf", prefix: "Hill" }],
+    });
+  });
+
+  it("applies nested copy level templates independently and stops outer work on nested failure", () => {
+    const base: CopyModRawRecord = { name: "Base", source: "SRC", remaining: { trait: [] } };
+    const middle: CopyModRawRecord = {
+      name: "Middle",
+      source: "SRC",
+      remaining: { _copy: { name: "Base", source: "SRC", _preserve: { "*": true }, _templates: [{ name: "First", source: "TMP" }] } },
+    };
+    const outer: CopyModRawRecord = {
+      name: "Outer",
+      source: "SRC",
+      remaining: { _copy: { name: "Middle", source: "SRC", _preserve: { "*": true }, _templates: [{ name: "Second", source: "TMP" }] } },
+    };
+    const result = materializeCopyWithMods(
+      outer,
+      makeTemplateContext([base, middle], [
+        templateRecord("First", "TMP", { _mod: { trait: { mode: "appendArr", items: "middle" } } }),
+        templateRecord("Second", "TMP", { _mod: { trait: { mode: "appendArr", items: "outer" } } }),
+      ]),
+      { sourcePath: "source.json", sourceEntityKind: "monster" },
+    );
+    const failed = materializeCopyWithMods(
+      { ...outer, remaining: { _copy: { name: "Middle", source: "SRC", _templates: [{ name: "Second", source: "TMP" }] } } },
+      makeTemplateContext([base, {
+        ...middle,
+        remaining: { _copy: { name: "Base", source: "SRC", _templates: [{ name: "Missing", source: "TMP" }] } },
+      }], [templateRecord("Second", "TMP", { _mod: { trait: { mode: "appendArr", items: "outer" } } })]),
+      { sourcePath: "source.json", sourceEntityKind: "monster" },
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected nested template success");
+    expect(result.result.record.remaining.trait).toEqual(["middle", "outer"]);
+    expect(result.result.metadata.appliedTemplates.map((item) => item.name)).toEqual(["First", "Second"]);
+    expect(failed.ok).toBe(false);
+    expect(!failed.ok && failed.diagnostics[0]).toMatchObject({ code: "TEMPLATE_NOT_FOUND", entityName: "Middle" });
   });
 });
 

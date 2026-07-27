@@ -13,8 +13,13 @@ export interface VersionAbstractExpansionContext {
 
 export interface VersionAbstractExpansionResult {
   readonly ok: boolean;
-  readonly versions: readonly unknown[];
+  readonly versions: readonly ExpandedVersionEntry[];
   readonly diagnostics: readonly VersionExpansionDiagnostic[];
+}
+
+export interface ExpandedVersionEntry {
+  readonly rawVersion: unknown;
+  readonly implementationIndex?: number;
 }
 
 function isStrictPlainObject(value: unknown): value is Record<string, unknown> {
@@ -205,7 +210,7 @@ export function expandAbstractVersionEntry(
   context: VersionAbstractExpansionContext,
 ): VersionAbstractExpansionResult {
   if (!isStrictPlainObject(rawVersion) || (rawVersion._abstract === undefined && rawVersion._implementations === undefined)) {
-    return { ok: true, versions: [cloneUnknown(rawVersion)], diagnostics: [] };
+    return { ok: true, versions: [{ rawVersion: cloneUnknown(rawVersion) }], diagnostics: [] };
   }
 
   if (!isStrictPlainObject(rawVersion._abstract)) {
@@ -235,7 +240,7 @@ export function expandAbstractVersionEntry(
     return failure(invalidPlainTreeDiagnostic(context, undefined, abstractTree.path, abstractTree.rawPayload));
   }
 
-  const concreteVersions: unknown[] = [];
+  const concreteVersions: ExpandedVersionEntry[] = [];
   const diagnostics: VersionExpansionDiagnostic[] = [];
 
   rawVersion._implementations.forEach((implementation, implementationIndex) => {
@@ -286,7 +291,10 @@ export function expandAbstractVersionEntry(
     }
 
     delete implementationClone._variables;
-    concreteVersions.push({ ...(substituted.value as Record<string, unknown>), ...implementationClone });
+    concreteVersions.push({
+      rawVersion: { ...(substituted.value as Record<string, unknown>), ...implementationClone },
+      implementationIndex,
+    });
   });
 
   return {

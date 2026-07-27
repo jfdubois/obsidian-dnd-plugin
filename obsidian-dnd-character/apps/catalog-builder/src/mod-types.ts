@@ -287,8 +287,22 @@ export interface CopyModRawRecord {
 
 export type MaterializationDiagnosticCode = CopyDiagnosticCode | ModDiagnosticCode;
 
+export type CopyTemplateDiagnosticCode =
+  | "TEMPLATE_REFERENCE_INVALID"
+  | "TEMPLATE_RECORD_INVALID"
+  | "TEMPLATE_NOT_FOUND"
+  | "TEMPLATE_AMBIGUOUS"
+  | "TEMPLATE_ENTITY_KIND_UNSUPPORTED";
+
+export interface AppliedCopyTemplateMetadata {
+  readonly name: string;
+  readonly source: string;
+  readonly entityKind: string;
+  readonly sourcePath: string;
+}
+
 export interface MaterializationDiagnostic {
-  readonly code: MaterializationDiagnosticCode;
+  readonly code: MaterializationDiagnosticCode | CopyTemplateDiagnosticCode;
   readonly severity: DiagnosticSeverity;
   readonly message: string;
   readonly sourcePath?: string;
@@ -319,6 +333,16 @@ export interface MaterializationDiagnostic {
   readonly validationReason?: string;
   /** Raw preserve payload for preserve diagnostics. */
   readonly rawPreservePayload?: unknown;
+  /** Index within the _templates array that failed. */
+  readonly templateReferenceIndex?: number;
+  /** Template name from the failing reference, when available. */
+  readonly templateName?: string;
+  /** Template source from the failing reference, when available. */
+  readonly templateSource?: string;
+  /** Raw template reference payload for template diagnostics. */
+  readonly rawTemplateReference?: unknown;
+  /** Candidates matched during TEMPLATE_AMBIGUOUS. */
+  readonly templateCandidates?: readonly AppliedCopyTemplateMetadata[];
 }
 
 export interface MaterializationAmbiguityCandidate {
@@ -364,6 +388,7 @@ export interface MaterializedResolvedRecord {
   readonly metadata: {
     readonly deferredPreserve: unknown;
     readonly diagnostics: readonly MaterializationDiagnostic[];
+    readonly appliedTemplates: readonly AppliedCopyTemplateMetadata[];
   };
 }
 

@@ -5,10 +5,6 @@ import {
   type CopyResolverDiagnostic,
   type StructuredIdentity,
 } from "./copy-resolver";
-import {
-  validatePreservePayload,
-  type PreservePayload,
-} from "./copy-preserve-policy";
 import { materializeNestedCopyLevels } from "./nested-copy-materializer";
 import type {
   CopyModRawRecord,
@@ -16,18 +12,11 @@ import type {
   MaterializedResolvedRecord,
 } from "./mod-types";
 import {
-  applyDirectFieldOverlay,
-  cloneRecord,
   cloneUnknown,
   deepFreeze,
   isPlainObject,
-  stripCopyDirectives,
 } from "./copy-materialization-merge";
-import { applyModBlock } from "./copy-materialization-mods";
-import {
-  convertModDiagnostic,
-  convertPreserveDiagnostic,
-} from "./copy-materialization-diagnostics";
+import { materializeCopyLevel } from "./copy-template-materializer";
 
 
 // Re-export for backward compatibility
@@ -126,7 +115,6 @@ export function resolveCopyWithMods(
   context: CopyResolverContext,
   modContext: CopyModContext,
 ): CopyModResolutionResult {
-  const copyValue = record.remaining._copy;
   const resolved = resolveCopy(record, context, {
     sourceEntityKind: modContext.sourceEntityKind,
     sourcePath: modContext.sourcePath,
@@ -145,6 +133,7 @@ export function resolveCopyWithMods(
     resolved.baseEntity,
     resolved.chain,
     resolved.locatedLevels,
+    context,
   );
   if (!nestedResult.ok) {
     return {
@@ -153,53 +142,15 @@ export function resolveCopyWithMods(
     };
   }
 
-  // Validate _copy._preserve payload before merge (only when present)
-  const preserveRaw = isPlainObject(copyValue) ? copyValue._preserve : undefined;
-  let preservePayload: PreservePayload = {};
-  if (preserveRaw !== undefined) {
-    const preserveValidation = validatePreservePayload(preserveRaw, modContext.sourceEntityKind);
-    if (!preserveValidation.valid) {
-      return {
-        ok: false,
-        diagnostics: Object.freeze(
-          preserveValidation.diagnostics.map((d) =>
-            convertPreserveDiagnostic(d, record, modContext.sourcePath, modContext.sourceEntityKind),
-          ),
-        ),
-      };
-    }
-    preservePayload = preserveValidation.payload;
-  }
-
-  const clonedBase = cloneRecord(nestedResult.record);
-  applyDirectFieldOverlay(
-    clonedBase.remaining,
-    record.remaining,
-    preservePayload,
-    modContext.sourceEntityKind,
-  );
-  if (!isPlainObject(copyValue) || copyValue._mod === undefined) {
-    return {
-      ok: true,
-      record: { name: record.name, source: record.source, remaining: stripCopyDirectives(clonedBase.remaining) },
-      diagnostics: [],
-    };
-  }
-  const diagnostics = convertModDiagnostic(
-    applyModBlock(
-      clonedBase.remaining,
-      record,
-      copyValue._mod,
-      modContext.sourcePath,
-    ),
-    { sourceEntityKind: modContext.sourceEntityKind },
-  );
-  if (diagnostics.length > 0) {
-    return { ok: false, diagnostics };
-  }
+  const materialized = materializeCopyLevel(nestedResult.record, record, {
+    resolverContext: context,
+    sourcePath: modContext.sourcePath,
+    sourceEntityKind: modContext.sourceEntityKind,
+  });
+  if (!materialized.ok) return { ok: false, diagnostics: materialized.diagnostics };
   return {
     ok: true,
-    record: { name: record.name, source: record.source, remaining: stripCopyDirectives(clonedBase.remaining) },
+    record: materialized.record,
     diagnostics: [],
   };
 }
@@ -235,6 +186,7 @@ export function materializeCopyWithMods(
     resolved.baseEntity,
     resolved.chain,
     resolved.locatedLevels,
+    context,
   );
   if (!nestedResult.ok) {
     return {
@@ -245,49 +197,12 @@ export function materializeCopyWithMods(
 
   const chain = resolved.chain;
 
-  // Validate _copy._preserve payload before merge (only when present)
-  const preserveRaw = isPlainObject(copyValue) ? copyValue._preserve : undefined;
-  let preservePayload: PreservePayload = {};
-  if (preserveRaw !== undefined) {
-    const preserveValidation = validatePreservePayload(preserveRaw, modContext.sourceEntityKind);
-    if (!preserveValidation.valid) {
-      return {
-        ok: false,
-        diagnostics: Object.freeze(
-          preserveValidation.diagnostics.map((d) =>
-            convertPreserveDiagnostic(d, record, modContext.sourcePath, modContext.sourceEntityKind),
-          ),
-        ),
-      };
-    }
-    preservePayload = preserveValidation.payload;
-  }
-
-  const clonedBase = cloneRecord(nestedResult.record);
-
-  applyDirectFieldOverlay(
-    clonedBase.remaining,
-    record.remaining,
-    preservePayload,
-    modContext.sourceEntityKind,
-  );
-
-  let diagnostics: readonly MaterializationDiagnostic[] = [];
-  if (isPlainObject(copyValue) && copyValue._mod !== undefined) {
-    diagnostics = convertModDiagnostic(
-      applyModBlock(
-        clonedBase.remaining,
-        record,
-        copyValue._mod,
-        modContext.sourcePath,
-      ),
-      { sourceEntityKind: modContext.sourceEntityKind },
-    );
-  }
-
-  if (diagnostics.length > 0) {
-    return { ok: false, diagnostics };
-  }
+  const materialized = materializeCopyLevel(nestedResult.record, record, {
+    resolverContext: context,
+    sourcePath: modContext.sourcePath,
+    sourceEntityKind: modContext.sourceEntityKind,
+  });
+  if (!materialized.ok) return { ok: false, diagnostics: materialized.diagnostics };
 
   // Reject if context fields would produce "unknown" in the result
   if (modContext.sourceEntityKind === "unknown" || modContext.sourcePath === "unknown") {
@@ -359,12 +274,16 @@ export function materializeCopyWithMods(
         sourcePath: modContext.sourcePath,
         discriminators,
       },
-      record: { name: record.name, source: record.source, remaining: stripCopyDirectives(clonedBase.remaining) },
+      record: materialized.record,
       inheritanceChain: chain,
       terminalBase,
       metadata: {
         deferredPreserve,
-        diagnostics,
+        diagnostics: [],
+        appliedTemplates: deepFreeze([
+          ...nestedResult.appliedTemplates,
+          ...materialized.appliedTemplates,
+        ]),
       },
     },
   };

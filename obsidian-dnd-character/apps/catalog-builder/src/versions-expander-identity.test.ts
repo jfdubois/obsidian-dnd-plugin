@@ -162,6 +162,132 @@ describe("version expansion identity and materialization", () => {
     expect(result.validatedFiles["subclass.json"]?.collections[0]?.records[2]?.remaining.entries).toEqual(["battle master"]);
   });
 
+  it("uses shortName, subclassName, abbreviation, and pantheon shared discriminators", () => {
+    const shortBase: RawRecord = {
+      name: "Order",
+      source: "TST",
+      remaining: { shortName: "Alpha", entries: ["alpha"] },
+    };
+    const shortVersioned: RawRecord = {
+      name: "Order",
+      source: "TST",
+      remaining: {
+        shortName: "Beta",
+        entries: ["beta"],
+        _versions: [{ name: "Order Revised", source: "TST" }],
+      },
+    };
+    const subclassBase: RawRecord = {
+      name: "Feature",
+      source: "TST",
+      remaining: { subclassName: "Open Hand", subclassSource: "PHB", level: 3, entries: ["open hand"] },
+    };
+    const subclassVersioned: RawRecord = {
+      name: "Feature",
+      source: "TST",
+      remaining: {
+        subclassName: "Shadow",
+        subclassSource: "PHB",
+        level: 3,
+        entries: ["shadow"],
+        _versions: [{ name: "Feature Revised", source: "TST" }],
+      },
+    };
+    const deityBase: RawRecord = {
+      name: "Apollo",
+      source: "TST",
+      remaining: { pantheon: "Greek", entries: ["greek"] },
+    };
+    const deityVersioned: RawRecord = {
+      name: "Apollo",
+      source: "TST",
+      remaining: {
+        pantheon: "Roman",
+        entries: ["roman"],
+        _versions: [{ name: "Apollo Revised", source: "TST" }],
+      },
+    };
+    const languageBase: RawRecord = {
+      name: "Common",
+      source: "TST",
+      remaining: { abbreviation: "C", entries: ["common"] },
+    };
+    const languageVersioned: RawRecord = {
+      name: "Common",
+      source: "TST",
+      remaining: {
+        abbreviation: "RC",
+        entries: ["rare common"],
+        _versions: [{ name: "Common Revised", source: "TST" }],
+      },
+    };
+
+    const result = expandVersions({
+      "mixed.json": env("mixed.json", [
+        col("class", [shortBase, shortVersioned]),
+        col("subclassFeature", [subclassBase, subclassVersioned]),
+        col("deity", [deityBase, deityVersioned]),
+        col("language", [languageBase, languageVersioned]),
+      ]),
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.validatedFiles["mixed.json"]?.collections[0]?.records[2]?.remaining.entries).toEqual(["beta"]);
+    expect(result.validatedFiles["mixed.json"]?.collections[1]?.records[2]?.remaining.entries).toEqual(["shadow"]);
+    expect(result.validatedFiles["mixed.json"]?.collections[2]?.records[2]?.remaining.entries).toEqual(["roman"]);
+    expect(result.validatedFiles["mixed.json"]?.collections[3]?.records[2]?.remaining.entries).toEqual(["rare common"]);
+  });
+
+  it("automatically uses a newly shared scalar discriminator without a version allowlist change", () => {
+    const oldShape: RawRecord = {
+      name: "Same",
+      source: "TST",
+      remaining: { futureScalarDiscriminator: "old", entries: ["old"] },
+    };
+    const newShape: RawRecord = {
+      name: "Same",
+      source: "TST",
+      remaining: {
+        futureScalarDiscriminator: "new",
+        entries: ["new"],
+        _versions: [{ name: "Same Revised", source: "TST" }],
+      },
+    };
+
+    const result = expandVersions({
+      "future.json": env("future.json", [col("monster", [oldShape, newShape])]),
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.validatedFiles["future.json"]?.collections[0]?.records[2]?.remaining.entries).toEqual(["new"]);
+  });
+
+  it("still fails ambiguous complete identities", () => {
+    const first: RawRecord = {
+      name: "Same",
+      source: "TST",
+      remaining: { entries: ["first"] },
+    };
+    const second: RawRecord = {
+      name: "Same",
+      source: "TST",
+      remaining: {
+        entries: ["second"],
+        _versions: [{ name: "Same Revised", source: "TST" }],
+      },
+    };
+
+    const result = expandVersions({
+      "ambiguous.json": env("ambiguous.json", [col("monster", [first, second])]),
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "VERSION_COPY_FAILED",
+      materializationCode: "AMBIGUOUS_BASE_ENTITY",
+    });
+  });
+
   it("keeps multi-collection files separated with correct counts", () => {
     const result = expandVersions({
       "mixed.json": env("mixed.json", [

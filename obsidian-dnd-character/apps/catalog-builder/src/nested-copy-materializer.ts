@@ -1,25 +1,15 @@
 import {
   type CopyChainStep,
+  type CopyResolverContext,
   type LocatedCopyLevel,
 } from "./copy-resolver";
-import {
-  validatePreservePayload,
-  type PreservePayload,
-} from "./copy-preserve-policy";
 import type {
+  AppliedCopyTemplateMetadata,
   CopyModRawRecord,
   MaterializationDiagnostic,
 } from "./mod-types";
-import {
-  applyDirectFieldOverlay,
-  cloneRecord,
-  isPlainObject,
-} from "./copy-materialization-merge";
-import { applyModBlock } from "./copy-materialization-mods";
-import {
-  convertModDiagnostic,
-  convertPreserveDiagnostic,
-} from "./copy-materialization-diagnostics";
+import { cloneRecord } from "./copy-materialization-merge";
+import { materializeCopyLevel } from "./copy-template-materializer";
 
 /* ── Public API ────────────────────────────────────────────────── */
 
@@ -41,12 +31,17 @@ export function materializeNestedCopyLevels(
   resolvedBase: CopyModRawRecord,
   chain: readonly CopyChainStep[],
   locatedLevels: readonly LocatedCopyLevel[],
+  resolverContext: CopyResolverContext = { validatedFiles: {} },
 ):
-  | { readonly ok: true; readonly record: CopyModRawRecord }
+  | {
+      readonly ok: true;
+      readonly record: CopyModRawRecord;
+      readonly appliedTemplates: readonly AppliedCopyTemplateMetadata[];
+    }
   | { readonly ok: false; readonly diagnostics: readonly MaterializationDiagnostic[] } {
 
   if (chain.length <= 1) {
-    return { ok: true, record: resolvedBase };
+    return { ok: true, record: resolvedBase, appliedTemplates: [] };
   }
 
   // Process from terminal base (last step) outward to the step just before derived
@@ -56,6 +51,7 @@ export function materializeNestedCopyLevels(
 
   let current = cloneRecord(resolvedBase);
   const allDiagnostics: MaterializationDiagnostic[] = [];
+  const appliedTemplates: AppliedCopyTemplateMetadata[] = [];
 
   for (let i = chain.length - 2; i >= 0; i--) {
     const step = chain[i];
@@ -86,63 +82,24 @@ export function materializeNestedCopyLevels(
     const intermediateEntityKind = locatedLevel.entityKind;
     const intermediateSourcePath = locatedLevel.sourcePath;
 
-    // Clone current accumulated state
-    current = cloneRecord(current);
-
-    // Validate intermediate's _copy._preserve
-    const copyValue = intermediate.remaining._copy;
-    const preserveRaw = isPlainObject(copyValue) ? copyValue._preserve : undefined;
-    let preservePayload: PreservePayload = {};
-    if (preserveRaw !== undefined) {
-      const validation = validatePreservePayload(preserveRaw, intermediateEntityKind);
-      if (!validation.valid) {
-        return {
-          ok: false,
-          diagnostics: Object.freeze(
-            validation.diagnostics.map((d) =>
-              convertPreserveDiagnostic(
-                d,
-                intermediate,
-                intermediateSourcePath,
-                intermediateEntityKind,
-                {
-                  requestedIdentity: step.identity,
-                  inheritanceChain: failureChain,
-                },
-              ),
-            ),
-          ),
-        };
-      }
-      preservePayload = validation.payload;
-    }
-
-    // Apply preserve-gated inheritance: overlay intermediate's direct fields onto current
-    applyDirectFieldOverlay(
-      current.remaining,
-      intermediate.remaining,
-      preservePayload,
-      intermediateEntityKind,
+    const materialized = materializeCopyLevel(
+      cloneRecord(current),
+      intermediate,
+      {
+        resolverContext,
+        sourcePath: intermediateSourcePath,
+        sourceEntityKind: intermediateEntityKind,
+        requestedIdentity: step.identity,
+        inheritanceChain: failureChain,
+      },
     );
-
-    // Apply intermediate's _copy._mod
-    if (isPlainObject(copyValue) && copyValue._mod !== undefined) {
-      const modDiagnostics = applyModBlock(
-        current.remaining,
-        intermediate,
-        copyValue._mod,
-        intermediateSourcePath,
-      );
-      if (modDiagnostics.length > 0) {
-        allDiagnostics.push(...convertModDiagnostic(modDiagnostics, {
-          sourceEntityKind: intermediateEntityKind,
-          requestedIdentity: step.identity,
-          inheritanceChain: failureChain,
-        }));
-        return { ok: false, diagnostics: allDiagnostics };
-      }
+    if (!materialized.ok) {
+      allDiagnostics.push(...materialized.diagnostics);
+      return { ok: false, diagnostics: allDiagnostics };
     }
+    current = materialized.record;
+    appliedTemplates.push(...materialized.appliedTemplates);
   }
 
-  return { ok: true, record: current };
+  return { ok: true, record: current, appliedTemplates };
 }

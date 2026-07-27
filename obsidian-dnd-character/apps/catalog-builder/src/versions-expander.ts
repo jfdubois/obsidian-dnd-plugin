@@ -25,21 +25,6 @@ export type {
   VersionExpansionDiagnosticCode,
 } from "./version-diagnostics";
 
-const VERSION_BASE_DISCRIMINATOR_KEYS = new Set([
-  "abbreviation",
-  "className",
-  "classSource",
-  "level",
-  "name",
-  "pantheon",
-  "raceName",
-  "raceSource",
-  "source",
-  "subclassName",
-  "subclassShortName",
-  "subclassSource",
-]);
-
 export interface VersionExpansionResult {
   readonly ok: boolean;
   readonly records: readonly RawRecord[];
@@ -99,7 +84,6 @@ function versionBaseIdentity(base: RawRecord): Record<string, unknown> {
   const identity = getRecordIdentity(base);
   const copyIdentity: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(identity)) {
-    if (!VERSION_BASE_DISCRIMINATOR_KEYS.has(key)) continue;
     if (!isCopyDiscriminatorValue(value)) continue;
     copyIdentity[key] = value;
   }
@@ -193,7 +177,7 @@ function expandCollection(
       }
 
       expandedVersion.versions.forEach((concreteVersion) => {
-        const validatedVersion = validateVersionRecord(concreteVersion, index);
+        const validatedVersion = validateVersionRecord(concreteVersion.rawVersion, index);
         if (isVersionRecordValidationDiagnostic(validatedVersion)) {
           diagnostics.push(
             invalidVersionRecordDiagnostic(
@@ -202,6 +186,7 @@ function expandCollection(
               record,
               index,
               validatedVersion,
+              concreteVersion.implementationIndex,
             ),
           );
           return;
@@ -221,6 +206,7 @@ function expandCollection(
               index,
               validatedVersion.name,
               validatedVersion.source,
+              concreteVersion.implementationIndex,
               resolved.diagnostics,
             ),
           );

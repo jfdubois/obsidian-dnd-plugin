@@ -183,4 +183,118 @@ describe("version materialization characterization", () => {
     expect(result.records[1]?.remaining.hasToken).toBe(true);
     expect(result.records[1]?.remaining).not.toHaveProperty("_preserve");
   });
+
+  it("applies basic version _templates in the original logical collection", () => {
+    const base: RawRecord = {
+      name: "Templated Base",
+      source: "TST",
+      remaining: {
+        trait: [],
+        _versions: [{
+          name: "Templated Version",
+          source: "TST",
+          _templates: [{ name: "Awakened", source: "PHB" }],
+        }],
+      },
+    };
+    const template: RawRecord = {
+      name: "Awakened",
+      source: "PHB",
+      remaining: { apply: { _mod: { trait: { mode: "appendArr", items: { name: "Awakened" } } } } },
+    };
+
+    const result = expandVersionsInFile(
+      envelope("bestiary.json", [
+        collection("monster", [base]),
+        collection("monsterTemplate", [template]),
+      ]),
+      "bestiary.json",
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.records).toHaveLength(3);
+    expect(result.records[1]).toMatchObject({
+      name: "Templated Version",
+      source: "TST",
+      remaining: { trait: [{ name: "Awakened" }] },
+    });
+    expect(result.records[1]?.remaining).not.toHaveProperty("_templates");
+  });
+
+  it("applies abstract implementation _templates and reports implementation-indexed template failures", () => {
+    const base: RawRecord = {
+      name: "Abstract Base",
+      source: "TST",
+      remaining: {
+        trait: [],
+        _versions: [{
+          _abstract: {
+            name: "Abstract {{kind}}",
+            source: "TST",
+            _templates: [{ name: "{{template}}", source: "TMP" }],
+          },
+          _implementations: [
+            { _variables: { kind: "Good", template: "Good Template" } },
+            { _variables: { kind: "Bad", template: "Missing Template" } },
+          ],
+        }],
+      },
+    };
+    const template: RawRecord = {
+      name: "Good Template",
+      source: "TMP",
+      remaining: { apply: { _mod: { trait: { mode: "appendArr", items: { name: "Good" } } } } },
+    };
+
+    const result = expandVersionsInFile(
+      envelope("bestiary.json", [
+        collection("monster", [base]),
+        collection("monsterTemplate", [template]),
+      ]),
+      "bestiary.json",
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.records[1]?.remaining.trait).toEqual([{ name: "Good" }]);
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "VERSION_TEMPLATE_FAILED",
+      materializationCode: "TEMPLATE_NOT_FOUND",
+      implementationIndex: 1,
+      templateReferenceIndex: 0,
+      templateName: "Missing Template",
+      templateSource: "TMP",
+    });
+  });
+
+  it("executes version and template _mod blocks once in upstream order", () => {
+    const base: RawRecord = {
+      name: "Mod Template Base",
+      source: "TST",
+      remaining: {
+        trait: [],
+        _versions: [{
+          name: "Mod Template Version",
+          source: "TST",
+          _templates: [{ name: "Appender", source: "TMP" }],
+          _mod: { trait: { mode: "appendArr", items: { name: "Own" } } },
+        }],
+      },
+    };
+    const template: RawRecord = {
+      name: "Appender",
+      source: "TMP",
+      remaining: { apply: { _mod: { trait: { mode: "appendArr", items: { name: "Template" } } } } },
+    };
+
+    const result = expandVersionsInFile(
+      envelope("bestiary.json", [
+        collection("monster", [base]),
+        collection("monsterTemplate", [template]),
+      ]),
+      "bestiary.json",
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.records[1]?.remaining.trait).toEqual([{ name: "Own" }, { name: "Template" }]);
+  });
 });

@@ -19,6 +19,7 @@ export type VersionExpansionDiagnosticCode =
   | "INVALID_VERSION_DIRECTIVE"
   | "VERSION_COPY_FAILED"
   | "VERSION_PRESERVE_FAILED"
+  | "VERSION_TEMPLATE_FAILED"
   | "VERSION_MOD_FAILED";
 
 export interface VersionExpansionDiagnostic {
@@ -49,6 +50,11 @@ export interface VersionExpansionDiagnostic {
   readonly invalidMarkerValue?: unknown;
   readonly validationReason?: string;
   readonly rawPreservePayload?: unknown;
+  readonly templateReferenceIndex?: number;
+  readonly templateName?: string;
+  readonly templateSource?: string;
+  readonly rawTemplateReference?: unknown;
+  readonly templateCandidates?: MaterializationDiagnostic["templateCandidates"];
   readonly modDiagnostics?: readonly MaterializationDiagnostic[];
 }
 
@@ -82,6 +88,7 @@ export function invalidVersionRecordDiagnostic(
   sourceRecord: RawRecord,
   versionIndex: number,
   validationDiagnostic: VersionRecordValidationDiagnostic,
+  implementationIndex?: number,
 ): VersionExpansionDiagnostic {
   return Object.freeze({
     code: validationDiagnostic.code,
@@ -92,11 +99,13 @@ export function invalidVersionRecordDiagnostic(
     recordName: sourceRecord.name,
     recordSource: sourceRecord.source,
     versionIndex,
+    implementationIndex,
     rawPayload: validationDiagnostic.rawPayload,
   });
 }
 
 function versionFailureCode(code: string): VersionExpansionDiagnosticCode {
+  if (code.startsWith("TEMPLATE_")) return "VERSION_TEMPLATE_FAILED";
   if (code.startsWith("INVALID_PRESERVE")) return "VERSION_PRESERVE_FAILED";
   if (code.startsWith("INVALID_") && code.includes("PRESERVE")) return "VERSION_PRESERVE_FAILED";
   if (code.startsWith("MOD_") || code.includes("_MOD_") || code === "UNKNOWN_MOD_MODE") return "VERSION_MOD_FAILED";
@@ -110,6 +119,7 @@ export function materializationFailureDiagnostic(
   versionIndex: number,
   versionName: string,
   versionSource: string,
+  implementationIndex: number | undefined,
   modDiagnostics: readonly MaterializationDiagnostic[],
 ): VersionExpansionDiagnostic {
   const first = modDiagnostics[0];
@@ -122,6 +132,7 @@ export function materializationFailureDiagnostic(
     recordName: sourceRecord.name,
     recordSource: sourceRecord.source,
     versionIndex,
+    implementationIndex,
     versionName,
     versionSource,
     materializationCode: first?.code,
@@ -139,6 +150,11 @@ export function materializationFailureDiagnostic(
     invalidMarkerValue: first?.invalidMarkerValue,
     validationReason: first?.validationReason,
     rawPreservePayload: first?.rawPreservePayload,
+    templateReferenceIndex: first?.templateReferenceIndex,
+    templateName: first?.templateName,
+    templateSource: first?.templateSource,
+    rawTemplateReference: first?.rawTemplateReference,
+    templateCandidates: first?.templateCandidates,
     modDiagnostics,
   });
 }

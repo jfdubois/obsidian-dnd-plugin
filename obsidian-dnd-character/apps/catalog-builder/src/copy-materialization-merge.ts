@@ -67,7 +67,7 @@ export function stripCopyDirectives(
 ): Record<string, unknown> {
   const stripped: Record<string, unknown> = {};
   for (const [key, value] of Object.entries(remaining)) {
-    if (key !== "_copy" && key !== "_preserve" && key !== "_mod") {
+    if (key !== "_copy" && key !== "_preserve" && key !== "_mod" && key !== "_templates") {
       stripped[key] = value;
     }
   }

@@ -32,8 +32,9 @@ describe("expandAbstractVersionEntry", () => {
     const result = expandAbstractVersionEntry(version, context());
 
     expect(result.ok).toBe(true);
-    expect(result.versions).toEqual([version]);
-    expect(result.versions[0]).not.toBe(version);
+    expect(result.versions).toEqual([{ rawVersion: version }]);
+    expect(result.versions[0]?.rawVersion).not.toBe(version);
+    expect(result.versions[0]?.implementationIndex).toBeUndefined();
   });
 
   it("expands one concrete entry per implementation and overlays implementation fields", () => {
@@ -59,33 +60,39 @@ describe("expandAbstractVersionEntry", () => {
     expect(result.ok).toBe(true);
     expect(result.versions).toEqual([
       {
-        name: "Dragonborn (Black)",
-        source: "XPHB",
-        speed: 35,
-        entries: ["Deal Acid damage."],
-        nested: { text: "Nested Black" },
-        _mod: { entries: { mode: "appendArr", items: "Tail Black" } },
-        _preserve: { note: "Black" },
-        _templates: [{ name: "Template Black" }],
+        rawVersion: {
+          name: "Dragonborn (Black)",
+          source: "XPHB",
+          speed: 35,
+          entries: ["Deal Acid damage."],
+          nested: { text: "Nested Black" },
+          _mod: { entries: { mode: "appendArr", items: "Tail Black" } },
+          _preserve: { note: "Black" },
+          _templates: [{ name: "Template Black" }],
+        },
+        implementationIndex: 0,
       },
       {
-        name: "Dragonborn (Blue)",
-        source: "XPHB",
-        speed: 30,
-        entries: ["Deal Lightning damage."],
-        nested: { text: "Nested Blue" },
-        _mod: { entries: { mode: "appendArr", items: "Tail Blue" } },
-        _preserve: { note: "Blue" },
-        _templates: [{ name: "Template Blue" }],
-        resist: ["lightning"],
+        rawVersion: {
+          name: "Dragonborn (Blue)",
+          source: "XPHB",
+          speed: 30,
+          entries: ["Deal Lightning damage."],
+          nested: { text: "Nested Blue" },
+          _mod: { entries: { mode: "appendArr", items: "Tail Blue" } },
+          _preserve: { note: "Blue" },
+          _templates: [{ name: "Template Blue" }],
+          resist: ["lightning"],
+        },
+        implementationIndex: 1,
       },
     ]);
     for (const version of result.versions) {
-      expect(version).not.toHaveProperty("_abstract");
-      expect(version).not.toHaveProperty("_implementations");
-      expect(version).not.toHaveProperty("_variables");
-      expect(version).toHaveProperty("name");
-      expect(version).toHaveProperty("source");
+      expect(version.rawVersion).not.toHaveProperty("_abstract");
+      expect(version.rawVersion).not.toHaveProperty("_implementations");
+      expect(version.rawVersion).not.toHaveProperty("_variables");
+      expect(version.rawVersion).toHaveProperty("name");
+      expect(version.rawVersion).toHaveProperty("source");
     }
   });
 
@@ -96,7 +103,8 @@ describe("expandAbstractVersionEntry", () => {
     }, context());
 
     expect(result.ok).toBe(true);
-    expect(result.versions[0]).toMatchObject({ name: "Dragonborn (acid)" });
+    expect(result.versions[0]?.rawVersion).toMatchObject({ name: "Dragonborn (acid)" });
+    expect(result.versions[0]?.implementationIndex).toBe(0);
   });
 
   it("returns structured diagnostics for malformed bundles and implementations", () => {
