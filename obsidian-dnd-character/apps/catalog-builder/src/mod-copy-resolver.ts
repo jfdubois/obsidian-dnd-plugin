@@ -177,12 +177,14 @@ function convertPreserveDiagnostic(
   diag: PreserveValidationDiagnostic,
   sourceRecord: CopyModRawRecord,
   sourcePath: string | undefined,
+  sourceEntityKind: string | undefined,
 ): MaterializationDiagnostic {
   const base = Object.freeze({
     code: diag.code,
     severity: diag.severity,
     message: diag.message,
     sourcePath,
+    sourceEntityKind,
     entityName: sourceRecord.name,
     entitySource: sourceRecord.source,
     fieldTarget: "_copy._preserve",
@@ -507,7 +509,7 @@ export function resolveCopyWithMods(
         ok: false,
         diagnostics: Object.freeze(
           preserveValidation.diagnostics.map((d) =>
-            convertPreserveDiagnostic(d, record, modContext.sourcePath),
+            convertPreserveDiagnostic(d, record, modContext.sourcePath, modContext.sourceEntityKind),
           ),
         ),
       };
@@ -583,7 +585,7 @@ export function materializeCopyWithMods(
         ok: false,
         diagnostics: Object.freeze(
           preserveValidation.diagnostics.map((d) =>
-            convertPreserveDiagnostic(d, record, modContext.sourcePath),
+            convertPreserveDiagnostic(d, record, modContext.sourcePath, modContext.sourceEntityKind),
           ),
         ),
       };

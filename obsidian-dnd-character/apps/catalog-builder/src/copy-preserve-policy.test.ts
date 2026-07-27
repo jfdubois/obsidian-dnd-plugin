@@ -9,26 +9,26 @@ import {
 
 describe("validatePreservePayload", () => {
   it("accepts empty plain object", () => {
-    const result = validatePreservePayload({});
+    const result = validatePreservePayload({}, "monster");
     expect(result.valid).toBe(true);
     if (!result.valid) throw new Error("expected valid");
     expect(result.payload).toEqual({});
   });
 
   it("accepts wildcard with boolean true", () => {
-    const result = validatePreservePayload({ "*": true });
+    const result = validatePreservePayload({ "*": true }, "monster");
     expect(result.valid).toBe(true);
     if (!result.valid) throw new Error("expected valid");
     expect(result.payload["*"]).toBe(true);
   });
 
   it("accepts per-field markers with boolean true", () => {
-    const result = validatePreservePayload({ page: true, srd: true });
+    const result = validatePreservePayload({ page: true, srd: true }, "monster");
     expect(result.valid).toBe(true);
   });
 
   it("rejects marker value 1", () => {
-    const result = validatePreservePayload({ page: 1 });
+    const result = validatePreservePayload({ page: 1 }, "monster");
     expect(result.valid).toBe(false);
     if (result.valid) throw new Error("expected invalid");
     expect(result.diagnostics[0]).toMatchObject({
@@ -39,7 +39,7 @@ describe("validatePreservePayload", () => {
   });
 
   it("rejects marker value 'true' string", () => {
-    const result = validatePreservePayload({ page: "true" });
+    const result = validatePreservePayload({ page: "true" }, "monster");
     expect(result.valid).toBe(false);
     if (result.valid) throw new Error("expected invalid");
     expect(result.diagnostics[0]).toMatchObject({
@@ -50,7 +50,7 @@ describe("validatePreservePayload", () => {
   });
 
   it("rejects null payload", () => {
-    const result = validatePreservePayload(null);
+    const result = validatePreservePayload(null, "monster");
     expect(result.valid).toBe(false);
     if (result.valid) throw new Error("expected invalid");
     expect(result.diagnostics[0]).toMatchObject({
@@ -60,7 +60,7 @@ describe("validatePreservePayload", () => {
   });
 
   it("rejects array payload", () => {
-    const result = validatePreservePayload([true, false]);
+    const result = validatePreservePayload([true, false], "monster");
     expect(result.valid).toBe(false);
     if (result.valid) throw new Error("expected invalid");
     expect(result.diagnostics[0]).toMatchObject({
@@ -69,22 +69,22 @@ describe("validatePreservePayload", () => {
   });
 
   it("rejects primitive string payload", () => {
-    const result = validatePreservePayload("all");
+    const result = validatePreservePayload("all", "monster");
     expect(result.valid).toBe(false);
   });
 
   it("rejects primitive number payload", () => {
-    const result = validatePreservePayload(42);
+    const result = validatePreservePayload(42, "monster");
     expect(result.valid).toBe(false);
   });
 
   it("rejects boolean payload", () => {
-    const result = validatePreservePayload(true);
+    const result = validatePreservePayload(true, "monster");
     expect(result.valid).toBe(false);
   });
 
   it("rejects nested object as marker value", () => {
-    const result = validatePreservePayload({ page: { nested: true } });
+    const result = validatePreservePayload({ page: { nested: true } }, "monster");
     expect(result.valid).toBe(false);
     if (result.valid) throw new Error("expected invalid");
     expect(result.diagnostics[0]).toMatchObject({
@@ -94,7 +94,7 @@ describe("validatePreservePayload", () => {
   });
 
   it("rejects array as marker value", () => {
-    const result = validatePreservePayload({ page: ["trait"] });
+    const result = validatePreservePayload({ page: ["trait"] }, "monster");
     expect(result.valid).toBe(false);
     if (result.valid) throw new Error("expected invalid");
     expect(result.diagnostics[0]).toMatchObject({
@@ -104,37 +104,37 @@ describe("validatePreservePayload", () => {
   });
 
   it("rejects null as marker value", () => {
-    const result = validatePreservePayload({ page: null });
+    const result = validatePreservePayload({ page: null }, "monster");
     expect(result.valid).toBe(false);
   });
 
   it("rejects false as marker value", () => {
-    const result = validatePreservePayload({ page: false });
+    const result = validatePreservePayload({ page: false }, "monster");
     expect(result.valid).toBe(false);
   });
 
   it("rejects 0 as marker value", () => {
-    const result = validatePreservePayload({ page: 0 });
+    const result = validatePreservePayload({ page: 0 }, "monster");
     expect(result.valid).toBe(false);
   });
 
   it("rejects empty string as marker value", () => {
-    const result = validatePreservePayload({ page: "" });
+    const result = validatePreservePayload({ page: "" }, "monster");
     expect(result.valid).toBe(false);
   });
 
   it("rejects non-true string as marker value", () => {
-    const result = validatePreservePayload({ page: "yes" });
+    const result = validatePreservePayload({ page: "yes" }, "monster");
     expect(result.valid).toBe(false);
   });
 
   it("rejects undefined as marker value", () => {
-    const result = validatePreservePayload({ page: undefined });
+    const result = validatePreservePayload({ page: undefined }, "monster");
     expect(result.valid).toBe(false);
   });
 
   it("rejects empty string field key", () => {
-    const result = validatePreservePayload({ "": true, page: true });
+    const result = validatePreservePayload({ "": true, page: true }, "monster");
     expect(result.valid).toBe(false);
     if (result.valid) throw new Error("expected invalid");
     const emptyKeyDiag = result.diagnostics.find((d) => d.validationReason === "EMPTY_FIELD_KEY");
@@ -142,7 +142,7 @@ describe("validatePreservePayload", () => {
   });
 
   it("rejects prototype-sensitive key: constructor", () => {
-    const result = validatePreservePayload({ constructor: true });
+    const result = validatePreservePayload({ constructor: true }, "monster");
     expect(result.valid).toBe(false);
     if (result.valid) throw new Error("expected invalid");
     expect(result.diagnostics[0]).toMatchObject({
@@ -154,7 +154,7 @@ describe("validatePreservePayload", () => {
   it("rejects prototype-sensitive key: __proto__", () => {
     // Simulate JSON-parsed input where __proto__ is an own property
     const payload = JSON.parse('{"__proto__": true}');
-    const result = validatePreservePayload(payload);
+    const result = validatePreservePayload(payload, "monster");
     expect(result.valid).toBe(false);
     if (result.valid) throw new Error("expected invalid");
     expect(result.diagnostics[0]).toMatchObject({
@@ -164,43 +164,43 @@ describe("validatePreservePayload", () => {
   });
 
   it("rejects prototype-sensitive key: prototype", () => {
-    const result = validatePreservePayload({ prototype: true });
+    const result = validatePreservePayload({ prototype: true }, "monster");
     expect(result.valid).toBe(false);
   });
 
   it("emits multiple diagnostics for multiple invalid entries", () => {
-    const result = validatePreservePayload({ page: false, srd: null, "*": "no" });
+    const result = validatePreservePayload({ page: false, srd: null, "*": "no" }, "monster");
     expect(result.valid).toBe(false);
     if (result.valid) throw new Error("expected invalid");
     expect(result.diagnostics.length).toBe(3);
   });
 
   it("accepts mixed valid markers in single payload", () => {
-    const result = validatePreservePayload({ "*": true, page: true, srd: true });
+    const result = validatePreservePayload({ "*": true, page: true, srd: true }, "monster");
     expect(result.valid).toBe(true);
   });
 
   it("returns frozen payload", () => {
-    const result = validatePreservePayload({ page: true });
+    const result = validatePreservePayload({ page: true }, "monster");
     expect(result.valid).toBe(true);
     if (!result.valid) throw new Error("expected valid");
     expect(Object.isFrozen(result.payload)).toBe(true);
   });
 
   it("returns frozen diagnostics", () => {
-    const result = validatePreservePayload(null);
+    const result = validatePreservePayload(null, "monster");
     expect(result.valid).toBe(false);
     if (result.valid) throw new Error("expected invalid");
     expect(Object.isFrozen(result.diagnostics)).toBe(true);
   });
 
   it("rejects undefined payload", () => {
-    const result = validatePreservePayload(undefined);
+    const result = validatePreservePayload(undefined, "monster");
     expect(result.valid).toBe(false);
   });
 
   it("rejects Date instance", () => {
-    const result = validatePreservePayload(new Date());
+    const result = validatePreservePayload(new Date(), "monster");
     expect(result.valid).toBe(false);
     if (result.valid) throw new Error("expected invalid");
     expect(result.diagnostics[0]).toMatchObject({
@@ -210,7 +210,7 @@ describe("validatePreservePayload", () => {
   });
 
   it("rejects Map instance", () => {
-    const result = validatePreservePayload(new Map());
+    const result = validatePreservePayload(new Map(), "monster");
     expect(result.valid).toBe(false);
     if (result.valid) throw new Error("expected invalid");
     expect(result.diagnostics[0]).toMatchObject({
@@ -220,7 +220,7 @@ describe("validatePreservePayload", () => {
   });
 
   it("rejects Set instance", () => {
-    const result = validatePreservePayload(new Set());
+    const result = validatePreservePayload(new Set(), "monster");
     expect(result.valid).toBe(false);
     if (result.valid) throw new Error("expected invalid");
     expect(result.diagnostics[0]).toMatchObject({
@@ -230,7 +230,7 @@ describe("validatePreservePayload", () => {
   });
 
   it("rejects RegExp instance", () => {
-    const result = validatePreservePayload(/test/);
+    const result = validatePreservePayload(/test/, "monster");
     expect(result.valid).toBe(false);
     if (result.valid) throw new Error("expected invalid");
     expect(result.diagnostics[0]).toMatchObject({
@@ -243,7 +243,7 @@ describe("validatePreservePayload", () => {
     class MyClass {
       page = true;
     }
-    const result = validatePreservePayload(new MyClass());
+    const result = validatePreservePayload(new MyClass(), "monster");
     expect(result.valid).toBe(false);
     if (result.valid) throw new Error("expected invalid");
     expect(result.diagnostics[0]).toMatchObject({
@@ -255,7 +255,7 @@ describe("validatePreservePayload", () => {
   it("accepts null prototype object", () => {
     const obj = Object.create(null);
     obj.page = true;
-    const result = validatePreservePayload(obj);
+    const result = validatePreservePayload(obj, "monster");
     expect(result.valid).toBe(true);
     if (!result.valid) throw new Error("expected valid");
     expect(result.payload).toEqual({ page: true });
@@ -297,11 +297,6 @@ describe("validatePreservePayload", () => {
       reason: "UNKNOWN_FIELD_KEY",
       invalidPreserveKey: "unknownField",
     });
-  });
-
-  it("entity-kind-aware: skips key validation when entity kind is omitted", () => {
-    const result = validatePreservePayload({ legendaryGroup: true, lootTables: true });
-    expect(result.valid).toBe(true);
   });
 
   it("preserves structured diagnostic fields: invalidPreserveKey", () => {

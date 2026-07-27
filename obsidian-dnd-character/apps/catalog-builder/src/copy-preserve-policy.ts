@@ -1,4 +1,16 @@
 import type { DiagnosticSeverity } from "./raw-loader";
+import {
+  PRESERVE_BASE_FIELDS,
+  PRESERVE_ENTITY_FIELDS,
+  PROTOTYPE_SENSITIVE_KEYS,
+} from "./copy-preserve-fields";
+import {
+  createKeyDiagnostic,
+  createMarkerDiagnostic,
+  createPayloadDiagnostic,
+  isStrictPlainObject,
+  isValidMarkerValue,
+} from "./copy-preserve-diagnostic";
 
 /* ── Types ─────────────────────────────────────────────────────── */
 
@@ -16,7 +28,7 @@ export type PreserveValidationDiagnostic =
   | PreserveKeyDiagnostic
   | PreserveMarkerDiagnostic;
 
-interface PreservePayloadDiagnostic {
+export interface PreservePayloadDiagnostic {
   readonly code: "INVALID_PRESERVE_PAYLOAD";
   readonly severity: DiagnosticSeverity;
   readonly message: string;
@@ -25,7 +37,7 @@ interface PreservePayloadDiagnostic {
   readonly validationReason: string;
 }
 
-interface PreserveKeyDiagnostic {
+export interface PreserveKeyDiagnostic {
   readonly code: "INVALID_PRESERVE_KEY";
   readonly severity: DiagnosticSeverity;
   readonly message: string;
@@ -35,7 +47,7 @@ interface PreserveKeyDiagnostic {
   readonly validationReason: string;
 }
 
-interface PreserveMarkerDiagnostic {
+export interface PreserveMarkerDiagnostic {
   readonly code: "INVALID_PRESERVE_MARKER";
   readonly severity: DiagnosticSeverity;
   readonly message: string;
@@ -60,122 +72,6 @@ export type PreserveValidationResult =
   | { readonly valid: true; readonly payload: PreservePayload }
   | { readonly valid: false; readonly diagnostics: readonly PreserveValidationDiagnostic[] };
 
-/* ── Preserve-gated field sets ─────────────────────────────────── */
-
-/**
- * Generic fields that require an explicit _preserve directive to be copied
- * from the base during a _copy merge. Matches 5eTools _MERGE_REQUIRES_PRESERVE_BASE.
- */
-const PRESERVE_BASE_FIELDS: ReadonlySet<string> = new Set([
-  "page",
-  "otherSources",
-  "referenceSources",
-  "srd",
-  "srd52",
-  "basicRules",
-  "basicRules2024",
-  "reprintedAs",
-  "hasFluff",
-  "hasFluffImages",
-  "hasToken",
-  "tokenCredit",
-  "tokenCustom",
-  "foundryTokenScale",
-  "altArt",
-  "_versions",
-]);
-
-/**
- * Entity-specific preserve-gated fields. Maps entity kind to additional fields
- * beyond the base set. Matches 5eTools per-entity _MERGE_REQUIRES_PRESERVE.
- */
-const PRESERVE_ENTITY_FIELDS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
-  ["monster", new Set(["legendaryGroup", "environment", "soundClip", "altArt", "variant", "dragonCastingColor", "familiar"])],
-  ["item", new Set(["lootTables", "tier"])],
-  ["itemGroup", new Set(["lootTables", "tier"])],
-  ["magicvariant", new Set(["lootTables", "tier"])],
-]);
-
-/** Keys that must not appear in a _copy._preserve payload. */
-const PROTOTYPE_SENSITIVE_KEYS: ReadonlySet<string> = new Set([
-  "constructor",
-  "__proto__",
-  "prototype",
-]);
-
-/* ── Validation ────────────────────────────────────────────────── */
-
-/**
- * Strict plain-object check. Only accepts objects whose prototype is Object.prototype or null.
- * Rejects Date, Map, Set, RegExp, class instances, custom prototypes, functions.
- */
-function isStrictPlainObject(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return false;
-  }
-  const proto = Object.getPrototypeOf(value);
-  return proto === Object.prototype || proto === null;
-}
-
-/**
- * Checks whether a marker value is strictly boolean true.
- * Rejects: false, 1, 0, "true", other strings, null, arrays, objects, undefined.
- */
-function isValidMarkerValue(value: unknown): value is true {
-  return value === true;
-}
-
-function createPayloadDiagnostic(
-  reason: PreserveValidationReason,
-  message: string,
-  rawPreservePayload: unknown,
-): PreservePayloadDiagnostic {
-  return Object.freeze({
-    code: "INVALID_PRESERVE_PAYLOAD",
-    severity: "error",
-    message,
-    reason,
-    rawPreservePayload,
-    validationReason: reason,
-  });
-}
-
-function createKeyDiagnostic(
-  reason: PreserveValidationReason,
-  message: string,
-  rawPreservePayload: unknown,
-  invalidPreserveKey: string,
-): PreserveKeyDiagnostic {
-  return Object.freeze({
-    code: "INVALID_PRESERVE_KEY",
-    severity: "error",
-    message,
-    reason,
-    rawPreservePayload,
-    invalidPreserveKey,
-    validationReason: reason,
-  });
-}
-
-function createMarkerDiagnostic(
-  reason: PreserveValidationReason,
-  message: string,
-  rawPreservePayload: unknown,
-  invalidMarkerValue: unknown,
-  invalidPreserveKey?: string,
-): PreserveMarkerDiagnostic {
-  return Object.freeze({
-    code: "INVALID_PRESERVE_MARKER",
-    severity: "error",
-    message,
-    reason,
-    rawPreservePayload,
-    invalidMarkerValue,
-    invalidPreserveKey,
-    validationReason: reason,
-  });
-}
-
 /**
  * Validates a _copy._preserve payload from unknown input.
  * Returns structured diagnostics instead of throwing.
@@ -195,7 +91,7 @@ function createMarkerDiagnostic(
  */
 export function validatePreservePayload(
   rawValue: unknown,
-  entityKind?: string,
+  entityKind: string,
 ): PreserveValidationResult {
   if (!isStrictPlainObject(rawValue)) {
     return {
@@ -218,7 +114,7 @@ export function validatePreservePayload(
   for (const key of PRESERVE_BASE_FIELDS) {
     allowedKeys.add(key);
   }
-  if (entityKind) {
+  {
     const entityFields = PRESERVE_ENTITY_FIELDS.get(entityKind);
     if (entityFields) {
       for (const key of entityFields) {
@@ -269,7 +165,7 @@ export function validatePreservePayload(
     }
 
     // Entity-kind-aware key validation
-    if (entityKind && !allowedKeys.has(key)) {
+    if (!allowedKeys.has(key)) {
       // Check if it's a cross-entity key
       let isCrossEntity = false;
       for (const [, fields] of PRESERVE_ENTITY_FIELDS) {
