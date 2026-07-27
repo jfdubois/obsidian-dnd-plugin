@@ -6,6 +6,12 @@ It is historical reference and is not part of normal task or between-task contex
 
 ## Archived work log
 
+2026-07-27 — PROJECT_STATUS recent-work archive
+Summary: Moved older recent-work entries out of `docs/PROJECT_STATUS.md` to retain only the latest three entries there after final Phase 3 ingestion readiness verification. Displaced entries: Phase 3 structured identity correction; Phase 3 multi-collection corrective follow-up; P4-T004; P4-T003; P4-T002; P4-T001; Phase 3 gate; P3-T012; P3-T011; P3-T010; P3-T009; P3-T008; P3-T007-S5; P3-T007-S4; P3-T007-S3; P3-T007-S2; P3-T006; P3-T005; P2-T013; P2-T012.
+Validation: Historical archive update only; see `docs/PROJECT_STATUS.md` before this commit or Git history for full displaced entry text.
+Commit: see Git history for final ingestion readiness verification.
+Notes: Current work state remains recorded in `docs/PROJECT_STATUS.md`; authoritative implementation details remain in task commits.
+
 2026-07-23 — P2-T011 — complete
 Summary: Implemented SpeciesRule (size, speed, darkvision, darkvisionRange, languageIds, traitDefs), BackgroundRule (skillProficiencies, featureId), FeatRule (abilityScorePrerequisite, abilityMinScore), SpellRule (school, level, castingTime, range, duration, concentration, ritual, higherLevelEffects), and ItemRule (category, rarity, cost, weight, bodySlot, properties, requiresAttunement). All extend RuleEntity base fields. Supporting types: TraitDefinition, ItemCost. Each has validator accepting unknown, factory function, and tests. 188 new tests (49+29+29+34+47). Total test count: 879.
 Validation: `npm run check` passes (typecheck + lint + 879/879 tests, EXIT 0). `npm run build` passes (EXIT 0).
