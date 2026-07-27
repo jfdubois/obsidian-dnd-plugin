@@ -1,31 +1,43 @@
-import type { CopyResolverContext } from "./copy-resolver";
 import {
-  resolveCopyWithMods,
+  getRecordIdentity,
+  type CopyResolverContext,
+} from "./copy-resolver";
+import {
+  materializeCopyWithMods,
   type CopyModRawRecord,
 } from "./mod-copy-resolver";
-import type { MaterializationDiagnostic } from "./mod-types";
-import type { DiagnosticSeverity } from "./raw-loader";
 import type { RawRecord, ValidatedCollection, ValidatedFileEnvelope } from "./raw-boundary";
+import {
+  invalidVersionRecordDiagnostic,
+  invalidVersionsPayloadDiagnostic,
+  materializationFailureDiagnostic,
+  type VersionExpansionDiagnostic,
+} from "./version-diagnostics";
+import {
+  isVersionRecordValidationDiagnostic,
+  validateVersionRecord,
+  type ValidatedVersionRecord,
+} from "./version-record-validator";
 
-export type VersionExpansionDiagnosticCode =
-  | "INVALID_VERSIONS_PAYLOAD"
-  | "INVALID_VERSION_RECORD"
-  | "VERSION_MOD_FAILED";
+export type {
+  VersionExpansionDiagnostic,
+  VersionExpansionDiagnosticCode,
+} from "./version-diagnostics";
 
-export interface VersionExpansionDiagnostic {
-  readonly code: VersionExpansionDiagnosticCode;
-  readonly severity: DiagnosticSeverity;
-  readonly message: string;
-  readonly sourcePath: string;
-  readonly entityKind: string;
-  readonly recordName: string;
-  readonly recordSource: string;
-  readonly versionIndex?: number;
-  readonly fieldTarget?: string;
-  readonly mode?: string;
-  readonly rawPayload?: unknown;
-  readonly modDiagnostics?: readonly MaterializationDiagnostic[];
-}
+const VERSION_BASE_DISCRIMINATOR_KEYS = new Set([
+  "abbreviation",
+  "className",
+  "classSource",
+  "level",
+  "name",
+  "pantheon",
+  "raceName",
+  "raceSource",
+  "source",
+  "subclassName",
+  "subclassShortName",
+  "subclassSource",
+]);
 
 export interface VersionExpansionResult {
   readonly ok: boolean;
@@ -40,11 +52,11 @@ export interface VersionExpansionFilesResult {
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isNonEmptyString(value: unknown): value is string {
-  return typeof value === "string" && value.length > 0;
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
 }
 
 function cloneObject(record: Record<string, unknown>): Record<string, unknown> {
@@ -75,6 +87,24 @@ function baseWithoutVersions(record: RawRecord): RawRecord {
   };
 }
 
+function isCopyDiscriminatorValue(value: unknown): boolean {
+  if (typeof value === "string") return value.length > 0;
+  if (typeof value === "number") return Number.isFinite(value) && Number.isInteger(value);
+  if (typeof value === "boolean") return true;
+  return false;
+}
+
+function versionBaseIdentity(base: RawRecord): Record<string, unknown> {
+  const identity = getRecordIdentity(base);
+  const copyIdentity: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(identity)) {
+    if (!VERSION_BASE_DISCRIMINATOR_KEYS.has(key)) continue;
+    if (!isCopyDiscriminatorValue(value)) continue;
+    copyIdentity[key] = value;
+  }
+  return copyIdentity;
+}
+
 function ensureNoVersions(record: RawRecord): RawRecord {
   const remaining = cloneObject(record.remaining);
   delete remaining._versions;
@@ -85,95 +115,35 @@ function ensureNoVersions(record: RawRecord): RawRecord {
   };
 }
 
-function diagnostic(
-  code: VersionExpansionDiagnosticCode,
-  message: string,
-  sourcePath: string,
-  entityKind: string,
-  sourceRecord: RawRecord,
-  rawPayload: unknown,
-  versionIndex?: number,
-): VersionExpansionDiagnostic {
-  return Object.freeze({
-    code,
-    severity: "error" as DiagnosticSeverity,
-    message,
-    sourcePath,
-    entityKind,
-    recordName: sourceRecord.name,
-    recordSource: sourceRecord.source,
-    versionIndex,
-    rawPayload,
-  });
-}
-
 function versionRecord(
   base: RawRecord,
-  version: Record<string, unknown>,
+  version: ValidatedVersionRecord,
 ): CopyModRawRecord {
   const copyValue: Record<string, unknown> = {
-    name: base.name,
-    source: base.source,
+    ...versionBaseIdentity(base),
+    _preserve: version.preserve === undefined
+      ? { "*": true }
+      : cloneUnknown(version.preserve),
   };
-  if (version._mod !== undefined) {
-    copyValue._mod = cloneUnknown(version._mod);
+  if (version.mod !== undefined) {
+    copyValue._mod = cloneUnknown(version.mod);
+  }
+  if (version.templates !== undefined) {
+    copyValue._templates = cloneUnknown(version.templates);
   }
 
   const remaining: Record<string, unknown> = {
     _copy: copyValue,
   };
-  for (const [key, value] of Object.entries(version)) {
-    if (key !== "name" && key !== "source" && key !== "_mod") {
-      remaining[key] = cloneUnknown(value);
-    }
+  for (const [key, value] of Object.entries(version.fields)) {
+    remaining[key] = cloneUnknown(value);
   }
 
   return {
-    name: version.name as string,
-    source: version.source as string,
+    name: version.name,
+    source: version.source,
     remaining,
   };
-}
-
-function mergeVersionFields(
-  record: RawRecord,
-  version: Record<string, unknown>,
-): RawRecord {
-  const remaining = cloneObject(record.remaining);
-  for (const [key, value] of Object.entries(version)) {
-    if (key !== "name" && key !== "source" && key !== "_mod") {
-      remaining[key] = cloneUnknown(value);
-    }
-  }
-  return {
-    name: version.name as string,
-    source: version.source as string,
-    remaining,
-  };
-}
-
-function modFailureDiagnostic(
-  sourcePath: string,
-  entityKind: string,
-  sourceRecord: RawRecord,
-  versionIndex: number,
-  modDiagnostics: readonly MaterializationDiagnostic[],
-): VersionExpansionDiagnostic {
-  const first = modDiagnostics[0];
-  return Object.freeze({
-    code: "VERSION_MOD_FAILED",
-    severity: "error" as DiagnosticSeverity,
-    message: `Failed to apply _versions[${versionIndex}] _mod for "${sourceRecord.name}" (${sourceRecord.source})`,
-    sourcePath,
-    entityKind,
-    recordName: sourceRecord.name,
-    recordSource: sourceRecord.source,
-    versionIndex,
-    fieldTarget: first?.fieldTarget,
-    mode: first?.mode,
-    rawPayload: first?.rawParam,
-    modDiagnostics,
-  });
 }
 
 interface CollectionExpansionResult {
@@ -183,7 +153,7 @@ interface CollectionExpansionResult {
 
 function expandCollection(
   collection: ValidatedCollection,
-  envelope: ValidatedFileEnvelope,
+  context: CopyResolverContext,
   sourcePath: string,
 ): CollectionExpansionResult {
   const records: RawRecord[] = [];
@@ -198,9 +168,7 @@ function expandCollection(
     }
     if (!Array.isArray(rawVersions)) {
       diagnostics.push(
-        diagnostic(
-          "INVALID_VERSIONS_PAYLOAD",
-          `_versions for "${record.name}" (${record.source}) must be an array`,
+        invalidVersionsPayloadDiagnostic(
           sourcePath,
           collection.entityKind,
           record,
@@ -210,51 +178,41 @@ function expandCollection(
       continue;
     }
 
-    const context: CopyResolverContext = {
-      validatedFiles: {
-        [sourcePath]: envelope,
-      },
-    };
-
     rawVersions.forEach((rawVersion, index) => {
-      if (
-        !isPlainObject(rawVersion) ||
-        !isNonEmptyString(rawVersion.name) ||
-        !isNonEmptyString(rawVersion.source)
-      ) {
+      const validatedVersion = validateVersionRecord(rawVersion, index);
+      if (isVersionRecordValidationDiagnostic(validatedVersion)) {
         diagnostics.push(
-          diagnostic(
-            "INVALID_VERSION_RECORD",
-            `_versions[${index}] for "${record.name}" (${record.source}) must be an object with non-empty name and source`,
+          invalidVersionRecordDiagnostic(
             sourcePath,
             collection.entityKind,
             record,
-            rawVersion,
             index,
+            validatedVersion,
           ),
         );
         return;
       }
 
-      const rawVersionRecord = versionRecord(baseRecord, rawVersion);
-      const resolved = resolveCopyWithMods(rawVersionRecord, context, {
+      const rawVersionRecord = versionRecord(baseRecord, validatedVersion);
+      const resolved = materializeCopyWithMods(rawVersionRecord, context, {
         sourcePath,
         sourceEntityKind: collection.entityKind,
       });
       if (!resolved.ok) {
         diagnostics.push(
-          modFailureDiagnostic(
+          materializationFailureDiagnostic(
             sourcePath,
             collection.entityKind,
             record,
             index,
+            validatedVersion.name,
+            validatedVersion.source,
             resolved.diagnostics,
           ),
         );
         return;
       }
-      const cleaned = ensureNoVersions(resolved.record);
-      records.push(mergeVersionFields(cleaned, rawVersion));
+      records.push(ensureNoVersions(resolved.result.record));
     });
   }
 
@@ -267,9 +225,14 @@ export function expandVersionsInFile(
 ): VersionExpansionResult {
   const allRecords: RawRecord[] = [];
   const allDiagnostics: VersionExpansionDiagnostic[] = [];
+  const context: CopyResolverContext = {
+    validatedFiles: {
+      [sourcePath]: envelope,
+    },
+  };
 
   for (const collection of envelope.collections) {
-    const result = expandCollection(collection, envelope, sourcePath);
+    const result = expandCollection(collection, context, sourcePath);
     allRecords.push(...result.records);
     allDiagnostics.push(...result.diagnostics);
   }
@@ -286,12 +249,13 @@ export function expandVersions(
 ): VersionExpansionFilesResult {
   const expandedFiles: Record<string, ValidatedFileEnvelope> = {};
   const diagnostics: VersionExpansionDiagnostic[] = [];
+  const context: CopyResolverContext = { validatedFiles };
 
   for (const [sourcePath, envelope] of Object.entries(validatedFiles)) {
     const expandedCollections: ValidatedCollection[] = [];
 
     for (const collection of envelope.collections) {
-      const result = expandCollection(collection, envelope, sourcePath);
+      const result = expandCollection(collection, context, sourcePath);
       diagnostics.push(...result.diagnostics);
 
       expandedCollections.push({
