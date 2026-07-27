@@ -26,6 +26,14 @@ describe("applyArrayModOperation: appendArr", () => {
     const result = applyArrayModOperation([], null);
     expect(Array.isArray(result)).toBe(false);
   });
+
+  it("creates a missing target array", () => {
+    const result = applyArrayModOperation(undefined, {
+      mode: "appendArr",
+      items: { name: "Trait B" },
+    });
+    expect(result).toEqual([{ name: "Trait B" }]);
+  });
 });
 
 /* ── appendIfNotExistsArr via dispatcher ─────────────────────────── */
@@ -55,12 +63,20 @@ describe("applyArrayModOperation: appendIfNotExistsArr", () => {
     }
   });
 
-  it("rejects non-string items in array", () => {
-    const result = applyArrayModOperation([], {
+  it("accepts non-string structural items in array", () => {
+    const result = applyArrayModOperation([{ name: "A" }], {
       mode: "appendIfNotExistsArr",
-      items: [42],
+      items: [{ name: "A" }, { name: "B" }],
     } as unknown);
-    expect(Array.isArray(result)).toBe(false);
+    expect(result).toEqual([{ name: "A" }, { name: "B" }]);
+  });
+
+  it("creates a missing target array", () => {
+    const result = applyArrayModOperation(undefined, {
+      mode: "appendIfNotExistsArr",
+      items: [{ name: "A" }],
+    });
+    expect(result).toEqual([{ name: "A" }]);
   });
 });
 
@@ -123,6 +139,14 @@ describe("applyArrayModOperation: prependArr", () => {
   it("rejects non-object payload", () => {
     const result = applyArrayModOperation([], "not-an-object");
     expect(Array.isArray(result)).toBe(false);
+  });
+
+  it("creates a missing target array", () => {
+    const result = applyArrayModOperation(undefined, {
+      mode: "prependArr",
+      items: { name: "Trait A" },
+    });
+    expect(result).toEqual([{ name: "Trait A" }]);
   });
 });
 
@@ -213,6 +237,18 @@ describe("applyArrayModOperation: replaceArr", () => {
       items: { name: "B" },
     } as unknown);
     expect(Array.isArray(result)).toBe(false);
+  });
+
+  it("keeps replaceArr strict for missing target arrays", () => {
+    const result = applyArrayModOperation(undefined, {
+      mode: "replaceArr",
+      replace: "A",
+      items: { name: "B" },
+    });
+    expect(result).toMatchObject({
+      code: "MOD_FIELD_TARGET_MISSING",
+      message: "replaceArr target field is not an array",
+    });
   });
 });
 

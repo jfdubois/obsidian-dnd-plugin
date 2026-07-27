@@ -3,9 +3,10 @@ import { loadRawJsonFiles } from "./raw-loader";
 import { validateRawBoundary } from "./raw-boundary";
 import type { RawRecord, ValidatedCollection, ValidatedFileEnvelope } from "./raw-boundary";
 import { materializeSubraceWithParent } from "./race-subrace-materializer";
+import { pinnedFiveEToolsPath } from "./test-pinned-source-path";
 import { expandVersions } from "./versions-expander";
 
-const FIVEETOOLS_PATH = "/home/jdubois/Documents/Projects/obsidian-dnd-plugin/external/5etools-src";
+const FIVEETOOLS_PATH = pinnedFiveEToolsPath();
 
 function record(name: string, source: string, remaining: Record<string, unknown> = {}): RawRecord {
   return { name, source, remaining };

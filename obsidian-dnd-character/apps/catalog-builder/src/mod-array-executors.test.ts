@@ -54,9 +54,33 @@ describe("execAppendArr", () => {
     expect(field).toHaveLength(originalLength);
   });
 
+  it("creates a missing target array from cloned items", () => {
+    const nested = { name: "Trait B", entries: [{ text: "nested" }] };
+    const result = execAppendArr(undefined, { mode: "appendArr", items: nested });
+    expect(result).toEqual([nested]);
+    if (Array.isArray(result)) {
+      expect(result[0]).not.toBe(nested);
+      expect((result[0] as { entries: unknown[] }).entries).not.toBe(nested.entries);
+    }
+    expect(nested).toEqual({ name: "Trait B", entries: [{ text: "nested" }] });
+  });
+
+  it("treats null as a missing target", () => {
+    const result = execAppendArr(null, { mode: "appendArr", items: ["A", "B"] });
+    expect(result).toEqual(["A", "B"]);
+  });
+
+  it("appends into an empty existing array", () => {
+    const result = execAppendArr([], payload);
+    expect(result).toEqual([{ name: "Trait B" }]);
+  });
+
   it("returns diagnostic when field is not an array", () => {
     const result = execAppendArr("not-an-array", payload);
-    expect(Array.isArray(result)).toBe(false);
+    expect(result).toMatchObject({
+      code: "MOD_FIELD_TARGET_MISSING",
+      message: "appendArr target field is not an array",
+    });
   });
 });
 
@@ -84,9 +108,48 @@ describe("execAppendIfNotExistsArr", () => {
     expect(field).toEqual(original);
   });
 
+  it("creates a missing target array", () => {
+    const result = execAppendIfNotExistsArr(undefined, payload);
+    expect(result).toEqual(["Dwarvish", "Elvish", "Undercommon"]);
+  });
+
+  it("treats null as a missing target", () => {
+    const result = execAppendIfNotExistsArr(null, { mode: "appendIfNotExistsArr", items: "Elvish" });
+    expect(result).toEqual(["Elvish"]);
+  });
+
+  it("uses structural equality for object items and preserves order", () => {
+    const existing = [{ name: "A", nested: { n: 1 } }];
+    const duplicate = { name: "A", nested: { n: 1 } };
+    const added = { name: "B", nested: { n: 2 } };
+    const result = execAppendIfNotExistsArr(existing, {
+      mode: "appendIfNotExistsArr",
+      items: [duplicate, added],
+    });
+    expect(result).toEqual([{ name: "A", nested: { n: 1 } }, { name: "B", nested: { n: 2 } }]);
+    if (Array.isArray(result)) {
+      expect(result[0]).not.toBe(existing[0]);
+      expect(result[1]).not.toBe(added);
+      expect((result[1] as { nested: object }).nested).not.toBe(added.nested);
+    }
+    expect(existing).toEqual([{ name: "A", nested: { n: 1 } }]);
+  });
+
+  it("does not append duplicate object items from the payload", () => {
+    const item = { name: "A", nested: ["x"] };
+    const result = execAppendIfNotExistsArr([], {
+      mode: "appendIfNotExistsArr",
+      items: [item, { name: "A", nested: ["x"] }],
+    });
+    expect(result).toEqual([{ name: "A", nested: ["x"] }]);
+  });
+
   it("returns diagnostic when field is not an array", () => {
     const result = execAppendIfNotExistsArr("not-an-array", payload);
-    expect(Array.isArray(result)).toBe(false);
+    expect(result).toMatchObject({
+      code: "MOD_FIELD_TARGET_MISSING",
+      message: "appendIfNotExistsArr target field is not an array",
+    });
   });
 });
 
@@ -142,9 +205,32 @@ describe("execPrependArr", () => {
     expect(field).toEqual(original);
   });
 
+  it("creates a missing target array from cloned items", () => {
+    const nested = { name: "Trait A", entries: [{ text: "nested" }] };
+    const result = execPrependArr(undefined, { mode: "prependArr", items: nested });
+    expect(result).toEqual([nested]);
+    if (Array.isArray(result)) {
+      expect(result[0]).not.toBe(nested);
+      expect((result[0] as { entries: unknown[] }).entries).not.toBe(nested.entries);
+    }
+  });
+
+  it("treats null as a missing target", () => {
+    const result = execPrependArr(null, { mode: "prependArr", items: ["A", "B"] });
+    expect(result).toEqual(["A", "B"]);
+  });
+
+  it("prepends into an empty existing array", () => {
+    const result = execPrependArr([], payload);
+    expect(result).toEqual([{ name: "Trait A" }]);
+  });
+
   it("returns diagnostic when field is not an array", () => {
     const result = execPrependArr(42, payload);
-    expect(Array.isArray(result)).toBe(false);
+    expect(result).toMatchObject({
+      code: "MOD_FIELD_TARGET_MISSING",
+      message: "prependArr target field is not an array",
+    });
   });
 });
 

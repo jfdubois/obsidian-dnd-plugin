@@ -93,7 +93,7 @@ export interface ModAppendArr {
 
 export interface ModAppendIfNotExistsArr {
   readonly mode: "appendIfNotExistsArr";
-  readonly items: string | readonly string[];
+  readonly items: unknown | readonly unknown[];
 }
 
 /* ── insertArr ─────────────────────────────────────────────────── */

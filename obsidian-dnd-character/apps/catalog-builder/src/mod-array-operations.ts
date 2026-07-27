@@ -80,17 +80,8 @@ function validateAppendIfNotExistsArr(
   if (r.items === undefined || r.items === null) {
     return createDiagnostic("INVALID_MOD_PAYLOAD", "appendIfNotExistsArr requires 'items' property", raw);
   }
-  const items: string[] = isString(r.items) ? [r.items] : Array.isArray(r.items) ? r.items : [];
-  for (const item of items) {
-    if (!isString(item)) {
-      return createDiagnostic(
-        "INVALID_MOD_PAYLOAD",
-        "appendIfNotExistsArr items must be strings or an array of strings",
-        raw,
-      );
-    }
-  }
-  return Object.freeze({ mode: "appendIfNotExistsArr" as const, items: items as readonly string[] });
+  const items = Array.isArray(r.items) ? [...r.items] : r.items;
+  return Object.freeze({ mode: "appendIfNotExistsArr" as const, items });
 }
 
 function validateInsertArr(raw: unknown): ModInsertArr | ModOperationDiagnostic {

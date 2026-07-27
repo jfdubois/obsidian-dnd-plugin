@@ -24,6 +24,31 @@ function deepClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value));
 }
 
+function isMissingArrayTarget(value: unknown): value is null | undefined {
+  return value === undefined || value === null;
+}
+
+function operationItems(value: unknown | readonly unknown[]): unknown[] {
+  return Array.isArray(value) ? [...value] : [value];
+}
+
+function deepEquals(left: unknown, right: unknown): boolean {
+  if (left === right) return true;
+  if (Array.isArray(left) || Array.isArray(right)) {
+    if (!Array.isArray(left) || !Array.isArray(right)) return false;
+    if (left.length !== right.length) return false;
+    return left.every((item, index) => deepEquals(item, right[index]));
+  }
+  if (isPlainObject(left) || isPlainObject(right)) {
+    if (!isPlainObject(left) || !isPlainObject(right)) return false;
+    const leftKeys = Object.keys(left).sort();
+    const rightKeys = Object.keys(right).sort();
+    if (!deepEquals(leftKeys, rightKeys)) return false;
+    return leftKeys.every((key) => deepEquals(left[key], right[key]));
+  }
+  return false;
+}
+
 function createDiagnostic(
   code: ModOperationDiagnostic["code"],
   message: string,
@@ -47,6 +72,10 @@ export function execAppendArr(
   fieldValue: unknown,
   payload: ModAppendArr,
 ): unknown[] | ModOperationDiagnostic {
+  const items = operationItems(payload.items);
+  if (isMissingArrayTarget(fieldValue)) {
+    return items.map(deepClone);
+  }
   if (!Array.isArray(fieldValue)) {
     return createDiagnostic(
       "MOD_FIELD_TARGET_MISSING",
@@ -55,17 +84,20 @@ export function execAppendArr(
     );
   }
   const cloned = deepClone(fieldValue);
-  const items = Array.isArray(payload.items) ? payload.items : [payload.items];
   return [...cloned, ...items.map(deepClone)];
 }
 
 /**
- * Append string items only if they don't already exist in the array.
+ * Append items only if structurally equal items don't already exist in the array.
  */
 export function execAppendIfNotExistsArr(
   fieldValue: unknown,
   payload: ModAppendIfNotExistsArr,
-): string[] | ModOperationDiagnostic {
+): unknown[] | ModOperationDiagnostic {
+  const items = operationItems(payload.items);
+  if (isMissingArrayTarget(fieldValue)) {
+    return items.map(deepClone);
+  }
   if (!Array.isArray(fieldValue)) {
     return createDiagnostic(
       "MOD_FIELD_TARGET_MISSING",
@@ -73,11 +105,10 @@ export function execAppendIfNotExistsArr(
       fieldValue,
     );
   }
-  const existing = fieldValue.filter((x: unknown) => typeof x === "string") as string[];
-  const cloned = deepClone(existing);
-  for (const item of payload.items) {
-    if (!cloned.includes(item)) {
-      cloned.push(item);
+  const cloned = deepClone(fieldValue);
+  for (const item of items) {
+    if (!cloned.some((existing) => deepEquals(item, existing))) {
+      cloned.push(deepClone(item));
     }
   }
   return cloned;
@@ -114,6 +145,10 @@ export function execPrependArr(
   fieldValue: unknown,
   payload: ModPrependArr,
 ): unknown[] | ModOperationDiagnostic {
+  const items = operationItems(payload.items);
+  if (isMissingArrayTarget(fieldValue)) {
+    return items.map(deepClone);
+  }
   if (!Array.isArray(fieldValue)) {
     return createDiagnostic(
       "MOD_FIELD_TARGET_MISSING",
@@ -122,7 +157,6 @@ export function execPrependArr(
     );
   }
   const cloned = deepClone(fieldValue);
-  const items = Array.isArray(payload.items) ? payload.items : [payload.items];
   return [...items.map(deepClone), ...cloned];
 }
 
