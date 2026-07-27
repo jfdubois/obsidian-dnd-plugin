@@ -2,22 +2,48 @@ import type { DiagnosticSeverity } from "./raw-loader";
 
 /* ── Types ─────────────────────────────────────────────────────── */
 
-/** Valid marker value for a _copy._preserve entry. */
-export type PreserveMarkerValue = boolean | number | string;
+/** Valid marker value for a _copy._preserve entry: only boolean true. */
+export type PreserveMarkerValue = true;
 
-/** Valid _copy._preserve payload: plain object mapping field names to marker values. */
+/** Valid _copy._preserve payload: plain object mapping field names to boolean true. */
 export interface PreservePayload {
   readonly [fieldName: string]: PreserveMarkerValue;
 }
 
 /** Structured diagnostic emitted when a _copy._preserve payload fails validation. */
-export interface PreserveValidationDiagnostic {
+export type PreserveValidationDiagnostic =
+  | PreservePayloadDiagnostic
+  | PreserveKeyDiagnostic
+  | PreserveMarkerDiagnostic;
+
+interface PreservePayloadDiagnostic {
   readonly code: "INVALID_PRESERVE_PAYLOAD";
   readonly severity: DiagnosticSeverity;
   readonly message: string;
   readonly reason: PreserveValidationReason;
-  readonly rawValue: unknown;
-  readonly fieldKey?: string;
+  readonly rawPreservePayload: unknown;
+  readonly validationReason: string;
+}
+
+interface PreserveKeyDiagnostic {
+  readonly code: "INVALID_PRESERVE_KEY";
+  readonly severity: DiagnosticSeverity;
+  readonly message: string;
+  readonly reason: PreserveValidationReason;
+  readonly rawPreservePayload: unknown;
+  readonly invalidPreserveKey: string;
+  readonly validationReason: string;
+}
+
+interface PreserveMarkerDiagnostic {
+  readonly code: "INVALID_PRESERVE_MARKER";
+  readonly severity: DiagnosticSeverity;
+  readonly message: string;
+  readonly reason: PreserveValidationReason;
+  readonly rawPreservePayload: unknown;
+  readonly invalidMarkerValue: unknown;
+  readonly invalidPreserveKey?: string;
+  readonly validationReason: string;
 }
 
 export type PreserveValidationReason =
@@ -25,7 +51,9 @@ export type PreserveValidationReason =
   | "INVALID_MARKER_TYPE"
   | "INVALID_MARKER_VALUE"
   | "EMPTY_FIELD_KEY"
-  | "PROTOTYPE_SENSITIVE_KEY";
+  | "PROTOTYPE_SENSITIVE_KEY"
+  | "UNKNOWN_FIELD_KEY"
+  | "CROSS_ENTITY_KEY";
 
 /** Result of validating a _copy._preserve payload. */
 export type PreserveValidationResult =
@@ -77,35 +105,74 @@ const PROTOTYPE_SENSITIVE_KEYS: ReadonlySet<string> = new Set([
 
 /* ── Validation ────────────────────────────────────────────────── */
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+/**
+ * Strict plain-object check. Only accepts objects whose prototype is Object.prototype or null.
+ * Rejects Date, Map, Set, RegExp, class instances, custom prototypes, functions.
+ */
+function isStrictPlainObject(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
 }
 
 /**
- * Checks whether a marker value is a valid pinned-data truthy marker.
- * Accepts only: boolean true, number 1, or string "true".
- * Rejects: 0, false, empty string, other numbers, other strings, undefined.
+ * Checks whether a marker value is strictly boolean true.
+ * Rejects: false, 1, 0, "true", other strings, null, arrays, objects, undefined.
  */
-function isValidMarkerValue(value: unknown): value is PreserveMarkerValue {
-  if (typeof value === "boolean") return value === true;
-  if (typeof value === "number") return value === 1;
-  if (typeof value === "string") return value === "true";
-  return false;
+function isValidMarkerValue(value: unknown): value is true {
+  return value === true;
 }
 
-function createDiagnostic(
+function createPayloadDiagnostic(
   reason: PreserveValidationReason,
   message: string,
-  rawValue: unknown,
-  fieldKey?: string,
-): PreserveValidationDiagnostic {
+  rawPreservePayload: unknown,
+): PreservePayloadDiagnostic {
   return Object.freeze({
     code: "INVALID_PRESERVE_PAYLOAD",
     severity: "error",
     message,
     reason,
-    rawValue,
-    fieldKey,
+    rawPreservePayload,
+    validationReason: reason,
+  });
+}
+
+function createKeyDiagnostic(
+  reason: PreserveValidationReason,
+  message: string,
+  rawPreservePayload: unknown,
+  invalidPreserveKey: string,
+): PreserveKeyDiagnostic {
+  return Object.freeze({
+    code: "INVALID_PRESERVE_KEY",
+    severity: "error",
+    message,
+    reason,
+    rawPreservePayload,
+    invalidPreserveKey,
+    validationReason: reason,
+  });
+}
+
+function createMarkerDiagnostic(
+  reason: PreserveValidationReason,
+  message: string,
+  rawPreservePayload: unknown,
+  invalidMarkerValue: unknown,
+  invalidPreserveKey?: string,
+): PreserveMarkerDiagnostic {
+  return Object.freeze({
+    code: "INVALID_PRESERVE_MARKER",
+    severity: "error",
+    message,
+    reason,
+    rawPreservePayload,
+    invalidMarkerValue,
+    invalidPreserveKey,
+    validationReason: reason,
   });
 }
 
@@ -114,21 +181,27 @@ function createDiagnostic(
  * Returns structured diagnostics instead of throwing.
  *
  * Accepts:
- *   - Plain object with string keys mapping to valid marker values (true, 1, "true")
+ *   - Strict plain object (Object.prototype or null prototype)
+ *   - String keys mapping to boolean true markers
  *   - The wildcard "*" key is allowed
+ *   - Keys must be valid for the given entity kind
  *
  * Rejects:
- *   - Non-plain-object payloads (arrays, null, primitives, nested objects as values)
- *   - Marker values that are not valid truthy markers
+ *   - Non-plain-object payloads (arrays, null, primitives, Date, Map, Set, RegExp, class instances)
+ *   - Marker values that are not boolean true
  *   - Empty string keys
  *   - Prototype-sensitive keys
+ *   - Unknown or cross-entity keys
  */
-export function validatePreservePayload(rawValue: unknown): PreserveValidationResult {
-  if (!isPlainObject(rawValue)) {
+export function validatePreservePayload(
+  rawValue: unknown,
+  entityKind?: string,
+): PreserveValidationResult {
+  if (!isStrictPlainObject(rawValue)) {
     return {
       valid: false,
       diagnostics: Object.freeze([
-        createDiagnostic(
+        createPayloadDiagnostic(
           "NOT_PLAIN_OBJECT",
           `_copy._preserve must be a plain object, got ${Array.isArray(rawValue) ? "array" : rawValue === null ? "null" : typeof rawValue}`,
           rawValue,
@@ -138,14 +211,27 @@ export function validatePreservePayload(rawValue: unknown): PreserveValidationRe
   }
 
   const diagnostics: PreserveValidationDiagnostic[] = [];
-  const payload: Record<string, PreserveMarkerValue> = {};
+  const payload: Record<string, true> = {};
+
+  // Build allowed keys set for entity-kind-aware validation
+  const allowedKeys = new Set<string>(["*"]);
+  for (const key of PRESERVE_BASE_FIELDS) {
+    allowedKeys.add(key);
+  }
+  if (entityKind) {
+    const entityFields = PRESERVE_ENTITY_FIELDS.get(entityKind);
+    if (entityFields) {
+      for (const key of entityFields) {
+        allowedKeys.add(key);
+      }
+    }
+  }
 
   // Check prototype-sensitive keys that may not appear in Object.entries
-  // (__proto__ sets the prototype rather than being an own property)
   for (const sensitiveKey of PROTOTYPE_SENSITIVE_KEYS) {
     if (Object.prototype.hasOwnProperty.call(rawValue, sensitiveKey)) {
       diagnostics.push(
-        createDiagnostic(
+        createKeyDiagnostic(
           "PROTOTYPE_SENSITIVE_KEY",
           `_copy._preserve contains prototype-sensitive key "${sensitiveKey}"`,
           rawValue,
@@ -156,9 +242,10 @@ export function validatePreservePayload(rawValue: unknown): PreserveValidationRe
   }
 
   for (const [key, value] of Object.entries(rawValue)) {
+    // Empty key check
     if (key.length === 0) {
       diagnostics.push(
-        createDiagnostic(
+        createKeyDiagnostic(
           "EMPTY_FIELD_KEY",
           `_copy._preserve contains an empty string field key`,
           rawValue,
@@ -168,9 +255,10 @@ export function validatePreservePayload(rawValue: unknown): PreserveValidationRe
       continue;
     }
 
+    // Prototype-sensitive key check (from Object.entries)
     if (PROTOTYPE_SENSITIVE_KEYS.has(key)) {
       diagnostics.push(
-        createDiagnostic(
+        createKeyDiagnostic(
           "PROTOTYPE_SENSITIVE_KEY",
           `_copy._preserve contains prototype-sensitive key "${key}"`,
           rawValue,
@@ -180,12 +268,46 @@ export function validatePreservePayload(rawValue: unknown): PreserveValidationRe
       continue;
     }
 
+    // Entity-kind-aware key validation
+    if (entityKind && !allowedKeys.has(key)) {
+      // Check if it's a cross-entity key
+      let isCrossEntity = false;
+      for (const [, fields] of PRESERVE_ENTITY_FIELDS) {
+        if (fields.has(key)) {
+          isCrossEntity = true;
+          break;
+        }
+      }
+      if (isCrossEntity) {
+        diagnostics.push(
+          createKeyDiagnostic(
+            "CROSS_ENTITY_KEY",
+            `_copy._preserve["${key}"] is not allowed for entity kind "${entityKind}"`,
+            rawValue,
+            key,
+          ),
+        );
+      } else {
+        diagnostics.push(
+          createKeyDiagnostic(
+            "UNKNOWN_FIELD_KEY",
+            `_copy._preserve["${key}"] is not a recognized preserve-gated field for entity kind "${entityKind}"`,
+            rawValue,
+            key,
+          ),
+        );
+      }
+      continue;
+    }
+
+    // Marker value validation: only boolean true
     if (!isValidMarkerValue(value)) {
       diagnostics.push(
-        createDiagnostic(
+        createMarkerDiagnostic(
           "INVALID_MARKER_VALUE",
-          `_copy._preserve["${key}"] has an invalid marker value: ${JSON.stringify(value)}`,
+          `_copy._preserve["${key}"] has an invalid marker value: ${JSON.stringify(value)} (expected boolean true)`,
           rawValue,
+          value,
           key,
         ),
       );

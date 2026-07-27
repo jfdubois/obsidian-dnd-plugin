@@ -265,7 +265,9 @@ export type ModDiagnosticCode =
   | "INVALID_MOD_PAYLOAD"
   | "MOD_FIELD_TARGET_MISSING"
   | "MOD_EXECUTION_ERROR"
-  | "INVALID_PRESERVE_PAYLOAD";
+  | "INVALID_PRESERVE_PAYLOAD"
+  | "INVALID_PRESERVE_KEY"
+  | "INVALID_PRESERVE_MARKER";
 
 /* ── Materialization diagnostic union ────────────────────────────
 
@@ -309,6 +311,14 @@ export interface MaterializationDiagnostic {
   readonly invalidDiscriminatorField?: string;
   /** Invalid discriminator value for INVALID_DISCRIMINATOR_VALUE. */
   readonly invalidDiscriminatorValue?: unknown;
+  /** Invalid preserve key for INVALID_PRESERVE_KEY. */
+  readonly invalidPreserveKey?: string;
+  /** Invalid marker value for INVALID_PRESERVE_MARKER. */
+  readonly invalidMarkerValue?: unknown;
+  /** Validation reason for preserve diagnostics. */
+  readonly validationReason?: string;
+  /** Raw preserve payload for preserve diagnostics. */
+  readonly rawPreservePayload?: unknown;
 }
 
 export interface MaterializationAmbiguityCandidate {

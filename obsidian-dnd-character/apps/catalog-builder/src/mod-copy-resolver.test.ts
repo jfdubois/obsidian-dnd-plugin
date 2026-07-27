@@ -1188,6 +1188,61 @@ describe("materialization diagnostic conversion preserves structured fields", ()
     expect(diag.sourceEntityKind).toBe("monster");
     expect(diag.sourcePath).toBe("monster.json");
   });
+
+  it("_copy._preserve diagnostic values are NOT mutated during materialization", () => {
+    const base: CopyModRawRecord = {
+      name: "Base Creature",
+      source: "TST",
+      remaining: { size: "M", page: "42" },
+    };
+
+    const variant: CopyModRawRecord = {
+      name: "Bad Preserve Variant",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: base.name,
+          source: base.source,
+          _preserve: { page: false },
+          _mod: { size: "L" },
+        },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    const preserveDiag = result.diagnostics.find((d) => d.code === "INVALID_PRESERVE_MARKER");
+    expect(preserveDiag).toBeDefined();
+    if (!preserveDiag) throw new Error("Expected INVALID_PRESERVE_MARKER diagnostic");
+    // Capture original diagnostic values
+    const originalKey = preserveDiag.invalidPreserveKey;
+    const originalValue = preserveDiag.invalidMarkerValue;
+    const originalReason = preserveDiag.validationReason;
+    // Attempt to mutate
+    try {
+      (preserveDiag as unknown as Record<string, unknown>).invalidMarkerValue = "MUTATED";
+    } catch {
+      // Object.freeze may throw; that's expected
+    }
+    // Original variant's _preserve should be unchanged
+    expect(variant.remaining._copy).toHaveProperty("_preserve", { page: false });
+    // Captured originals should still match
+    expect(originalKey).toBe("page");
+    expect(originalValue).toBe(false);
+    expect(originalReason).toBe("INVALID_MARKER_VALUE");
+  });
 });
 
 describe("direct-field overlay merge semantics (5eTools alignment)", () => {
@@ -1536,10 +1591,10 @@ describe("preserve payload validation enforcement", () => {
 
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
-    const preserveDiag = result.diagnostics.find((d) => d.code === "INVALID_PRESERVE_PAYLOAD");
+    const preserveDiag = result.diagnostics.find((d) => d.code === "INVALID_PRESERVE_MARKER");
     expect(preserveDiag).toBeDefined();
-    if (!preserveDiag) throw new Error("Expected INVALID_PRESERVE_PAYLOAD diagnostic");
-    expect(preserveDiag.message).toContain("page");
+    if (!preserveDiag) throw new Error("Expected INVALID_PRESERVE_MARKER diagnostic");
+    expect(preserveDiag.invalidPreserveKey).toBe("page");
   });
 
   it("rejects _copy._preserve with null payload and emits diagnostic", () => {
@@ -1655,10 +1710,10 @@ describe("preserve payload validation enforcement", () => {
 
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
-    const preserveDiag = result.diagnostics.find((d) => d.code === "INVALID_PRESERVE_PAYLOAD");
+    const preserveDiag = result.diagnostics.find((d) => d.code === "INVALID_PRESERVE_KEY");
     expect(preserveDiag).toBeDefined();
-    if (!preserveDiag) throw new Error("Expected INVALID_PRESERVE_PAYLOAD diagnostic");
-    expect(preserveDiag.message).toContain("constructor");
+    if (!preserveDiag) throw new Error("Expected INVALID_PRESERVE_KEY diagnostic");
+    expect(preserveDiag.invalidPreserveKey).toBe("constructor");
   });
 
   it("accepts valid _copy._preserve wildcard and preserves gated fields", () => {
@@ -1753,7 +1808,7 @@ describe("preserve payload validation enforcement", () => {
     expect(r.trait).toEqual([{ name: "Base Trait" }]);
   });
 
-  it("accepts valid _copy._preserve with marker values 1 and 'true'", () => {
+  it("rejects _copy._preserve with marker values 1 and 'true'", () => {
     const base: CopyModRawRecord = {
       name: "Base Creature",
       source: "TST",
@@ -1790,11 +1845,10 @@ describe("preserve payload validation enforcement", () => {
 
     const result = materializeCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
 
-    expect(result.ok).toBe(true);
-    if (!result.ok) throw new Error("Expected success");
-    const r = result.result.record.remaining;
-    expect(r.page).toBe("42");
-    expect(r.srd).toBe("5.1");
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    const preserveDiag = result.diagnostics.find((d) => d.code === "INVALID_PRESERVE_MARKER");
+    expect(preserveDiag).toBeDefined();
   });
 
   it("entity-kind-aware: monster-specific field preserved with wildcard for monster kind", () => {
@@ -1915,7 +1969,7 @@ describe("preserve payload validation enforcement", () => {
 
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
-    const preserveDiag = result.diagnostics.find((d) => d.code === "INVALID_PRESERVE_PAYLOAD");
+    const preserveDiag = result.diagnostics.find((d) => d.code === "INVALID_PRESERVE_MARKER");
     expect(preserveDiag).toBeDefined();
   });
 
@@ -1953,7 +2007,7 @@ describe("preserve payload validation enforcement", () => {
 
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
-    const preserveDiag = result.diagnostics.find((d) => d.code === "INVALID_PRESERVE_PAYLOAD");
+    const preserveDiag = result.diagnostics.find((d) => d.code === "INVALID_PRESERVE_KEY");
     expect(preserveDiag).toBeDefined();
   });
 });

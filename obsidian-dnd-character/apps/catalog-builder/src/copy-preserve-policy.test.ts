@@ -27,14 +27,26 @@ describe("validatePreservePayload", () => {
     expect(result.valid).toBe(true);
   });
 
-  it("accepts marker value 1", () => {
+  it("rejects marker value 1", () => {
     const result = validatePreservePayload({ page: 1 });
-    expect(result.valid).toBe(true);
+    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error("expected invalid");
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "INVALID_PRESERVE_MARKER",
+      reason: "INVALID_MARKER_VALUE",
+      invalidMarkerValue: 1,
+    });
   });
 
-  it("accepts marker value 'true' string", () => {
+  it("rejects marker value 'true' string", () => {
     const result = validatePreservePayload({ page: "true" });
-    expect(result.valid).toBe(true);
+    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error("expected invalid");
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "INVALID_PRESERVE_MARKER",
+      reason: "INVALID_MARKER_VALUE",
+      invalidMarkerValue: "true",
+    });
   });
 
   it("rejects null payload", () => {
@@ -77,7 +89,7 @@ describe("validatePreservePayload", () => {
     if (result.valid) throw new Error("expected invalid");
     expect(result.diagnostics[0]).toMatchObject({
       reason: "INVALID_MARKER_VALUE",
-      fieldKey: "page",
+      invalidPreserveKey: "page",
     });
   });
 
@@ -87,7 +99,7 @@ describe("validatePreservePayload", () => {
     if (result.valid) throw new Error("expected invalid");
     expect(result.diagnostics[0]).toMatchObject({
       reason: "INVALID_MARKER_VALUE",
-      fieldKey: "page",
+      invalidPreserveKey: "page",
     });
   });
 
@@ -125,7 +137,7 @@ describe("validatePreservePayload", () => {
     const result = validatePreservePayload({ "": true, page: true });
     expect(result.valid).toBe(false);
     if (result.valid) throw new Error("expected invalid");
-    const emptyKeyDiag = result.diagnostics.find((d) => d.reason === "EMPTY_FIELD_KEY");
+    const emptyKeyDiag = result.diagnostics.find((d) => d.validationReason === "EMPTY_FIELD_KEY");
     expect(emptyKeyDiag).toBeDefined();
   });
 
@@ -135,7 +147,7 @@ describe("validatePreservePayload", () => {
     if (result.valid) throw new Error("expected invalid");
     expect(result.diagnostics[0]).toMatchObject({
       reason: "PROTOTYPE_SENSITIVE_KEY",
-      fieldKey: "constructor",
+      invalidPreserveKey: "constructor",
     });
   });
 
@@ -147,7 +159,7 @@ describe("validatePreservePayload", () => {
     if (result.valid) throw new Error("expected invalid");
     expect(result.diagnostics[0]).toMatchObject({
       reason: "PROTOTYPE_SENSITIVE_KEY",
-      fieldKey: "__proto__",
+      invalidPreserveKey: "__proto__",
     });
   });
 
@@ -164,7 +176,7 @@ describe("validatePreservePayload", () => {
   });
 
   it("accepts mixed valid markers in single payload", () => {
-    const result = validatePreservePayload({ "*": true, page: 1, srd: "true" });
+    const result = validatePreservePayload({ "*": true, page: true, srd: true });
     expect(result.valid).toBe(true);
   });
 
@@ -185,6 +197,144 @@ describe("validatePreservePayload", () => {
   it("rejects undefined payload", () => {
     const result = validatePreservePayload(undefined);
     expect(result.valid).toBe(false);
+  });
+
+  it("rejects Date instance", () => {
+    const result = validatePreservePayload(new Date());
+    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error("expected invalid");
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "INVALID_PRESERVE_PAYLOAD",
+      reason: "NOT_PLAIN_OBJECT",
+    });
+  });
+
+  it("rejects Map instance", () => {
+    const result = validatePreservePayload(new Map());
+    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error("expected invalid");
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "INVALID_PRESERVE_PAYLOAD",
+      reason: "NOT_PLAIN_OBJECT",
+    });
+  });
+
+  it("rejects Set instance", () => {
+    const result = validatePreservePayload(new Set());
+    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error("expected invalid");
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "INVALID_PRESERVE_PAYLOAD",
+      reason: "NOT_PLAIN_OBJECT",
+    });
+  });
+
+  it("rejects RegExp instance", () => {
+    const result = validatePreservePayload(/test/);
+    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error("expected invalid");
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "INVALID_PRESERVE_PAYLOAD",
+      reason: "NOT_PLAIN_OBJECT",
+    });
+  });
+
+  it("rejects class instance", () => {
+    class MyClass {
+      page = true;
+    }
+    const result = validatePreservePayload(new MyClass());
+    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error("expected invalid");
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "INVALID_PRESERVE_PAYLOAD",
+      reason: "NOT_PLAIN_OBJECT",
+    });
+  });
+
+  it("accepts null prototype object", () => {
+    const obj = Object.create(null);
+    obj.page = true;
+    const result = validatePreservePayload(obj);
+    expect(result.valid).toBe(true);
+    if (!result.valid) throw new Error("expected valid");
+    expect(result.payload).toEqual({ page: true });
+  });
+
+  it("rejects entity-kind-aware: cross-entity key for monster", () => {
+    const result = validatePreservePayload({ legendaryGroup: true }, "race");
+    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error("expected invalid");
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "INVALID_PRESERVE_KEY",
+      reason: "CROSS_ENTITY_KEY",
+      invalidPreserveKey: "legendaryGroup",
+    });
+  });
+
+  it("rejects entity-kind-aware: cross-entity key for item", () => {
+    const result = validatePreservePayload({ lootTables: true }, "monster");
+    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error("expected invalid");
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "INVALID_PRESERVE_KEY",
+      reason: "CROSS_ENTITY_KEY",
+      invalidPreserveKey: "lootTables",
+    });
+  });
+
+  it("accepts entity-kind-aware: valid keys for entity kind", () => {
+    const result = validatePreservePayload({ legendaryGroup: true, page: true }, "monster");
+    expect(result.valid).toBe(true);
+  });
+
+  it("rejects entity-kind-aware: unknown key for entity kind", () => {
+    const result = validatePreservePayload({ unknownField: true }, "monster");
+    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error("expected invalid");
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "INVALID_PRESERVE_KEY",
+      reason: "UNKNOWN_FIELD_KEY",
+      invalidPreserveKey: "unknownField",
+    });
+  });
+
+  it("entity-kind-aware: skips key validation when entity kind is omitted", () => {
+    const result = validatePreservePayload({ legendaryGroup: true, lootTables: true });
+    expect(result.valid).toBe(true);
+  });
+
+  it("preserves structured diagnostic fields: invalidPreserveKey", () => {
+    const result = validatePreservePayload({ "": true }, "monster");
+    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error("expected invalid");
+    const diag = result.diagnostics[0]!;
+    expect(diag.code).toBe("INVALID_PRESERVE_KEY");
+    if (diag.code !== "INVALID_PRESERVE_KEY") throw new Error("unexpected code");
+    expect(diag.invalidPreserveKey).toBe("");
+    expect(diag.validationReason).toBe("EMPTY_FIELD_KEY");
+  });
+
+  it("preserves structured diagnostic fields: invalidMarkerValue", () => {
+    const result = validatePreservePayload({ page: false }, "monster");
+    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error("expected invalid");
+    const diag = result.diagnostics[0]!;
+    expect(diag.code).toBe("INVALID_PRESERVE_MARKER");
+    if (diag.code !== "INVALID_PRESERVE_MARKER") throw new Error("unexpected code");
+    expect(diag.invalidMarkerValue).toBe(false);
+    expect(diag.invalidPreserveKey).toBe("page");
+    expect(diag.validationReason).toBe("INVALID_MARKER_VALUE");
+  });
+
+  it("preserves rawPreservePayload in diagnostics", () => {
+    const raw = { page: false, srd: null };
+    const result = validatePreservePayload(raw, "monster");
+    expect(result.valid).toBe(false);
+    if (result.valid) throw new Error("expected invalid");
+    for (const diag of result.diagnostics) {
+      expect(diag.rawPreservePayload).toBe(raw);
+    }
   });
 });
 

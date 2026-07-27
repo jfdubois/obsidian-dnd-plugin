@@ -72,7 +72,11 @@ export type CopyModResolutionResult =
     };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const proto = Object.getPrototypeOf(value);
+  return proto === Object.prototype || proto === null;
 }
 
 function cloneRecord(record: CopyModRawRecord): CopyModRawRecord {
@@ -167,14 +171,15 @@ function modeOf(rawOperation: unknown): string | undefined {
 
 /**
  * Converts a preserve validation diagnostic into a MaterializationDiagnostic.
+ * Passes through the original code and deep-clones all structured values.
  */
 function convertPreserveDiagnostic(
   diag: PreserveValidationDiagnostic,
   sourceRecord: CopyModRawRecord,
   sourcePath: string | undefined,
 ): MaterializationDiagnostic {
-  return Object.freeze({
-    code: "INVALID_PRESERVE_PAYLOAD",
+  const base = Object.freeze({
+    code: diag.code,
     severity: diag.severity,
     message: diag.message,
     sourcePath,
@@ -182,8 +187,33 @@ function convertPreserveDiagnostic(
     entitySource: sourceRecord.source,
     fieldTarget: "_copy._preserve",
     mode: undefined,
-    rawParam: diag.rawValue,
+    rawParam: diag.rawPreservePayload !== undefined
+      ? deepFreeze(cloneUnknown(diag.rawPreservePayload))
+      : undefined,
+    rawPreservePayload: diag.rawPreservePayload !== undefined
+      ? deepFreeze(cloneUnknown(diag.rawPreservePayload))
+      : undefined,
+    validationReason: diag.validationReason,
   });
+
+  if (diag.code === "INVALID_PRESERVE_KEY") {
+    return Object.freeze({
+      ...base,
+      invalidPreserveKey: diag.invalidPreserveKey,
+    });
+  }
+
+  if (diag.code === "INVALID_PRESERVE_MARKER") {
+    return Object.freeze({
+      ...base,
+      invalidMarkerValue: diag.invalidMarkerValue !== undefined
+        ? deepFreeze(cloneUnknown(diag.invalidMarkerValue))
+        : undefined,
+      invalidPreserveKey: diag.invalidPreserveKey,
+    });
+  }
+
+  return base;
 }
 
 /**
@@ -471,7 +501,7 @@ export function resolveCopyWithMods(
   const preserveRaw = isPlainObject(copyValue) ? copyValue._preserve : undefined;
   let preservePayload: PreservePayload = {};
   if (preserveRaw !== undefined) {
-    const preserveValidation = validatePreservePayload(preserveRaw);
+    const preserveValidation = validatePreservePayload(preserveRaw, modContext.sourceEntityKind);
     if (!preserveValidation.valid) {
       return {
         ok: false,
@@ -547,7 +577,7 @@ export function materializeCopyWithMods(
   const preserveRaw = isPlainObject(copyValue) ? copyValue._preserve : undefined;
   let preservePayload: PreservePayload = {};
   if (preserveRaw !== undefined) {
-    const preserveValidation = validatePreservePayload(preserveRaw);
+    const preserveValidation = validatePreservePayload(preserveRaw, modContext.sourceEntityKind);
     if (!preserveValidation.valid) {
       return {
         ok: false,
