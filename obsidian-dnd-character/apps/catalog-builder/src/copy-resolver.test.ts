@@ -1391,3 +1391,250 @@ describe("no unsafe casts in diagnostics", () => {
     expect(result.diagnostic.ambiguityCandidates![0]).toHaveProperty("identity");
   });
 });
+
+describe("located copy levels", () => {
+  it("returns the exact located level for a simple successful resolution", () => {
+    const base = { name: "Base", source: "TST", remaining: { size: "M" } };
+    const context: CopyResolverContext = {
+      validatedFiles: {
+        "base.json": {
+          filePath: "base.json",
+          collections: [{ entityKind: "monster", recordCount: 1, records: [base] }],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = resolveCopy(
+      makeRecord("Derived", "TST", { _copy: { name: "Base", source: "TST" } }),
+      context,
+      { sourceEntityKind: "monster", sourcePath: "derived.json" },
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.locatedLevels).toHaveLength(1);
+    expect(result.locatedLevels[0]!.record).toBe(base);
+    expect(result.locatedLevels[0]).toMatchObject({
+      entityKind: "monster",
+      sourcePath: "base.json",
+      identity: { name: "Base", source: "TST" },
+    });
+  });
+
+  it("keeps located intermediate and terminal records in CopyChainStep order", () => {
+    const terminal = { name: "Terminal", source: "TST", remaining: { size: "M" } };
+    const middle = {
+      name: "Middle",
+      source: "TST",
+      remaining: { _copy: { name: "Terminal", source: "TST" }, ac: 14 },
+    };
+    const context: CopyResolverContext = {
+      validatedFiles: {
+        "chain.json": {
+          filePath: "chain.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [terminal, middle] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = resolveCopy(
+      makeRecord("Derived", "TST", { _copy: { name: "Middle", source: "TST" } }),
+      context,
+      { sourceEntityKind: "monster", sourcePath: "chain.json" },
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.chain.map((step) => step.entityName)).toEqual(["Middle", "Terminal"]);
+    expect(result.locatedLevels.map((level) => level.record.name)).toEqual(["Middle", "Terminal"]);
+    expect(result.locatedLevels[0]!.record).toBe(middle);
+    expect(result.locatedLevels[1]!.record).toBe(terminal);
+  });
+
+  it("retains all selected records in a four-level chain", () => {
+    const root = { name: "Root", source: "TST", remaining: { marker: "root" } };
+    const level2 = { name: "Level 2", source: "TST", remaining: { _copy: { name: "Root", source: "TST" } } };
+    const level1 = { name: "Level 1", source: "TST", remaining: { _copy: { name: "Level 2", source: "TST" } } };
+    const context: CopyResolverContext = {
+      validatedFiles: {
+        "chain.json": {
+          filePath: "chain.json",
+          collections: [{ entityKind: "monster", recordCount: 3, records: [root, level2, level1] }],
+          totalRecords: 3,
+        },
+      },
+    };
+
+    const result = resolveCopy(
+      makeRecord("Outer", "TST", { _copy: { name: "Level 1", source: "TST" } }),
+      context,
+      { sourceEntityKind: "monster", sourcePath: "chain.json" },
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.locatedLevels.map((level) => level.record)).toEqual([level1, level2, root]);
+  });
+
+  it("retains exact physical paths for intermediate and base records in different files", () => {
+    const base = { name: "Base", source: "TST", remaining: { size: "M" } };
+    const middle = { name: "Middle", source: "TST", remaining: { _copy: { name: "Base", source: "TST" } } };
+    const context: CopyResolverContext = {
+      validatedFiles: {
+        "middle.json": {
+          filePath: "middle.json",
+          collections: [{ entityKind: "monster", recordCount: 1, records: [middle] }],
+          totalRecords: 1,
+        },
+        "base.json": {
+          filePath: "base.json",
+          collections: [{ entityKind: "monster", recordCount: 1, records: [base] }],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = resolveCopy(
+      makeRecord("Derived", "TST", { _copy: { name: "Middle", source: "TST" } }),
+      context,
+      { sourceEntityKind: "monster", sourcePath: "derived.json" },
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.locatedLevels.map((level) => level.sourcePath)).toEqual(["middle.json", "base.json"]);
+  });
+
+  it("retains exact entity kinds for compatible cross-collection inheritance", () => {
+    const base = { name: "Base Creature", source: "TST", remaining: { size: "M" } };
+    const fluff = { name: "Base Fluff", source: "TST", remaining: { _copy: { name: "Base Creature", source: "TST" } } };
+    const context: CopyResolverContext = {
+      validatedFiles: {
+        "mixed.json": {
+          filePath: "mixed.json",
+          collections: [
+            { entityKind: "monster", recordCount: 1, records: [base] },
+            { entityKind: "monsterFluff", recordCount: 1, records: [fluff] },
+          ],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = resolveCopy(fluff, context, {
+      sourceEntityKind: "monsterFluff",
+      sourcePath: "mixed.json",
+    });
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.locatedLevels[0]!.record).toBe(base);
+    expect(result.locatedLevels[0]!.entityKind).toBe("monster");
+  });
+
+  it("selects the correct same-name same-source record by raceName", () => {
+    const target = { name: "Variant", source: "TST", remaining: { raceName: "Human" } };
+    const other = { name: "Variant", source: "TST", remaining: { raceName: "Elf" } };
+    const context = makeMultiCollectionContext([{ entityKind: "subrace", records: [target, other] }]);
+
+    const result = resolveCopy(
+      makeRecord("Derived", "TST", { _copy: { name: "Variant", source: "TST", raceName: "Human" } }),
+      context,
+      { sourceEntityKind: "subrace", sourcePath: "test.json" },
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.locatedLevels[0]!.record).toBe(context.validatedFiles["test.json"]!.collections[0]!.records[0]);
+  });
+
+  it("selects the correct same-name same-source record by className", () => {
+    const context = makeMultiCollectionContext([
+      {
+        entityKind: "subclass",
+        records: [
+          { name: "Champion", source: "TST", remaining: { className: "Fighter" } },
+          { name: "Champion", source: "TST", remaining: { className: "Wizard" } },
+        ],
+      },
+    ]);
+
+    const result = resolveCopy(
+      makeRecord("Derived", "TST", { _copy: { name: "Champion", source: "TST", className: "Wizard" } }),
+      context,
+      { sourceEntityKind: "subclass", sourcePath: "test.json" },
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.locatedLevels[0]!.record.remaining.className).toBe("Wizard");
+  });
+
+  it("selects the correct same-name same-source record by level", () => {
+    const context = makeMultiCollectionContext([
+      {
+        entityKind: "subclassFeature",
+        records: [
+          { name: "Feature", source: "TST", remaining: { level: 3 } },
+          { name: "Feature", source: "TST", remaining: { level: 7 } },
+        ],
+      },
+    ]);
+
+    const result = resolveCopy(
+      makeRecord("Derived", "TST", { _copy: { name: "Feature", source: "TST", level: 7 } }),
+      context,
+      { sourceEntityKind: "subclassFeature", sourcePath: "test.json" },
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.locatedLevels[0]!.record.remaining.level).toBe(7);
+  });
+
+  it("selects the correct same-name same-source subclass feature by subclassShortName", () => {
+    const context = makeMultiCollectionContext([
+      {
+        entityKind: "subclassFeature",
+        records: [
+          { name: "Feature", source: "TST", remaining: { subclassShortName: "Alpha" } },
+          { name: "Feature", source: "TST", remaining: { subclassShortName: "Beta" } },
+        ],
+      },
+    ]);
+
+    const result = resolveCopy(
+      makeRecord("Derived", "TST", { _copy: { name: "Feature", source: "TST", subclassShortName: "Beta" } }),
+      context,
+      { sourceEntityKind: "subclassFeature", sourcePath: "test.json" },
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.locatedLevels[0]!.record.remaining.subclassShortName).toBe("Beta");
+  });
+
+  it("still fails ambiguous complete identity before materialization", () => {
+    const context = makeMultiCollectionContext([
+      {
+        entityKind: "monster",
+        records: [
+          { name: "Base", source: "TST", remaining: {} },
+          { name: "Base", source: "TST", remaining: {} },
+        ],
+      },
+    ]);
+
+    const result = resolveCopy(
+      makeRecord("Derived", "TST", { _copy: { name: "Base", source: "TST" } }),
+      context,
+      { sourceEntityKind: "monster", sourcePath: "test.json" },
+    );
+
+    expect(isCopyResolutionFailure(result)).toBe(true);
+    if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
+    expect(result.diagnostic.code).toBe("AMBIGUOUS_BASE_ENTITY");
+  });
+});

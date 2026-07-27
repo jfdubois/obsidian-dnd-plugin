@@ -59,6 +59,14 @@ export interface CopyChainStep {
   readonly identity: StructuredIdentity;
 }
 
+/** Exact located record selected while resolving a _copy chain. */
+export interface LocatedCopyLevel {
+  readonly record: RawRecord;
+  readonly entityKind: string;
+  readonly sourcePath: string;
+  readonly identity: StructuredIdentity;
+}
+
 /** Discriminated result of a _copy resolution attempt. */
 export type CopyResolutionResult =
   | CopyResolutionSuccess
@@ -71,6 +79,8 @@ export interface CopyResolutionSuccess {
   readonly baseEntity: RawRecord;
   /** Chain of references traversed to reach the final base entity. */
   readonly chain: readonly CopyChainStep[];
+  /** Exact located records traversed to reach the final base entity. */
+  readonly locatedLevels: readonly LocatedCopyLevel[];
 }
 
 /** Failed resolution with diagnostic information. */
@@ -524,6 +534,7 @@ function resolveCopyChain(
   sourceRecord: RawRecord,
   visited: Set<string>,
   chain: CopyChainStep[],
+  locatedLevels: LocatedCopyLevel[],
   depth: number,
   currentEntityKind: string,
   currentSourcePath: string,
@@ -593,6 +604,15 @@ function resolveCopyChain(
       status: "resolved",
       baseEntity: preservedRecord(sourceRecord),
       chain: Object.freeze(chain),
+      locatedLevels: Object.freeze([
+        ...locatedLevels,
+        {
+          record: sourceRecord,
+          entityKind: currentEntityKind,
+          sourcePath: currentSourcePath,
+          identity,
+        },
+      ]),
     };
   }
 
@@ -645,6 +665,15 @@ function resolveCopyChain(
 
   const matched = candidates[0]!;
   const baseEntity = matched.record;
+  const nextLocatedLevels: LocatedCopyLevel[] = [
+    ...locatedLevels,
+    {
+      record: baseEntity,
+      entityKind: matched.entityKind,
+      sourcePath: matched.sourcePath,
+      identity,
+    },
+  ];
 
   // If the base entity itself has a _copy, recurse using the located entity kind and source path
   const baseCopy = baseEntity.remaining._copy;
@@ -655,6 +684,7 @@ function resolveCopyChain(
       sourceRecord,
       visited,
       chain,
+      nextLocatedLevels,
       depth + 1,
       matched.entityKind,
       matched.sourcePath,
@@ -666,6 +696,7 @@ function resolveCopyChain(
     status: "resolved",
     baseEntity,
     chain: Object.freeze(chain),
+    locatedLevels: Object.freeze(nextLocatedLevels),
   };
 }
 
@@ -865,6 +896,7 @@ export function resolveCopy(
     context,
     rawRecord,
     new Set(),
+    [],
     [],
     0,
     sourceEntityKind,

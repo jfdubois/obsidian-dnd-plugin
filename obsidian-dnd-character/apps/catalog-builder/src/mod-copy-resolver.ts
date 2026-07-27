@@ -143,7 +143,7 @@ export function resolveCopyWithMods(
   const nestedResult = materializeNestedCopyLevels(
     resolved.baseEntity,
     resolved.chain,
-    context,
+    resolved.locatedLevels,
   );
   if (!nestedResult.ok) {
     return {
@@ -233,7 +233,7 @@ export function materializeCopyWithMods(
   const nestedResult = materializeNestedCopyLevels(
     resolved.baseEntity,
     resolved.chain,
-    context,
+    resolved.locatedLevels,
   );
   if (!nestedResult.ok) {
     return {

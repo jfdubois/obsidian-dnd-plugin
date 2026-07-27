@@ -1,7 +1,6 @@
 import {
-  recordMatchesIdentity,
   type CopyChainStep,
-  type CopyResolverContext,
+  type LocatedCopyLevel,
 } from "./copy-resolver";
 import {
   validatePreservePayload,
@@ -22,27 +21,6 @@ import {
   convertPreserveDiagnostic,
 } from "./copy-materialization-diagnostics";
 
-/**
- * Finds the raw record in the context that matches the given chain step's identity.
- */
-export function findRecordForChainStep(
-  context: CopyResolverContext,
-  step: CopyChainStep,
-): CopyModRawRecord | undefined {
-  const envelope = context.validatedFiles[step.sourcePath];
-  if (envelope === undefined) return undefined;
-
-  for (const collection of envelope.collections) {
-    if (collection.entityKind !== step.entityKind) continue;
-    for (const record of collection.records) {
-      if (recordMatchesIdentity(record, step.identity)) {
-        return record as CopyModRawRecord;
-      }
-    }
-  }
-  return undefined;
-}
-
 /* ── Public API ────────────────────────────────────────────────── */
 
 /**
@@ -62,7 +40,7 @@ export function findRecordForChainStep(
 export function materializeNestedCopyLevels(
   resolvedBase: CopyModRawRecord,
   chain: readonly CopyChainStep[],
-  context: CopyResolverContext,
+  locatedLevels: readonly LocatedCopyLevel[],
 ):
   | { readonly ok: true; readonly record: CopyModRawRecord }
   | { readonly ok: false; readonly diagnostics: readonly MaterializationDiagnostic[] } {
@@ -83,9 +61,9 @@ export function materializeNestedCopyLevels(
     const step = chain[i];
     if (step === undefined) continue;
     const failureChain = Object.freeze(chain.slice(i));
-
-    const intermediate = findRecordForChainStep(context, step);
-    if (intermediate === undefined) {
+    const locatedLevel = locatedLevels[i];
+    const intermediate = locatedLevel?.record as CopyModRawRecord | undefined;
+    if (locatedLevel === undefined || intermediate === undefined) {
       return {
         ok: false,
         diagnostics: Object.freeze([{
@@ -105,8 +83,8 @@ export function materializeNestedCopyLevels(
       };
     }
 
-    const intermediateEntityKind = step.entityKind;
-    const intermediateSourcePath = step.sourcePath;
+    const intermediateEntityKind = locatedLevel.entityKind;
+    const intermediateSourcePath = locatedLevel.sourcePath;
 
     // Clone current accumulated state
     current = cloneRecord(current);

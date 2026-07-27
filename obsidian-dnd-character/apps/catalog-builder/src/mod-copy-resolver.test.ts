@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { CopyChainStep, CopyResolverContext } from "./copy-resolver";
+import {
+  isCopyResolutionSuccess,
+  resolveCopy,
+  type CopyChainStep,
+  type CopyResolverContext,
+  type LocatedCopyLevel,
+} from "./copy-resolver";
 import {
   materializeCopyWithMods,
   resolveCopyWithMods,
@@ -38,6 +44,18 @@ function makeVariant(base: CopyModRawRecord, mod: Record<string, unknown>): Copy
       },
     },
   };
+}
+
+function makeLocatedLevels(
+  chain: readonly CopyChainStep[],
+  records: readonly CopyModRawRecord[],
+): readonly LocatedCopyLevel[] {
+  return chain.map((step, index) => ({
+    record: records[index]!,
+    entityKind: step.entityKind,
+    sourcePath: step.sourcePath,
+    identity: step.identity,
+  }));
 }
 
 describe("resolveCopyWithMods dispatcher integration", () => {
@@ -2393,19 +2411,7 @@ describe("nested copy chain materialization", () => {
         identity: { name: "Base", source: "BAS" },
       },
     ];
-    const context = {
-      validatedFiles: {
-        "middle-monster.json": {
-          filePath: "middle-monster.json",
-          collections: [
-            { entityKind: "monster", recordCount: 1, records: [middle] },
-          ],
-          totalRecords: 1,
-        },
-      },
-    };
-
-    const result = materializeNestedCopyLevels(base, chain, context);
+    const result = materializeNestedCopyLevels(base, chain, makeLocatedLevels(chain, [middle, base]));
 
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
@@ -2445,19 +2451,7 @@ describe("nested copy chain materialization", () => {
         identity: { name: "Base", source: "BAS" },
       },
     ];
-    const context = {
-      validatedFiles: {
-        "middle-monster.json": {
-          filePath: "middle-monster.json",
-          collections: [
-            { entityKind: "monster", recordCount: 1, records: [middle] },
-          ],
-          totalRecords: 1,
-        },
-      },
-    };
-
-    const result = materializeNestedCopyLevels(base, chain, context);
+    const result = materializeNestedCopyLevels(base, chain, makeLocatedLevels(chain, [middle, base]));
 
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
@@ -2497,19 +2491,7 @@ describe("nested copy chain materialization", () => {
         identity: { name: "Base", source: "BAS" },
       },
     ];
-    const context = {
-      validatedFiles: {
-        "middle-monster.json": {
-          filePath: "middle-monster.json",
-          collections: [
-            { entityKind: "monster", recordCount: 1, records: [middle] },
-          ],
-          totalRecords: 1,
-        },
-      },
-    };
-
-    const result = materializeNestedCopyLevels(base, chain, context);
+    const result = materializeNestedCopyLevels(base, chain, makeLocatedLevels(chain, [middle, base]));
 
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
@@ -2541,19 +2523,7 @@ describe("nested copy chain materialization", () => {
         identity: { name: "Base", source: "BAS" },
       },
     ];
-    const context: CopyResolverContext = {
-      validatedFiles: {
-        "base-monster.json": {
-          filePath: "base-monster.json",
-          collections: [
-            { entityKind: "monster", recordCount: 1, records: [base] },
-          ],
-          totalRecords: 1,
-        },
-      },
-    };
-
-    const result = materializeNestedCopyLevels(base, chain, context);
+    const result = materializeNestedCopyLevels(base, chain, []);
 
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
@@ -2755,19 +2725,7 @@ describe("nested copy chain materialization", () => {
         identity: { name: "Base", source: "BAS" },
       },
     ];
-    const context = {
-      validatedFiles: {
-        "middle-monster.json": {
-          filePath: "middle-monster.json",
-          collections: [
-            { entityKind: "monster", recordCount: 1, records: [middle] },
-          ],
-          totalRecords: 1,
-        },
-      },
-    };
-
-    const result = materializeNestedCopyLevels(base, chain, context);
+    const result = materializeNestedCopyLevels(base, chain, makeLocatedLevels(chain, [middle, base]));
 
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
@@ -2803,19 +2761,7 @@ describe("nested copy chain materialization", () => {
         identity: { name: "Base", source: "BAS" },
       },
     ];
-    const context = {
-      validatedFiles: {
-        "middle-monster.json": {
-          filePath: "middle-monster.json",
-          collections: [
-            { entityKind: "monster", recordCount: 1, records: [middle] },
-          ],
-          totalRecords: 1,
-        },
-      },
-    };
-
-    const result = materializeNestedCopyLevels(base, chain, context);
+    const result = materializeNestedCopyLevels(base, chain, makeLocatedLevels(chain, [middle, base]));
 
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected failure");
@@ -2868,5 +2814,203 @@ describe("nested copy chain materialization", () => {
     expect(r.size).toBe("L");
     expect(r.ac).toBe(16);
     expect(r.cr).toBe(4);
+  });
+});
+
+describe("nested materialization with located copy levels", () => {
+  it("materializes nested levels from stored records without boundary rediscovery", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { size: "M", ac: 12 },
+    };
+    const middle: CopyModRawRecord = {
+      name: "Middle",
+      source: "TST",
+      remaining: { _copy: { name: "Base", source: "TST" }, ac: 16 },
+    };
+    const chain: readonly CopyChainStep[] = [
+      {
+        entityName: "Middle",
+        sourceAbbr: "TST",
+        entityKind: "monster",
+        sourcePath: "missing-middle.json",
+        identity: { name: "Middle", source: "TST" },
+      },
+      {
+        entityName: "Base",
+        sourceAbbr: "TST",
+        entityKind: "monster",
+        sourcePath: "missing-base.json",
+        identity: { name: "Base", source: "TST" },
+      },
+    ];
+
+    const result = materializeNestedCopyLevels(base, chain, makeLocatedLevels(chain, [middle, base]));
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    expect(result.record.remaining).toEqual({ size: "M", ac: 16 });
+  });
+
+  it("uses the records selected at resolution even after context records change", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { size: "M", ac: 12 },
+    };
+    const selectedMiddle: CopyModRawRecord = {
+      name: "Middle",
+      source: "TST",
+      remaining: { _copy: { name: "Base", source: "TST" }, ac: 16 },
+    };
+    const replacementMiddle: CopyModRawRecord = {
+      name: "Middle",
+      source: "TST",
+      remaining: { _copy: { name: "Base", source: "TST" }, ac: 20 },
+    };
+    const records = [base, selectedMiddle];
+    const ctx: CopyResolverContext = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            { entityKind: "monster", recordCount: 2, records },
+          ],
+          totalRecords: 2,
+        },
+      },
+    };
+    const resolved = resolveCopy(
+      { name: "Derived", source: "TST", remaining: { _copy: { name: "Middle", source: "TST" } } },
+      ctx,
+      { sourcePath: "monster.json", sourceEntityKind: "monster" },
+    );
+    expect(isCopyResolutionSuccess(resolved)).toBe(true);
+    if (!isCopyResolutionSuccess(resolved)) throw new Error("Expected success");
+
+    records.splice(1, 1, replacementMiddle);
+    const result = materializeNestedCopyLevels(
+      resolved.baseEntity,
+      resolved.chain,
+      resolved.locatedLevels,
+    );
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    expect(resolved.locatedLevels[0]!.record).toBe(selectedMiddle);
+    expect(result.record.remaining.ac).toBe(16);
+  });
+
+  it("leaves base, intermediate, and outer records unchanged and strips consumed directives", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { trait: [{ name: "Base Trait" }], size: "M" },
+    };
+    const middle: CopyModRawRecord = {
+      name: "Middle",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: "Base",
+          source: "TST",
+          _mod: { trait: { mode: "appendArr", items: { name: "Middle Trait" } } },
+        },
+        ac: 15,
+      },
+    };
+    const outer: CopyModRawRecord = {
+      name: "Outer",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: "Middle",
+          source: "TST",
+          _preserve: { "*": true },
+          _mod: { trait: { mode: "appendArr", items: { name: "Outer Trait" } } },
+        },
+      },
+    };
+    const ctx: CopyResolverContext = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            { entityKind: "monster", recordCount: 3, records: [base, middle, outer] },
+          ],
+          totalRecords: 3,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(outer, ctx, {
+      sourcePath: "monster.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    expect(base.remaining).toEqual({ trait: [{ name: "Base Trait" }], size: "M" });
+    expect(middle.remaining).toEqual({
+      _copy: {
+        name: "Base",
+        source: "TST",
+        _mod: { trait: { mode: "appendArr", items: { name: "Middle Trait" } } },
+      },
+      ac: 15,
+    });
+    expect(outer.remaining).toEqual({
+      _copy: {
+        name: "Middle",
+        source: "TST",
+        _preserve: { "*": true },
+        _mod: { trait: { mode: "appendArr", items: { name: "Outer Trait" } } },
+      },
+    });
+    expect(result.result.record.remaining).not.toHaveProperty("_copy");
+    expect(result.result.record.remaining).not.toHaveProperty("_mod");
+    expect(result.result.record.remaining).not.toHaveProperty("_preserve");
+  });
+
+  it("does not include raw stored records in materialization diagnostics", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { page: 1 },
+    };
+    const middle: CopyModRawRecord = {
+      name: "Middle",
+      source: "TST",
+      remaining: {
+        _copy: { name: "Base", source: "TST", _preserve: { page: false } },
+        rawOnlyMarker: "do-not-serialize",
+      },
+    };
+    const chain: readonly CopyChainStep[] = [
+      {
+        entityName: "Middle",
+        sourceAbbr: "TST",
+        entityKind: "monster",
+        sourcePath: "middle.json",
+        identity: { name: "Middle", source: "TST" },
+      },
+      {
+        entityName: "Base",
+        sourceAbbr: "TST",
+        entityKind: "monster",
+        sourcePath: "base.json",
+        identity: { name: "Base", source: "TST" },
+      },
+    ];
+
+    const result = materializeNestedCopyLevels(base, chain, makeLocatedLevels(chain, [middle, base]));
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    const serialized = JSON.stringify(result.diagnostics);
+    expect(serialized).toContain("\"inheritanceChain\"");
+    expect(serialized).not.toContain("rawOnlyMarker");
+    expect(serialized).not.toContain("do-not-serialize");
   });
 });
