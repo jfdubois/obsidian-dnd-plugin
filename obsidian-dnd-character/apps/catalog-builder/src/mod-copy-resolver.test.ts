@@ -531,7 +531,7 @@ describe("materializeCopyWithMods", () => {
     expect(result.result.identity.sourcePath).toBe("monster.json");
   });
 
-  it("terminal base retains exact path, kind, and identity from final chain step", () => {
+  it("terminal base retains exact path, kind, and identity from the final located level", () => {
     const base: CopyModRawRecord = {
       name: "Centaur",
       source: "GGR",
@@ -578,6 +578,120 @@ describe("materializeCopyWithMods", () => {
     expect(result.result.terminalBase.identity).toEqual({
       name: "Centaur",
       source: "GGR",
+    });
+  });
+
+  it("cross-file terminal base uses the actual terminal file", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "BAS",
+      remaining: { size: "M" },
+    };
+    const middle: CopyModRawRecord = {
+      name: "Middle",
+      source: "MID",
+      remaining: { _copy: { name: "Base", source: "BAS" } },
+    };
+    const outer: CopyModRawRecord = {
+      name: "Outer",
+      source: "OUT",
+      remaining: { _copy: { name: "Middle", source: "MID" } },
+    };
+    const ctx: CopyResolverContext = {
+      validatedFiles: {
+        "middle.json": {
+          filePath: "middle.json",
+          collections: [{ entityKind: "monster", recordCount: 1, records: [middle] }],
+          totalRecords: 1,
+        },
+        "base.json": {
+          filePath: "base.json",
+          collections: [{ entityKind: "monster", recordCount: 1, records: [base] }],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(outer, ctx, {
+      sourcePath: "outer.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected materialization success");
+    expect(result.result.terminalBase.sourcePath).toBe("base.json");
+    expect(result.result.inheritanceChain.map((step) => step.sourcePath)).toEqual(["middle.json", "base.json"]);
+  });
+
+  it("cross-collection terminal base uses the actual terminal entity kind", () => {
+    const base: CopyModRawRecord = {
+      name: "Base Creature",
+      source: "BAS",
+      remaining: { size: "M" },
+    };
+    const fluff: CopyModRawRecord = {
+      name: "Base Fluff",
+      source: "OUT",
+      remaining: { _copy: { name: "Base Creature", source: "BAS" } },
+    };
+    const ctx: CopyResolverContext = {
+      validatedFiles: {
+        "base.json": {
+          filePath: "base.json",
+          collections: [
+            { entityKind: "monster", recordCount: 1, records: [base] },
+            { entityKind: "monsterFluff", recordCount: 1, records: [fluff] },
+          ],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(fluff, ctx, {
+      sourcePath: "fluff.json",
+      sourceEntityKind: "monsterFluff",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected materialization success");
+    expect(result.result.terminalBase.entityKind).toBe("monster");
+    expect(result.result.terminalBase.sourcePath).toBe("base.json");
+  });
+
+  it("terminal base name and source come from the exact terminal record", () => {
+    const itemType: CopyModRawRecord = {
+      name: "Vehicle (Air)",
+      source: "DMG",
+      remaining: { abbreviation: "SHP", entries: ["ship"] },
+    };
+    const copy: CopyModRawRecord = {
+      name: "Ship Type Copy",
+      source: "TST",
+      remaining: { _copy: { abbreviation: "SHP", source: "DMG" } },
+    };
+    const ctx: CopyResolverContext = {
+      validatedFiles: {
+        "item-type.json": {
+          filePath: "item-type.json",
+          collections: [{ entityKind: "itemType", recordCount: 1, records: [itemType] }],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(copy, ctx, {
+      sourcePath: "copy.json",
+      sourceEntityKind: "itemType",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected materialization success");
+    expect(result.result.terminalBase).toMatchObject({
+      name: "Vehicle (Air)",
+      source: "DMG",
+      entityKind: "itemType",
+      sourcePath: "item-type.json",
+      identity: { abbreviation: "SHP", source: "DMG" },
     });
   });
 
@@ -2971,6 +3085,146 @@ describe("nested materialization with located copy levels", () => {
     expect(result.result.record.remaining).not.toHaveProperty("_copy");
     expect(result.result.record.remaining).not.toHaveProperty("_mod");
     expect(result.result.record.remaining).not.toHaveProperty("_preserve");
+  });
+
+  it("nested top-level _preserve self-reference succeeds without a false cycle", () => {
+    const intermediate: CopyModRawRecord = {
+      name: "Intermediate",
+      source: "MID",
+      remaining: {
+        _copy: { name: "Intermediate", source: "MID" },
+        _preserve: true,
+        trait: [{ name: "Intermediate Trait" }],
+        size: "M",
+      },
+    };
+    const outer: CopyModRawRecord = {
+      name: "Outer",
+      source: "OUT",
+      remaining: {
+        _copy: { name: "Intermediate", source: "MID" },
+        ac: 17,
+      },
+    };
+    const originalIntermediate = JSON.parse(JSON.stringify(intermediate)) as CopyModRawRecord;
+    const originalOuter = JSON.parse(JSON.stringify(outer)) as CopyModRawRecord;
+    const ctx: CopyResolverContext = {
+      validatedFiles: {
+        "intermediate.json": {
+          filePath: "intermediate.json",
+          collections: [{ entityKind: "monster", recordCount: 1, records: [intermediate] }],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(outer, ctx, {
+      sourcePath: "outer.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected materialization success");
+    expect(result.result.inheritanceChain.map((step) => step.entityName)).toEqual(["Intermediate", "Intermediate"]);
+    expect(result.result.inheritanceChain.map((step) => step.sourcePath)).toEqual(["intermediate.json", "intermediate.json"]);
+    expect(result.result.metadata.diagnostics).toHaveLength(0);
+    expect(result.result.record.remaining).toMatchObject({
+      trait: [{ name: "Intermediate Trait" }],
+      size: "M",
+      ac: 17,
+    });
+    expect(result.result.record.remaining).not.toHaveProperty("_copy");
+    expect(result.result.record.remaining).not.toHaveProperty("_preserve");
+    expect(intermediate).toEqual(originalIntermediate);
+    expect(outer).toEqual(originalOuter);
+  });
+
+  it("nested missing-base diagnostic identifies the intermediate record", () => {
+    const middle: CopyModRawRecord = {
+      name: "Middle",
+      source: "MID",
+      remaining: { _copy: { name: "Missing", source: "BAS" } },
+    };
+    const outer: CopyModRawRecord = {
+      name: "Outer",
+      source: "OUT",
+      remaining: { _copy: { name: "Middle", source: "MID" } },
+    };
+    const ctx: CopyResolverContext = {
+      validatedFiles: {
+        "middle.json": {
+          filePath: "middle.json",
+          collections: [{ entityKind: "monster", recordCount: 1, records: [middle] }],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(outer, ctx, {
+      sourcePath: "outer.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    const diag = result.diagnostics[0] as MaterializationDiagnostic;
+    expect(diag).toMatchObject({
+      code: "BASE_ENTITY_NOT_FOUND",
+      entityName: "Middle",
+      entitySource: "MID",
+      sourcePath: "middle.json",
+      sourceEntityKind: "monster",
+      requestedIdentity: { name: "Missing", source: "BAS" },
+    });
+    expect(diag.inheritanceChain?.map((step) => step.entityName)).toEqual(["Middle", "Missing"]);
+  });
+
+  it("nested ambiguity diagnostic identifies the intermediate record", () => {
+    const baseA: CopyModRawRecord = { name: "Base", source: "BAS", remaining: {} };
+    const baseB: CopyModRawRecord = { name: "Base", source: "BAS", remaining: {} };
+    const middle: CopyModRawRecord = {
+      name: "Middle",
+      source: "MID",
+      remaining: { _copy: { name: "Base", source: "BAS" } },
+    };
+    const outer: CopyModRawRecord = {
+      name: "Outer",
+      source: "OUT",
+      remaining: { _copy: { name: "Middle", source: "MID" } },
+    };
+    const ctx: CopyResolverContext = {
+      validatedFiles: {
+        "middle.json": {
+          filePath: "middle.json",
+          collections: [{ entityKind: "monster", recordCount: 1, records: [middle] }],
+          totalRecords: 1,
+        },
+        "base.json": {
+          filePath: "base.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [baseA, baseB] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(outer, ctx, {
+      sourcePath: "outer.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    const diag = result.diagnostics[0] as MaterializationDiagnostic;
+    expect(diag).toMatchObject({
+      code: "AMBIGUOUS_BASE_ENTITY",
+      entityName: "Middle",
+      entitySource: "MID",
+      sourcePath: "middle.json",
+      sourceEntityKind: "monster",
+      requestedIdentity: { name: "Base", source: "BAS" },
+    });
+    expect(diag.ambiguityCandidates).toHaveLength(2);
+    expect(diag.inheritanceChain?.map((step) => step.entityName)).toEqual(["Middle", "Base"]);
   });
 
   it("does not include raw stored records in materialization diagnostics", () => {

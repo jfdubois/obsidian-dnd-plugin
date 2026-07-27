@@ -453,6 +453,36 @@ function formatCopyChain(chain: readonly CopyChainStep[]): string {
   return chain.map((step) => `${step.entityName}|${step.sourceAbbr} [${step.entityKind}]`).join(" -> ");
 }
 
+function createCopyChainStep(
+  record: RawRecord,
+  entityKind: string,
+  sourcePath: string,
+  identity: StructuredIdentity,
+): CopyChainStep {
+  return {
+    entityName: record.name,
+    sourceAbbr: record.source,
+    entityKind,
+    sourcePath,
+    identity,
+  };
+}
+
+function createRequestedCopyChainStep(
+  identity: StructuredIdentity,
+  entityKind: string,
+  sourcePath: string,
+): CopyChainStep {
+  const chainLabel = identityToChainLabel(identity);
+  return {
+    entityName: chainLabel.name,
+    sourceAbbr: chainLabel.source,
+    entityKind,
+    sourcePath,
+    identity,
+  };
+}
+
 interface LocatedRecord {
   readonly record: RawRecord;
   readonly entityKind: string;
@@ -531,7 +561,7 @@ function identityMatchesSourceRecord(
 function resolveCopyChain(
   copyValue: RawCopyValue,
   context: CopyResolverContext,
-  sourceRecord: RawRecord,
+  currentSourceRecord: RawRecord,
   visited: Set<string>,
   chain: CopyChainStep[],
   locatedLevels: LocatedCopyLevel[],
@@ -547,7 +577,7 @@ function resolveCopyChain(
       "COPY_CHAIN_TOO_DEEP",
       "error",
       `_copy chain exceeded maximum depth of ${MAX_COPY_DEPTH}. Chain: ${formatCopyChain(chain)}`,
-      sourceRecord,
+      currentSourceRecord,
       copyValue,
       undefined,
       identity,
@@ -556,6 +586,30 @@ function resolveCopyChain(
     );
   }
   const cycleKey = `${currentEntityKind}|${identityToCycleKey(identity)}`;
+
+  // _preserve self-reference: if the identity matches the current source record itself
+  if (
+    currentSourceRecord.remaining._preserve === true &&
+    identityMatchesSourceRecord(identity, currentSourceRecord)
+  ) {
+    return {
+      status: "resolved",
+      baseEntity: preservedRecord(currentSourceRecord),
+      chain: Object.freeze([
+        ...chain,
+        createCopyChainStep(currentSourceRecord, currentEntityKind, currentSourcePath, identity),
+      ]),
+      locatedLevels: Object.freeze([
+        ...locatedLevels,
+        {
+          record: currentSourceRecord,
+          entityKind: currentEntityKind,
+          sourcePath: currentSourcePath,
+          identity,
+        },
+      ]),
+    };
+  }
 
   // Cycle detection
   if (visited.has(cycleKey)) {
@@ -574,7 +628,7 @@ function resolveCopyChain(
       "CIRCULAR_COPY_REFERENCE",
       "error",
       `Circular _copy reference detected: "${cycleKey}" appears multiple times in chain: ${formatCopyChain(cycleChain)}`,
-      sourceRecord,
+      currentSourceRecord,
       copyValue,
       undefined,
       identity,
@@ -586,57 +640,36 @@ function resolveCopyChain(
   }
 
   visited.add(cycleKey);
-  const chainLabel = identityToChainLabel(identity);
-  chain.push({
-    entityName: chainLabel.name,
-    sourceAbbr: chainLabel.source,
-    entityKind: currentEntityKind,
-    sourcePath: currentSourcePath,
-    identity,
-  });
-
-  // _preserve self-reference: if the identity matches the source record itself
-  if (
-    sourceRecord.remaining._preserve === true &&
-    identityMatchesSourceRecord(identity, sourceRecord)
-  ) {
-    return {
-      status: "resolved",
-      baseEntity: preservedRecord(sourceRecord),
-      chain: Object.freeze(chain),
-      locatedLevels: Object.freeze([
-        ...locatedLevels,
-        {
-          record: sourceRecord,
-          entityKind: currentEntityKind,
-          sourcePath: currentSourcePath,
-          identity,
-        },
-      ]),
-    };
-  }
 
   // Find base entities matching ALL identity fields within allowed entity kinds
   const candidates = findRecordsByStructuredIdentity(context, identity, currentEntityKind);
 
   if (candidates.length === 0) {
     const allowedKinds = getAllowedEntityKinds(currentEntityKind);
+    const failureChain = [
+      ...chain,
+      createRequestedCopyChainStep(identity, currentEntityKind, currentSourcePath),
+    ];
     return createFailure(
       "BASE_ENTITY_NOT_FOUND",
       "error",
-      `Base entity matching identity ${JSON.stringify(identity)} not found in allowed entity kinds [${[...allowedKinds].sort().join(", ")}]. Source entity kind: "${currentEntityKind}". Source path: "${currentSourcePath}". Referenced by "${sourceRecord.name}" (${sourceRecord.source}).`,
-      sourceRecord,
+      `Base entity matching identity ${JSON.stringify(identity)} not found in allowed entity kinds [${[...allowedKinds].sort().join(", ")}]. Source entity kind: "${currentEntityKind}". Source path: "${currentSourcePath}". Referenced by "${currentSourceRecord.name}" (${currentSourceRecord.source}).`,
+      currentSourceRecord,
       copyValue,
       undefined,
       identity,
       currentEntityKind,
       currentSourcePath,
       Object.freeze([...allowedKinds]),
-      Object.freeze(chain),
+      Object.freeze(failureChain),
     );
   }
 
   if (candidates.length > 1) {
+    const failureChain = [
+      ...chain,
+      createRequestedCopyChainStep(identity, currentEntityKind, currentSourcePath),
+    ];
     const candidateDescs = candidates
       .map((c) => `"${c.record.name}" (${c.record.source}) [${c.entityKind}] at "${c.sourcePath}"`)
       .join(", ");
@@ -650,21 +683,22 @@ function resolveCopyChain(
     return createFailure(
       "AMBIGUOUS_BASE_ENTITY",
       "error",
-      `Found ${candidates.length} candidates matching identity ${JSON.stringify(identity)} within entity kind "${currentEntityKind}": ${candidateDescs}. Referenced by "${sourceRecord.name}" (${sourceRecord.source}).`,
-      sourceRecord,
+      `Found ${candidates.length} candidates matching identity ${JSON.stringify(identity)} within entity kind "${currentEntityKind}": ${candidateDescs}. Referenced by "${currentSourceRecord.name}" (${currentSourceRecord.source}).`,
+      currentSourceRecord,
       copyValue,
       undefined,
       identity,
       currentEntityKind,
       currentSourcePath,
       undefined,
-      Object.freeze(chain),
+      Object.freeze(failureChain),
       Object.freeze(ambiguityCandidates),
     );
   }
 
   const matched = candidates[0]!;
   const baseEntity = matched.record;
+  chain.push(createCopyChainStep(baseEntity, matched.entityKind, matched.sourcePath, identity));
   const nextLocatedLevels: LocatedCopyLevel[] = [
     ...locatedLevels,
     {
@@ -681,7 +715,7 @@ function resolveCopyChain(
     return resolveCopyChain(
       baseCopy,
       context,
-      sourceRecord,
+      baseEntity,
       visited,
       chain,
       nextLocatedLevels,

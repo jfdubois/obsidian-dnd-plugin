@@ -1225,7 +1225,7 @@ describe("AMBIGUOUS_BASE_ENTITY structured identity", () => {
     expect(isCopyResolutionSuccess(result)).toBe(true);
     if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
     expect(result.chain).toHaveLength(1);
-    expect(result.chain[0]!.entityKind).toBe("monsterFluff");
+    expect(result.chain[0]!.entityKind).toBe("monster");
     expect(result.chain[0]!.sourcePath).toBe("test.json");
   });
 
@@ -1505,6 +1505,10 @@ describe("located copy levels", () => {
     expect(isCopyResolutionSuccess(result)).toBe(true);
     if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
     expect(result.locatedLevels.map((level) => level.sourcePath)).toEqual(["middle.json", "base.json"]);
+    expect(result.chain.map((step) => step.entityName)).toEqual(["Middle", "Base"]);
+    expect(result.chain.map((step) => step.sourcePath)).toEqual(result.locatedLevels.map((level) => level.sourcePath));
+    expect(result.chain.map((step) => step.entityKind)).toEqual(result.locatedLevels.map((level) => level.entityKind));
+    expect(result.chain.map((step) => step.identity)).toEqual(result.locatedLevels.map((level) => level.identity));
   });
 
   it("retains exact entity kinds for compatible cross-collection inheritance", () => {
@@ -1532,6 +1536,128 @@ describe("located copy levels", () => {
     if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
     expect(result.locatedLevels[0]!.record).toBe(base);
     expect(result.locatedLevels[0]!.entityKind).toBe("monster");
+    expect(result.chain[0]).toMatchObject({
+      entityName: "Base Creature",
+      entityKind: "monster",
+      sourcePath: "mixed.json",
+      identity: { name: "Base Creature", source: "TST" },
+    });
+  });
+
+  it("reports nested missing base from the intermediate record containing the failing _copy", () => {
+    const middle = {
+      name: "Middle",
+      source: "MID",
+      remaining: { _copy: { name: "Missing Base", source: "BAS" } },
+    };
+    const context: CopyResolverContext = {
+      validatedFiles: {
+        "middle.json": {
+          filePath: "middle.json",
+          collections: [{ entityKind: "monster", recordCount: 1, records: [middle] }],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = resolveCopy(
+      makeRecord("Outer", "OUT", { _copy: { name: "Middle", source: "MID" } }),
+      context,
+      { sourceEntityKind: "monster", sourcePath: "outer.json" },
+    );
+
+    expect(isCopyResolutionFailure(result)).toBe(true);
+    if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
+    expect(result.diagnostic.code).toBe("BASE_ENTITY_NOT_FOUND");
+    expect(result.diagnostic.sourceRecord).toBe(middle);
+    expect(result.diagnostic.sourcePath).toBe("middle.json");
+    expect(result.diagnostic.sourceEntityKind).toBe("monster");
+    expect(result.diagnostic.requestedIdentity).toEqual({ name: "Missing Base", source: "BAS" });
+    expect(result.diagnostic.message).toContain('Referenced by "Middle" (MID)');
+    expect(result.diagnostic.chain?.map((step) => step.entityName)).toEqual(["Middle", "Missing Base"]);
+  });
+
+  it("reports nested ambiguity from the intermediate record containing the failing _copy", () => {
+    const baseA = { name: "Base", source: "BAS", remaining: {} };
+    const baseB = { name: "Base", source: "BAS", remaining: {} };
+    const middle = {
+      name: "Middle",
+      source: "MID",
+      remaining: { _copy: { name: "Base", source: "BAS" } },
+    };
+    const context: CopyResolverContext = {
+      validatedFiles: {
+        "middle.json": {
+          filePath: "middle.json",
+          collections: [{ entityKind: "monster", recordCount: 1, records: [middle] }],
+          totalRecords: 1,
+        },
+        "base.json": {
+          filePath: "base.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [baseA, baseB] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = resolveCopy(
+      makeRecord("Outer", "OUT", { _copy: { name: "Middle", source: "MID" } }),
+      context,
+      { sourceEntityKind: "monster", sourcePath: "outer.json" },
+    );
+
+    expect(isCopyResolutionFailure(result)).toBe(true);
+    if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
+    expect(result.diagnostic.code).toBe("AMBIGUOUS_BASE_ENTITY");
+    expect(result.diagnostic.sourceRecord).toBe(middle);
+    expect(result.diagnostic.sourcePath).toBe("middle.json");
+    expect(result.diagnostic.sourceEntityKind).toBe("monster");
+    expect(result.diagnostic.requestedIdentity).toEqual({ name: "Base", source: "BAS" });
+    expect(result.diagnostic.ambiguityCandidates).toHaveLength(2);
+    expect(result.diagnostic.message).toContain('Referenced by "Middle" (MID)');
+    expect(result.diagnostic.chain?.map((step) => step.entityName)).toEqual(["Middle", "Base"]);
+  });
+
+  it("reports nested cycles from the current record containing the repeated _copy", () => {
+    const base = {
+      name: "Base",
+      source: "BAS",
+      remaining: { _copy: { name: "Middle", source: "MID" } },
+    };
+    const middle = {
+      name: "Middle",
+      source: "MID",
+      remaining: { _copy: { name: "Base", source: "BAS" } },
+    };
+    const context: CopyResolverContext = {
+      validatedFiles: {
+        "middle.json": {
+          filePath: "middle.json",
+          collections: [{ entityKind: "monster", recordCount: 1, records: [middle] }],
+          totalRecords: 1,
+        },
+        "base.json": {
+          filePath: "base.json",
+          collections: [{ entityKind: "monster", recordCount: 1, records: [base] }],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = resolveCopy(
+      makeRecord("Outer", "OUT", { _copy: { name: "Middle", source: "MID" } }),
+      context,
+      { sourceEntityKind: "monster", sourcePath: "outer.json" },
+    );
+
+    expect(isCopyResolutionFailure(result)).toBe(true);
+    if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
+    expect(result.diagnostic.code).toBe("CIRCULAR_COPY_REFERENCE");
+    expect(result.diagnostic.sourceRecord).toBe(base);
+    expect(result.diagnostic.sourcePath).toBe("base.json");
+    expect(result.diagnostic.sourceEntityKind).toBe("monster");
+    expect(result.diagnostic.requestedIdentity).toEqual({ name: "Middle", source: "MID" });
+    expect(result.diagnostic.chain?.map((step) => step.entityName)).toEqual(["Middle", "Base", "Middle"]);
   });
 
   it("selects the correct same-name same-source record by raceName", () => {

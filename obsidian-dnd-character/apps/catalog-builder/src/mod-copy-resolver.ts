@@ -58,6 +58,7 @@ function convertCopyDiagnostic(
   copyDiagnostic: CopyResolverDiagnostic,
   sourceRecord: CopyModRawRecord,
 ): MaterializationDiagnostic {
+  const diagnosticSourceRecord = copyDiagnostic.sourceRecord ?? sourceRecord;
   const ambiguityCandidates = copyDiagnostic.ambiguityCandidates
     ? Object.freeze(
         copyDiagnostic.ambiguityCandidates.map((candidate) =>
@@ -105,8 +106,8 @@ function convertCopyDiagnostic(
     severity: copyDiagnostic.severity,
     message: copyDiagnostic.message,
     sourcePath: copyDiagnostic.sourcePath,
-    entityName: sourceRecord.name,
-    entitySource: sourceRecord.source,
+    entityName: diagnosticSourceRecord.name,
+    entitySource: diagnosticSourceRecord.source,
     fieldTarget: "_copy",
     mode: undefined,
     rawParam: copyDiagnostic.rawCopy,
@@ -316,21 +317,23 @@ export function materializeCopyWithMods(
     }
   }
 
-  // Terminal base from the exact final CopyChainStep
-  const lastStep = chain.length > 0 ? chain[chain.length - 1]! : null;
+  // Terminal base from the exact located level selected during resolution.
+  const terminalLevel = resolved.locatedLevels.length > 0
+    ? resolved.locatedLevels[resolved.locatedLevels.length - 1]!
+    : null;
   const terminalBase: {
     readonly name: string;
     readonly source: string;
     readonly entityKind: string;
     readonly sourcePath: string;
     readonly identity: Record<string, unknown>;
-  } = lastStep
+  } = terminalLevel
     ? {
-        name: lastStep.entityName,
-        source: lastStep.sourceAbbr,
-        entityKind: lastStep.entityKind,
-        sourcePath: lastStep.sourcePath,
-        identity: lastStep.identity as Record<string, unknown>,
+        name: terminalLevel.record.name,
+        source: terminalLevel.record.source,
+        entityKind: terminalLevel.entityKind,
+        sourcePath: terminalLevel.sourcePath,
+        identity: terminalLevel.identity as Record<string, unknown>,
       }
     : {
         name: resolved.baseEntity.name,
