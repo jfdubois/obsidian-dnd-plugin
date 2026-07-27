@@ -7,11 +7,14 @@ import {
   type CopyModRawRecord,
 } from "./mod-copy-resolver";
 import type { RawRecord, ValidatedCollection, ValidatedFileEnvelope } from "./raw-boundary";
+import { materializeSubraceVersionRecord, materializeSubraceWithParent } from "./race-subrace-materializer";
 import { expandAbstractVersionEntry } from "./version-abstract-expander";
 import {
   invalidVersionRecordDiagnostic,
   invalidVersionsPayloadDiagnostic,
   materializationFailureDiagnostic,
+  raceSubraceFailureDiagnostic,
+  subraceVersionFailureAfterMergeDiagnostic,
   type VersionExpansionDiagnostic,
 } from "./version-diagnostics";
 import {
@@ -145,7 +148,15 @@ function expandCollection(
   const diagnostics: VersionExpansionDiagnostic[] = [];
 
   for (const record of collection.records) {
-    const baseRecord = baseWithoutVersions(record);
+    let baseRecord = baseWithoutVersions(record);
+    if (collection.entityKind === "subrace") {
+      const materialized = materializeSubraceWithParent(record, context, sourcePath);
+      if (!materialized.ok) {
+        diagnostics.push(...materialized.diagnostics.map(raceSubraceFailureDiagnostic));
+        continue;
+      }
+      baseRecord = materialized.record;
+    }
     records.push(baseRecord);
     const rawVersions = record.remaining._versions;
     if (rawVersions === undefined) {
@@ -193,26 +204,28 @@ function expandCollection(
         }
 
         const rawVersionRecord = versionRecord(baseRecord, validatedVersion);
-        const resolved = materializeCopyWithMods(rawVersionRecord, context, {
-          sourcePath,
-          sourceEntityKind: collection.entityKind,
-        });
+        const resolved = collection.entityKind === "subrace"
+          ? materializeSubraceVersionRecord(baseRecord, rawVersionRecord, context, sourcePath)
+          : materializeCopyWithMods(rawVersionRecord, context, { sourcePath, sourceEntityKind: collection.entityKind });
         if (!resolved.ok) {
-          diagnostics.push(
-            materializationFailureDiagnostic(
-              sourcePath,
-              collection.entityKind,
-              record,
-              index,
-              validatedVersion.name,
-              validatedVersion.source,
-              concreteVersion.implementationIndex,
+          const diagnostic = materializationFailureDiagnostic(
+            sourcePath,
+            collection.entityKind,
+            record,
+            index,
+            validatedVersion.name,
+            validatedVersion.source,
+            concreteVersion.implementationIndex,
               resolved.diagnostics,
-            ),
+            );
+          diagnostics.push(
+            collection.entityKind === "subrace"
+              ? subraceVersionFailureAfterMergeDiagnostic(record, diagnostic)
+              : diagnostic,
           );
           return;
         }
-        records.push(ensureNoVersions(resolved.result.record));
+        records.push(ensureNoVersions("result" in resolved ? resolved.result.record : resolved.record));
       });
     });
   }
@@ -263,6 +276,7 @@ export function expandVersions(
         entityKind: collection.entityKind,
         records: result.records,
         recordCount: result.records.length,
+        sourceRole: collection.sourceRole,
       });
     }
 
@@ -270,6 +284,7 @@ export function expandVersions(
       filePath: envelope.filePath,
       collections: expandedCollections,
       totalRecords: expandedCollections.reduce((sum, c) => sum + c.recordCount, 0),
+      sourceRole: envelope.sourceRole,
     };
   }
 

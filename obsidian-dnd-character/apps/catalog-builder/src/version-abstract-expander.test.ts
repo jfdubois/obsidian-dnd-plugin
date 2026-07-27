@@ -230,7 +230,11 @@ describe("abstract version materialization", () => {
         collection("subrace", [{
           name: "Draconblood",
           source: "EGW",
-          remaining: { _versions: [{ name: "Draconblood (Blue)", source: "EGW" }] },
+          remaining: {
+            raceName: "Dragonborn",
+            raceSource: "XPHB",
+            _versions: [{ name: "Draconblood (Blue)", source: "EGW" }],
+          },
         }]),
       ]),
     });
@@ -247,7 +251,7 @@ describe("abstract version materialization", () => {
       "Dragonborn (Red)",
     ]);
     expect(expanded?.collections[1]?.records.map((record) => record.name)).toEqual([
-      "Draconblood",
+      "Dragonborn (Draconblood)",
       "Draconblood (Blue)",
     ]);
   });

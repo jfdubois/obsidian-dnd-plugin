@@ -147,7 +147,7 @@ describe("version materialization characterization", () => {
     const subrace: RawRecord = {
       name: "Shared",
       source: "TST",
-      remaining: { entries: ["subrace"] },
+      remaining: { raceName: "Shared", raceSource: "TST", entries: ["subrace"] },
     };
 
     const result = expandVersions({

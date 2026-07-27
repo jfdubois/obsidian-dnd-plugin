@@ -256,6 +256,8 @@ describe("expandVersions", () => {
               name: "High Elf",
               source: "PHB",
               remaining: {
+                raceName: "Human",
+                raceSource: "PHB",
                 speed: 30,
                 _versions: [{ name: "Wood Elf", source: "PHB", speed: 35 }],
               },
@@ -282,7 +284,7 @@ describe("expandVersions", () => {
 
     expect(subraceCol).toBeDefined();
     expect(subraceCol!.recordCount).toBe(2);
-    expect(subraceCol!.records.map((r) => r.name)).toEqual(["High Elf", "Wood Elf"]);
+    expect(subraceCol!.records.map((r) => r.name)).toEqual(["Human (High Elf)", "Wood Elf"]);
 
     expect(expanded!.totalRecords).toBe(4);
   });
@@ -310,7 +312,7 @@ describe("expandVersions", () => {
             {
               name: "High Elf",
               source: "PHB",
-              remaining: {},
+              remaining: { raceName: "Elf", raceSource: "PHB" },
             },
           ],
           recordCount: 1,
@@ -326,7 +328,7 @@ describe("expandVersions", () => {
     expect(raceCol!.records.map((r) => r.name)).toEqual(["Elf", "Dark Elf"]);
 
     const subraceCol = expanded!.collections.find((c) => c.entityKind === "subrace");
-    expect(subraceCol!.records.map((r) => r.name)).toEqual(["High Elf"]);
+    expect(subraceCol!.records.map((r) => r.name)).toEqual(["Elf (High Elf)"]);
   });
 
   it("versioned subrace records remain in subrace collection", () => {
@@ -347,6 +349,8 @@ describe("expandVersions", () => {
               name: "Hill Dwarf",
               source: "PHB",
               remaining: {
+                raceName: "Dwarf",
+                raceSource: "PHB",
                 _versions: [{ name: "Mountain Dwarf", source: "PHB" }],
               },
             },
@@ -364,7 +368,7 @@ describe("expandVersions", () => {
     expect(raceCol!.records.map((r) => r.name)).toEqual(["Dwarf"]);
 
     const subraceCol = expanded!.collections.find((c) => c.entityKind === "subrace");
-    expect(subraceCol!.records.map((r) => r.name)).toEqual(["Hill Dwarf", "Mountain Dwarf"]);
+    expect(subraceCol!.records.map((r) => r.name)).toEqual(["Dwarf (Hill Dwarf)", "Mountain Dwarf"]);
   });
 
   it("class file keeps class, subclass, classFeature, and subclassFeature separate", () => {
@@ -557,6 +561,8 @@ describe("expandVersions", () => {
               name: "High Elf",
               source: "PHB",
               remaining: {
+                raceName: "Elf",
+                raceSource: "PHB",
                 _versions: [{ name: "Wood Elf", source: "PHB" }],
               },
             },
@@ -574,7 +580,7 @@ describe("expandVersions", () => {
     expect(raceCol!.recordCount).toBe(4); // Human + 2 variants + Elf
 
     const subraceCol = expanded!.collections.find((c) => c.entityKind === "subrace");
-    expect(subraceCol!.recordCount).toBe(2); // High Elf + Wood Elf
+    expect(subraceCol!.recordCount).toBe(2); // merged High Elf + Wood Elf
 
     expect(expanded!.totalRecords).toBe(6);
   });

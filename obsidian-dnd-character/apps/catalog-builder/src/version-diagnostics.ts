@@ -6,6 +6,7 @@ import {
 import type { MaterializationDiagnostic } from "./mod-types";
 import type { DiagnosticSeverity } from "./raw-loader";
 import type { RawRecord } from "./raw-boundary";
+import type { RaceSubraceMaterializationDiagnostic } from "./race-subrace-diagnostics";
 import type { VersionRecordValidationDiagnostic } from "./version-record-validator";
 
 export type VersionExpansionDiagnosticCode =
@@ -20,7 +21,14 @@ export type VersionExpansionDiagnosticCode =
   | "VERSION_COPY_FAILED"
   | "VERSION_PRESERVE_FAILED"
   | "VERSION_TEMPLATE_FAILED"
-  | "VERSION_MOD_FAILED";
+  | "VERSION_MOD_FAILED"
+  | "PARENT_RACE_NOT_FOUND"
+  | "PARENT_RACE_AMBIGUOUS"
+  | "MALFORMED_PARENT_DISCRIMINATOR"
+  | "PARENT_COPY_MATERIALIZATION_FAILURE"
+  | "SUBRACE_COPY_MATERIALIZATION_FAILURE"
+  | "PARENT_SUBRACE_MERGE_FAILURE"
+  | "SUBRACE_VERSION_FAILURE_AFTER_MERGE";
 
 export interface VersionExpansionDiagnostic {
   readonly code: VersionExpansionDiagnosticCode;
@@ -42,6 +50,9 @@ export interface VersionExpansionDiagnostic {
   readonly inheritanceChain?: MaterializationDiagnostic["inheritanceChain"];
   readonly ambiguityCandidates?: MaterializationDiagnostic["ambiguityCandidates"];
   readonly sourceEntityKind?: string;
+  readonly raceName?: string;
+  readonly raceSource?: string;
+  readonly parentSourcePath?: string;
   readonly allowedEntityKinds?: readonly string[];
   readonly invalidDiscriminatorField?: string;
   readonly invalidDiscriminatorValue?: unknown;
@@ -56,6 +67,9 @@ export interface VersionExpansionDiagnostic {
   readonly rawTemplateReference?: unknown;
   readonly templateCandidates?: MaterializationDiagnostic["templateCandidates"];
   readonly modDiagnostics?: readonly MaterializationDiagnostic[];
+  readonly parentCandidates?: RaceSubraceMaterializationDiagnostic["candidates"];
+  readonly ineligibleParentCandidates?: RaceSubraceMaterializationDiagnostic["ineligibleCandidates"];
+  readonly underlyingRaceSubraceDiagnostics?: readonly RaceSubraceMaterializationDiagnostic[];
 }
 
 function cloneStructuredIdentity(value: StructuredIdentity | undefined): StructuredIdentity | undefined {
@@ -156,5 +170,45 @@ export function materializationFailureDiagnostic(
     rawTemplateReference: first?.rawTemplateReference,
     templateCandidates: first?.templateCandidates,
     modDiagnostics,
+  });
+}
+
+export function raceSubraceFailureDiagnostic(
+  diagnostic: RaceSubraceMaterializationDiagnostic,
+): VersionExpansionDiagnostic {
+  return Object.freeze({
+    code: diagnostic.code,
+    severity: diagnostic.severity,
+    message: diagnostic.message,
+    sourcePath: diagnostic.sourcePath,
+    entityKind: "subrace",
+    recordName: diagnostic.recordName,
+    recordSource: diagnostic.recordSource,
+    raceName: diagnostic.raceName,
+    raceSource: diagnostic.raceSource,
+    parentSourcePath: diagnostic.parentSourcePath,
+    requestedIdentity: cloneStructuredIdentity(diagnostic.requestedIdentity),
+    inheritanceChain: diagnostic.inheritanceChain,
+    materializationCode: diagnostic.materializationCode,
+    fieldTarget: diagnostic.fieldTarget,
+    mode: diagnostic.mode,
+    rawPayload: diagnostic.rawPayload,
+    sourceEntityKind: diagnostic.sourceEntityKind,
+    parentCandidates: diagnostic.candidates,
+    ineligibleParentCandidates: diagnostic.ineligibleCandidates,
+    underlyingRaceSubraceDiagnostics: [diagnostic],
+  });
+}
+
+export function subraceVersionFailureAfterMergeDiagnostic(
+  sourceRecord: RawRecord,
+  diagnostic: VersionExpansionDiagnostic,
+): VersionExpansionDiagnostic {
+  return Object.freeze({
+    ...diagnostic,
+    code: "SUBRACE_VERSION_FAILURE_AFTER_MERGE",
+    message: `Failed to expand subrace _versions after parent merge for "${sourceRecord.name}" (${sourceRecord.source}): ${diagnostic.message}`,
+    raceName: typeof sourceRecord.remaining.raceName === "string" ? sourceRecord.remaining.raceName : undefined,
+    raceSource: typeof sourceRecord.remaining.raceSource === "string" ? sourceRecord.remaining.raceSource : undefined,
   });
 }
