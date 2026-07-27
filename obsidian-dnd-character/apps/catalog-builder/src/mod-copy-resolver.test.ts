@@ -1716,6 +1716,44 @@ describe("preserve payload validation enforcement", () => {
     expect(preserveDiag.invalidPreserveKey).toBe("constructor");
   });
 
+  it("does not mutate _copy._preserve diagnostic values", () => {
+    const base: CopyModRawRecord = {
+      name: "Base Creature",
+      source: "TST",
+      remaining: { size: "M" },
+    };
+
+    const variant: CopyModRawRecord = {
+      name: "Mutation Test Variant",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: base.name,
+          source: base.source,
+          _preserve: { page: false, srd: null },
+          _mod: { size: "L" },
+        },
+      },
+    };
+
+    const originalPreserve = JSON.parse(JSON.stringify((variant.remaining._copy as Record<string, unknown>)._preserve));
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    expect((variant.remaining._copy as Record<string, unknown>)._preserve).toEqual(originalPreserve);
+  });
+
   it("accepts valid _copy._preserve wildcard and preserves gated fields", () => {
     const base: CopyModRawRecord = {
       name: "Base Creature",
