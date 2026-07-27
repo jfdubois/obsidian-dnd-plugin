@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main, dev]
 
+permissions:
+  contents: read
+
 defaults:
   run:
     working-directory: obsidian-dnd-character
@@ -18,16 +21,63 @@ jobs:
       matrix:
         node-version: [22]
 
+    env:
+      FIVEETOOLS_SRC_PATH: ${{ github.workspace }}/external/5etools-src
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkout project
+        uses: actions/checkout@v7
 
       - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
           cache: npm
           cache-dependency-path: obsidian-dnd-character/package-lock.json
+
+      - name: Read pinned 5eTools revision
+        id: fiveetools
+        shell: bash
+        run: |
+          revision="$(tr -d '\r\n' < config/pinned-5etools-revision.txt)"
+          if [[ ! "$revision" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Invalid pinned 5eTools revision: $revision" >&2
+            exit 1
+          fi
+          echo "revision=$revision" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout pinned 5eTools source
+        uses: actions/checkout@v7
+        with:
+          repository: 5etools-mirror-3/5etools-src
+          ref: ${{ steps.fiveetools.outputs.revision }}
+          path: external/5etools-src
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Verify pinned 5eTools source
+        shell: bash
+        run: |
+          expected="$(tr -d '\r\n' < config/pinned-5etools-revision.txt)"
+          actual="$(git -C "$FIVEETOOLS_SRC_PATH" rev-parse HEAD)"
+
+          if [[ "$actual" != "$expected" ]]; then
+            echo "Pinned revision mismatch: expected $expected, found $actual" >&2
+            exit 1
+          fi
+
+          if [[ -n "$(git -C "$FIVEETOOLS_SRC_PATH" status --short)" ]]; then
+            echo "Pinned 5eTools checkout is not clean" >&2
+            git -C "$FIVEETOOLS_SRC_PATH" status --short >&2
+            exit 1
+          fi
+
+          if [[ ! -d "$FIVEETOOLS_SRC_PATH/data" ]]; then
+            echo "Pinned 5eTools data directory is missing" >&2
+            exit 1
+          fi
+
+          echo "Verified 5eTools source: ${actual:0:7}"
 
       - name: Install dependencies
         run: npm ci
