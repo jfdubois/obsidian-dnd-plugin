@@ -1,6 +1,8 @@
 import {
   isCopyResolutionFailure,
   resolveCopy,
+  getRecordIdentity,
+  recordMatchesIdentity,
   type CopyChainStep,
   type CopyResolverContext,
 } from "./copy-resolver";
@@ -52,6 +54,7 @@ export interface ResolvedRecordDebugDiagnostic {
     | "SOURCE_ENTITY_KIND_REQUIRED"
     | "INVALID_SOURCE_ENTITY_KIND"
     | "SOURCE_RECORD_NOT_FOUND"
+    | "SOURCE_RECORD_AMBIGUOUS"
     | "COPY_RESOLUTION_FAILED"
     | "MOD_RESOLUTION_FAILED";
   readonly message: string;
@@ -61,6 +64,7 @@ export interface ResolvedRecordDebugDiagnostic {
     readonly name: string;
     readonly source: string;
   };
+  readonly candidates?: readonly ResolvedRecordDebugIdentity[];
   readonly materializationDiagnostic?: MaterializationDiagnostic;
 }
 
@@ -106,17 +110,18 @@ function cloneRecord(record: CopyModRawRecord): CopyModRawRecord {
 }
 
 /**
- * Locates the source record using exact object identity first,
- * then falls back to structured identity match within the specified
- * sourcePath and sourceEntityKind. Never searches unrelated files
- * or collections.
+ * Locates the source record using full structured identity comparison
+ * within the specified sourcePath and sourceEntityKind. Detects ambiguity
+ * when multiple records share the same structured identity.
  */
 function locateSourceRecord(
   context: CopyResolverContext,
   record: CopyModRawRecord,
   sourcePath: string,
   sourceEntityKind: string,
-): { record: CopyModRawRecord; found: true } | { found: false; reason: string } {
+):
+  | { record: CopyModRawRecord; found: true }
+  | { found: false; reason: string; candidates?: readonly ResolvedRecordDebugIdentity[] } {
   const envelope = context.validatedFiles[sourcePath];
   if (envelope === undefined) {
     return { found: false, reason: `Source path "${sourcePath}" not found in validated files` };
@@ -131,26 +136,35 @@ function locateSourceRecord(
     };
   }
 
-  // Try exact object identity first
-  const exactMatch = collection.records.find(
-    (candidate) => candidate === record,
+  const targetIdentity = getRecordIdentity(record);
+  const matches = collection.records.filter(
+    (candidate) => recordMatchesIdentity(candidate, targetIdentity),
   );
-  if (exactMatch !== undefined) {
-    return { record: exactMatch as CopyModRawRecord, found: true };
+
+  if (matches.length === 0) {
+    return {
+      found: false,
+      reason: `Record with structured identity [name="${record.name}", source="${record.source}"] not found in "${sourceEntityKind}" collection of "${sourcePath}"`,
+    };
   }
 
-  // Fall back to structured identity match within the specified collection
-  const structuredMatch = collection.records.find(
-    (candidate) => candidate.name === record.name && candidate.source === record.source,
-  );
-  if (structuredMatch !== undefined) {
-    return { record: structuredMatch as CopyModRawRecord, found: true };
+  if (matches.length > 1) {
+    const candidates: ResolvedRecordDebugIdentity[] = matches.map((m) => {
+      const id = getRecordIdentity(m);
+      return {
+        entityKind: sourceEntityKind,
+        name: String(id.name ?? ""),
+        ...id,
+      } as ResolvedRecordDebugIdentity;
+    });
+    return {
+      found: false,
+      reason: `Found ${matches.length} records matching structured identity [name="${record.name}", source="${record.source}"] in "${sourceEntityKind}" collection of "${sourcePath}". Ambiguous match.`,
+      candidates,
+    };
   }
 
-  return {
-    found: false,
-    reason: `Record "${record.name}" (${record.source}) not found in "${sourceEntityKind}" collection of "${sourcePath}"`,
-  };
+  return { record: matches[0] as CopyModRawRecord, found: true };
 }
 
 export function collectResolvedFieldInventory(
@@ -177,7 +191,9 @@ export function createResolvedRecordDebugFixture(
     const code: ResolvedRecordDebugDiagnostic["code"] =
       context.validatedFiles[sourcePath] === undefined
         ? "SOURCE_PATH_NOT_FOUND"
-        : "SOURCE_RECORD_NOT_FOUND";
+        : (located.candidates?.length ?? 0) > 0
+          ? "SOURCE_RECORD_AMBIGUOUS"
+          : "SOURCE_RECORD_NOT_FOUND";
     return {
       ok: false,
       diagnostics: [
@@ -187,13 +203,16 @@ export function createResolvedRecordDebugFixture(
           sourcePath,
           sourceEntityKind,
           identity: { name: record.name, source: record.source },
+          ...(located.candidates ? { candidates: located.candidates } : {}),
         },
       ],
     };
   }
 
+  const boundaryRecord = located.record;
+
   const modContext: CopyModContext = { sourcePath, sourceEntityKind };
-  const copyResult = resolveCopy(record, context, modContext);
+  const copyResult = resolveCopy(boundaryRecord, context, modContext);
 
   // Direct record: no _copy field
   const isDirectRecord =
@@ -221,18 +240,19 @@ export function createResolvedRecordDebugFixture(
   let deferredPreserve: unknown = undefined;
 
   if (isDirectRecord) {
-    resolvedRecord = cloneRecord(record);
+    resolvedRecord = cloneRecord(boundaryRecord);
     inheritanceChain = [];
+    const boundaryIdentity = getRecordIdentity(boundaryRecord);
     terminalBase = {
-      name: record.name,
-      source: record.source,
+      name: boundaryRecord.name,
+      source: boundaryRecord.source,
       entityKind: sourceEntityKind,
       sourcePath,
-      identity: {},
+      identity: boundaryIdentity,
     };
   } else {
     // Use materializeCopyWithMods for full MaterializedResolvedRecord contract
-    const materialized = materializeCopyWithMods(record, context, modContext);
+    const materialized = materializeCopyWithMods(boundaryRecord, context, modContext);
 
     if (!materialized.ok) {
       return {
@@ -262,19 +282,20 @@ export function createResolvedRecordDebugFixture(
     ...step,
     identity: {
       entityKind: step.entityKind,
-      name: step.entityName,
-      source: step.sourceAbbr,
-    },
+      name: String(step.identity.name ?? step.entityName),
+      ...step.identity,
+    } as ResolvedRecordDebugIdentity,
   }));
 
+  const recordIdentity = getRecordIdentity(boundaryRecord);
   const fixture: ResolvedRecordDebugFixture = {
     sourcePath,
     sourceEntityKind,
     identity: {
       entityKind: sourceEntityKind,
-      name: record.name,
-      source: record.source,
-    },
+      name: String(recordIdentity.name ?? boundaryRecord.name),
+      ...recordIdentity,
+    } as ResolvedRecordDebugIdentity,
     inheritanceChain: chainSteps,
     terminalBase,
     resolvedFieldInventory: collectResolvedFieldInventory(resolvedRecord),

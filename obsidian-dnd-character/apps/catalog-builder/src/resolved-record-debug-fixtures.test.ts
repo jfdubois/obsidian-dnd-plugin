@@ -57,7 +57,13 @@ describe("createResolvedRecordDebugFixture", () => {
     );
 
     expect(fixture.sourcePath).toBe("race.json");
-    expect(fixture.identity).toEqual({ entityKind: "race", name: "Human", source: "PHB" });
+    expect(fixture.identity).toEqual({
+      entityKind: "race",
+      name: "Human",
+      source: "PHB",
+      entries: ["Adaptable"],
+      page: 29,
+    });
     expect(fixture.inheritanceChain).toEqual([]);
     expect(fixture.resolvedFieldInventory).toEqual({
       envelope: ["name", "source"],
@@ -423,5 +429,219 @@ describe("createResolvedRecordDebugFixture", () => {
 
     expect(base.remaining.trait).toEqual([{ name: "Original" }]);
     expect(variant.remaining).toEqual({ _copy: { name: "Base", source: "TST" } });
+  });
+
+  it("detects ambiguity when multiple records share the same structured identity", () => {
+    const sharedEntries = ["Variant"];
+    const a: TestRecord = {
+      name: "Human",
+      source: "PHB",
+      remaining: { entries: sharedEntries },
+    };
+    const b: TestRecord = {
+      name: "Human",
+      source: "PHB",
+      remaining: { entries: sharedEntries },
+    };
+
+    const result = createResolvedRecordDebugFixture(
+      a,
+      makeContext("race.json", "race", [a, b]),
+      { sourcePath: "race.json", sourceEntityKind: "race" },
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected ambiguity diagnostic");
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "SOURCE_RECORD_AMBIGUOUS",
+      sourcePath: "race.json",
+      sourceEntityKind: "race",
+      identity: { name: "Human", source: "PHB" },
+    });
+    expect(result.diagnostics[0]!.candidates).toHaveLength(2);
+    expect(result.diagnostics[0]!.message).toContain("Ambiguous match");
+  });
+
+  it("distinguishes records by discriminator fields (raceName)", () => {
+    const base: TestRecord = {
+      name: "Custom Origin",
+      source: "TST",
+      remaining: { raceName: "Human", entries: ["Base"] },
+    };
+    const variantElf: TestRecord = {
+      name: "Custom Origin",
+      source: "TST",
+      remaining: { raceName: "Elf", entries: ["Elf variant"] },
+    };
+    const user: TestRecord = {
+      name: "User Origin",
+      source: "TST",
+      remaining: { _copy: { name: "Custom Origin", source: "TST", raceName: "Elf" } },
+    };
+
+    const fixture = fixtureOrThrow(
+      createResolvedRecordDebugFixture(
+        user,
+        makeContext("origin.json", "origin", [base, variantElf, user]),
+        { sourcePath: "origin.json", sourceEntityKind: "origin" },
+      ),
+    );
+
+    expect(fixture.resolvedRecord.remaining.entries).toEqual(["Elf variant"]);
+  });
+
+  it("distinguishes records by discriminator fields (className and level)", () => {
+    const base1: TestRecord = {
+      name: "Feat Feature",
+      source: "TST",
+      remaining: { className: "Fighter", level: 1, entries: ["Fighter 1"] },
+    };
+    const base2: TestRecord = {
+      name: "Feat Feature",
+      source: "TST",
+      remaining: { className: "Fighter", level: 2, entries: ["Fighter 2"] },
+    };
+    const user: TestRecord = {
+      name: "User Feat",
+      source: "TST",
+      remaining: { _copy: { name: "Feat Feature", source: "TST", className: "Fighter", level: 2 } },
+    };
+
+    const fixture = fixtureOrThrow(
+      createResolvedRecordDebugFixture(
+        user,
+        makeContext("classFeature.json", "classFeature", [base1, base2, user]),
+        { sourcePath: "classFeature.json", sourceEntityKind: "classFeature" },
+      ),
+    );
+
+    expect(fixture.resolvedRecord.remaining.entries).toEqual(["Fighter 2"]);
+  });
+
+  it("rejects record from wrong sourcePath even with matching name and source", () => {
+    const ctx = {
+      validatedFiles: {
+        "race.json": {
+          filePath: "race.json",
+          collections: [
+            {
+              entityKind: "race",
+              recordCount: 1,
+              records: [
+                { name: "Human", source: "PHB", remaining: { entries: ["Correct"] } },
+              ],
+            },
+          ],
+          totalRecords: 1,
+        },
+        "other.json": {
+          filePath: "other.json",
+          collections: [
+            {
+              entityKind: "race",
+              recordCount: 1,
+              records: [
+                { name: "Human", source: "PHB", remaining: { entries: ["Wrong file"] } },
+              ],
+            },
+          ],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const record: TestRecord = {
+      name: "Human",
+      source: "PHB",
+      remaining: { entries: ["Correct"] },
+    };
+
+    const result = createResolvedRecordDebugFixture(
+      record,
+      ctx,
+      { sourcePath: "other.json", sourceEntityKind: "race" },
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "SOURCE_RECORD_NOT_FOUND",
+    });
+  });
+
+  it("preserves complete structured identity in terminal base for direct records", () => {
+    const record: TestRecord = {
+      name: "Dragonborn",
+      source: "PHB",
+      remaining: { raceName: "Dragonborn", entries: ["Draconic Ancestry"] },
+    };
+
+    const fixture = fixtureOrThrow(
+      createResolvedRecordDebugFixture(
+        record,
+        makeContext("race.json", "race", [record]),
+        { sourcePath: "race.json", sourceEntityKind: "race" },
+      ),
+    );
+
+    expect(fixture.terminalBase.identity).toMatchObject({
+      source: "PHB",
+    });
+    expect(fixture.terminalBase.name).toBe("Dragonborn");
+    expect(fixture.terminalBase.sourcePath).toBe("race.json");
+  });
+
+  it("preserves complete structured identity in chain step identities", () => {
+    const base: TestRecord = {
+      name: "Centaur",
+      source: "GGR",
+      remaining: { entries: ["Charge"] },
+    };
+    const variant: TestRecord = {
+      name: "Centaur MOT",
+      source: "MOT",
+      remaining: { _copy: { name: "Centaur", source: "GGR" } },
+    };
+
+    const fixture = fixtureOrThrow(
+      createResolvedRecordDebugFixture(
+        variant,
+        makeContext("race.json", "race", [base, variant]),
+        { sourcePath: "race.json", sourceEntityKind: "race" },
+      ),
+    );
+
+    expect(fixture.inheritanceChain).toHaveLength(1);
+    const step = fixture.inheritanceChain[0]!;
+    expect(step.identity.source).toBe("GGR");
+    expect(step.identity.entityKind).toBe("race");
+  });
+
+  it("does not fall back to name+source match when structured identity differs", () => {
+    const base: TestRecord = {
+      name: "Feature",
+      source: "TST",
+      remaining: { className: "Wizard", entries: ["Wizard Feature"] },
+    };
+    const wrong: TestRecord = {
+      name: "Feature",
+      source: "TST",
+      remaining: { className: "Fighter", entries: ["Fighter Feature"] },
+    };
+    const user: TestRecord = {
+      name: "User Feature",
+      source: "TST",
+      remaining: { _copy: { name: "Feature", source: "TST", className: "Wizard" } },
+    };
+
+    const fixture = fixtureOrThrow(
+      createResolvedRecordDebugFixture(
+        user,
+        makeContext("classFeature.json", "classFeature", [base, wrong, user]),
+        { sourcePath: "classFeature.json", sourceEntityKind: "classFeature" },
+      ),
+    );
+
+    expect(fixture.resolvedRecord.remaining.entries).toEqual(["Wizard Feature"]);
   });
 });

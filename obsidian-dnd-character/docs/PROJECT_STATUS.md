@@ -24,9 +24,9 @@ None recorded.
 
 ## Validation baseline
 
-- `npm run check`: passing at Prompt 3A-4 resolved-record debug fixture location handling
-- `npm run build`: passing at Prompt 3A-4 resolved-record debug fixture location handling
-- Tests: 1679 passing
+- `npm run check`: passing at Prompt 3A-5 resolved-record debug fixture structured identity
+- `npm run build`: passing at Prompt 3A-5 resolved-record debug fixture structured identity
+- Tests: 1686 passing
 
 ## Catalog baseline
 
@@ -53,6 +53,11 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-26 — Prompt 3A-5 — Resolved-record debug fixture structured identity
+Summary: Replaced name-and-source fallback in resolved-record debug fixture source record location with full structured identity matching using exported `getRecordIdentity` and `recordMatchesIdentity` from copy-resolver. Added `SOURCE_RECORD_AMBIGUOUS` diagnostic code with `candidates` array carrying complete structured identities for every matching record. Fixture construction now uses the located boundary record instead of the detached input record. Complete structured identities preserved in chain step identities, terminal base for direct records, and fixture root identity. Added 7 new focused tests covering ambiguity detection, discriminator field distinctions (raceName, className, level), sourcePath isolation, identity retention, and no-fallback behavior.
+Validation: `npm --prefix obsidian-dnd-character run test -- apps/catalog-builder/src/resolved-record-debug-fixtures.test.ts` passes (19/19 tests, EXIT 0). `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 1686/1686 tests, EXIT 0). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Debug fixtures remain in-memory catalog-builder outputs only. No normalized catalog schemas, canonical ID construction, source-policy semantics, Obsidian API use, semantic mappings, or entity normalizer behavior modified. Copy-resolver exports `getRecordIdentity` and `recordMatchesIdentity` for reuse.
 
 2026-07-26 — Prompt 3A-4 — Resolved-record debug fixture location handling
 Summary: Replaced loose first-match source path discovery in resolved-record debug fixtures with strict path-and-entity-kind location. `ResolvedRecordDebugFixtureOptions.sourcePath` and `sourceEntityKind` are now required. Lookup uses exact object identity first, then structured identity within the specified collection. Chain entries carry stored `CopyChainStep` values (`entityKind`, `sourcePath`, `identity`) directly without rediscovery from `RawBoundaryFile`. Terminal base trace sourced from `MaterializedResolvedRecord.terminalBase`. Diagnostic codes `SOURCE_ENTITY_KIND_REQUIRED`, `INVALID_SOURCE_ENTITY_KIND`, and `SOURCE_RECORD_NOT_FOUND` added. All 12 existing tests updated and passing.

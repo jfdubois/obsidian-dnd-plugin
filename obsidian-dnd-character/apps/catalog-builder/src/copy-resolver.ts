@@ -219,7 +219,7 @@ function identityToCycleKey(identity: StructuredIdentity): string {
   return parts.join("|");
 }
 
-function getRecordIdentity(record: RawRecord): StructuredIdentity {
+export function getRecordIdentity(record: RawRecord): StructuredIdentity {
   const identity: Record<string, unknown> = { name: record.name, source: record.source };
   for (const [key, value] of Object.entries(record.remaining)) {
     if (!key.startsWith("_")) {
@@ -482,7 +482,7 @@ function findRecordsByStructuredIdentity(
  * The record's envelope fields (name, source) and remaining fields are
  * checked against every non-directive key in the identity.
  */
-function recordMatchesIdentity(
+export function recordMatchesIdentity(
   record: RawRecord,
   identity: StructuredIdentity,
 ): boolean {
