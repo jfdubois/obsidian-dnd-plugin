@@ -88,6 +88,57 @@ Narrative mechanics without a reviewed mapping shall remain visible as safe rend
 
 **Reason:** eTools does not represent every mechanical rule through universal structured fields. This decision permits explicit and testable support for rules such as conditional saving-throw advantage and physiological capabilities without guessing from prose, adding entity-name code branches, or hiding unsupported traits.
 
+### ADR-010 — Species size scope (P4-T005)
+
+**Status:** accepted
+**Date:** 2026-07-27
+
+**Context:** Pinned species source records may offer multiple descriptive size possibilities (e.g., "Small or Medium humanoid"). The species normalizer must decide how to handle size information.
+
+**Decision:**
+- P4-T005 may retain the source size information as display text or builder metadata.
+- P4-T005 is not required to create a structured size-selection mechanic.
+- Character-selected size support is deferred to a follow-up enhancement task.
+- The normalizer must not arbitrarily remove source size information.
+
+**Consequences:** Size remains unstructured in the initial species normalization pass. A follow-up task will add structured size selection where the character explicitly chooses among available sizes.
+
+**Affected roadmap tasks:** P4-T005 (initial normalizer), follow-up enhancement task for structured size selection.
+
+### ADR-011 — Initial source scope for species normalizer (P4-T005)
+
+**Status:** accepted
+**Date:** 2026-07-27
+
+**Context:** The species normalizer must define which source books it initially supports.
+
+**Decision:**
+- P4-T005 initially supports core species from PHB and XPHB only.
+- Other pinned sources remain excluded until a reviewed source-to-ruleset registry is implemented.
+- Excluded sources must produce explicit diagnostics rather than silently disappearing.
+- No ruleset may be inferred from publication date, entity name, display text, or narrative content.
+
+**Consequences:** Species from optional sources will emit build-time diagnostics indicating exclusion. A follow-up task will implement the reviewed source-to-ruleset registry to expand supported sources.
+
+**Affected roadmap tasks:** P4-T005 (initial normalizer), follow-up task for reviewed optional-source ruleset registry.
+
+### ADR-012 — Canonical ID scope (pre-P4-T005)
+
+**Status:** accepted
+**Date:** 2026-07-27
+
+**Context:** The species normalizer needs stable identifiers but P4-T018 is responsible for the complete catalog-wide canonical-ID pass.
+
+**Decision:**
+- P4-T005 must not implement a private species-only canonical-ID algorithm.
+- A shared deterministic ID helper must be available before P4-T005 begins (minimum shared behavior for normalizers).
+- P4-T018 remains responsible for the complete catalog-wide canonical-ID pass.
+- The pre-P4-T005 helper may implement only the minimum shared behavior needed by normalizers.
+
+**Consequences:** The shared helper provides a consistent, deterministic ID generation function that all normalizers can use. P4-T018 will later audit and finalize the complete catalog-wide ID scheme.
+
+**Affected roadmap tasks:** P4-T005 (species normalizer), P4-T018 (canonical ID generator).
+
 ## Principal risks
 
 | ID | Risk | Impact | Mitigation |

@@ -231,6 +231,21 @@ Generate a valid versioned catalog using stable contracts.
   - Emit diagnostics for unmatched, invalid, or stale mappings.
 
 - [ ] **P4-T005 — Implement species normalizer**
+  - Core species from PHB and XPHB only (see ADR-011).
+  - Retain source size information as display text or metadata; no structured size-selection mechanic (see ADR-010).
+  - Use shared deterministic ID helper; no private species-only algorithm (see ADR-012).
+  - Excluded sources produce explicit diagnostics.
+
+- [ ] **P4-T005A — Implement structured species size selection**
+  - Follow-up to P4-T005 (deferred by ADR-010).
+  - Add structured size-selection mechanic for species that offer multiple descriptive size possibilities.
+  - Character-selected size becomes a persisted choice rather than display-only text.
+
+- [ ] **P4-T005B — Implement reviewed optional-source ruleset registry**
+  - Follow-up to P4-T005 (deferred by ADR-011).
+  - Create a reviewed registry mapping optional sources to their supported rulesets.
+  - Expand species normalizer (and subsequent normalizers) to process registered optional sources.
+  - Excluded sources continue to produce explicit diagnostics until registered.
 
 - [ ] **P4-T006 — Implement background normalizer**
 
