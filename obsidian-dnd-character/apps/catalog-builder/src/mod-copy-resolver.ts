@@ -5,6 +5,12 @@ import {
   type CopyResolverDiagnostic,
   type StructuredIdentity,
 } from "./copy-resolver";
+import {
+  validatePreservePayload,
+  shouldPreserveField,
+  type PreservePayload,
+  type PreserveValidationDiagnostic,
+} from "./copy-preserve-policy";
 import { applyArrayModOperation } from "./mod-array-operations";
 import { applyRootModOperation } from "./mod-root-operations";
 import { applyScalarTextModOperation } from "./mod-scalar-text-operations";
@@ -160,27 +166,25 @@ function modeOf(rawOperation: unknown): string | undefined {
 }
 
 /**
- * Sets of field names that require an explicit _preserve directive to be copied
- * from the base during a _copy merge. Matches 5eTools _MERGE_REQUIRES_PRESERVE_BASE.
+ * Converts a preserve validation diagnostic into a MaterializationDiagnostic.
  */
-const MERGE_REQUIRES_PRESERVE = new Set([
-  "page",
-  "otherSources",
-  "referenceSources",
-  "srd",
-  "srd52",
-  "basicRules",
-  "basicRules2024",
-  "reprintedAs",
-  "hasFluff",
-  "hasFluffImages",
-  "hasToken",
-  "tokenCredit",
-  "tokenCustom",
-  "foundryTokenScale",
-  "altArt",
-  "_versions",
-]);
+function convertPreserveDiagnostic(
+  diag: PreserveValidationDiagnostic,
+  sourceRecord: CopyModRawRecord,
+  sourcePath: string | undefined,
+): MaterializationDiagnostic {
+  return Object.freeze({
+    code: "INVALID_PRESERVE_PAYLOAD",
+    severity: diag.severity,
+    message: diag.message,
+    sourcePath,
+    entityName: sourceRecord.name,
+    entitySource: sourceRecord.source,
+    fieldTarget: "_copy._preserve",
+    mode: undefined,
+    rawParam: diag.rawValue,
+  });
+}
 
 /**
  * Applies the 5eTools-compatible direct-field overlay merge.
@@ -196,7 +200,8 @@ const MERGE_REQUIRES_PRESERVE = new Set([
 function applyDirectFieldOverlay(
   baseRemaining: Record<string, unknown>,
   derivedRemaining: Record<string, unknown>,
-  copyValue: unknown,
+  preservePayload: PreservePayload,
+  entityKind: string,
 ): void {
   // First, overlay derived non-directive fields onto the base clone.
   // This handles derived keys that exist or don't exist in the base.
@@ -208,8 +213,6 @@ function applyDirectFieldOverlay(
 
   // Then, iterate over BASE keys to handle gap-fill and null-as-delete.
   // This matches the upstream iteration direction (utils.js:6171-6177).
-  const preserveAllowance = computePreserveAllowance(copyValue);
-
   for (const key of Object.keys(baseRemaining)) {
     const derivedValue = derivedRemaining[key];
 
@@ -221,33 +224,15 @@ function applyDirectFieldOverlay(
 
     // If derived doesn't have this key (undefined) → copy from base, unless preserve-gated
     if (derivedValue === undefined) {
-      if (MERGE_REQUIRES_PRESERVE.has(key)) {
-        if (!preserveAllowance.has("*") && !preserveAllowance.has(key)) {
-          delete baseRemaining[key];
-        }
+      if (!shouldPreserveField(key, entityKind, preservePayload)) {
+        delete baseRemaining[key];
       }
-      // Otherwise base value stays (it's already in baseRemaining)
     }
     // If derived has a non-null, non-undefined value → already overlaid above; leave as-is
   }
 }
 
-function computePreserveAllowance(copyValue: unknown): Set<string> {
-  const allowed = new Set<string>();
-  if (isPlainObject(copyValue) && isPlainObject(copyValue._preserve)) {
-    const preserve = copyValue._preserve as Record<string, unknown>;
-    if (preserve["*"] !== undefined) {
-      // Wildcard: all preserve-gated fields are allowed
-      allowed.add("*");
-    }
-    for (const [key, value] of Object.entries(preserve)) {
-      if (key !== "*" && value != null) {
-        allowed.add(key);
-      }
-    }
-  }
-  return allowed;
-}
+
 
 function deepFreeze<T>(value: T): T {
   if (typeof value !== "object" || value === null) return value;
@@ -481,8 +466,32 @@ export function resolveCopyWithMods(
       ],
     };
   }
+
+  // Validate _copy._preserve payload before merge (only when present)
+  const preserveRaw = isPlainObject(copyValue) ? copyValue._preserve : undefined;
+  let preservePayload: PreservePayload = {};
+  if (preserveRaw !== undefined) {
+    const preserveValidation = validatePreservePayload(preserveRaw);
+    if (!preserveValidation.valid) {
+      return {
+        ok: false,
+        diagnostics: Object.freeze(
+          preserveValidation.diagnostics.map((d) =>
+            convertPreserveDiagnostic(d, record, modContext.sourcePath),
+          ),
+        ),
+      };
+    }
+    preservePayload = preserveValidation.payload;
+  }
+
   const clonedBase = cloneRecord(resolved.baseEntity);
-  applyDirectFieldOverlay(clonedBase.remaining, record.remaining, copyValue);
+  applyDirectFieldOverlay(
+    clonedBase.remaining,
+    record.remaining,
+    preservePayload,
+    modContext.sourceEntityKind,
+  );
   if (!isPlainObject(copyValue) || copyValue._mod === undefined) {
     return {
       ok: true,
@@ -533,9 +542,33 @@ export function materializeCopyWithMods(
   }
 
   const chain = resolved.chain;
+
+  // Validate _copy._preserve payload before merge (only when present)
+  const preserveRaw = isPlainObject(copyValue) ? copyValue._preserve : undefined;
+  let preservePayload: PreservePayload = {};
+  if (preserveRaw !== undefined) {
+    const preserveValidation = validatePreservePayload(preserveRaw);
+    if (!preserveValidation.valid) {
+      return {
+        ok: false,
+        diagnostics: Object.freeze(
+          preserveValidation.diagnostics.map((d) =>
+            convertPreserveDiagnostic(d, record, modContext.sourcePath),
+          ),
+        ),
+      };
+    }
+    preservePayload = preserveValidation.payload;
+  }
+
   const clonedBase = cloneRecord(resolved.baseEntity);
 
-  applyDirectFieldOverlay(clonedBase.remaining, record.remaining, copyValue);
+  applyDirectFieldOverlay(
+    clonedBase.remaining,
+    record.remaining,
+    preservePayload,
+    modContext.sourceEntityKind,
+  );
 
   let diagnostics: readonly MaterializationDiagnostic[] = [];
   if (isPlainObject(copyValue) && copyValue._mod !== undefined) {

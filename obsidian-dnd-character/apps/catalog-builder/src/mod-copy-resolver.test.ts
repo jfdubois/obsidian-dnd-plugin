@@ -630,7 +630,7 @@ describe("materializeCopyWithMods", () => {
         _copy: {
           name: "Base",
           source: "TST",
-          _preserve: { fields: ["trait", "size"], reason: "test preserve" },
+          _preserve: { "*": true },
         },
       },
     };
@@ -643,15 +643,10 @@ describe("materializeCopyWithMods", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error("Expected materialization success");
     const preserved = result.result.metadata.deferredPreserve as Record<string, unknown>;
-    expect(preserved).toEqual({ fields: ["trait", "size"], reason: "test preserve" });
+    expect(preserved).toEqual({ "*": true });
     // Verify deep clone: mutating the result does not affect the original
-    if (Array.isArray(preserved.fields)) {
-      preserved.fields.push("injected");
-    }
-    expect(variant.remaining._copy).toHaveProperty("_preserve", {
-      fields: ["trait", "size"],
-      reason: "test preserve",
-    });
+    (preserved as Record<string, unknown>)["*"] = false;
+    expect(variant.remaining._copy).toHaveProperty("_preserve", { "*": true });
   });
 
   it("successful results contain no 'unknown' locations", () => {
@@ -1499,5 +1494,466 @@ describe("direct-field overlay merge semantics (5eTools alignment)", () => {
     expect(r).not.toHaveProperty("speed");
     expect(r.trait).toEqual([{ name: "Derived Trait" }]);
     expect(r).not.toHaveProperty("srd");
+  });
+});
+
+describe("preserve payload validation enforcement", () => {
+  it("rejects _copy._preserve with invalid marker value and emits diagnostic", () => {
+    const base: CopyModRawRecord = {
+      name: "Base Creature",
+      source: "TST",
+      remaining: {
+        size: "M",
+        page: "42",
+        trait: [{ name: "Base Trait" }],
+      },
+    };
+
+    const variant: CopyModRawRecord = {
+      name: "Bad Preserve Variant",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: base.name,
+          source: base.source,
+          _preserve: { page: false },
+          _mod: { size: "L" },
+        },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    const preserveDiag = result.diagnostics.find((d) => d.code === "INVALID_PRESERVE_PAYLOAD");
+    expect(preserveDiag).toBeDefined();
+    if (!preserveDiag) throw new Error("Expected INVALID_PRESERVE_PAYLOAD diagnostic");
+    expect(preserveDiag.message).toContain("page");
+  });
+
+  it("rejects _copy._preserve with null payload and emits diagnostic", () => {
+    const base: CopyModRawRecord = {
+      name: "Base Creature",
+      source: "TST",
+      remaining: {
+        size: "M",
+        page: "42",
+      },
+    };
+
+    const variant: CopyModRawRecord = {
+      name: "Null Preserve Variant",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: base.name,
+          source: base.source,
+          _preserve: null,
+          _mod: { size: "L" },
+        },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    const preserveDiag = result.diagnostics.find((d) => d.code === "INVALID_PRESERVE_PAYLOAD");
+    expect(preserveDiag).toBeDefined();
+  });
+
+  it("rejects _copy._preserve with array payload and emits diagnostic", () => {
+    const base: CopyModRawRecord = {
+      name: "Base Creature",
+      source: "TST",
+      remaining: { size: "M" },
+    };
+
+    const variant: CopyModRawRecord = {
+      name: "Array Preserve Variant",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: base.name,
+          source: base.source,
+          _preserve: [true],
+          _mod: { size: "L" },
+        },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    const preserveDiag = result.diagnostics.find((d) => d.code === "INVALID_PRESERVE_PAYLOAD");
+    expect(preserveDiag).toBeDefined();
+  });
+
+  it("rejects _copy._preserve with prototype-sensitive key and emits diagnostic", () => {
+    const base: CopyModRawRecord = {
+      name: "Base Creature",
+      source: "TST",
+      remaining: { size: "M" },
+    };
+
+    const variant: CopyModRawRecord = {
+      name: "Proto Preserve Variant",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: base.name,
+          source: base.source,
+          _preserve: JSON.parse('{"constructor": true}'),
+          _mod: { size: "L" },
+        },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    const preserveDiag = result.diagnostics.find((d) => d.code === "INVALID_PRESERVE_PAYLOAD");
+    expect(preserveDiag).toBeDefined();
+    if (!preserveDiag) throw new Error("Expected INVALID_PRESERVE_PAYLOAD diagnostic");
+    expect(preserveDiag.message).toContain("constructor");
+  });
+
+  it("accepts valid _copy._preserve wildcard and preserves gated fields", () => {
+    const base: CopyModRawRecord = {
+      name: "Base Creature",
+      source: "TST",
+      remaining: {
+        size: "M",
+        page: "42",
+        srd: "5.1",
+        trait: [{ name: "Base Trait" }],
+      },
+    };
+
+    const variant: CopyModRawRecord = {
+      name: "Valid Wildcard Preserve",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: base.name,
+          source: base.source,
+          _preserve: { "*": true },
+          _mod: { _: { mode: "setProp", prop: "size", value: "L" } },
+        },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    const r = result.result.record.remaining;
+    expect(r.size).toBe("L");
+    expect(r.page).toBe("42");
+    expect(r.srd).toBe("5.1");
+    expect(r.trait).toEqual([{ name: "Base Trait" }]);
+  });
+
+  it("accepts valid _copy._preserve with specific field and only preserves that field", () => {
+    const base: CopyModRawRecord = {
+      name: "Base Creature",
+      source: "TST",
+      remaining: {
+        size: "M",
+        page: "42",
+        srd: "5.1",
+        trait: [{ name: "Base Trait" }],
+      },
+    };
+
+    const variant: CopyModRawRecord = {
+      name: "Valid Specific Preserve",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: base.name,
+          source: base.source,
+          _preserve: { page: true },
+          _mod: { _: { mode: "setProp", prop: "size", value: "L" } },
+        },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    const r = result.result.record.remaining;
+    expect(r.size).toBe("L");
+    expect(r.page).toBe("42");
+    expect(r).not.toHaveProperty("srd");
+    expect(r.trait).toEqual([{ name: "Base Trait" }]);
+  });
+
+  it("accepts valid _copy._preserve with marker values 1 and 'true'", () => {
+    const base: CopyModRawRecord = {
+      name: "Base Creature",
+      source: "TST",
+      remaining: {
+        size: "M",
+        page: "42",
+        srd: "5.1",
+        trait: [{ name: "Base Trait" }],
+      },
+    };
+
+    const variant: CopyModRawRecord = {
+      name: "Marker Value 1",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: base.name,
+          source: base.source,
+          _preserve: { page: 1, srd: "true" },
+          _mod: { _: { mode: "setProp", prop: "size", value: "L" } },
+        },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    const r = result.result.record.remaining;
+    expect(r.page).toBe("42");
+    expect(r.srd).toBe("5.1");
+  });
+
+  it("entity-kind-aware: monster-specific field preserved with wildcard for monster kind", () => {
+    const base: CopyModRawRecord = {
+      name: "Base Monster",
+      source: "TST",
+      remaining: {
+        size: "M",
+        legendaryGroup: [{ name: "Legendary Action" }],
+        page: "42",
+        trait: [{ name: "Base Trait" }],
+      },
+    };
+
+    const variant: CopyModRawRecord = {
+      name: "Legendary Variant",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: base.name,
+          source: base.source,
+          _preserve: { "*": true },
+          _mod: { _: { mode: "setProp", prop: "size", value: "L" } },
+        },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    const r = result.result.record.remaining;
+    expect(r.legendaryGroup).toEqual([{ name: "Legendary Action" }]);
+  });
+
+  it("entity-kind-aware: monster-specific field NOT preserved without preserve for monster kind", () => {
+    const base: CopyModRawRecord = {
+      name: "Base Monster",
+      source: "TST",
+      remaining: {
+        size: "M",
+        legendaryGroup: [{ name: "Legendary Action" }],
+        page: "42",
+        trait: [{ name: "Base Trait" }],
+      },
+    };
+
+    const variant: CopyModRawRecord = {
+      name: "No Preserve Variant",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: base.name,
+          source: base.source,
+        },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    const r = result.result.record.remaining;
+    expect(r).not.toHaveProperty("legendaryGroup");
+  });
+
+  it("rejects _copy._preserve with nested object as marker value", () => {
+    const base: CopyModRawRecord = {
+      name: "Base Creature",
+      source: "TST",
+      remaining: { size: "M" },
+    };
+
+    const variant: CopyModRawRecord = {
+      name: "Nested Marker Variant",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: base.name,
+          source: base.source,
+          _preserve: { page: { nested: true } },
+          _mod: { size: "L" },
+        },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    const preserveDiag = result.diagnostics.find((d) => d.code === "INVALID_PRESERVE_PAYLOAD");
+    expect(preserveDiag).toBeDefined();
+  });
+
+  it("rejects _copy._preserve with empty field key", () => {
+    const base: CopyModRawRecord = {
+      name: "Base Creature",
+      source: "TST",
+      remaining: { size: "M" },
+    };
+
+    const variant: CopyModRawRecord = {
+      name: "Empty Key Variant",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: base.name,
+          source: base.source,
+          _preserve: { "": true, page: true },
+          _mod: { size: "L" },
+        },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "source.json": {
+          filePath: "source.json",
+          collections: [{ entityKind: "monster", recordCount: 2, records: [base, variant] }],
+          totalRecords: 2,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(variant, ctx, { sourcePath: "source.json", sourceEntityKind: "monster" });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    const preserveDiag = result.diagnostics.find((d) => d.code === "INVALID_PRESERVE_PAYLOAD");
+    expect(preserveDiag).toBeDefined();
   });
 });

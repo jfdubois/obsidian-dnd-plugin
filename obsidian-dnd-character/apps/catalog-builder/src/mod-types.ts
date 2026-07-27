@@ -264,7 +264,8 @@ export type ModDiagnosticCode =
   | "UNKNOWN_MOD_MODE"
   | "INVALID_MOD_PAYLOAD"
   | "MOD_FIELD_TARGET_MISSING"
-  | "MOD_EXECUTION_ERROR";
+  | "MOD_EXECUTION_ERROR"
+  | "INVALID_PRESERVE_PAYLOAD";
 
 /* ── Materialization diagnostic union ────────────────────────────
 
