@@ -7,54 +7,31 @@ import {
 } from "./copy-resolver";
 import {
   validatePreservePayload,
-  shouldPreserveField,
   type PreservePayload,
-  type PreserveValidationDiagnostic,
 } from "./copy-preserve-policy";
 import { materializeNestedCopyLevels } from "./nested-copy-materializer";
-import { applyArrayModOperation } from "./mod-array-operations";
-import { applyRootModOperation } from "./mod-root-operations";
-import { applyScalarTextModOperation } from "./mod-scalar-text-operations";
 import type {
   CopyModRawRecord,
   MaterializationDiagnostic,
   MaterializedResolvedRecord,
-  ModOperationDiagnostic,
 } from "./mod-types";
+import {
+  applyDirectFieldOverlay,
+  cloneRecord,
+  cloneUnknown,
+  deepFreeze,
+  isPlainObject,
+  stripCopyDirectives,
+} from "./copy-materialization-merge";
+import { applyModBlock } from "./copy-materialization-mods";
+import {
+  convertModDiagnostic,
+  convertPreserveDiagnostic,
+} from "./copy-materialization-diagnostics";
 
 
 // Re-export for backward compatibility
 export type { CopyModRawRecord } from "./mod-types";
-
-const ARRAY_MODES = new Set([
-  "appendArr",
-  "appendIfNotExistsArr",
-  "insertArr",
-  "prependArr",
-  "removeArr",
-  "renameArr",
-  "replaceArr",
-]);
-
-const ROOT_MODES = new Set([
-  "addSenses",
-  "addSkills",
-  "addSpells",
-  "removeSpells",
-  "replaceSpells",
-]);
-
-const SCALAR_TEXT_MODES = new Set([
-  "maxSize",
-  "prefixSuffixStringProp",
-  "replaceTxt",
-  "scalarAddDc",
-  "scalarAddHit",
-  "scalarAddProp",
-  "scalarMultProp",
-  "scalarMultXp",
-  "setProp",
-]);
 
 export interface CopyModContext {
   readonly sourcePath: string;
@@ -71,221 +48,6 @@ export type CopyModResolutionResult =
       readonly ok: false;
       readonly diagnostics: readonly MaterializationDiagnostic[];
     };
-
-function isPlainObject(value: unknown): value is Record<string, unknown> {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return false;
-  }
-  const proto = Object.getPrototypeOf(value);
-  return proto === Object.prototype || proto === null;
-}
-
-function cloneRecord(record: CopyModRawRecord): CopyModRawRecord {
-  return {
-    name: record.name,
-    source: record.source,
-    remaining: cloneObject(record.remaining),
-  };
-}
-
-/**
- * Strips copy directives (_copy, _preserve) from a record's remaining fields.
- * These are resolution-time directives and should not appear in the materialized output.
- */
-function stripCopyDirectives(remaining: Record<string, unknown>): Record<string, unknown> {
-  const stripped: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(remaining)) {
-    if (key !== "_copy" && key !== "_preserve" && key !== "_mod") {
-      stripped[key] = value;
-    }
-  }
-  return stripped;
-}
-
-function cloneObject(record: Record<string, unknown>): Record<string, unknown> {
-  const cloned: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(record)) {
-    cloned[key] = cloneUnknown(value);
-  }
-  return cloned;
-}
-
-function cloneUnknown(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map((item) => cloneUnknown(item));
-  }
-  if (isPlainObject(value)) {
-    return cloneObject(value);
-  }
-  return value;
-}
-
-function diagnostic(
-  code: ModOperationDiagnostic["code"],
-  message: string,
-  sourceRecord: CopyModRawRecord,
-  fieldTarget: string,
-  mode: string | undefined,
-  sourcePath: string | undefined,
-  rawParam: unknown,
-): ModOperationDiagnostic {
-  return Object.freeze({
-    code,
-    severity: "error",
-    message,
-    sourcePath,
-    entityName: sourceRecord.name,
-    entitySource: sourceRecord.source,
-    fieldTarget,
-    mode,
-    rawParam,
-  });
-}
-
-function enrichDiagnostic(
-  original: ModOperationDiagnostic,
-  sourceRecord: CopyModRawRecord,
-  fieldTarget: string,
-  mode: string | undefined,
-  sourcePath: string | undefined,
-): ModOperationDiagnostic {
-  return Object.freeze({
-    ...original,
-    sourcePath,
-    entityName: sourceRecord.name,
-    entitySource: sourceRecord.source,
-    fieldTarget,
-    mode,
-  });
-}
-
-function operationList(rawOperations: unknown): readonly unknown[] {
-  return Array.isArray(rawOperations) ? rawOperations : [rawOperations];
-}
-
-function modeOf(rawOperation: unknown): string | undefined {
-  if (!isPlainObject(rawOperation)) {
-    return undefined;
-  }
-  return typeof rawOperation.mode === "string" ? rawOperation.mode : undefined;
-}
-
-/**
- * Converts a preserve validation diagnostic into a MaterializationDiagnostic.
- * Passes through the original code and deep-clones all structured values.
- */
-function convertPreserveDiagnostic(
-  diag: PreserveValidationDiagnostic,
-  sourceRecord: CopyModRawRecord,
-  sourcePath: string | undefined,
-  sourceEntityKind: string | undefined,
-): MaterializationDiagnostic {
-  const base = Object.freeze({
-    code: diag.code,
-    severity: diag.severity,
-    message: diag.message,
-    sourcePath,
-    sourceEntityKind,
-    entityName: sourceRecord.name,
-    entitySource: sourceRecord.source,
-    fieldTarget: "_copy._preserve",
-    mode: undefined,
-    rawParam: diag.rawPreservePayload !== undefined
-      ? deepFreeze(cloneUnknown(diag.rawPreservePayload))
-      : undefined,
-    rawPreservePayload: diag.rawPreservePayload !== undefined
-      ? deepFreeze(cloneUnknown(diag.rawPreservePayload))
-      : undefined,
-    validationReason: diag.validationReason,
-  });
-
-  if (diag.code === "INVALID_PRESERVE_KEY") {
-    return Object.freeze({
-      ...base,
-      invalidPreserveKey: diag.invalidPreserveKey,
-    });
-  }
-
-  if (diag.code === "INVALID_PRESERVE_MARKER") {
-    return Object.freeze({
-      ...base,
-      invalidMarkerValue: diag.invalidMarkerValue !== undefined
-        ? deepFreeze(cloneUnknown(diag.invalidMarkerValue))
-        : undefined,
-      invalidPreserveKey: diag.invalidPreserveKey,
-    });
-  }
-
-  return base;
-}
-
-/**
- * Applies the 5eTools-compatible direct-field overlay merge.
- *
- * Semantics (matches 5eTools utils.js getCopy, lines 6168-6178):
- * - Iterate over BASE keys.
- * - If derived has exactly null for that key → delete from result.
- * - If derived is absent (undefined) for that key → copy from base, unless
- *   the key is preserve-gated and _preserve doesn't allow it.
- * - If derived has any other value → leave derived value as-is.
- * - Derived non-directive keys NOT in the base are kept as-is.
- */
-function applyDirectFieldOverlay(
-  baseRemaining: Record<string, unknown>,
-  derivedRemaining: Record<string, unknown>,
-  preservePayload: PreservePayload,
-  entityKind: string,
-): void {
-  // First, overlay derived non-directive fields onto the base clone.
-  // This handles derived keys that exist or don't exist in the base.
-  for (const [key, value] of Object.entries(derivedRemaining)) {
-    if (key.startsWith("_")) continue;
-    if (value === null || value === undefined) continue;
-    baseRemaining[key] = cloneUnknown(value);
-  }
-
-  // Then, iterate over BASE keys to handle gap-fill and null-as-delete.
-  // This matches the upstream iteration direction (utils.js:6171-6177).
-  for (const key of Object.keys(baseRemaining)) {
-    const derivedValue = derivedRemaining[key];
-
-    // If derived explicitly set this base key to null → delete from result
-    if (derivedValue === null) {
-      delete baseRemaining[key];
-      continue;
-    }
-
-    // If derived doesn't have this key (undefined) → copy from base, unless preserve-gated
-    if (derivedValue === undefined) {
-      if (!shouldPreserveField(key, entityKind, preservePayload)) {
-        delete baseRemaining[key];
-      }
-    }
-    // If derived has a non-null, non-undefined value → already overlaid above; leave as-is
-  }
-}
-
-
-
-function deepFreeze<T>(value: T): T {
-  if (typeof value !== "object" || value === null) return value;
-  Object.freeze(value);
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      if (typeof item === "object" && item !== null) {
-        deepFreeze(item);
-      }
-    }
-  } else {
-    for (const key of Object.keys(value)) {
-      const prop = (value as Record<string, unknown>)[key];
-      if (typeof prop === "object" && prop !== null) {
-        deepFreeze(prop);
-      }
-    }
-  }
-  return value;
-}
 
 /**
  * Converts a copy resolver diagnostic into a structured MaterializationDiagnostic.
@@ -358,129 +120,6 @@ function convertCopyDiagnostic(
   });
 }
 
-/**
- * Converts a mod operation diagnostic into a MaterializationDiagnostic.
- * Safe because ModDiagnosticCode is a subtype of MaterializationDiagnosticCode.
- */
-function convertModDiagnostic(
-  modDiagnostics: readonly ModOperationDiagnostic[],
-): readonly MaterializationDiagnostic[] {
-  return Object.freeze(
-    modDiagnostics.map((diag) =>
-      Object.freeze({
-        code: diag.code,
-        severity: diag.severity,
-        message: diag.message,
-        sourcePath: diag.sourcePath,
-        entityName: diag.entityName,
-        entitySource: diag.entitySource,
-        fieldTarget: diag.fieldTarget,
-        mode: diag.mode,
-        rawParam: diag.rawParam,
-      }),
-    ),
-  );
-}
-
-function applyModBlock(
-  record: Record<string, unknown>,
-  sourceRecord: CopyModRawRecord,
-  rawMod: unknown,
-  sourcePath: string | undefined,
-): readonly ModOperationDiagnostic[] {
-  if (!isPlainObject(rawMod)) {
-    return [
-      diagnostic(
-        "INVALID_MOD_PAYLOAD",
-        "_mod block must be a plain object",
-        sourceRecord,
-        "_",
-        undefined,
-        sourcePath,
-        rawMod,
-      ),
-    ];
-  }
-
-  const diagnostics: ModOperationDiagnostic[] = [];
-  for (const [fieldTarget, rawOperations] of Object.entries(rawMod)) {
-    for (const rawOperation of operationList(rawOperations)) {
-      const mode = modeOf(rawOperation);
-      if (mode === undefined) {
-        diagnostics.push(
-          diagnostic(
-            "INVALID_MOD_PAYLOAD",
-            "Mod operation payload missing string 'mode'",
-            sourceRecord,
-            fieldTarget,
-            undefined,
-            sourcePath,
-            rawOperation,
-          ),
-        );
-        continue;
-      }
-
-      if (ARRAY_MODES.has(mode)) {
-        const applied = applyArrayModOperation(record[fieldTarget], rawOperation);
-        if (Array.isArray(applied)) {
-          record[fieldTarget] = applied;
-        } else {
-          diagnostics.push(enrichDiagnostic(applied, sourceRecord, fieldTarget, mode, sourcePath));
-        }
-        continue;
-      }
-
-      if (ROOT_MODES.has(mode)) {
-        if (fieldTarget !== "_") {
-          diagnostics.push(
-            diagnostic(
-              "MOD_FIELD_TARGET_MISSING",
-              `${mode} must target "_"`,
-              sourceRecord,
-              fieldTarget,
-              mode,
-              sourcePath,
-              rawOperation,
-            ),
-          );
-          continue;
-        }
-        const rootDiagnostic = applyRootModOperation(record, rawOperation);
-        if (rootDiagnostic !== undefined) {
-          diagnostics.push(
-            enrichDiagnostic(rootDiagnostic, sourceRecord, fieldTarget, mode, sourcePath),
-          );
-        }
-        continue;
-      }
-
-      if (SCALAR_TEXT_MODES.has(mode)) {
-        const scalarDiagnostic = applyScalarTextModOperation(record, fieldTarget, rawOperation);
-        if (scalarDiagnostic !== undefined) {
-          diagnostics.push(
-            enrichDiagnostic(scalarDiagnostic, sourceRecord, fieldTarget, mode, sourcePath),
-          );
-        }
-        continue;
-      }
-
-      diagnostics.push(
-        diagnostic(
-          "UNKNOWN_MOD_MODE",
-          `Unknown _mod mode "${mode}"`,
-          sourceRecord,
-          fieldTarget,
-          mode,
-          sourcePath,
-          rawOperation,
-        ),
-      );
-    }
-  }
-  return diagnostics;
-}
-
 export function resolveCopyWithMods(
   record: CopyModRawRecord,
   context: CopyResolverContext,
@@ -505,9 +144,6 @@ export function resolveCopyWithMods(
     resolved.baseEntity,
     resolved.chain,
     context,
-    record,
-    modContext.sourcePath,
-    modContext.sourceEntityKind,
   );
   if (!nestedResult.ok) {
     return {
@@ -548,11 +184,14 @@ export function resolveCopyWithMods(
       diagnostics: [],
     };
   }
-  const diagnostics = applyModBlock(
-    clonedBase.remaining,
-    record,
-    copyValue._mod,
-    modContext.sourcePath,
+  const diagnostics = convertModDiagnostic(
+    applyModBlock(
+      clonedBase.remaining,
+      record,
+      copyValue._mod,
+      modContext.sourcePath,
+    ),
+    { sourceEntityKind: modContext.sourceEntityKind },
   );
   if (diagnostics.length > 0) {
     return { ok: false, diagnostics };
@@ -595,9 +234,6 @@ export function materializeCopyWithMods(
     resolved.baseEntity,
     resolved.chain,
     context,
-    record,
-    modContext.sourcePath,
-    modContext.sourceEntityKind,
   );
   if (!nestedResult.ok) {
     return {
@@ -644,6 +280,7 @@ export function materializeCopyWithMods(
         copyValue._mod,
         modContext.sourcePath,
       ),
+      { sourceEntityKind: modContext.sourceEntityKind },
     );
   }
 

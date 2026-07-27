@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
-import type { CopyResolverContext } from "./copy-resolver";
+import type { CopyChainStep, CopyResolverContext } from "./copy-resolver";
 import {
   materializeCopyWithMods,
   resolveCopyWithMods,
   type CopyModRawRecord,
 } from "./mod-copy-resolver";
+import { materializeNestedCopyLevels } from "./nested-copy-materializer";
 import type { MaterializationDiagnostic } from "./mod-types";
 
 function makeContext(base: CopyModRawRecord): CopyResolverContext {
@@ -2359,6 +2360,327 @@ describe("nested copy chain materialization", () => {
     expect(diag.mode).toBe("badMode");
   });
 
+  it("intermediate _mod failure retains its sourcePath", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "BAS",
+      remaining: { trait: [] },
+    };
+    const middle: CopyModRawRecord = {
+      name: "Middle",
+      source: "MID",
+      remaining: {
+        _copy: {
+          name: "Base",
+          source: "BAS",
+          _mod: { trait: { mode: "badMode" } },
+        },
+      },
+    };
+    const chain: readonly CopyChainStep[] = [
+      {
+        entityName: "Middle",
+        sourceAbbr: "MID",
+        entityKind: "monster",
+        sourcePath: "middle-monster.json",
+        identity: { name: "Middle", source: "MID" },
+      },
+      {
+        entityName: "Base",
+        sourceAbbr: "BAS",
+        entityKind: "monster",
+        sourcePath: "base-monster.json",
+        identity: { name: "Base", source: "BAS" },
+      },
+    ];
+    const context = {
+      validatedFiles: {
+        "middle-monster.json": {
+          filePath: "middle-monster.json",
+          collections: [
+            { entityKind: "monster", recordCount: 1, records: [middle] },
+          ],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = materializeNestedCopyLevels(base, chain, context);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    expect(result.diagnostics[0]?.sourcePath).toBe("middle-monster.json");
+  });
+
+  it("intermediate _mod failure retains its sourceEntityKind", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "BAS",
+      remaining: { trait: [] },
+    };
+    const middle: CopyModRawRecord = {
+      name: "Middle",
+      source: "MID",
+      remaining: {
+        _copy: {
+          name: "Base",
+          source: "BAS",
+          _mod: { trait: { mode: "badMode" } },
+        },
+      },
+    };
+    const chain: readonly CopyChainStep[] = [
+      {
+        entityName: "Middle",
+        sourceAbbr: "MID",
+        entityKind: "monster",
+        sourcePath: "middle-monster.json",
+        identity: { name: "Middle", source: "MID" },
+      },
+      {
+        entityName: "Base",
+        sourceAbbr: "BAS",
+        entityKind: "monster",
+        sourcePath: "base-monster.json",
+        identity: { name: "Base", source: "BAS" },
+      },
+    ];
+    const context = {
+      validatedFiles: {
+        "middle-monster.json": {
+          filePath: "middle-monster.json",
+          collections: [
+            { entityKind: "monster", recordCount: 1, records: [middle] },
+          ],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = materializeNestedCopyLevels(base, chain, context);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    expect(result.diagnostics[0]?.sourceEntityKind).toBe("monster");
+  });
+
+  it("intermediate failure retains the chain identity", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "BAS",
+      remaining: { trait: [] },
+    };
+    const middle: CopyModRawRecord = {
+      name: "Middle",
+      source: "MID",
+      remaining: {
+        _copy: {
+          name: "Base",
+          source: "BAS",
+          _mod: { trait: { mode: "badMode" } },
+        },
+      },
+    };
+    const chain: readonly CopyChainStep[] = [
+      {
+        entityName: "Middle",
+        sourceAbbr: "MID",
+        entityKind: "monster",
+        sourcePath: "middle-monster.json",
+        identity: { name: "Middle", source: "MID" },
+      },
+      {
+        entityName: "Base",
+        sourceAbbr: "BAS",
+        entityKind: "monster",
+        sourcePath: "base-monster.json",
+        identity: { name: "Base", source: "BAS" },
+      },
+    ];
+    const context = {
+      validatedFiles: {
+        "middle-monster.json": {
+          filePath: "middle-monster.json",
+          collections: [
+            { entityKind: "monster", recordCount: 1, records: [middle] },
+          ],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = materializeNestedCopyLevels(base, chain, context);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    const diag = result.diagnostics[0] as MaterializationDiagnostic;
+    expect(diag.requestedIdentity).toEqual({ name: "Middle", source: "MID" });
+    expect(diag.inheritanceChain?.[0]?.identity).toEqual({ name: "Middle", source: "MID" });
+  });
+
+  it("missing intermediate record reports the missing step, not the outer derived record", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "BAS",
+      remaining: { size: "M" },
+    };
+    const missingIdentity = { name: "Middle", source: "MID" } as const;
+    const chain: readonly CopyChainStep[] = [
+      {
+        entityName: "Middle",
+        sourceAbbr: "MID",
+        entityKind: "monster",
+        sourcePath: "missing-middle.json",
+        identity: missingIdentity,
+      },
+      {
+        entityName: "Base",
+        sourceAbbr: "BAS",
+        entityKind: "monster",
+        sourcePath: "base-monster.json",
+        identity: { name: "Base", source: "BAS" },
+      },
+    ];
+    const context: CopyResolverContext = {
+      validatedFiles: {
+        "base-monster.json": {
+          filePath: "base-monster.json",
+          collections: [
+            { entityKind: "monster", recordCount: 1, records: [base] },
+          ],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = materializeNestedCopyLevels(base, chain, context);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    const diag = result.diagnostics[0] as MaterializationDiagnostic;
+    expect(diag.sourcePath).toBe("missing-middle.json");
+    expect(diag.sourceEntityKind).toBe("monster");
+    expect(diag.entityName).toBe("Middle");
+    expect(diag.entitySource).toBe("MID");
+    expect(diag.requestedIdentity).toEqual(missingIdentity);
+  });
+
+  it("outer _mod is not executed after an intermediate failure", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { trait: [] },
+    };
+    const middle: CopyModRawRecord = {
+      name: "Middle",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: "Base",
+          source: "TST",
+          _mod: { trait: { mode: "innerBadMode" } },
+        },
+      },
+    };
+    const derived: CopyModRawRecord = {
+      name: "Derived",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: "Middle",
+          source: "TST",
+          _mod: { trait: { mode: "outerBadMode" } },
+        },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            { entityKind: "monster", recordCount: 3, records: [base, middle, derived] },
+          ],
+          totalRecords: 3,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(derived, ctx, {
+      sourcePath: "monster.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    expect(result.diagnostics).toHaveLength(1);
+    expect(result.diagnostics[0]?.mode).toBe("innerBadMode");
+  });
+
+  it("shared outer and intermediate _mod execution produce identical diagnostic fields", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { trait: [] },
+    };
+    const direct: CopyModRawRecord = {
+      name: "Middle",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: "Base",
+          source: "TST",
+          _mod: { trait: { mode: "badMode" } },
+        },
+      },
+    };
+    const outer: CopyModRawRecord = {
+      name: "Outer",
+      source: "TST",
+      remaining: {
+        _copy: { name: "Middle", source: "TST" },
+      },
+    };
+    const ctx = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            { entityKind: "monster", recordCount: 3, records: [base, direct, outer] },
+          ],
+          totalRecords: 3,
+        },
+      },
+    };
+
+    const outerResult = materializeCopyWithMods(direct, ctx, {
+      sourcePath: "monster.json",
+      sourceEntityKind: "monster",
+    });
+    const intermediateResult = materializeCopyWithMods(outer, ctx, {
+      sourcePath: "monster.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(outerResult.ok).toBe(false);
+    expect(intermediateResult.ok).toBe(false);
+    if (outerResult.ok || intermediateResult.ok) throw new Error("Expected failures");
+    const commonFields = (diag: MaterializationDiagnostic) => ({
+      code: diag.code,
+      severity: diag.severity,
+      message: diag.message,
+      sourcePath: diag.sourcePath,
+      sourceEntityKind: diag.sourceEntityKind,
+      entityName: diag.entityName,
+      entitySource: diag.entitySource,
+      fieldTarget: diag.fieldTarget,
+      mode: diag.mode,
+      rawParam: diag.rawParam,
+    });
+    expect(commonFields(intermediateResult.diagnostics[0] as MaterializationDiagnostic))
+      .toEqual(commonFields(outerResult.diagnostics[0] as MaterializationDiagnostic));
+  });
+
   it("intermediate preserve validation failure stops outer materialization", () => {
     const base: CopyModRawRecord = {
       name: "Base",
@@ -2402,6 +2724,102 @@ describe("nested copy chain materialization", () => {
     const diag = result.diagnostics[0] as MaterializationDiagnostic;
     expect(diag.code).toBe("INVALID_PRESERVE_MARKER");
     expect(diag.entityName).toBe("Middle");
+  });
+
+  it("intermediate preserve failure retains its sourcePath", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "BAS",
+      remaining: { size: "M" },
+    };
+    const middle: CopyModRawRecord = {
+      name: "Middle",
+      source: "MID",
+      remaining: {
+        _copy: { name: "Base", source: "BAS", _preserve: { page: false } },
+      },
+    };
+    const chain: readonly CopyChainStep[] = [
+      {
+        entityName: "Middle",
+        sourceAbbr: "MID",
+        entityKind: "monster",
+        sourcePath: "middle-monster.json",
+        identity: { name: "Middle", source: "MID" },
+      },
+      {
+        entityName: "Base",
+        sourceAbbr: "BAS",
+        entityKind: "monster",
+        sourcePath: "base-monster.json",
+        identity: { name: "Base", source: "BAS" },
+      },
+    ];
+    const context = {
+      validatedFiles: {
+        "middle-monster.json": {
+          filePath: "middle-monster.json",
+          collections: [
+            { entityKind: "monster", recordCount: 1, records: [middle] },
+          ],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = materializeNestedCopyLevels(base, chain, context);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    expect(result.diagnostics[0]?.sourcePath).toBe("middle-monster.json");
+  });
+
+  it("intermediate preserve failure retains its sourceEntityKind", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "BAS",
+      remaining: { size: "M" },
+    };
+    const middle: CopyModRawRecord = {
+      name: "Middle",
+      source: "MID",
+      remaining: {
+        _copy: { name: "Base", source: "BAS", _preserve: { page: false } },
+      },
+    };
+    const chain: readonly CopyChainStep[] = [
+      {
+        entityName: "Middle",
+        sourceAbbr: "MID",
+        entityKind: "monster",
+        sourcePath: "middle-monster.json",
+        identity: { name: "Middle", source: "MID" },
+      },
+      {
+        entityName: "Base",
+        sourceAbbr: "BAS",
+        entityKind: "monster",
+        sourcePath: "base-monster.json",
+        identity: { name: "Base", source: "BAS" },
+      },
+    ];
+    const context = {
+      validatedFiles: {
+        "middle-monster.json": {
+          filePath: "middle-monster.json",
+          collections: [
+            { entityKind: "monster", recordCount: 1, records: [middle] },
+          ],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = materializeNestedCopyLevels(base, chain, context);
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    expect(result.diagnostics[0]?.sourceEntityKind).toBe("monster");
   });
 
   it("resolveCopyWithMods also materializes nested levels", () => {
