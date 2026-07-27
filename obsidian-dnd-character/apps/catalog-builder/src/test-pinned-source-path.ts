@@ -7,9 +7,9 @@ const repositoryRoot = resolve(here, "../../..");
 
 const REVISION_FILE = resolve(repositoryRoot, "config/pinned-5etools-revision.txt");
 
-function buildErrorMessage(path: string): string {
+function buildErrorMessage(path: string, reason: string): string {
   return [
-    `Pinned 5eTools source clone not found at: ${path}`,
+    `${reason} at: ${path}`,
     `Ensure the external 5eTools clone is provisioned at that location.`,
     `Set FIVEETOOLS_SRC_PATH to override the default path.`,
   ].join("\n");
@@ -18,28 +18,35 @@ function buildErrorMessage(path: string): string {
 export function pinnedFiveEToolsPath(): string {
   const envPath = process.env.FIVEETOOLS_SRC_PATH;
   const clonePath =
-    typeof envPath === "string" && envPath.length > 0
-      ? envPath
+    typeof envPath === "string" && envPath.trim().length > 0
+      ? resolve(envPath.trim())
       : resolve(repositoryRoot, "../external/5etools-src");
 
   if (!existsSync(clonePath)) {
-    throw new Error(buildErrorMessage(clonePath));
+    throw new Error(buildErrorMessage(clonePath, "source path missing"));
   }
 
   const stats = statSync(clonePath);
   if (!stats.isDirectory()) {
-    throw new Error(buildErrorMessage(clonePath));
+    throw new Error(buildErrorMessage(clonePath, "source path is not a directory"));
   }
 
   if (!existsSync(resolve(clonePath, ".git"))) {
-    throw new Error(buildErrorMessage(clonePath));
+    throw new Error(buildErrorMessage(resolve(clonePath, ".git"), ".git missing"));
   }
 
   if (!existsSync(resolve(clonePath, "data"))) {
-    throw new Error(buildErrorMessage(clonePath));
+    throw new Error(buildErrorMessage(resolve(clonePath, "data"), "data missing"));
   }
 
   return clonePath;
+}
+
+export function parsePinnedRevision(raw: string, filePath: string): string {
+  const revision = raw.trim();
+  if (revision.length === 0) throw new Error(`Pinned 5eTools revision file is empty: ${filePath}`);
+  if (!/^[0-9a-f]{40}$/.test(revision)) throw new Error(`Pinned 5eTools revision is malformed (expected 40 lowercase hex chars): ${filePath}`);
+  return revision;
 }
 
 export function pinnedFiveEToolsRevision(): string {
@@ -52,19 +59,5 @@ export function pinnedFiveEToolsRevision(): string {
     );
   }
 
-  const revision = raw.trim();
-
-  if (revision.length === 0) {
-    throw new Error(
-      `Pinned 5eTools revision file is empty: ${REVISION_FILE}`,
-    );
-  }
-
-  if (!/^[0-9a-f]{40}$/.test(revision)) {
-    throw new Error(
-      `Pinned 5eTools revision is malformed (expected 40 lowercase hex chars): ${REVISION_FILE}`,
-    );
-  }
-
-  return revision;
+  return parsePinnedRevision(raw, REVISION_FILE);
 }
