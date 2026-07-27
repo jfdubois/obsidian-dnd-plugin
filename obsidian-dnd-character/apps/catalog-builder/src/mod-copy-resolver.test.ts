@@ -2049,3 +2049,406 @@ describe("preserve payload validation enforcement", () => {
     expect(preserveDiag).toBeDefined();
   });
 });
+
+describe("nested copy chain materialization", () => {
+  it("3-level chain applies intermediate direct fields before derived level", () => {
+    const base: CopyModRawRecord = {
+      name: "Centaur",
+      source: "GGR",
+      remaining: { size: "L", ac: 14, cr: 3 },
+    };
+    const middle: CopyModRawRecord = {
+      name: "Centaur MOT",
+      source: "MOT",
+      remaining: {
+        _copy: { name: "Centaur", source: "GGR" },
+        ac: 16,
+      },
+    };
+    const derived: CopyModRawRecord = {
+      name: "Centaur Variant",
+      source: "MOT",
+      remaining: {
+        _copy: { name: "Centaur MOT", source: "MOT" },
+        cr: 4,
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            { entityKind: "monster", recordCount: 3, records: [base, middle, derived] },
+          ],
+          totalRecords: 3,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(derived, ctx, {
+      sourcePath: "monster.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    const r = result.result.record.remaining;
+    expect(r.size).toBe("L");
+    expect(r.ac).toBe(16);
+    expect(r.cr).toBe(4);
+  });
+
+  it("3-level chain applies intermediate _mod before derived level", () => {
+    const base: CopyModRawRecord = {
+      name: "Centaur",
+      source: "GGR",
+      remaining: { size: "L", ac: 14, cr: 3, trait: [] },
+    };
+    const middle: CopyModRawRecord = {
+      name: "Centaur MOT",
+      source: "MOT",
+      remaining: {
+        _copy: {
+          name: "Centaur",
+          source: "GGR",
+          _mod: { _: { mode: "setProp", prop: "ac", value: 16 } },
+        },
+      },
+    };
+    const derived: CopyModRawRecord = {
+      name: "Centaur Variant",
+      source: "MOT",
+      remaining: {
+        _copy: { name: "Centaur MOT", source: "MOT" },
+        cr: 4,
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            { entityKind: "monster", recordCount: 3, records: [base, middle, derived] },
+          ],
+          totalRecords: 3,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(derived, ctx, {
+      sourcePath: "monster.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    const r = result.result.record.remaining;
+    expect(r.size).toBe("L");
+    expect(r.ac).toBe(16);
+    expect(r.cr).toBe(4);
+  });
+
+  it("intermediate _preserve is respected at each level", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { size: "M", srd: true, hasToken: true, page: "10" },
+    };
+    const middle: CopyModRawRecord = {
+      name: "Middle",
+      source: "TST",
+      remaining: {
+        _copy: { name: "Base", source: "TST", _preserve: { "*": true } },
+      },
+    };
+    const derived: CopyModRawRecord = {
+      name: "Derived",
+      source: "TST",
+      remaining: {
+        _copy: { name: "Middle", source: "TST", _preserve: { "*": true } },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            { entityKind: "monster", recordCount: 3, records: [base, middle, derived] },
+          ],
+          totalRecords: 3,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(derived, ctx, {
+      sourcePath: "monster.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    const r = result.result.record.remaining;
+    expect(r.size).toBe("M");
+    expect(r.srd).toBe(true);
+    expect(r.hasToken).toBe(true);
+    expect(r.page).toBe("10");
+  });
+
+  it("intermediate _preserve propagates; derived without _preserve drops gated fields", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { size: "M", srd: true, hasToken: true },
+    };
+    const middle: CopyModRawRecord = {
+      name: "Middle",
+      source: "TST",
+      remaining: {
+        _copy: { name: "Base", source: "TST", _preserve: { "*": true } },
+      },
+    };
+    const derived: CopyModRawRecord = {
+      name: "Derived",
+      source: "TST",
+      remaining: {
+        _copy: { name: "Middle", source: "TST" },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            { entityKind: "monster", recordCount: 3, records: [base, middle, derived] },
+          ],
+          totalRecords: 3,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(derived, ctx, {
+      sourcePath: "monster.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    const r = result.result.record.remaining;
+    expect(r.size).toBe("M");
+    expect(r).not.toHaveProperty("srd");
+    expect(r).not.toHaveProperty("hasToken");
+  });
+
+  it("4-level chain materializes all intermediate levels", () => {
+    const base: CopyModRawRecord = {
+      name: "A",
+      source: "TST",
+      remaining: { size: "S", ac: 10, hp: 10, cr: 1 },
+    };
+    const b: CopyModRawRecord = {
+      name: "B",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: "A",
+          source: "TST",
+          _mod: { _: { mode: "setProp", prop: "ac", value: 12 } },
+        },
+        size: "M",
+      },
+    };
+    const c: CopyModRawRecord = {
+      name: "C",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: "B",
+          source: "TST",
+          _mod: { _: { mode: "setProp", prop: "hp", value: 25 } },
+        },
+        ac: 14,
+      },
+    };
+    const derived: CopyModRawRecord = {
+      name: "D",
+      source: "TST",
+      remaining: {
+        _copy: { name: "C", source: "TST" },
+        cr: 3,
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            { entityKind: "monster", recordCount: 4, records: [base, b, c, derived] },
+          ],
+          totalRecords: 4,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(derived, ctx, {
+      sourcePath: "monster.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    const r = result.result.record.remaining;
+    expect(r.size).toBe("M");
+    expect(r.ac).toBe(14);
+    expect(r.hp).toBe(25);
+    expect(r.cr).toBe(3);
+  });
+
+  it("intermediate mod failure stops outer materialization", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { size: "M", trait: [] },
+    };
+    const middle: CopyModRawRecord = {
+      name: "Middle",
+      source: "TST",
+      remaining: {
+        _copy: {
+          name: "Base",
+          source: "TST",
+          _mod: { trait: { mode: "badMode" } },
+        },
+      },
+    };
+    const derived: CopyModRawRecord = {
+      name: "Derived",
+      source: "TST",
+      remaining: {
+        _copy: { name: "Middle", source: "TST" },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            { entityKind: "monster", recordCount: 3, records: [base, middle, derived] },
+          ],
+          totalRecords: 3,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(derived, ctx, {
+      sourcePath: "monster.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    const diag = result.diagnostics[0] as MaterializationDiagnostic;
+    expect(diag.code).toBe("UNKNOWN_MOD_MODE");
+    expect(diag.entityName).toBe("Middle");
+    expect(diag.fieldTarget).toBe("trait");
+    expect(diag.mode).toBe("badMode");
+  });
+
+  it("intermediate preserve validation failure stops outer materialization", () => {
+    const base: CopyModRawRecord = {
+      name: "Base",
+      source: "TST",
+      remaining: { size: "M" },
+    };
+    const middle: CopyModRawRecord = {
+      name: "Middle",
+      source: "TST",
+      remaining: {
+        _copy: { name: "Base", source: "TST", _preserve: { page: false } },
+      },
+    };
+    const derived: CopyModRawRecord = {
+      name: "Derived",
+      source: "TST",
+      remaining: {
+        _copy: { name: "Middle", source: "TST" },
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            { entityKind: "monster", recordCount: 3, records: [base, middle, derived] },
+          ],
+          totalRecords: 3,
+        },
+      },
+    };
+
+    const result = materializeCopyWithMods(derived, ctx, {
+      sourcePath: "monster.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(false);
+    if (result.ok) throw new Error("Expected failure");
+    const diag = result.diagnostics[0] as MaterializationDiagnostic;
+    expect(diag.code).toBe("INVALID_PRESERVE_MARKER");
+    expect(diag.entityName).toBe("Middle");
+  });
+
+  it("resolveCopyWithMods also materializes nested levels", () => {
+    const base: CopyModRawRecord = {
+      name: "Centaur",
+      source: "GGR",
+      remaining: { size: "L", ac: 14, cr: 3 },
+    };
+    const middle: CopyModRawRecord = {
+      name: "Centaur MOT",
+      source: "MOT",
+      remaining: {
+        _copy: { name: "Centaur", source: "GGR" },
+        ac: 16,
+      },
+    };
+    const derived: CopyModRawRecord = {
+      name: "Centaur Variant",
+      source: "MOT",
+      remaining: {
+        _copy: { name: "Centaur MOT", source: "MOT" },
+        cr: 4,
+      },
+    };
+
+    const ctx = {
+      validatedFiles: {
+        "monster.json": {
+          filePath: "monster.json",
+          collections: [
+            { entityKind: "monster", recordCount: 3, records: [base, middle, derived] },
+          ],
+          totalRecords: 3,
+        },
+      },
+    };
+
+    const result = resolveCopyWithMods(derived, ctx, {
+      sourcePath: "monster.json",
+      sourceEntityKind: "monster",
+    });
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("Expected success");
+    const r = result.record.remaining;
+    expect(r.size).toBe("L");
+    expect(r.ac).toBe(16);
+    expect(r.cr).toBe(4);
+  });
+});

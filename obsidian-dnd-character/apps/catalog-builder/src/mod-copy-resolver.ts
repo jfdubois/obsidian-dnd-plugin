@@ -11,6 +11,7 @@ import {
   type PreservePayload,
   type PreserveValidationDiagnostic,
 } from "./copy-preserve-policy";
+import { materializeNestedCopyLevels } from "./nested-copy-materializer";
 import { applyArrayModOperation } from "./mod-array-operations";
 import { applyRootModOperation } from "./mod-root-operations";
 import { applyScalarTextModOperation } from "./mod-scalar-text-operations";
@@ -499,6 +500,22 @@ export function resolveCopyWithMods(
     };
   }
 
+  // Materialize all intermediate levels of the _copy chain from terminal base outward
+  const nestedResult = materializeNestedCopyLevels(
+    resolved.baseEntity,
+    resolved.chain,
+    context,
+    record,
+    modContext.sourcePath,
+    modContext.sourceEntityKind,
+  );
+  if (!nestedResult.ok) {
+    return {
+      ok: false,
+      diagnostics: nestedResult.diagnostics,
+    };
+  }
+
   // Validate _copy._preserve payload before merge (only when present)
   const preserveRaw = isPlainObject(copyValue) ? copyValue._preserve : undefined;
   let preservePayload: PreservePayload = {};
@@ -517,7 +534,7 @@ export function resolveCopyWithMods(
     preservePayload = preserveValidation.payload;
   }
 
-  const clonedBase = cloneRecord(resolved.baseEntity);
+  const clonedBase = cloneRecord(nestedResult.record);
   applyDirectFieldOverlay(
     clonedBase.remaining,
     record.remaining,
@@ -573,6 +590,22 @@ export function materializeCopyWithMods(
     };
   }
 
+  // Materialize all intermediate levels of the _copy chain from terminal base outward
+  const nestedResult = materializeNestedCopyLevels(
+    resolved.baseEntity,
+    resolved.chain,
+    context,
+    record,
+    modContext.sourcePath,
+    modContext.sourceEntityKind,
+  );
+  if (!nestedResult.ok) {
+    return {
+      ok: false,
+      diagnostics: nestedResult.diagnostics,
+    };
+  }
+
   const chain = resolved.chain;
 
   // Validate _copy._preserve payload before merge (only when present)
@@ -593,7 +626,7 @@ export function materializeCopyWithMods(
     preservePayload = preserveValidation.payload;
   }
 
-  const clonedBase = cloneRecord(resolved.baseEntity);
+  const clonedBase = cloneRecord(nestedResult.record);
 
   applyDirectFieldOverlay(
     clonedBase.remaining,
