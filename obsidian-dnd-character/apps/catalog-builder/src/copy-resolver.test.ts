@@ -13,6 +13,11 @@ import {
   type CopyResolverContext,
   type CopyDiagnosticCode,
 } from "./copy-resolver";
+import { loadRawJsonFiles } from "./raw-loader";
+import { validateRawBoundary } from "./raw-boundary";
+
+const FIVEETOOLS_PATH =
+  "/home/jdubois/Documents/Projects/obsidian-dnd-plugin/external/5etools-src";
 
 /* ── Helpers ───────────────────────────────────────────────────── */
 
@@ -1762,5 +1767,150 @@ describe("located copy levels", () => {
     expect(isCopyResolutionFailure(result)).toBe(true);
     if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
     expect(result.diagnostic.code).toBe("AMBIGUOUS_BASE_ENTITY");
+  });
+});
+
+/* ── Source role eligibility ───────────────────────────────────── */
+
+describe("source-role-aware canonical copy lookup", () => {
+  it("selects canonical subclass when a platform augmentation record has the same complete identity", () => {
+    const canonical = makeRecord("Alchemist", "TCE", {
+      shortName: "Alchemist",
+      className: "Artificer",
+      classSource: "TCE",
+      page: 14,
+    });
+    const foundry = makeRecord("Alchemist", "TCE", {
+      shortName: "Alchemist",
+      className: "Artificer",
+      classSource: "TCE",
+      advancement: [],
+    });
+    const context: CopyResolverContext = {
+      validatedFiles: {
+        "class/class-artificer.json": {
+          filePath: "class/class-artificer.json",
+          sourceRole: "canonical-content",
+          collections: [{ entityKind: "subclass", sourceRole: "canonical-content", records: [canonical], recordCount: 1 }],
+          totalRecords: 1,
+        },
+        "class/foundry.json": {
+          filePath: "class/foundry.json",
+          sourceRole: "platform-augmentation",
+          collections: [{ entityKind: "subclass", sourceRole: "platform-augmentation", records: [foundry], recordCount: 1 }],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = resolveCopy(
+      makeRecord("Alchemist", "TCE", {
+        _copy: { name: "Alchemist", source: "TCE", shortName: "Alchemist", className: "Artificer", classSource: "TCE" },
+      }),
+      context,
+      { sourceEntityKind: "subclass", sourcePath: "class/class-artificer.json" },
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.locatedLevels[0]).toMatchObject({ sourcePath: "class/class-artificer.json", entityKind: "subclass" });
+    expect(result.baseEntity.remaining.page).toBe(14);
+    expect(canonical.remaining).toEqual({ shortName: "Alchemist", className: "Artificer", classSource: "TCE", page: 14 });
+    expect(foundry.remaining).toEqual({ shortName: "Alchemist", className: "Artificer", classSource: "TCE", advancement: [] });
+  });
+
+  it("keeps duplicate canonical records ambiguous", () => {
+    const context: CopyResolverContext = {
+      validatedFiles: {
+        "class/a.json": {
+          filePath: "class/a.json",
+          sourceRole: "canonical-content",
+          collections: [{ entityKind: "subclass", sourceRole: "canonical-content", records: [
+            makeRecord("Alchemist", "TCE", { shortName: "Alchemist", className: "Artificer", classSource: "TCE" }),
+          ], recordCount: 1 }],
+          totalRecords: 1,
+        },
+        "class/b.json": {
+          filePath: "class/b.json",
+          sourceRole: "canonical-content",
+          collections: [{ entityKind: "subclass", sourceRole: "canonical-content", records: [
+            makeRecord("Alchemist", "TCE", { shortName: "Alchemist", className: "Artificer", classSource: "TCE" }),
+          ], recordCount: 1 }],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = resolveCopy(
+      makeRecord("Derived", "TST", { _copy: { name: "Alchemist", source: "TCE", shortName: "Alchemist", className: "Artificer", classSource: "TCE" } }),
+      context,
+      { sourceEntityKind: "subclass", sourcePath: "class/a.json" },
+    );
+
+    expect(isCopyResolutionFailure(result)).toBe(true);
+    if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
+    expect(result.diagnostic.code).toBe("AMBIGUOUS_BASE_ENTITY");
+    expect(result.diagnostic.ambiguityCandidates).toHaveLength(2);
+  });
+
+  it("does not silently resolve augmentation-only matches", () => {
+    const context: CopyResolverContext = {
+      validatedFiles: {
+        "class/foundry.json": {
+          filePath: "class/foundry.json",
+          sourceRole: "platform-augmentation",
+          collections: [{ entityKind: "subclass", sourceRole: "platform-augmentation", records: [
+            makeRecord("Alchemist", "TCE", { shortName: "Alchemist", className: "Artificer", classSource: "TCE" }),
+          ], recordCount: 1 }],
+          totalRecords: 1,
+        },
+      },
+    };
+
+    const result = resolveCopy(
+      makeRecord("Derived", "TST", { _copy: { name: "Alchemist", source: "TCE", shortName: "Alchemist", className: "Artificer", classSource: "TCE" } }),
+      context,
+      { sourceEntityKind: "subclass", sourcePath: "class/class-artificer.json" },
+    );
+
+    expect(isCopyResolutionFailure(result)).toBe(true);
+    if (!isCopyResolutionFailure(result)) throw new Error("Expected failure");
+    expect(result.diagnostic.code).toBe("BASE_ENTITY_NOT_FOUND");
+    expect(result.diagnostic.ineligibleCandidates).toEqual([
+      expect.objectContaining({
+        sourcePath: "class/foundry.json",
+        sourceRole: "platform-augmentation",
+        entityKind: "subclass",
+      }),
+    ]);
+  });
+
+  it("selects the pinned canonical Alchemist record over class/foundry.json", () => {
+    const loaded = loadRawJsonFiles(FIVEETOOLS_PATH);
+    const boundary = validateRawBoundary(loaded.files);
+
+    const result = resolveCopy(
+      makeRecord("Alchemist", "TCE", {
+        shortName: "Alchemist",
+        className: "Artificer",
+        classSource: "EFA",
+        _copy: {
+          name: "Alchemist",
+          source: "TCE",
+          shortName: "Alchemist",
+          className: "Artificer",
+          classSource: "TCE",
+        },
+      }),
+      { validatedFiles: boundary.validatedFiles },
+      { sourceEntityKind: "subclass", sourcePath: "class/class-artificer.json" },
+    );
+
+    expect(isCopyResolutionSuccess(result)).toBe(true);
+    if (!isCopyResolutionSuccess(result)) throw new Error("Expected success");
+    expect(result.locatedLevels[0]).toMatchObject({ sourcePath: "class/class-artificer.json", entityKind: "subclass" });
+    expect(result.baseEntity.remaining.className).toBe("Artificer");
+    expect(result.baseEntity.remaining.classSource).toBe("TCE");
+    expect(result.baseEntity.remaining.shortName).toBe("Alchemist");
   });
 });

@@ -1,4 +1,8 @@
 import type { DiagnosticSeverity } from "./raw-loader";
+import {
+  classifySourceFileRole,
+  type SourceFileRole,
+} from "./source-file-role";
 
 /* ── Known raw fields registry ─────────────────────────────────── */
 
@@ -195,12 +199,14 @@ export interface ValidatedCollection {
   entityKind: string;
   records: RawRecord[];
   recordCount: number;
+  sourceRole?: SourceFileRole;
 }
 
 export interface ValidatedFileEnvelope {
   filePath: string;
   collections: ValidatedCollection[];
   totalRecords: number;
+  sourceRole?: SourceFileRole;
 }
 
 export interface RawBoundaryDiagnostic {
@@ -217,6 +223,18 @@ export interface RawBoundaryDiagnostic {
   entityKind?: string;
   recordIndex?: number;
   recordName?: string;
+  sourceRole?: SourceFileRole;
+}
+
+export interface SourceFileRoleCollectionInventory {
+  entityKind: string;
+  recordCount: number;
+}
+
+export interface SourceFileRoleInventory {
+  sourcePath: string;
+  sourceRole: SourceFileRole;
+  collections: SourceFileRoleCollectionInventory[];
 }
 
 export interface FieldInventory {
@@ -230,6 +248,7 @@ export interface RawBoundaryResult {
   validatedFiles: Record<string, ValidatedFileEnvelope>;
   diagnostics: RawBoundaryDiagnostic[];
   unclaimedDiagnostics: UnclaimedFieldDiagnostic[];
+  sourceFileRoles: SourceFileRoleInventory[];
   fieldInventory: FieldInventory;
   summary: {
     totalFiles: number;
@@ -376,6 +395,7 @@ export function validateRawBoundary(
   const validatedFiles: Record<string, ValidatedFileEnvelope> = {};
   const diagnostics: RawBoundaryDiagnostic[] = [];
   const unclaimedDiagnostics: UnclaimedFieldDiagnostic[] = [];
+  const sourceFileRoles: SourceFileRoleInventory[] = [];
 
   // Global field inventory collectors
   const allEnvelopeFields = new Set<string>();
@@ -389,6 +409,8 @@ export function validateRawBoundary(
   let totalCollections = 0;
 
   for (const [filePath, data] of Object.entries(files)) {
+    const sourceRole = classifySourceFileRole(filePath).role;
+
     // 1. Validate file envelope
     const envelopeResult = parseFileEnvelope(data);
 
@@ -399,6 +421,7 @@ export function validateRawBoundary(
         severity: "error",
         message: `Invalid file envelope in "${filePath}": ${envelopeResult.error}`,
         path: filePath,
+        sourceRole,
       });
       continue;
     }
@@ -417,11 +440,13 @@ export function validateRawBoundary(
           severity: "warning",
           message: `File "${filePath}" has an empty records array for entity kind "${entityKind}".`,
           path: filePath,
+          sourceRole,
         });
         fileCollections.push({
           entityKind: entityKind as string,
           records: [],
           recordCount: 0,
+          sourceRole,
         });
         totalCollections++;
         continue;
@@ -442,6 +467,7 @@ export function validateRawBoundary(
             path: filePath,
             entityKind: entityKind as string,
             recordIndex: i,
+            sourceRole,
           });
           continue;
         }
@@ -460,6 +486,7 @@ export function validateRawBoundary(
               entityKind: entityKind as string,
               recordIndex: i,
               recordName: isNonEmptyString(rawRecord.name) ? rawRecord.name as string : undefined,
+              sourceRole,
             });
           }
           continue;
@@ -501,6 +528,7 @@ export function validateRawBoundary(
         entityKind: entityKind as string,
         records: validRecords,
         recordCount: validRecords.length,
+        sourceRole,
       });
       totalCollections++;
       totalRecords += validRecords.length;
@@ -517,13 +545,23 @@ export function validateRawBoundary(
         filePath,
         collections: fileCollections,
         totalRecords: fileCollections.reduce((sum, c) => sum + c.recordCount, 0),
+        sourceRole,
       };
+      sourceFileRoles.push({
+        sourcePath: filePath,
+        sourceRole,
+        collections: fileCollections.map((collection) => ({
+          entityKind: collection.entityKind,
+          recordCount: collection.recordCount,
+        })),
+      });
 
       diagnostics.push({
         code: "VALID_FILE",
         severity: "info",
         message: `File "${filePath}": validated ${fileCollections.length} collection(s) with ${validatedFiles[filePath].totalRecords} total records.`,
         path: filePath,
+        sourceRole,
       });
     }
   }
@@ -532,6 +570,7 @@ export function validateRawBoundary(
     validatedFiles,
     diagnostics,
     unclaimedDiagnostics,
+    sourceFileRoles,
     fieldInventory: {
       envelope: [...allEnvelopeFields].sort(),
       knownRaw: [...allKnownRawFields].sort(),

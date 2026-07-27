@@ -38,6 +38,8 @@ export {
   loadRawJsonFiles,
 } from "./raw-loader";
 
+export { type SourceFileRole, type SourceFileRoleMetadata, classifySourceFileRole, isCanonicalCopyCandidateSource } from "./source-file-role";
+
 export {
   /* Raw boundary types */
   type FieldClassificationKind,
@@ -47,6 +49,7 @@ export {
   type ValidatedCollection,
   type ValidatedFileEnvelope,
   type RawBoundaryDiagnostic,
+  type SourceFileRoleInventory,
   type FieldInventory,
   type RawBoundaryResult,
   /* Known raw fields registry */
@@ -92,6 +95,7 @@ export {
 export {
   /* Copy resolver types */
   type AmbiguityCandidate,
+  type IneligibleCopyCandidate,
   type RawCopyValue,
   type CopyChainStep,
   type CopyResolutionResult,

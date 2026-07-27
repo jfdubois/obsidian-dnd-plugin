@@ -1,6 +1,10 @@
 import type { DiagnosticSeverity } from "./raw-loader";
 import type { RawRecord, ValidatedFileEnvelope } from "./raw-boundary";
 import {
+  classifySourceFileRole,
+  type SourceFileRole,
+} from "./source-file-role";
+import {
   parseReference,
   isCanonicalParsedReference,
   isDiagnosticParsedReference,
@@ -98,6 +102,16 @@ export interface AmbiguityCandidate {
   readonly identity: StructuredIdentity;
 }
 
+/** A matching record excluded from canonical copy lookup by source-file role. */
+export interface IneligibleCopyCandidate {
+  readonly name: string;
+  readonly source: string;
+  readonly entityKind: string;
+  readonly sourcePath: string;
+  readonly sourceRole: SourceFileRole;
+  readonly identity: StructuredIdentity;
+}
+
 /** Diagnosis emitted when _copy resolution fails. */
 export interface CopyResolverDiagnostic {
   readonly code: CopyDiagnosticCode;
@@ -121,6 +135,8 @@ export interface CopyResolverDiagnostic {
   readonly chain?: readonly CopyChainStep[];
   /** Candidates matched during AMBIGUOUS_BASE_ENTITY. */
   readonly ambiguityCandidates?: readonly AmbiguityCandidate[];
+  /** Matching records excluded before ambiguity evaluation by source-file role. */
+  readonly ineligibleCandidates?: readonly IneligibleCopyCandidate[];
   /** Invalid discriminator field and value for INVALID_DISCRIMINATOR_VALUE. */
   readonly invalidDiscriminatorField?: string;
   readonly invalidDiscriminatorValue?: unknown;
@@ -393,6 +409,7 @@ function createDiagnostic(
   ambiguityCandidates?: readonly AmbiguityCandidate[],
   invalidDiscriminatorField?: string,
   invalidDiscriminatorValue?: unknown,
+  ineligibleCandidates?: readonly IneligibleCopyCandidate[],
 ): CopyResolverDiagnostic {
   return {
     code,
@@ -409,6 +426,7 @@ function createDiagnostic(
     ambiguityCandidates,
     invalidDiscriminatorField,
     invalidDiscriminatorValue,
+    ineligibleCandidates,
   };
 }
 
@@ -427,6 +445,7 @@ function createFailure(
   ambiguityCandidates?: readonly AmbiguityCandidate[],
   invalidDiscriminatorField?: string,
   invalidDiscriminatorValue?: unknown,
+  ineligibleCandidates?: readonly IneligibleCopyCandidate[],
 ): CopyResolutionFailure {
   return {
     status: "failed",
@@ -445,6 +464,7 @@ function createFailure(
       ambiguityCandidates,
       invalidDiscriminatorField,
       invalidDiscriminatorValue,
+      ineligibleCandidates,
     ),
   };
 }
@@ -487,6 +507,7 @@ interface LocatedRecord {
   readonly record: RawRecord;
   readonly entityKind: string;
   readonly sourcePath: string;
+  readonly sourceRole: SourceFileRole;
 }
 
 /**
@@ -503,18 +524,39 @@ function findRecordsByStructuredIdentity(
   const allowedKinds = getAllowedEntityKinds(sourceEntityKind);
   const matches: LocatedRecord[] = [];
   for (const [sourcePath, envelope] of Object.entries(context.validatedFiles)) {
+    const sourceRole = envelope.sourceRole ?? classifySourceFileRole(sourcePath).role;
     for (const collection of envelope.collections) {
       if (!allowedKinds.has(collection.entityKind)) {
         continue;
       }
       for (const record of collection.records) {
         if (recordMatchesIdentity(record, identity)) {
-          matches.push({ record, entityKind: collection.entityKind, sourcePath });
+          matches.push({
+            record,
+            entityKind: collection.entityKind,
+            sourcePath,
+            sourceRole: collection.sourceRole ?? sourceRole,
+          });
         }
       }
     }
   }
   return matches;
+}
+
+function isEligibleCanonicalCopyCandidate(candidate: LocatedRecord): boolean {
+  return candidate.sourceRole === "canonical-content";
+}
+
+function toIneligibleCandidate(candidate: LocatedRecord): IneligibleCopyCandidate {
+  return {
+    name: candidate.record.name,
+    source: candidate.record.source,
+    entityKind: candidate.entityKind,
+    sourcePath: candidate.sourcePath,
+    sourceRole: candidate.sourceRole,
+    identity: getRecordIdentity(candidate.record),
+  };
 }
 
 /**
@@ -642,7 +684,11 @@ function resolveCopyChain(
   visited.add(cycleKey);
 
   // Find base entities matching ALL identity fields within allowed entity kinds
-  const candidates = findRecordsByStructuredIdentity(context, identity, currentEntityKind);
+  const allCandidates = findRecordsByStructuredIdentity(context, identity, currentEntityKind);
+  const candidates = allCandidates.filter(isEligibleCanonicalCopyCandidate);
+  const ineligibleCandidates = allCandidates
+    .filter((candidate) => !isEligibleCanonicalCopyCandidate(candidate))
+    .map(toIneligibleCandidate);
 
   if (candidates.length === 0) {
     const allowedKinds = getAllowedEntityKinds(currentEntityKind);
@@ -650,10 +696,15 @@ function resolveCopyChain(
       ...chain,
       createRequestedCopyChainStep(identity, currentEntityKind, currentSourcePath),
     ];
+    const ineligibleMessage = ineligibleCandidates.length === 0
+      ? ""
+      : ` Matching ineligible source-role candidate(s): ${ineligibleCandidates
+          .map((candidate) => `"${candidate.name}" (${candidate.source}) [${candidate.entityKind}] at "${candidate.sourcePath}" role "${candidate.sourceRole}"`)
+          .join(", ")}.`;
     return createFailure(
       "BASE_ENTITY_NOT_FOUND",
       "error",
-      `Base entity matching identity ${JSON.stringify(identity)} not found in allowed entity kinds [${[...allowedKinds].sort().join(", ")}]. Source entity kind: "${currentEntityKind}". Source path: "${currentSourcePath}". Referenced by "${currentSourceRecord.name}" (${currentSourceRecord.source}).`,
+      `Base entity matching identity ${JSON.stringify(identity)} not found among eligible canonical source roles in allowed entity kinds [${[...allowedKinds].sort().join(", ")}]. Source entity kind: "${currentEntityKind}". Source path: "${currentSourcePath}". Referenced by "${currentSourceRecord.name}" (${currentSourceRecord.source}).${ineligibleMessage}`,
       currentSourceRecord,
       copyValue,
       undefined,
@@ -662,6 +713,10 @@ function resolveCopyChain(
       currentSourcePath,
       Object.freeze([...allowedKinds]),
       Object.freeze(failureChain),
+      undefined,
+      undefined,
+      undefined,
+      Object.freeze(ineligibleCandidates),
     );
   }
 
