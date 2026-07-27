@@ -7,6 +7,7 @@ import {
   type CopyModRawRecord,
 } from "./mod-copy-resolver";
 import type { RawRecord, ValidatedCollection, ValidatedFileEnvelope } from "./raw-boundary";
+import { expandAbstractVersionEntry } from "./version-abstract-expander";
 import {
   invalidVersionRecordDiagnostic,
   invalidVersionsPayloadDiagnostic,
@@ -179,40 +180,54 @@ function expandCollection(
     }
 
     rawVersions.forEach((rawVersion, index) => {
-      const validatedVersion = validateVersionRecord(rawVersion, index);
-      if (isVersionRecordValidationDiagnostic(validatedVersion)) {
-        diagnostics.push(
-          invalidVersionRecordDiagnostic(
-            sourcePath,
-            collection.entityKind,
-            record,
-            index,
-            validatedVersion,
-          ),
-        );
+      const expandedVersion = expandAbstractVersionEntry(rawVersion, {
+        sourcePath,
+        entityKind: collection.entityKind,
+        recordName: record.name,
+        recordSource: record.source,
+        versionIndex: index,
+      });
+      if (!expandedVersion.ok) {
+        diagnostics.push(...expandedVersion.diagnostics);
         return;
       }
 
-      const rawVersionRecord = versionRecord(baseRecord, validatedVersion);
-      const resolved = materializeCopyWithMods(rawVersionRecord, context, {
-        sourcePath,
-        sourceEntityKind: collection.entityKind,
+      expandedVersion.versions.forEach((concreteVersion) => {
+        const validatedVersion = validateVersionRecord(concreteVersion, index);
+        if (isVersionRecordValidationDiagnostic(validatedVersion)) {
+          diagnostics.push(
+            invalidVersionRecordDiagnostic(
+              sourcePath,
+              collection.entityKind,
+              record,
+              index,
+              validatedVersion,
+            ),
+          );
+          return;
+        }
+
+        const rawVersionRecord = versionRecord(baseRecord, validatedVersion);
+        const resolved = materializeCopyWithMods(rawVersionRecord, context, {
+          sourcePath,
+          sourceEntityKind: collection.entityKind,
+        });
+        if (!resolved.ok) {
+          diagnostics.push(
+            materializationFailureDiagnostic(
+              sourcePath,
+              collection.entityKind,
+              record,
+              index,
+              validatedVersion.name,
+              validatedVersion.source,
+              resolved.diagnostics,
+            ),
+          );
+          return;
+        }
+        records.push(ensureNoVersions(resolved.result.record));
       });
-      if (!resolved.ok) {
-        diagnostics.push(
-          materializationFailureDiagnostic(
-            sourcePath,
-            collection.entityKind,
-            record,
-            index,
-            validatedVersion.name,
-            validatedVersion.source,
-            resolved.diagnostics,
-          ),
-        );
-        return;
-      }
-      records.push(ensureNoVersions(resolved.result.record));
     });
   }
 

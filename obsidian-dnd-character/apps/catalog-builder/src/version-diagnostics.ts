@@ -10,6 +10,11 @@ import type { VersionRecordValidationDiagnostic } from "./version-record-validat
 
 export type VersionExpansionDiagnosticCode =
   | "INVALID_VERSIONS_PAYLOAD"
+  | "INVALID_VERSION_ABSTRACT"
+  | "INVALID_VERSION_IMPLEMENTATIONS"
+  | "INVALID_VERSION_IMPLEMENTATION"
+  | "INVALID_VERSION_VARIABLES"
+  | "UNRESOLVED_VERSION_VARIABLE"
   | "INVALID_VERSION_RECORD"
   | "INVALID_VERSION_DIRECTIVE"
   | "VERSION_COPY_FAILED"
@@ -25,6 +30,7 @@ export interface VersionExpansionDiagnostic {
   readonly recordName: string;
   readonly recordSource: string;
   readonly versionIndex?: number;
+  readonly implementationIndex?: number;
   readonly versionName?: string;
   readonly versionSource?: string;
   readonly materializationCode?: string;
@@ -39,6 +45,7 @@ export interface VersionExpansionDiagnostic {
   readonly invalidDiscriminatorField?: string;
   readonly invalidDiscriminatorValue?: unknown;
   readonly invalidPreserveKey?: string;
+  readonly invalidField?: string;
   readonly invalidMarkerValue?: unknown;
   readonly validationReason?: string;
   readonly rawPreservePayload?: unknown;
