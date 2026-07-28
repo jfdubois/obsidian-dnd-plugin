@@ -1,8 +1,39 @@
 import type { SemanticMappingKey, SemanticMappingRegistry, SemanticMappingDiagnostic, MappingMethod, SemanticMappingResult } from "./semantic-mapping";
 import { isSemanticMappingKey, validateSemanticMappingEntry } from "./semantic-mapping";
 import { computeSourceFingerprint } from "./semantic-mapping-fingerprint";
+import type { RuleEffect, EffectOrigin } from "@obsidian-dnd/catalog-contract";
+import { isRuleEffect } from "@obsidian-dnd/catalog-contract";
 
 const PINNED_REVISION_RE = /^[0-9a-f]{40}$/;
+
+/* ── Deep clone helper ──────────────────────────────────────────── */
+
+/**
+ * Produces a deep clone of a validated RuleEffect using JSON round-trip.
+ * RuleEffect objects are guaranteed to be plain JSON-compatible structures
+ * (validated by isRuleEffect), so JSON serialization is safe.
+ *
+ * @throws TypeError if the effect cannot be serialized (not JSON-compatible).
+ */
+function cloneRuleEffect(effect: RuleEffect): RuleEffect {
+  const cloned = JSON.parse(JSON.stringify(effect)) as RuleEffect;
+  // Validate the clone is still a proper RuleEffect
+  if (!isRuleEffect(cloned)) {
+    throw new TypeError("Cloned effect failed RuleEffect validation after JSON round-trip.");
+  }
+  return cloned;
+}
+
+/**
+ * Extracts the EffectOrigin from a RuleEffect in a focused, read-only manner.
+ */
+function extractEffectOrigin(effect: RuleEffect): EffectOrigin {
+  return {
+    entityId: effect.origin.entityId,
+    sourceId: effect.origin.sourceId,
+    method: effect.origin.method,
+  };
+}
 
 /* ── Resolution context ─────────────────────────────────────────── */
 
@@ -241,7 +272,15 @@ export function resolveSemanticMapping(
 
   return Object.freeze({
     mapped: true,
-    entry,
+    materializedEffect: cloneRuleEffect(entry.effect),
+    mappingKey: entry.key,
+    mappingVersion: entry.mappingVersion,
+    reviewedBy: entry.reviewedBy,
+    reviewedAt: entry.reviewedAt,
+    sourceRevision: entry.sourceRevision,
+    sourceFingerprint: entry.sourceFingerprint,
+    defaultProjection: entry.defaultProjection,
+    effectOrigin: extractEffectOrigin(entry.effect),
     mappingMethod: "reviewed-mapping" as MappingMethod,
     diagnostics: Object.freeze([]),
   });

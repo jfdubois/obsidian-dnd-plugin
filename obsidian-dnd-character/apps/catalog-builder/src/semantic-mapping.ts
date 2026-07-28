@@ -1,6 +1,6 @@
 import type { Ruleset } from "@obsidian-dnd/domain";
 import { isRuleset } from "@obsidian-dnd/domain";
-import type { RuleEffect, SheetProjection } from "@obsidian-dnd/catalog-contract";
+import type { EffectOrigin, RuleEffect, SheetProjection } from "@obsidian-dnd/catalog-contract";
 import { isRuleEffect, isSheetProjection } from "@obsidian-dnd/catalog-contract";
 
 /* ── Schema version ─────────────────────────────────────────────── */
@@ -310,7 +310,24 @@ export type MappingMethod = "structured" | "reviewed-mapping";
 
 export interface SemanticMappingResult {
   readonly mapped: boolean;
-  readonly entry?: SemanticMappingEntry;
+  /** Deep-cloned RuleEffect from the mapping entry (only when mapped: true). */
+  readonly materializedEffect?: RuleEffect;
+  /** The mapping key used for the lookup. */
+  readonly mappingKey?: SemanticMappingKey;
+  /** Version of the mapping entry. */
+  readonly mappingVersion?: number;
+  /** Reviewer who approved the mapping. */
+  readonly reviewedBy?: string;
+  /** Timestamp when the mapping was reviewed. */
+  readonly reviewedAt?: string;
+  /** Source revision the mapping was created against. */
+  readonly sourceRevision?: string;
+  /** Source fingerprint if present in the mapping entry. */
+  readonly sourceFingerprint?: string;
+  /** Default projection if present in the mapping entry. */
+  readonly defaultProjection?: SheetProjection;
+  /** Structured source provenance from the effect origin. */
+  readonly effectOrigin?: EffectOrigin;
   readonly mappingMethod: MappingMethod;
   readonly diagnostics: readonly SemanticMappingDiagnostic[];
 }

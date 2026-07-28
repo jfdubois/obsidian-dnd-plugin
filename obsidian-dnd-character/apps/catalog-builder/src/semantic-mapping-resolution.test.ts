@@ -1,6 +1,19 @@
 import { describe, expect, it } from "vitest";
 import type { RuleEffect } from "@obsidian-dnd/catalog-contract";
-import { createAddAbilityEffect, createRuleEffectMetadata, createEffectPresentation, createEffectOrigin } from "@obsidian-dnd/catalog-contract";
+import {
+  createAddAbilityEffect,
+  createAddCapabilityEffect,
+  createAddImmunityEffect,
+  createConditionalRollModeEffect,
+  createSetMovementEffect,
+  createRuleEffectMetadata,
+  createEffectPresentation,
+  createEffectOrigin,
+  createDamageImmunity,
+  createNoBreathingRequiredCapability,
+  createAbilityRollPredicate,
+  createSkillRollPredicate,
+} from "@obsidian-dnd/catalog-contract";
 import { createEntityId, createSourceId } from "@obsidian-dnd/domain";
 import type { SemanticMappingEntry, SemanticMappingKey } from "./semantic-mapping";
 import { createSemanticMappingRegistry } from "./semantic-mapping";
@@ -54,7 +67,14 @@ describe("mandatory context", () => {
     const reg = createSemanticMappingRegistry([e]);
     const r = resolveSemanticMapping(reg, e.key, mkCtx());
     expect(r.mapped).toBe(true);
-    expect(r.entry).toBe(e);
+    expect(r.materializedEffect).toEqual(e.effect);
+    expect(r.materializedEffect).not.toBe(e.effect);
+    expect(r.mappingKey).toEqual(e.key);
+    expect(r.mappingVersion).toBe(e.mappingVersion);
+    expect(r.reviewedBy).toBe(e.reviewedBy);
+    expect(r.reviewedAt).toBe(e.reviewedAt);
+    expect(r.sourceRevision).toBe(e.sourceRevision);
+    expect(r.effectOrigin).toEqual(e.effect.origin);
     expect(r.diagnostics).toEqual([]);
   });
 
@@ -63,7 +83,7 @@ describe("mandatory context", () => {
     const reg = createSemanticMappingRegistry([e]);
     const r = resolveSemanticMapping(reg, e.key, { pinnedRevision: "0".repeat(40) });
     expect(r.mapped).toBe(false);
-    expect(r.entry).toBeUndefined();
+    expect(r.materializedEffect).toBeUndefined();
     expect(r.diagnostics).toHaveLength(1);
     expect(r.diagnostics[0]).toMatchObject({
       code: "STALE_MAPPING", severity: "error",
@@ -76,7 +96,7 @@ describe("mandatory context", () => {
     const reg = createSemanticMappingRegistry([e]);
     const r = resolveSemanticMapping(reg, e.key, { pinnedRevision: "0".repeat(40) });
     expect(r.mapped).toBe(false);
-    expect(r.entry).toBeUndefined();
+    expect(r.materializedEffect).toBeUndefined();
   });
 });
 
@@ -334,5 +354,200 @@ describe("immutability", () => {
     expect(Object.isFrozen(r)).toBe(true);
     expect(Object.isFrozen(r.results)).toBe(true);
     expect(Object.isFrozen(r.allDiagnostics)).toBe(true);
+  });
+});
+
+describe("materialized effect", () => {
+  function mkMetadata(): ReturnType<typeof createRuleEffectMetadata> {
+    return createRuleEffectMetadata(
+      "full",
+      createEffectPresentation("abilities", []),
+      createEffectOrigin(createEntityId("PHB:fighter"), createSourceId("phb"), "structured"),
+    );
+  }
+
+  it("capability effect is deep-cloned and validated", () => {
+    const capability = createNoBreathingRequiredCapability();
+    const effect = createAddCapabilityEffect(mkMetadata(), capability);
+    const entry = Object.freeze({
+      key: mkKey("PHB:fighter"),
+      mappingVersion: 1,
+      sourceRevision: REV,
+      effect,
+      reviewedBy: "test",
+      reviewedAt: TS,
+    } as SemanticMappingEntry);
+    const reg = createSemanticMappingRegistry([entry]);
+    const r = resolveSemanticMapping(reg, entry.key, mkCtx());
+
+    expect(r.mapped).toBe(true);
+    expect(r.materializedEffect).toEqual(effect);
+    expect(r.materializedEffect).not.toBe(effect);
+    expect(r.materializedEffect?.type).toBe("add-capability");
+    expect(r.materializedEffect).toHaveProperty("origin.entityId");
+    expect(r.effectOrigin).toEqual(effect.origin);
+  });
+
+  it("immunity effect is deep-cloned and validated", () => {
+    const immunity = createDamageImmunity("fire");
+    const effect = createAddImmunityEffect(mkMetadata(), immunity);
+    const entry = Object.freeze({
+      key: mkKey("PHB:fire-elemental"),
+      mappingVersion: 1,
+      sourceRevision: REV,
+      effect,
+      reviewedBy: "test",
+      reviewedAt: TS,
+    } as SemanticMappingEntry);
+    const reg = createSemanticMappingRegistry([entry]);
+    const r = resolveSemanticMapping(reg, entry.key, mkCtx());
+
+    expect(r.mapped).toBe(true);
+    expect(r.materializedEffect).toEqual(effect);
+    expect(r.materializedEffect).not.toBe(effect);
+    expect(r.materializedEffect?.type).toBe("add-immunity");
+    expect(r.effectOrigin).toEqual(effect.origin);
+  });
+
+  it("conditional roll effect is deep-cloned and validated", () => {
+    const predicate = createAbilityRollPredicate("STR");
+    const effect = createConditionalRollModeEffect(mkMetadata(), "ability-check", "advantage", predicate);
+    const entry = Object.freeze({
+      key: mkKey("PHB:fighter"),
+      mappingVersion: 1,
+      sourceRevision: REV,
+      effect,
+      reviewedBy: "test",
+      reviewedAt: TS,
+    } as SemanticMappingEntry);
+    const reg = createSemanticMappingRegistry([entry]);
+    const r = resolveSemanticMapping(reg, entry.key, mkCtx());
+
+    expect(r.mapped).toBe(true);
+    expect(r.materializedEffect).toEqual(effect);
+    expect(r.materializedEffect).not.toBe(effect);
+    expect(r.materializedEffect?.type).toBe("conditional-roll-mode");
+    expect(r.effectOrigin).toEqual(effect.origin);
+  });
+
+  it("movement effect is deep-cloned and validated", () => {
+    const effect = createSetMovementEffect(mkMetadata(), "walk", 30);
+    const entry = Object.freeze({
+      key: mkKey("PHB:fighter"),
+      mappingVersion: 1,
+      sourceRevision: REV,
+      effect,
+      reviewedBy: "test",
+      reviewedAt: TS,
+    } as SemanticMappingEntry);
+    const reg = createSemanticMappingRegistry([entry]);
+    const r = resolveSemanticMapping(reg, entry.key, mkCtx());
+
+    expect(r.mapped).toBe(true);
+    expect(r.materializedEffect).toEqual(effect);
+    expect(r.materializedEffect).not.toBe(effect);
+    expect(r.materializedEffect?.type).toBe("set-movement");
+    expect(r.effectOrigin).toEqual(effect.origin);
+  });
+
+  it("materialized effect does not share mutable structures with registry", () => {
+    const effect = createAddCapabilityEffect(mkMetadata(), createNoBreathingRequiredCapability());
+    const entry = Object.freeze({
+      key: mkKey("PHB:fighter"),
+      mappingVersion: 1,
+      sourceRevision: REV,
+      effect,
+      reviewedBy: "test",
+      reviewedAt: TS,
+    } as SemanticMappingEntry);
+    const reg = createSemanticMappingRegistry([entry]);
+    const r = resolveSemanticMapping(reg, entry.key, mkCtx());
+
+    expect(r.mapped).toBe(true);
+    // Origin is deep-cloned, not the same reference
+    expect(r.materializedEffect?.origin).not.toBe(effect.origin);
+    // Presentation is deep-cloned
+    expect(r.materializedEffect?.presentation).not.toBe(effect.presentation);
+    // Registry entry remains unchanged
+    expect(reg.mappings[0]?.effect).toBe(effect);
+    expect(reg.mappings[0]?.effect).toEqual(effect);
+  });
+
+  it("materialized effect includes all provenance fields", () => {
+    const effect = createAddAbilityEffect(
+      mkMetadata(),
+      "STR",
+      1,
+    );
+    const entry = Object.freeze({
+      key: mkKey("PHB:fighter"),
+      mappingVersion: 3,
+      sourceRevision: REV,
+      effect,
+      reviewedBy: "reviewer-1",
+      reviewedAt: "2025-06-15T10:00:00.000Z",
+    } as SemanticMappingEntry);
+    const reg = createSemanticMappingRegistry([entry]);
+    const r = resolveSemanticMapping(reg, entry.key, mkCtx());
+
+    expect(r.mapped).toBe(true);
+    expect(r.mappingKey).toEqual(entry.key);
+    expect(r.mappingVersion).toBe(3);
+    expect(r.reviewedBy).toBe("reviewer-1");
+    expect(r.reviewedAt).toBe("2025-06-15T10:00:00.000Z");
+    expect(r.sourceRevision).toBe(REV);
+    expect(r.sourceFingerprint).toBeUndefined();
+    expect(r.effectOrigin).toEqual(effect.origin);
+  });
+
+  it("unmapped result has no materialized effect", () => {
+    const reg = createSemanticMappingRegistry([]);
+    const r = resolveSemanticMapping(reg, mkKey("PHB:rogue"), mkCtx());
+
+    expect(r.mapped).toBe(false);
+    expect(r.materializedEffect).toBeUndefined();
+    expect(r.mappingKey).toBeUndefined();
+    expect(r.mappingVersion).toBeUndefined();
+    expect(r.effectOrigin).toBeUndefined();
+  });
+
+  it("stale mapping has no materialized effect", () => {
+    const effect = createAddImmunityEffect(mkMetadata(), createDamageImmunity("cold"));
+    const entry = Object.freeze({
+      key: mkKey("PHB:ice-elemental"),
+      mappingVersion: 1,
+      sourceRevision: REV,
+      effect,
+      reviewedBy: "test",
+      reviewedAt: TS,
+    } as SemanticMappingEntry);
+    const reg = createSemanticMappingRegistry([entry]);
+    const r = resolveSemanticMapping(reg, entry.key, { pinnedRevision: "0".repeat(40) });
+
+    expect(r.mapped).toBe(false);
+    expect(r.materializedEffect).toBeUndefined();
+  });
+
+  it("skill roll predicate in conditional effect is deep-cloned", () => {
+    const predicate = createSkillRollPredicate(createEntityId("PHB:athletics"));
+    const effect = createConditionalRollModeEffect(mkMetadata(), "skill-check", "disadvantage", predicate);
+    const entry = Object.freeze({
+      key: mkKey("PHB:fighter"),
+      mappingVersion: 1,
+      sourceRevision: REV,
+      effect,
+      reviewedBy: "test",
+      reviewedAt: TS,
+    } as SemanticMappingEntry);
+    const reg = createSemanticMappingRegistry([entry]);
+    const r = resolveSemanticMapping(reg, entry.key, mkCtx());
+
+    expect(r.mapped).toBe(true);
+    expect(r.materializedEffect).toEqual(effect);
+    expect(r.materializedEffect).not.toBe(effect);
+    // Nested predicate is also deep-cloned
+    const cloned = r.materializedEffect as typeof effect;
+    expect(cloned.predicate).not.toBe(effect.predicate);
+    expect(cloned.predicate).toEqual(effect.predicate);
   });
 });
