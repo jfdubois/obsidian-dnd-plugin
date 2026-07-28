@@ -14,22 +14,51 @@ import type { CopyResolverContext } from "./copy-resolver";
 
 /* ── Pinned species source-scope integration ───────────────────── */
 
+/** Test-only structured location data for pipeline records. */
+interface LocatedMaterializedSpeciesRecord {
+  readonly record: RawRecord;
+  readonly entityKind: string;
+  readonly sourcePath: string;
+}
+
 /**
- * Find an exact record by name and source from materialized records.
- * Throws if the record is not found, ensuring deterministic identity
+ * Find an exact record by entity kind, name, and source from materialized records.
+ * Throws if the match count is not exactly one, enforcing deterministic identity
  * selection rather than positional [0] selectors.
  */
 function findExactRecord(
-  records: readonly RawRecord[],
+  records: readonly LocatedMaterializedSpeciesRecord[],
+  entityKind: string,
   name: string,
   source: string,
-): RawRecord {
-  const found = records.find((r) => r.name === name && r.source === source);
-  if (found === undefined) {
-    throw new Error(`Missing representative record: ${name}|${source}`);
+): LocatedMaterializedSpeciesRecord {
+  const matches = records.filter(
+    (candidate) =>
+      candidate.entityKind === entityKind
+      && candidate.record.name === name
+      && candidate.record.source === source,
+  );
+
+  if (matches.length !== 1) {
+    throw new Error(
+      `Expected exactly one ${entityKind}:${name}|${source}; found ${matches.length}`,
+    );
   }
-  return found;
+
+  return matches[0]!;
 }
+
+/** Consumed directives that must be absent from materialized records. */
+const CONSUMED_DIRECTIVES = Object.freeze([
+  "_copy",
+  "_mod",
+  "_preserve",
+  "_templates",
+  "_versions",
+  "_abstract",
+  "_implementations",
+  "_variables",
+] as const);
 
 /**
  * Run the full materialization pipeline on pinned races.json:
@@ -37,9 +66,9 @@ function findExactRecord(
  * 2. Validate raw boundary
  * 3. Expand versions
  * 4. Materialize copy+mod records
- * Returns the fully materialized species records.
+ * Returns the fully materialized species records with structured location data.
  */
-function loadMaterializedSpeciesRecords(): RawRecord[] {
+function loadMaterializedSpeciesRecords(): LocatedMaterializedSpeciesRecord[] {
   const loaded = loadRawJsonFiles(pinnedFiveEToolsPath());
   const boundary = validateRawBoundary(loaded.files);
   const racesEnvelope = boundary.validatedFiles["races.json"];
@@ -49,18 +78,22 @@ function loadMaterializedSpeciesRecords(): RawRecord[] {
   // Step 1: Expand versions to create version-expanded records
   const expanded = expandVersions({ "races.json": racesEnvelope! });
   expect(expanded.ok, expanded.diagnostics.map((d) => d.message).join("\n")).toBe(true);
+  expect(expanded.diagnostics).toEqual([]);
   const expandedEnvelope = expanded.validatedFiles["races.json"];
   expect(expandedEnvelope).toBeDefined();
 
   // Step 2: Materialize copy+mod records to produce materialized species records
   const context: CopyResolverContext = { validatedFiles: expanded.validatedFiles };
-  const materialized: RawRecord[] = [];
+  const materialized: LocatedMaterializedSpeciesRecord[] = [];
+
+  let copyBearingCount = 0;
+  let successfullyMaterialized = 0;
 
   for (const collection of expandedEnvelope!.collections) {
     for (const record of collection.records) {
-      // Only materialize records that have _copy directives
       const copyValue = record.remaining._copy;
       if (copyValue !== undefined && typeof copyValue === "object" && copyValue !== null) {
+        copyBearingCount++;
         const result = materializeCopyWithMods(
           record as CopyModRawRecord,
           context,
@@ -70,27 +103,43 @@ function loadMaterializedSpeciesRecords(): RawRecord[] {
           },
         );
         if (result.ok) {
-          materialized.push(result.result.record);
+          successfullyMaterialized++;
+          materialized.push({
+            record: result.result.record,
+            entityKind: collection.entityKind,
+            sourcePath: "races.json",
+          });
         } else {
-          // Non-copy records pass through; copy failures are skipped for inventory
-          materialized.push(record);
+          throw new Error(
+            `Copy materialization failed for ${record.name}|${record.source} ` +
+            `(entityKind: ${collection.entityKind}, sourcePath: races.json): ` +
+            result.diagnostics.map((d) => d.message).join("; "),
+          );
         }
       } else {
         // Non-copy records are already materialized
-        materialized.push(record);
+        materialized.push({
+          record,
+          entityKind: collection.entityKind,
+          sourcePath: "races.json",
+        });
       }
     }
   }
+
+  // Assert copy materialization completeness
+  expect(copyBearingCount).toBeGreaterThanOrEqual(0);
+  expect(successfullyMaterialized).toBe(copyBearingCount);
 
   return materialized;
 }
 
 describe("pinned species source-scope integration", () => {
   // Load fully materialized species records through the complete pipeline
-  const records = loadMaterializedSpeciesRecords();
+  const locatedRecords = loadMaterializedSpeciesRecords();
 
-  // Build the inventory from materialized records (not raw or manually constructed)
-  const inventory = collectKnownSpeciesSources(records);
+  // Build the inventory from successfully materialized records
+  const inventory = collectKnownSpeciesSources(locatedRecords.map((item) => item.record));
 
   // Build context from derived inventory
   const ctx: SpeciesSourceScopeContext = {
@@ -104,6 +153,7 @@ describe("pinned species source-scope integration", () => {
     // The inventory must contain at least the core sources
     expect(inventory.sources.has("PHB")).toBe(true);
     expect(inventory.sources.has("XPHB")).toBe(true);
+    expect(inventory.sources.has("MPMM")).toBe(true);
   });
 
   it("at least one actual optional source exists in the derived inventory", () => {
@@ -113,12 +163,43 @@ describe("pinned species source-scope integration", () => {
     expect(optionalSources.length).toBeGreaterThan(0);
   });
 
+  it("inventory diagnostics are empty", () => {
+    expect(inventory.diagnostics).toEqual([]);
+  });
+
+  it("fabricated TST is absent from the derived inventory", () => {
+    expect(inventory.sources.has("TST")).toBe(false);
+  });
+
+  /* ── Consumed directive cleanup ────────────────────────────── */
+
+  it("Human|PHB has no consumed directives in remaining", () => {
+    const phbLocated = findExactRecord(locatedRecords, "race", "Human", "PHB");
+    for (const directive of CONSUMED_DIRECTIVES) {
+      expect(phbLocated.record.remaining[directive]).toBeUndefined();
+    }
+  });
+
+  it("Human|XPHB has no consumed directives in remaining", () => {
+    const xphbLocated = findExactRecord(locatedRecords, "race", "Human", "XPHB");
+    for (const directive of CONSUMED_DIRECTIVES) {
+      expect(xphbLocated.record.remaining[directive]).toBeUndefined();
+    }
+  });
+
+  it("Aarakocra|MPMM has no consumed directives in remaining", () => {
+    const mpmmLocated = findExactRecord(locatedRecords, "race", "Aarakocra", "MPMM");
+    for (const directive of CONSUMED_DIRECTIVES) {
+      expect(mpmmLocated.record.remaining[directive]).toBeUndefined();
+    }
+  });
+
   /* ── Exact representative acceptance ───────────────────────── */
 
   it("Human|PHB is accepted as 2014 ruleset", () => {
-    const phbRecord = findExactRecord(records, "Human", "PHB");
+    const phbLocated = findExactRecord(locatedRecords, "race", "Human", "PHB");
     const result = classifySpeciesSourceScope(
-      { record: phbRecord, entityKind: "race" },
+      { record: phbLocated.record, entityKind: "race" },
       ctx,
     );
     expect(result.ok).toBe(true);
@@ -128,9 +209,9 @@ describe("pinned species source-scope integration", () => {
   });
 
   it("Human|XPHB is accepted as 2024 ruleset", () => {
-    const xphbRecord = findExactRecord(records, "Human", "XPHB");
+    const xphbLocated = findExactRecord(locatedRecords, "race", "Human", "XPHB");
     const result = classifySpeciesSourceScope(
-      { record: xphbRecord, entityKind: "race" },
+      { record: xphbLocated.record, entityKind: "race" },
       ctx,
     );
     expect(result.ok).toBe(true);
@@ -141,10 +222,10 @@ describe("pinned species source-scope integration", () => {
 
   /* ── Optional source rejection ─────────────────────────────── */
 
-  it("Aarakocra|MPMM emits UNSUPPORTED_SPECIES_SOURCE", () => {
-    const mpmmRecord = findExactRecord(records, "Aarakocra", "MPMM");
+  it("Aarakocra|MPMM emits UNSUPPORTED_SPECIES_SOURCE (not UNKNOWN_SOURCE)", () => {
+    const mpmmLocated = findExactRecord(locatedRecords, "race", "Aarakocra", "MPMM");
     const result = classifySpeciesSourceScope(
-      { record: mpmmRecord, entityKind: "race" },
+      { record: mpmmLocated.record, entityKind: "race" },
       ctx,
     );
     expect(result.ok).toBe(false);
@@ -171,8 +252,8 @@ describe("pinned species source-scope integration", () => {
   /* ── Batch classification on pinned records ────────────────── */
 
   it("batch classification on pinned records preserves order and determinism", () => {
-    const humanPhb = findExactRecord(records, "Human", "PHB");
-    const humanXphb = findExactRecord(records, "Human", "XPHB");
+    const humanPhb = findExactRecord(locatedRecords, "race", "Human", "PHB").record;
+    const humanXphb = findExactRecord(locatedRecords, "race", "Human", "XPHB").record;
     const batch = [
       { record: humanPhb, entityKind: "race", recordIndex: 0 },
       { record: humanXphb, entityKind: "race", recordIndex: 1 },

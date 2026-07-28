@@ -216,14 +216,25 @@ function toClassification(
   result: SpeciesSourceScopeSuccess,
   input: SpeciesSourceScopeInput,
 ): SpeciesSourceScopeClassification {
+  if (result.source === "PHB") {
+    return Object.freeze({
+      record: result.record,
+      source: "PHB",
+      ruleset: "2014",
+      sourcePath: input.sourcePath,
+      entityKind: input.entityKind,
+      recordIndex: input.recordIndex,
+    });
+  }
+
   return Object.freeze({
     record: result.record,
-    source: result.source,
-    ruleset: result.ruleset,
+    source: "XPHB",
+    ruleset: "2024",
     sourcePath: input.sourcePath,
     entityKind: input.entityKind,
     recordIndex: input.recordIndex,
-  }) as SpeciesSourceScopeClassification;
+  });
 }
 
 export function classifySpeciesSourceScopeBatch(
