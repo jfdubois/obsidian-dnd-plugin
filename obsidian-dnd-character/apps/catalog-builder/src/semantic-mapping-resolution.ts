@@ -160,12 +160,12 @@ export function resolveSemanticMapping(
 
   // Fingerprint validation (only if entry has a sourceFingerprint)
   if (entry.sourceFingerprint !== undefined) {
-    // Require sourceInput when fingerprint is expected
-    if (context.sourceInput === undefined || context.sourceInput === null) {
+    // Require sourceInput when fingerprint is expected (only undefined is missing)
+    if (context.sourceInput === undefined) {
       diagnostics.push(createDiagnostic({
         code: "INVALID_MAPPING",
         severity: "error",
-        message: `Mapping for "${key.entityId}" field "${key.fieldId}" expects a source fingerprint but no source input was provided.`,
+        message: `Mapping for "${key.entityId}" field "${key.fieldId}" expects a source fingerprint but source input is missing.`,
         entityId: key.entityId,
         ruleset: key.ruleset,
         fieldId: key.fieldId,
@@ -188,7 +188,7 @@ export function resolveSemanticMapping(
     // Compute fingerprint internally
     let actualFingerprint: string;
     try {
-      actualFingerprint = computeSourceFingerprint(context.sourceInput as Readonly<Record<string, unknown>>);
+      actualFingerprint = computeSourceFingerprint(context.sourceInput);
     } catch {
       diagnostics.push(createDiagnostic({
         code: "INVALID_MAPPING",

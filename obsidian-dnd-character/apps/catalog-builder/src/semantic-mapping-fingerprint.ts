@@ -1,5 +1,8 @@
 import { createHash } from "crypto";
 
+/** Tracks objects/arrays currently in the active recursion path for cycle detection. */
+const activeCycleSet = new WeakSet<object>();
+
 /**
  * Validates that a value is a JSON-compatible structured value suitable for
  * fingerprinting. Throws deterministic TypeError for unsupported values.
@@ -44,45 +47,63 @@ function validateFingerprintValue(value: unknown, path: string = "root"): void {
     throw new TypeError(`Unsupported value at "${path}": unexpected type`);
   }
 
-  // Check for non-plain objects
+  // Cycle detection — reject if already in active recursion path
+  if (activeCycleSet.has(value)) {
+    throw new TypeError(`Cyclic reference detected at "${path}"`);
+  }
+
+  // Check for non-plain objects (arrays and null-prototype objects are OK)
   const proto = Object.getPrototypeOf(value);
   if (proto !== Object.prototype && proto !== null) {
-    if (Array.isArray(value)) {
-      // Arrays are handled below
-    } else {
+    if (!Array.isArray(value)) {
       const ctorName = proto.constructor?.name ?? "unknown";
       throw new TypeError(`Unsupported value at "${path}": ${ctorName} instance is not allowed`);
     }
   }
 
-  // Check for accessors and symbol-keyed properties
-  for (const sym of Object.getOwnPropertySymbols(value)) {
-    const desc = Object.getOwnPropertyDescriptor(value, sym);
-    if (desc && (desc.get !== undefined || desc.set !== undefined)) {
-      throw new TypeError(`Unsupported value at "${path}": symbol-keyed accessor is not allowed`);
-    }
-    throw new TypeError(`Unsupported value at "${path}": symbol-keyed property is not allowed`);
-  }
+  activeCycleSet.add(value);
 
-  const ownNames = Object.getOwnPropertyNames(value);
-  for (const name of ownNames) {
-    const desc = Object.getOwnPropertyDescriptor(value, name);
-    if (desc && (desc.get !== undefined || desc.set !== undefined)) {
-      throw new TypeError(`Unsupported value at "${path}.${name}": accessor is not allowed`);
+  try {
+    // Reject symbol-keyed properties
+    for (const _sym of Object.getOwnPropertySymbols(value)) {
+      throw new TypeError(`Unsupported value at "${path}": symbol-keyed property is not allowed`);
     }
-  }
 
-  // Recurse into arrays
-  if (Array.isArray(value)) {
-    for (let i = 0; i < value.length; i++) {
-      validateFingerprintValue(value[i], `${path}[${i}]`);
+    const ownNames = Object.getOwnPropertyNames(value);
+    for (const name of ownNames) {
+      const desc = Object.getOwnPropertyDescriptor(value, name);
+      if (desc && (desc.get !== undefined || desc.set !== undefined)) {
+        throw new TypeError(`Unsupported value at "${path}.${name}": accessor is not allowed`);
+      }
+
+      // Plain objects: reject non-enumerable own string properties
+      if (!Array.isArray(value) && desc && !desc.enumerable) {
+        throw new TypeError(`Unsupported value at "${path}.${name}": non-enumerable property is not allowed`);
+      }
+
+      // Arrays: reject non-enumerable properties except "length"
+      if (Array.isArray(value) && name !== "length" && desc && !desc.enumerable) {
+        throw new TypeError(`Unsupported value at "${path}": non-enumerable array property "${name}" is not allowed`);
+      }
     }
-    return;
-  }
 
-  // Recurse into plain objects
-  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-    validateFingerprintValue(val, `${path}.${key}`);
+    // Recurse into arrays
+    if (Array.isArray(value)) {
+      for (let i = 0; i < value.length; i++) {
+        if (!(i in value)) {
+          throw new TypeError(`Unsupported value at "${path}[${i}]": sparse array hole is not allowed`);
+        }
+        validateFingerprintValue(value[i], `${path}[${i}]`);
+      }
+      return;
+    }
+
+    // Recurse into plain objects
+    for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+      validateFingerprintValue(val, `${path}.${key}`);
+    }
+  } finally {
+    activeCycleSet.delete(value);
   }
 }
 
@@ -136,24 +157,25 @@ function canonicalJson(value: unknown): string {
   }
 
   /* istanbul ignore next */
-  return "null";
+  throw new TypeError(`Unexpected value type in canonicalJson: ${typeof value}`);
 }
 
 /**
- * Computes a deterministic SHA-256 fingerprint from a structured input object.
+ * Computes a deterministic SHA-256 fingerprint from a structured input value.
  * - Validates all values are JSON-compatible structured values
  * - Sorts keys ordinally to be independent of insertion order
  * - Serializes to canonical JSON
  * - Produces 64-char lowercase hex string
  *
- * Accepts: null, strings, booleans, finite numbers, arrays, plain objects
- *          (with Object.prototype or null prototype).
+ * Accepts: null, strings, booleans, finite numbers, arrays of valid values,
+ *          plain objects (with Object.prototype or null prototype) of valid values.
  *
  * Rejects (throws TypeError): undefined, NaN, Infinity, -Infinity, functions,
- * symbols, bigint, accessors, symbol-keyed properties, Date, RegExp, Map, Set,
- * class instances, other non-plain objects, cyclic structures.
+ * symbols, bigint, accessors, symbol-keyed properties, non-enumerable properties,
+ * sparse arrays, Date, RegExp, Map, Set, class instances, other non-plain objects,
+ * cyclic structures.
  */
-export function computeSourceFingerprint(input: Readonly<Record<string, unknown>>): string {
+export function computeSourceFingerprint(input: unknown): string {
   validateFingerprintValue(input);
   const canonical = canonicalJson(input);
   return createHash("sha256").update(canonical, "utf8").digest("hex");

@@ -258,6 +258,44 @@ describe("diagnostics", () => {
   });
 });
 
+describe("null source input resolution", () => {
+  it("null source input resolves when fingerprint matches", () => {
+    const fp = computeSourceFingerprint(null);
+    const e = mkEntry({ sourceFingerprint: fp });
+    const reg = createSemanticMappingRegistry([e]);
+    const r = resolveSemanticMapping(reg, e.key, mkCtx({ sourceInput: null }));
+    expect(r.mapped).toBe(true);
+    expect(r.diagnostics).toEqual([]);
+  });
+
+  it("undefined source input emits INVALID_MAPPING", () => {
+    const fp = computeSourceFingerprint({ name: "fighter" });
+    const e = mkEntry({ sourceFingerprint: fp });
+    const reg = createSemanticMappingRegistry([e]);
+    const r = resolveSemanticMapping(reg, e.key, mkCtx({ sourceInput: undefined }));
+    expect(r.mapped).toBe(false);
+    expect(r.diagnostics[0]).toMatchObject({ code: "INVALID_MAPPING", severity: "error" });
+  });
+
+  it("null vs non-null source input emits STALE_MAPPING", () => {
+    const fp = computeSourceFingerprint(null);
+    const e = mkEntry({ sourceFingerprint: fp });
+    const reg = createSemanticMappingRegistry([e]);
+    const r = resolveSemanticMapping(reg, e.key, mkCtx({ sourceInput: { name: "fighter" } }));
+    expect(r.mapped).toBe(false);
+    expect(r.diagnostics[0]).toMatchObject({ code: "STALE_MAPPING", severity: "error" });
+  });
+
+  it("non-null vs null source input emits STALE_MAPPING", () => {
+    const fp = computeSourceFingerprint({ name: "fighter" });
+    const e = mkEntry({ sourceFingerprint: fp });
+    const reg = createSemanticMappingRegistry([e]);
+    const r = resolveSemanticMapping(reg, e.key, mkCtx({ sourceInput: null }));
+    expect(r.mapped).toBe(false);
+    expect(r.diagnostics[0]).toMatchObject({ code: "STALE_MAPPING", severity: "error" });
+  });
+});
+
 describe("immutability", () => {
   it("registry and entry unchanged", () => {
     const e = mkEntry();

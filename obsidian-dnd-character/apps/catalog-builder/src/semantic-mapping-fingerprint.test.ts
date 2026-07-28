@@ -215,4 +215,137 @@ describe("computeSourceFingerprint", () => {
       expect(() => computeSourceFingerprint({ a: arr })).toThrow();
     });
   });
+
+  describe("root scalar values", () => {
+    it("fingerprints null as root", () => {
+      const fp = computeSourceFingerprint(null);
+      expect(fp).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    it("fingerprints string as root", () => {
+      const fp = computeSourceFingerprint("hello");
+      expect(fp).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    it("fingerprints boolean as root", () => {
+      const fp = computeSourceFingerprint(true);
+      expect(fp).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    it("fingerprints finite number as root", () => {
+      const fp = computeSourceFingerprint(42);
+      expect(fp).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    it("fingerprints array as root", () => {
+      const fp = computeSourceFingerprint([1, 2, 3]);
+      expect(fp).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    it("fingerprints plain object as root", () => {
+      const fp = computeSourceFingerprint({ a: 1, b: 2 });
+      expect(fp).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    it("fingerprints null-prototype object as root", () => {
+      const obj = Object.create(null);
+      obj.a = 1;
+      obj.b = 2;
+      const fp = computeSourceFingerprint(obj);
+      expect(fp).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    it("null vs string 'null' produce distinct hashes", () => {
+      const fpNull = computeSourceFingerprint(null);
+      const fpString = computeSourceFingerprint("null");
+      expect(fpNull).not.toBe(fpString);
+    });
+
+    it("number 1 vs string '1' produce distinct hashes", () => {
+      const fpNum = computeSourceFingerprint(1);
+      const fpStr = computeSourceFingerprint("1");
+      expect(fpNum).not.toBe(fpStr);
+    });
+
+    it("[1,2] vs [2,1] produce distinct hashes", () => {
+      const fp1 = computeSourceFingerprint([1, 2]);
+      const fp2 = computeSourceFingerprint([2, 1]);
+      expect(fp1).not.toBe(fp2);
+    });
+  });
+
+  describe("cycle detection", () => {
+    it("rejects cyclic object with TypeError", () => {
+      const obj: Record<string, unknown> = { a: 1 };
+      obj.self = obj;
+      expect(() => computeSourceFingerprint(obj)).toThrow(TypeError);
+      expect(() => computeSourceFingerprint(obj)).toThrow(/cyclic reference/i);
+    });
+
+    it("rejects cyclic array with TypeError", () => {
+      const arr: unknown[] = [1, 2];
+      arr.push(arr);
+      expect(() => computeSourceFingerprint(arr)).toThrow(TypeError);
+      expect(() => computeSourceFingerprint(arr)).toThrow(/cyclic reference/i);
+    });
+
+    it("rejects mixed object-array cycle with TypeError", () => {
+      const obj: Record<string, unknown> = {};
+      const arr: unknown[] = [obj];
+      obj.arr = arr;
+      expect(() => computeSourceFingerprint(obj)).toThrow(TypeError);
+      expect(() => computeSourceFingerprint(obj)).toThrow(/cyclic reference/i);
+    });
+
+    it("accepts shared non-cyclic reference", () => {
+      const shared = { value: 42 };
+      const obj = { a: shared, b: shared };
+      const fp = computeSourceFingerprint(obj);
+      expect(fp).toMatch(/^[0-9a-f]{64}$/);
+    });
+
+    it("accepts shared non-cyclic array reference", () => {
+      const shared = [1, 2, 3];
+      const obj = { a: shared, b: shared };
+      const fp = computeSourceFingerprint(obj);
+      expect(fp).toMatch(/^[0-9a-f]{64}$/);
+    });
+  });
+
+  describe("property descriptor rejection", () => {
+    it("rejects non-enumerable object property", () => {
+      const obj: Record<string, unknown> = { a: 1 };
+      Object.defineProperty(obj, "hidden", { value: 2, enumerable: false, writable: true, configurable: true });
+      expect(() => computeSourceFingerprint(obj)).toThrow(TypeError);
+      expect(() => computeSourceFingerprint(obj)).toThrow(/non-enumerable/);
+    });
+
+    it("rejects non-enumerable array property", () => {
+      const arr = [1, 2, 3];
+      Object.defineProperty(arr, "meta", { value: "x", enumerable: false, writable: true, configurable: true });
+      expect(() => computeSourceFingerprint(arr)).toThrow(TypeError);
+      expect(() => computeSourceFingerprint(arr)).toThrow(/non-enumerable/);
+    });
+
+    it("rejects sparse array", () => {
+      const arr: number[] = [1];
+      arr[2] = 3;
+      expect(() => computeSourceFingerprint(arr)).toThrow(TypeError);
+      expect(() => computeSourceFingerprint(arr)).toThrow(/sparse/);
+    });
+
+    it("rejects accessor property", () => {
+      const obj: Record<string, unknown> = { a: 1 };
+      Object.defineProperty(obj, "b", { get: () => 2, enumerable: true, configurable: true });
+      expect(() => computeSourceFingerprint(obj)).toThrow(TypeError);
+      expect(() => computeSourceFingerprint(obj)).toThrow(/accessor/);
+    });
+
+    it("rejects symbol-keyed property", () => {
+      const obj: Record<string | symbol, unknown> = { a: 1 };
+      obj[Symbol("sym")] = "value";
+      expect(() => computeSourceFingerprint(obj)).toThrow(TypeError);
+      expect(() => computeSourceFingerprint(obj)).toThrow(/symbol-keyed/);
+    });
+  });
 });
