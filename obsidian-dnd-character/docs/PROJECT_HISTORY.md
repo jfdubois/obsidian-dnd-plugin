@@ -6,6 +6,12 @@ It is historical reference and is not part of normal task or between-task contex
 
 ## Archived work log
 
+2026-07-26 — Prompt 3A-4 — Resolved-record debug fixture location handling
+Summary: Replaced loose first-match source path discovery in resolved-record debug fixtures with strict path-and-entity-kind location. `ResolvedRecordDebugFixtureOptions.sourcePath` and `sourceEntityKind` are now required. Lookup uses exact object identity first, then structured identity within the specified collection. Chain entries carry stored `CopyChainStep` values (`entityKind`, `sourcePath`, `identity`) directly without rediscovery from `RawBoundaryFile`. Terminal base trace sourced from `MaterializedResolvedRecord.terminalBase`. Diagnostic codes `SOURCE_ENTITY_KIND_REQUIRED`, `INVALID_SOURCE_ENTITY_KIND`, and `SOURCE_RECORD_NOT_FOUND` added. All 12 existing tests updated and passing.
+Validation: `npm --prefix obsidian-dnd-character run test -- apps/catalog-builder/src/resolved-record-debug-fixtures.test.ts` passes (12/12 tests, EXIT 0). `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 1679/1679 tests, EXIT 0). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Debug fixtures remain in-memory catalog-builder outputs only. No normalized catalog schemas, canonical ID construction, source-policy semantics, Obsidian API use, semantic mappings, or entity normalizer behavior modified.
+Commit: see Git history for the task or gate ID.
+
 2026-07-27 — PROJECT_STATUS recent-work archive
 Summary: Moved older recent-work entries out of `docs/PROJECT_STATUS.md` to retain only the latest three entries there after final Phase 3 ingestion readiness verification. Displaced entries: Phase 3 structured identity correction; Phase 3 multi-collection corrective follow-up; P4-T004; P4-T003; P4-T002; P4-T001; Phase 3 gate; P3-T012; P3-T011; P3-T010; P3-T009; P3-T008; P3-T007-S5; P3-T007-S4; P3-T007-S3; P3-T007-S2; P3-T006; P3-T005; P2-T013; P2-T012.
 Validation: Historical archive update only; see `docs/PROJECT_STATUS.md` before this commit or Git history for full displaced entry text.
