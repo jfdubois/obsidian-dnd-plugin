@@ -301,22 +301,32 @@ export {
 } from "./projection-defaults";
 
 export {
-  /* Species source scope types */
+  /* Species source inventory types */
   type FrozenReadonlySet,
+  type SpeciesSourceInventoryDiagnostic,
+  type KnownSpeciesSourceInventoryResult,
+  /* Species source inventory functions */
+  collectKnownSpeciesSources,
+} from "./species-source-inventory";
+
+export {
+  /* Species source scope types */
+  type SupportedSpeciesSourceEntry,
+  type SupportedSpeciesSource,
+  type SupportedSpeciesRuleset,
   type SpeciesSourceScopeContext,
   type SpeciesSourceScopeInput,
   type SpeciesParentIdentity,
   type SpeciesSourceScopeDiagnosticCode,
   type SpeciesSourceScopeDiagnostic,
-  type SpeciesSourceInventoryDiagnostic,
-  type KnownSpeciesSourceInventoryResult,
-  type SpeciesSourceScopeClassification,
+  type SpeciesSourceScopeSuccess,
+  type SpeciesSourceScopeFailure,
   type SpeciesSourceScopeResult,
+  type SpeciesSourceScopeClassification,
   type SpeciesSourceScopeBatchResult,
   /* Species source scope registry */
   SUPPORTED_SPECIES_SOURCES,
   /* Species source scope functions */
-  collectKnownSpeciesSources,
   classifySpeciesSourceScope,
   classifySpeciesSourceScopeBatch,
 } from "./species-source-scope";

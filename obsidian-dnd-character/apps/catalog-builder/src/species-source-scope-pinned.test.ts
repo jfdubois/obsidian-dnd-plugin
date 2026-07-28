@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { loadRawJsonFiles } from "./raw-loader";
 import { validateRawBoundary, type RawRecord } from "./raw-boundary";
 import {
-  collectKnownSpeciesSources,
   classifySpeciesSourceScope,
   classifySpeciesSourceScopeBatch,
   type SpeciesSourceScopeContext,
 } from "./species-source-scope";
+import { collectKnownSpeciesSources } from "./species-source-inventory";
 import { pinnedFiveEToolsPath } from "./test-pinned-source-path";
 
 /* ── Pinned species source-scope integration ───────────────────── */
@@ -66,8 +66,6 @@ describe("pinned species source-scope integration", () => {
     if (!result.ok) throw new Error("Expected ok");
     expect(result.source).toBe("PHB");
     expect(result.ruleset).toBe("2014");
-    // Report the representative identity
-    console.log(`PHB representative: ${phbRecord.name} (source: ${phbRecord.source})`);
   });
 
   /* ── XPHB species acceptance ───────────────────────────────── */
@@ -85,8 +83,6 @@ describe("pinned species source-scope integration", () => {
     if (!result.ok) throw new Error("Expected ok");
     expect(result.source).toBe("XPHB");
     expect(result.ruleset).toBe("2024");
-    // Report the representative identity
-    console.log(`XPHB representative: ${xphbRecord.name} (source: ${xphbRecord.source})`);
   });
 
   /* ── Optional source rejection ─────────────────────────────── */
@@ -109,8 +105,6 @@ describe("pinned species source-scope integration", () => {
     expect(result.ok).toBe(false);
     if (result.ok) throw new Error("Expected not ok");
     expect(result.diagnostic.code).toBe("UNSUPPORTED_SPECIES_SOURCE");
-    // Report the representative identity
-    console.log(`Optional representative: ${optionalRecord.name} (source: ${optionalSource})`);
   });
 
   /* ── Fabricated source ─────────────────────────────────────── */

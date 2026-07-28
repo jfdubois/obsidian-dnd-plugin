@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import type { RawRecord } from "./raw-boundary";
 import {
   SUPPORTED_SPECIES_SOURCES,
-  collectKnownSpeciesSources,
   classifySpeciesSourceScope,
 } from "./species-source-scope";
+import { collectKnownSpeciesSources } from "./species-source-inventory";
 
 function rec(source: string, name = "Test Species", rem: Record<string, unknown> = {}): RawRecord {
   return { name, source, remaining: rem };
