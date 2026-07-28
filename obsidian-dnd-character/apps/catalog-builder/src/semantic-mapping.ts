@@ -290,6 +290,18 @@ export interface SemanticMappingDiagnostic {
   readonly sourceFingerprint?: string;
   readonly mappingVersion?: number;
   readonly defaultProjection?: SheetProjection;
+  /** What the mapping entry was created against (entry's stored revision). */
+  readonly expectedSourceRevision?: string;
+  /** The current pinned revision from config. */
+  readonly actualPinnedRevision?: string;
+  /** What the mapping entry's stored fingerprint says. */
+  readonly expectedSourceFingerprint?: string;
+  /** The computed fingerprint from the current source data. */
+  readonly actualSourceFingerprint?: string;
+  /** Source entity kind (collection) of the mapped entity. */
+  readonly entityKind?: string;
+  /** Physical file path of the source entity. */
+  readonly sourcePath?: string;
 }
 
 /* ── Mapping result ─────────────────────────────────────────────── */

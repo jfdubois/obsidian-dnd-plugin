@@ -14,7 +14,9 @@ import {
 import {
   resolveSemanticMapping,
   resolveSemanticMappings,
+  type StaleCheckContext,
 } from "./semantic-mapping-resolution";
+import { computeSourceFingerprint } from "./semantic-mapping-fingerprint";
 
 function makeKey(entityId: string, ruleset: "2014" | "2024", fieldId: string = "proficiencies"): SemanticMappingKey {
   return Object.freeze({ entityId, ruleset, fieldId });
@@ -246,5 +248,249 @@ describe("resolveSemanticMappings", () => {
       code: "UNMAPPED_FIELD",
       fieldId: "senses.darkvision",
     });
+  });
+
+  it("passes staleCheck through to individual resolutions", () => {
+    const entry = makeEntry();
+    const registry = createSemanticMappingRegistry([entry]);
+    const staleCheck: StaleCheckContext = {
+      pinnedRevision: "0000000000000000000000000000000000000000",
+    };
+
+    const result = resolveSemanticMappings(registry, [{ key: entry.key }], staleCheck);
+
+    expect(result.mappedCount).toBe(0);
+    expect(result.allDiagnostics[0]).toMatchObject({
+      code: "STALE_MAPPING",
+      severity: "error",
+    });
+  });
+});
+
+describe("resolveSemanticMapping — stale detection", () => {
+  it("matching revision resolves successfully", () => {
+    const entry = makeEntry();
+    const registry = createSemanticMappingRegistry([entry]);
+    const staleCheck: StaleCheckContext = {
+      pinnedRevision: VALID_REVISION,
+    };
+
+    const result = resolveSemanticMapping(registry, entry.key, staleCheck);
+
+    expect(result.mapped).toBe(true);
+    expect(result.entry).toBe(entry);
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  it("changed revision emits STALE_MAPPING", () => {
+    const entry = makeEntry();
+    const registry = createSemanticMappingRegistry([entry]);
+    const staleCheck: StaleCheckContext = {
+      pinnedRevision: "0000000000000000000000000000000000000000",
+    };
+
+    const result = resolveSemanticMapping(registry, entry.key, staleCheck);
+
+    expect(result.mapped).toBe(false);
+    expect(result.entry).toBeUndefined();
+    expect(result.diagnostics).toHaveLength(1);
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "STALE_MAPPING",
+      severity: "error",
+      entityId: "PHB:fighter",
+      fieldId: "proficiencies",
+      ruleset: "2014",
+    });
+  });
+
+  it("STALE_MAPPING diagnostic includes revision details", () => {
+    const entry = makeEntry();
+    const registry = createSemanticMappingRegistry([entry]);
+    const staleCheck: StaleCheckContext = {
+      pinnedRevision: "0000000000000000000000000000000000000000",
+      entityKind: "class",
+      sourcePath: "data/classes/PHB.json",
+    };
+
+    const result = resolveSemanticMapping(registry, entry.key, staleCheck);
+
+    const diag = result.diagnostics[0];
+    expect(diag?.code).toBe("STALE_MAPPING");
+    expect(diag?.expectedSourceRevision).toBe(VALID_REVISION);
+    expect(diag?.actualPinnedRevision).toBe("0000000000000000000000000000000000000000");
+    expect(diag?.entityKind).toBe("class");
+    expect(diag?.sourcePath).toBe("data/classes/PHB.json");
+    expect(diag?.mappingVersion).toBe(1);
+  });
+
+  it("matching fingerprint resolves successfully", () => {
+    const sourceData = { name: "fighter", source: "PHB", level: 1 };
+    const fingerprint = computeSourceFingerprint(sourceData);
+    const entry = makeEntry({ sourceFingerprint: fingerprint });
+    const registry = createSemanticMappingRegistry([entry]);
+    const staleCheck: StaleCheckContext = {
+      pinnedRevision: VALID_REVISION,
+      sourceFingerprint: fingerprint,
+    };
+
+    const result = resolveSemanticMapping(registry, entry.key, staleCheck);
+
+    expect(result.mapped).toBe(true);
+    expect(result.entry).toBe(entry);
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  it("changed fingerprint emits STALE_MAPPING", () => {
+    const entry = makeEntry({
+      sourceFingerprint: "a".repeat(64),
+    });
+    const registry = createSemanticMappingRegistry([entry]);
+    const staleCheck: StaleCheckContext = {
+      pinnedRevision: VALID_REVISION,
+      sourceFingerprint: "b".repeat(64),
+    };
+
+    const result = resolveSemanticMapping(registry, entry.key, staleCheck);
+
+    expect(result.mapped).toBe(false);
+    expect(result.entry).toBeUndefined();
+    expect(result.diagnostics).toHaveLength(1);
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "STALE_MAPPING",
+      severity: "error",
+    });
+  });
+
+  it("STALE_MAPPING fingerprint diagnostic includes fingerprint details", () => {
+    const entry = makeEntry({
+      sourceFingerprint: "a".repeat(64),
+    });
+    const registry = createSemanticMappingRegistry([entry]);
+    const staleCheck: StaleCheckContext = {
+      pinnedRevision: VALID_REVISION,
+      sourceFingerprint: "b".repeat(64),
+    };
+
+    const result = resolveSemanticMapping(registry, entry.key, staleCheck);
+
+    const diag = result.diagnostics[0];
+    expect(diag?.code).toBe("STALE_MAPPING");
+    expect(diag?.expectedSourceFingerprint).toBe("a".repeat(64));
+    expect(diag?.actualSourceFingerprint).toBe("b".repeat(64));
+  });
+
+  it("fingerprint check is skipped when entry has no fingerprint", () => {
+    const entry = makeEntry(); // no sourceFingerprint
+    const registry = createSemanticMappingRegistry([entry]);
+    const staleCheck: StaleCheckContext = {
+      pinnedRevision: VALID_REVISION,
+      sourceFingerprint: "b".repeat(64),
+    };
+
+    const result = resolveSemanticMapping(registry, entry.key, staleCheck);
+
+    expect(result.mapped).toBe(true);
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  it("fingerprint check is skipped when staleCheck has no fingerprint", () => {
+    const entry = makeEntry({
+      sourceFingerprint: "a".repeat(64),
+    });
+    const registry = createSemanticMappingRegistry([entry]);
+    const staleCheck: StaleCheckContext = {
+      pinnedRevision: VALID_REVISION,
+    };
+
+    const result = resolveSemanticMapping(registry, entry.key, staleCheck);
+
+    expect(result.mapped).toBe(true);
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  it("stale mapping never emits an effect (entry is undefined in result)", () => {
+    const entry = makeEntry();
+    const registry = createSemanticMappingRegistry([entry]);
+    const staleCheck: StaleCheckContext = {
+      pinnedRevision: "0000000000000000000000000000000000000000",
+    };
+
+    const result = resolveSemanticMapping(registry, entry.key, staleCheck);
+
+    expect(result.mapped).toBe(false);
+    expect(result.entry).toBeUndefined();
+  });
+
+  it("backward compatible: no staleCheck skips stale checks", () => {
+    const entry = makeEntry();
+    const registry = createSemanticMappingRegistry([entry]);
+
+    const result = resolveSemanticMapping(registry, entry.key);
+
+    expect(result.mapped).toBe(true);
+    expect(result.entry).toBe(entry);
+    expect(result.diagnostics).toEqual([]);
+  });
+
+  it("input mapping and source data remain unchanged (immutability)", () => {
+    const entry = makeEntry();
+    const registry = createSemanticMappingRegistry([entry]);
+    const key = makeKey("PHB:fighter", "2014", "proficiencies");
+    const staleCheck: StaleCheckContext = {
+      pinnedRevision: "0000000000000000000000000000000000000000",
+    };
+
+    // Capture pre-resolution state
+    const entryRevisionBefore = entry.sourceRevision;
+    const keyEntityBefore = key.entityId;
+
+    resolveSemanticMapping(registry, key, staleCheck);
+
+    // Verify nothing was mutated
+    expect(entry.sourceRevision).toBe(entryRevisionBefore);
+    expect(key.entityId).toBe(keyEntityBefore);
+    expect(Object.isFrozen(entry)).toBe(true);
+  });
+
+  it("malformed mapping emits INVALID_MAPPING", () => {
+    // Create an entry that fails validation by having an invalid source revision
+    const badEntry = {
+      key: makeKey("PHB:fighter", "2014", "proficiencies"),
+      mappingVersion: 1,
+      sourceRevision: "INVALID_REV", // not 40 hex chars
+      effect: makeEffect(),
+      reviewedBy: "test-reviewer",
+      reviewedAt: VALID_TIMESTAMP,
+    } as SemanticMappingEntry;
+    const registry = createSemanticMappingRegistry([badEntry]);
+
+    const result = resolveSemanticMapping(registry, badEntry.key);
+
+    expect(result.mapped).toBe(false);
+    expect(result.diagnostics).toHaveLength(1);
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "INVALID_MAPPING",
+      severity: "error",
+    });
+  });
+
+  it("revision check takes priority over fingerprint check", () => {
+    const sourceData = { name: "fighter", source: "PHB" };
+    const fingerprint = computeSourceFingerprint(sourceData);
+    const entry = makeEntry({ sourceFingerprint: fingerprint });
+    const registry = createSemanticMappingRegistry([entry]);
+    const staleCheck: StaleCheckContext = {
+      pinnedRevision: "0000000000000000000000000000000000000000",
+      sourceFingerprint: fingerprint, // fingerprint matches but revision doesn't
+    };
+
+    const result = resolveSemanticMapping(registry, entry.key, staleCheck);
+
+    expect(result.mapped).toBe(false);
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "STALE_MAPPING",
+    });
+    // The diagnostic should mention revision mismatch, not fingerprint
+    expect(result.diagnostics[0]?.message).toContain("source revision");
   });
 });

@@ -1,5 +1,18 @@
 import type { SemanticMappingKey, SemanticMappingRegistry, SemanticMappingDiagnostic, MappingMethod, SemanticMappingResult } from "./semantic-mapping";
-import { isSemanticMappingKey } from "./semantic-mapping";
+import { isSemanticMappingKey, validateSemanticMappingEntry } from "./semantic-mapping";
+
+/* ── Stale-check context ────────────────────────────────────────── */
+
+export interface StaleCheckContext {
+  /** The current pinned 5eTools revision (40-char lowercase hex). */
+  readonly pinnedRevision: string;
+  /** The computed SHA-256 fingerprint of the current source data. */
+  readonly sourceFingerprint?: string;
+  /** Source entity kind (collection) for diagnostic context. */
+  readonly entityKind?: string;
+  /** Physical file path of the source entity for diagnostic context. */
+  readonly sourcePath?: string;
+}
 
 /* ── Resolution ─────────────────────────────────────────────────── */
 
@@ -16,6 +29,7 @@ function createDiagnostic(
 export function resolveSemanticMapping(
   registry: SemanticMappingRegistry,
   key: SemanticMappingKey,
+  staleCheck?: StaleCheckContext,
 ): SemanticMappingResult {
   const diagnostics: SemanticMappingDiagnostic[] = [];
 
@@ -52,6 +66,80 @@ export function resolveSemanticMapping(
     });
   }
 
+  // Validate the mapping entry before using it
+  const entryDiagnostics = validateSemanticMappingEntry(entry);
+  const hasErrors = entryDiagnostics.some((d) => d.severity === "error");
+  if (hasErrors) {
+    diagnostics.push(createDiagnostic({
+      code: "INVALID_MAPPING",
+      severity: "error",
+      message: `Mapping entry for "${key.entityId}" is invalid: ${entryDiagnostics[0]?.message ?? "unknown error"}.`,
+      entityId: key.entityId,
+      ruleset: key.ruleset,
+      fieldId: key.fieldId,
+      mappingVersion: entry.mappingVersion,
+      sourceRevision: entry.sourceRevision,
+      sourceFingerprint: entry.sourceFingerprint,
+    }));
+    return Object.freeze({
+      mapped: false,
+      mappingMethod: "reviewed-mapping" as MappingMethod,
+      diagnostics: Object.freeze(diagnostics),
+    });
+  }
+
+  // Stale revision check
+  if (staleCheck !== undefined) {
+    if (entry.sourceRevision !== staleCheck.pinnedRevision) {
+      diagnostics.push(createDiagnostic({
+        code: "STALE_MAPPING",
+        severity: "error",
+        message: `Mapping for "${key.entityId}" field "${key.fieldId}" is stale: source revision "${entry.sourceRevision}" does not match pinned revision "${staleCheck.pinnedRevision}".`,
+        entityId: key.entityId,
+        ruleset: key.ruleset,
+        fieldId: key.fieldId,
+        mappingVersion: entry.mappingVersion,
+        sourceRevision: entry.sourceRevision,
+        sourceFingerprint: entry.sourceFingerprint,
+        expectedSourceRevision: entry.sourceRevision,
+        actualPinnedRevision: staleCheck.pinnedRevision,
+        entityKind: staleCheck.entityKind,
+        sourcePath: staleCheck.sourcePath,
+      }));
+      return Object.freeze({
+        mapped: false,
+        mappingMethod: "reviewed-mapping" as MappingMethod,
+        diagnostics: Object.freeze(diagnostics),
+      });
+    }
+
+    // Stale fingerprint check (only if entry has a fingerprint and actual is provided)
+    if (entry.sourceFingerprint !== undefined && staleCheck.sourceFingerprint !== undefined) {
+      if (entry.sourceFingerprint !== staleCheck.sourceFingerprint) {
+        diagnostics.push(createDiagnostic({
+          code: "STALE_MAPPING",
+          severity: "error",
+          message: `Mapping for "${key.entityId}" field "${key.fieldId}" is stale: source fingerprint "${entry.sourceFingerprint}" does not match computed fingerprint "${staleCheck.sourceFingerprint}".`,
+          entityId: key.entityId,
+          ruleset: key.ruleset,
+          fieldId: key.fieldId,
+          mappingVersion: entry.mappingVersion,
+          sourceRevision: entry.sourceRevision,
+          sourceFingerprint: entry.sourceFingerprint,
+          expectedSourceFingerprint: entry.sourceFingerprint,
+          actualSourceFingerprint: staleCheck.sourceFingerprint,
+          entityKind: staleCheck.entityKind,
+          sourcePath: staleCheck.sourcePath,
+        }));
+        return Object.freeze({
+          mapped: false,
+          mappingMethod: "reviewed-mapping" as MappingMethod,
+          diagnostics: Object.freeze(diagnostics),
+        });
+      }
+    }
+  }
+
   return Object.freeze({
     mapped: true,
     entry,
@@ -76,6 +164,7 @@ export interface SemanticMappingBatchResult {
 export function resolveSemanticMappings(
   registry: SemanticMappingRegistry,
   inputs: readonly SemanticMappingBatchInput[],
+  staleCheck?: StaleCheckContext,
 ): SemanticMappingBatchResult {
   const results: SemanticMappingResult[] = [];
   const allDiagnostics: SemanticMappingDiagnostic[] = [];
@@ -83,7 +172,7 @@ export function resolveSemanticMappings(
   let unmappedCount = 0;
 
   for (const input of inputs) {
-    const result = resolveSemanticMapping(registry, input.key);
+    const result = resolveSemanticMapping(registry, input.key, staleCheck);
     results.push(result);
     allDiagnostics.push(...result.diagnostics);
     if (result.mapped) {
