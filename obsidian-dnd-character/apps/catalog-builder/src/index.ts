@@ -258,8 +258,6 @@ export {
   isSemanticMappingKey,
   isSemanticMappingEntry,
   isSemanticMappingRegistry,
-  /* Semantic mapping detection */
-  detectExecutableContent,
   /* Semantic mapping validation */
   validateSemanticMappingEntry,
   validateSemanticMappingRegistry,

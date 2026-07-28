@@ -33,16 +33,17 @@ export function resolveSemanticMapping(
   }
 
   const entry = registry.mappings.find(
-    (m) => m.key.entityId === key.entityId && m.key.ruleset === key.ruleset,
+    (m) => m.key.entityId === key.entityId && m.key.ruleset === key.ruleset && m.key.fieldId === key.fieldId,
   );
 
   if (entry === undefined) {
     diagnostics.push(createDiagnostic({
-      code: "INVALID_MAPPING",
+      code: "UNMAPPED_FIELD",
       severity: "warning",
-      message: `No reviewed semantic mapping exists for entity "${key.entityId}" ruleset "${key.ruleset}".`,
+      message: `No reviewed semantic mapping exists for entity "${key.entityId}" field "${key.fieldId}" ruleset "${key.ruleset}".`,
       entityId: key.entityId,
       ruleset: key.ruleset,
+      fieldId: key.fieldId,
     }));
     return Object.freeze({
       mapped: false,
