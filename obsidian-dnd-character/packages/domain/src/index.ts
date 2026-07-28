@@ -93,3 +93,16 @@ export {
   policyContainsSource,
   queryContextContainsSource,
 } from "./source-policy";
+
+export {
+  /* Canonical entity ID types */
+  type CanonicalEntityKey,
+  type CanonicalEntityIdDiagnostic,
+  type CanonicalEntityIdResult,
+  type CanonicalEntityIdBatchResult,
+  /* Canonical entity ID functions */
+  canonicalSourceId,
+  canonicalEntityNameSegment,
+  createCanonicalEntityId,
+  createCanonicalEntityIds,
+} from "./canonical-entity-id";
