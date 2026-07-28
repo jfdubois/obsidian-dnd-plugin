@@ -74,14 +74,9 @@ export interface SpeciesSourceScopeFailure {
 
 export type SpeciesSourceScopeResult = SpeciesSourceScopeSuccess | SpeciesSourceScopeFailure;
 
-export interface SpeciesSourceScopeClassification {
-  readonly record: RawRecord;
-  readonly source: SupportedSpeciesSource;
-  readonly ruleset: SupportedSpeciesRuleset;
-  readonly sourcePath?: string;
-  readonly entityKind?: string;
-  readonly recordIndex?: number;
-}
+export type SpeciesSourceScopeClassification =
+  | { readonly record: RawRecord; readonly source: "PHB"; readonly ruleset: "2014"; readonly sourcePath?: string; readonly entityKind?: string; readonly recordIndex?: number; }
+  | { readonly record: RawRecord; readonly source: "XPHB"; readonly ruleset: "2024"; readonly sourcePath?: string; readonly entityKind?: string; readonly recordIndex?: number; };
 
 export interface SpeciesSourceScopeBatchResult {
   readonly classifications: readonly SpeciesSourceScopeClassification[];
@@ -217,6 +212,20 @@ export function classifySpeciesSourceScope(
   });
 }
 
+function toClassification(
+  result: SpeciesSourceScopeSuccess,
+  input: SpeciesSourceScopeInput,
+): SpeciesSourceScopeClassification {
+  return Object.freeze({
+    record: result.record,
+    source: result.source,
+    ruleset: result.ruleset,
+    sourcePath: input.sourcePath,
+    entityKind: input.entityKind,
+    recordIndex: input.recordIndex,
+  }) as SpeciesSourceScopeClassification;
+}
+
 export function classifySpeciesSourceScopeBatch(
   inputs: readonly SpeciesSourceScopeInput[],
   context: SpeciesSourceScopeContext,
@@ -233,14 +242,7 @@ export function classifySpeciesSourceScopeBatch(
       continue;
     }
 
-    classifications.push(Object.freeze({
-      record: result.record,
-      source: result.source,
-      ruleset: result.ruleset,
-      sourcePath: input.sourcePath,
-      entityKind: input.entityKind,
-      recordIndex: input.recordIndex,
-    }));
+    classifications.push(toClassification(result, input));
 
     if (!representedRulesets.includes(result.ruleset)) {
       representedRulesets.push(result.ruleset);

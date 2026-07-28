@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RawRecord } from "./raw-boundary";
-import { classifySpeciesSourceScopeBatch } from "./species-source-scope";
+import { classifySpeciesSourceScopeBatch, type SpeciesSourceScopeClassification } from "./species-source-scope";
 
 function rec(source: string, name = "Test Species"): RawRecord {
   return { name, source, remaining: {} };
@@ -214,5 +214,51 @@ describe("batch exclusion", () => {
       "UNKNOWN_SOURCE",
       "UNKNOWN_SOURCE",
     ]);
+  });
+});
+
+/* ── Paired union type compile-time proofs ─────────────────────── */
+
+describe("SpeciesSourceScopeClassification paired union type", () => {
+  it("enforces PHB must pair with 2014 (compile-time)", () => {
+    // Valid: PHB paired with 2014
+    const validPhb: SpeciesSourceScopeClassification = {
+      record: rec("PHB"),
+      source: "PHB",
+      ruleset: "2014",
+    };
+    expect(validPhb.source).toBe("PHB");
+    expect(validPhb.ruleset).toBe("2014");
+  });
+
+  it("enforces XPHB must pair with 2024 (compile-time)", () => {
+    // Valid: XPHB paired with 2024
+    const validXphb: SpeciesSourceScopeClassification = {
+      record: rec("XPHB"),
+      source: "XPHB",
+      ruleset: "2024",
+    };
+    expect(validXphb.source).toBe("XPHB");
+    expect(validXphb.ruleset).toBe("2024");
+  });
+
+  it("rejects PHB paired with 2024 (compile-time)", () => {
+    // @ts-expect-error PHB must pair with 2014, not 2024
+    const _invalid: SpeciesSourceScopeClassification = {
+      record: rec("PHB"),
+      source: "PHB",
+      ruleset: "2024",
+    };
+    expect(_invalid).toBeDefined();
+  });
+
+  it("rejects XPHB paired with 2014 (compile-time)", () => {
+    // @ts-expect-error XPHB must pair with 2024, not 2014
+    const _invalid: SpeciesSourceScopeClassification = {
+      record: rec("XPHB"),
+      source: "XPHB",
+      ruleset: "2014",
+    };
+    expect(_invalid).toBeDefined();
   });
 });
