@@ -1,19 +1,11 @@
 import type { Ruleset } from "@obsidian-dnd/domain";
 import { isRuleset } from "@obsidian-dnd/domain";
-import type { RuleEffectType, SheetProjection } from "@obsidian-dnd/catalog-contract";
-import { isRuleEffectType, isSheetProjection } from "@obsidian-dnd/catalog-contract";
+import type { RuleEffect, RuleEffectType, SheetProjection } from "@obsidian-dnd/catalog-contract";
+import { isRuleEffect, isRuleEffectType, isSheetProjection } from "@obsidian-dnd/catalog-contract";
 
 /* ── Schema version ─────────────────────────────────────────────── */
 
-export const SEMANTIC_MAPPING_SCHEMA_VERSION = 1;
-
-/* ── Mapping version ────────────────────────────────────────────── */
-
-export type MappingVersion = string;
-
-export function isMappingVersion(value: unknown): value is MappingVersion {
-  return typeof value === "string" && value.length > 0;
-}
+export const SEMANTIC_MAPPING_SCHEMA_VERSION = 2;
 
 /* ── Semantic mapping key ───────────────────────────────────────── */
 
@@ -38,24 +30,42 @@ function mappingKeyToString(key: SemanticMappingKey): string {
 
 export interface SemanticMappingEntry {
   readonly key: SemanticMappingKey;
-  readonly version: MappingVersion;
-  readonly rawField: string;
-  readonly targetEffectType: RuleEffectType;
-  readonly defaultProjection: SheetProjection;
+  readonly mappingVersion: number;
+  readonly sourceRevision: string;
+  readonly sourceFingerprint?: string;
+  readonly effect: RuleEffect;
+  readonly defaultProjection?: SheetProjection;
   readonly reviewedBy: string;
   readonly reviewedAt: string;
+}
+
+function hasExecutableValue(obj: Record<string, unknown>): boolean {
+  for (const value of Object.values(obj)) {
+    if (typeof value === "function") return true;
+  }
+  return false;
+}
+
+function isValidTimestamp(ts: string): boolean {
+  const d = new Date(ts);
+  return !isNaN(d.getTime());
 }
 
 export function isSemanticMappingEntry(value: unknown): value is SemanticMappingEntry {
   if (typeof value !== "object" || value === null) return false;
   const obj = value as Record<string, unknown>;
+
+  if (hasExecutableValue(obj)) return false;
   if (!isSemanticMappingKey(obj.key)) return false;
-  if (!isMappingVersion(obj.version)) return false;
-  if (typeof obj.rawField !== "string" || obj.rawField.length === 0) return false;
-  if (!isRuleEffectType(obj.targetEffectType)) return false;
-  if (!isSheetProjection(obj.defaultProjection)) return false;
+  if (typeof obj.mappingVersion !== "number") return false;
+  if (typeof obj.sourceRevision !== "string" || obj.sourceRevision.length === 0) return false;
+  if (obj.sourceFingerprint !== undefined && (typeof obj.sourceFingerprint !== "string" || obj.sourceFingerprint.length === 0)) return false;
+  if (!isRuleEffect(obj.effect)) return false;
+  if (obj.defaultProjection !== undefined && !isSheetProjection(obj.defaultProjection)) return false;
   if (typeof obj.reviewedBy !== "string" || obj.reviewedBy.length === 0) return false;
   if (typeof obj.reviewedAt !== "string" || obj.reviewedAt.length === 0) return false;
+  if (!isValidTimestamp(obj.reviewedAt)) return false;
+
   return true;
 }
 
@@ -77,15 +87,17 @@ export function isSemanticMappingRegistry(value: unknown): value is SemanticMapp
 /* ── Diagnostic codes ───────────────────────────────────────────── */
 
 export type SemanticMappingDiagnosticCode =
-  | "UNMAPPED_FIELD"
   | "INVALID_MAPPING"
   | "STALE_MAPPING"
-  | "DISPLAY_NAME_BRANCH"
   | "EXECUTABLE_CONTENT"
   | "SCHEMA_VERSION_MISMATCH"
   | "DUPLICATE_MAPPING"
-  | "INVALID_EFFECT_TYPE"
-  | "INVALID_PROJECTION";
+  | "INVALID_EFFECT"
+  | "INVALID_PROJECTION"
+  | "INVALID_SOURCE_REVISION"
+  | "INVALID_FINGERPRINT"
+  | "MISSING_REVIEWER"
+  | "INVALID_TIMESTAMP";
 
 /* ── Diagnostic ─────────────────────────────────────────────────── */
 
@@ -95,8 +107,9 @@ export interface SemanticMappingDiagnostic {
   readonly message: string;
   readonly entityId?: string;
   readonly ruleset?: Ruleset;
-  readonly rawField?: string;
-  readonly mappingVersion?: string;
+  readonly sourceRevision?: string;
+  readonly sourceFingerprint?: string;
+  readonly mappingVersion?: number;
   readonly targetEffectType?: RuleEffectType;
   readonly defaultProjection?: SheetProjection;
 }
@@ -114,12 +127,6 @@ export interface SemanticMappingResult {
 
 /* ── Detection helpers ──────────────────────────────────────────── */
 
-const DISPLAY_NAME_PATTERNS = [
-  /\b(name|displayName|display_name|title)\b/i,
-  /\b(name\s*[=:])/i,
-  /\b(display\s*[=:])/i,
-];
-
 const EXECUTABLE_PATTERNS = [
   /\beval\s*\(/i,
   /\bnew\s+Function\b/i,
@@ -132,11 +139,6 @@ const EXECUTABLE_PATTERNS = [
   /<script\b/i,
   /\bon\w+\s*=/i,
 ];
-
-export function detectDisplayNameBranch(entry: SemanticMappingEntry): boolean {
-  const rawField = entry.rawField;
-  return DISPLAY_NAME_PATTERNS.some((pattern) => pattern.test(rawField));
-}
 
 export function detectExecutableContent(rawField: string): boolean {
   return EXECUTABLE_PATTERNS.some((pattern) => pattern.test(rawField));
@@ -156,41 +158,51 @@ function createDiagnostic(
 
 export function validateSemanticMappingEntry(entry: SemanticMappingEntry): readonly SemanticMappingDiagnostic[] {
   const diagnostics: SemanticMappingDiagnostic[] = [];
+  const obj = entry as unknown as Record<string, unknown>;
 
-  if (detectDisplayNameBranch(entry)) {
-    diagnostics.push(createDiagnostic({
-      code: "DISPLAY_NAME_BRANCH",
-      severity: "error",
-      message: `Mapping for entity "${entry.key.entityId}" references a display name in raw field "${entry.rawField}". Display-name branching is prohibited.`,
-      entityId: entry.key.entityId,
-      ruleset: entry.key.ruleset,
-      rawField: entry.rawField,
-    }));
-  }
-
-  if (detectExecutableContent(entry.rawField)) {
+  if (hasExecutableValue(obj)) {
     diagnostics.push(createDiagnostic({
       code: "EXECUTABLE_CONTENT",
       severity: "error",
-      message: `Mapping for entity "${entry.key.entityId}" contains executable content in raw field "${entry.rawField}".`,
+      message: `Mapping for entity "${entry.key.entityId}" contains executable content (function values).`,
       entityId: entry.key.entityId,
       ruleset: entry.key.ruleset,
-      rawField: entry.rawField,
     }));
   }
 
-  if (!isRuleEffectType(entry.targetEffectType)) {
+  if (typeof entry.sourceRevision !== "string" || entry.sourceRevision.length === 0) {
     diagnostics.push(createDiagnostic({
-      code: "INVALID_EFFECT_TYPE",
+      code: "INVALID_SOURCE_REVISION",
       severity: "error",
-      message: `Mapping for entity "${entry.key.entityId}" targets invalid effect type "${entry.targetEffectType}".`,
+      message: `Mapping for entity "${entry.key.entityId}" has invalid source revision.`,
       entityId: entry.key.entityId,
       ruleset: entry.key.ruleset,
-      targetEffectType: entry.targetEffectType,
+      sourceRevision: entry.sourceRevision,
     }));
   }
 
-  if (!isSheetProjection(entry.defaultProjection)) {
+  if (entry.sourceFingerprint !== undefined && (typeof entry.sourceFingerprint !== "string" || entry.sourceFingerprint.length === 0)) {
+    diagnostics.push(createDiagnostic({
+      code: "INVALID_FINGERPRINT",
+      severity: "error",
+      message: `Mapping for entity "${entry.key.entityId}" has invalid source fingerprint.`,
+      entityId: entry.key.entityId,
+      ruleset: entry.key.ruleset,
+      sourceFingerprint: entry.sourceFingerprint,
+    }));
+  }
+
+  if (!isRuleEffect(entry.effect)) {
+    diagnostics.push(createDiagnostic({
+      code: "INVALID_EFFECT",
+      severity: "error",
+      message: `Mapping for entity "${entry.key.entityId}" has invalid effect payload.`,
+      entityId: entry.key.entityId,
+      ruleset: entry.key.ruleset,
+    }));
+  }
+
+  if (entry.defaultProjection !== undefined && !isSheetProjection(entry.defaultProjection)) {
     diagnostics.push(createDiagnostic({
       code: "INVALID_PROJECTION",
       severity: "error",
@@ -198,6 +210,26 @@ export function validateSemanticMappingEntry(entry: SemanticMappingEntry): reado
       entityId: entry.key.entityId,
       ruleset: entry.key.ruleset,
       defaultProjection: entry.defaultProjection,
+    }));
+  }
+
+  if (typeof entry.reviewedBy !== "string" || entry.reviewedBy.length === 0) {
+    diagnostics.push(createDiagnostic({
+      code: "MISSING_REVIEWER",
+      severity: "error",
+      message: `Mapping for entity "${entry.key.entityId}" is missing reviewer information.`,
+      entityId: entry.key.entityId,
+      ruleset: entry.key.ruleset,
+    }));
+  }
+
+  if (typeof entry.reviewedAt !== "string" || entry.reviewedAt.length === 0 || !isValidTimestamp(entry.reviewedAt)) {
+    diagnostics.push(createDiagnostic({
+      code: "INVALID_TIMESTAMP",
+      severity: "error",
+      message: `Mapping for entity "${entry.key.entityId}" has invalid review timestamp "${entry.reviewedAt}".`,
+      entityId: entry.key.entityId,
+      ruleset: entry.key.ruleset,
     }));
   }
 
@@ -222,15 +254,14 @@ export function validateSemanticMappingRegistry(
     const entryDiagnostics = validateSemanticMappingEntry(entry);
     diagnostics.push(...entryDiagnostics);
 
-    const keyStr = mappingKeyToString(entry.key) + ":" + entry.rawField;
+    const keyStr = mappingKeyToString(entry.key);
     if (seenKeys.has(keyStr)) {
       diagnostics.push(createDiagnostic({
         code: "DUPLICATE_MAPPING",
         severity: "warning",
-        message: `Duplicate mapping for entity "${entry.key.entityId}" ruleset "${entry.key.ruleset}" field "${entry.rawField}".`,
+        message: `Duplicate mapping for entity "${entry.key.entityId}" ruleset "${entry.key.ruleset}".`,
         entityId: entry.key.entityId,
         ruleset: entry.key.ruleset,
-        rawField: entry.rawField,
       }));
     }
     seenKeys.add(keyStr);

@@ -1,4 +1,12 @@
 import { describe, expect, it } from "vitest";
+import type { RuleEffect } from "@obsidian-dnd/catalog-contract";
+import {
+  createAddAbilityEffect,
+  createRuleEffectMetadata,
+  createEffectPresentation,
+  createEffectOrigin,
+} from "@obsidian-dnd/catalog-contract";
+import { createEntityId, createSourceId } from "@obsidian-dnd/domain";
 import type { SemanticMappingEntry, SemanticMappingKey } from "./semantic-mapping";
 import {
   createSemanticMappingRegistry,
@@ -12,13 +20,24 @@ function makeKey(entityId: string, ruleset: "2014" | "2024"): SemanticMappingKey
   return Object.freeze({ entityId, ruleset });
 }
 
+function makeEffect(): RuleEffect {
+  return createAddAbilityEffect(
+    createRuleEffectMetadata(
+      "full",
+      createEffectPresentation("abilities", []),
+      createEffectOrigin(createEntityId("PHB:fighter"), createSourceId("phb"), "structured"),
+    ),
+    "STR",
+    1,
+  );
+}
+
 function makeEntry(overrides: Partial<SemanticMappingEntry> = {}): SemanticMappingEntry {
   return Object.freeze({
     key: makeKey("PHB:fighter", "2014"),
-    version: "1.0.0",
-    rawField: "proficiencies",
-    targetEffectType: "add-proficiency",
-    defaultProjection: "proficiencies",
+    mappingVersion: 1,
+    sourceRevision: "abc123",
+    effect: makeEffect(),
     reviewedBy: "test-reviewer",
     reviewedAt: "2024-01-01T00:00:00Z",
     ...overrides,
@@ -27,10 +46,10 @@ function makeEntry(overrides: Partial<SemanticMappingEntry> = {}): SemanticMappi
 
 describe("resolveSemanticMapping", () => {
   it("resolves a matching mapping", () => {
-    const entry = makeEntry({ rawField: "proficiencies" });
+    const entry = makeEntry();
     const registry = createSemanticMappingRegistry([entry]);
 
-    const result = resolveSemanticMapping(registry, entry.key, "proficiencies");
+    const result = resolveSemanticMapping(registry, entry.key);
 
     expect(result.mapped).toBe(true);
     expect(result.mappingMethod).toBe("reviewed-mapping");
@@ -38,48 +57,36 @@ describe("resolveSemanticMapping", () => {
     expect(result.diagnostics).toEqual([]);
   });
 
-  it("returns unmapped diagnostic for non-matching field", () => {
-    const entry = makeEntry({ rawField: "proficiencies" });
+  it("returns unmapped diagnostic for non-matching key", () => {
+    const entry = makeEntry();
     const registry = createSemanticMappingRegistry([entry]);
 
-    const result = resolveSemanticMapping(registry, entry.key, "abilities");
+    const result = resolveSemanticMapping(registry, makeKey("PHB:rogue", "2014"));
 
     expect(result.mapped).toBe(false);
     expect(result.diagnostics).toHaveLength(1);
     expect(result.diagnostics[0]).toMatchObject({
-      code: "UNMAPPED_FIELD",
+      code: "INVALID_MAPPING",
       severity: "warning",
-      rawField: "abilities",
     });
   });
 
   it("returns unmapped diagnostic for non-matching ruleset", () => {
-    const entry = makeEntry({ rawField: "proficiencies" });
+    const entry = makeEntry();
     const registry = createSemanticMappingRegistry([entry]);
 
-    const result = resolveSemanticMapping(registry, makeKey("PHB:fighter", "2024"), "proficiencies");
+    const result = resolveSemanticMapping(registry, makeKey("PHB:fighter", "2024"));
 
     expect(result.mapped).toBe(false);
     expect(result.diagnostics[0]).toMatchObject({
-      code: "UNMAPPED_FIELD",
+      code: "INVALID_MAPPING",
       ruleset: "2024",
     });
   });
 
   it("rejects invalid resolution key", () => {
     const registry = createSemanticMappingRegistry([]);
-    const result = resolveSemanticMapping(registry, {} as SemanticMappingKey, "field");
-
-    expect(result.mapped).toBe(false);
-    expect(result.diagnostics[0]).toMatchObject({
-      code: "INVALID_MAPPING",
-      severity: "error",
-    });
-  });
-
-  it("rejects empty raw field", () => {
-    const registry = createSemanticMappingRegistry([]);
-    const result = resolveSemanticMapping(registry, makeKey("PHB:fighter", "2014"), "");
+    const result = resolveSemanticMapping(registry, {} as SemanticMappingKey);
 
     expect(result.mapped).toBe(false);
     expect(result.diagnostics[0]).toMatchObject({
@@ -91,7 +98,7 @@ describe("resolveSemanticMapping", () => {
   it("returns frozen results", () => {
     const entry = makeEntry();
     const registry = createSemanticMappingRegistry([entry]);
-    const result = resolveSemanticMapping(registry, entry.key, entry.rawField);
+    const result = resolveSemanticMapping(registry, entry.key);
 
     expect(Object.isFrozen(result)).toBe(true);
     expect(Object.isFrozen(result.diagnostics)).toBe(true);
@@ -100,14 +107,14 @@ describe("resolveSemanticMapping", () => {
 
 describe("resolveSemanticMappings", () => {
   it("resolves multiple inputs correctly", () => {
-    const entry1 = makeEntry({ rawField: "proficiencies" });
-    const entry2 = makeEntry({ rawField: "movement", key: makeKey("PHB:barbarian", "2014") });
+    const entry1 = makeEntry();
+    const entry2 = makeEntry({ key: makeKey("PHB:barbarian", "2014") });
     const registry = createSemanticMappingRegistry([entry1, entry2]);
 
     const result = resolveSemanticMappings(registry, [
-      { key: entry1.key, rawField: "proficiencies" },
-      { key: entry2.key, rawField: "movement" },
-      { key: makeKey("PHB:rogue", "2014"), rawField: "stealth" },
+      { key: entry1.key },
+      { key: entry2.key },
+      { key: makeKey("PHB:rogue", "2014") },
     ]);
 
     expect(result.mappedCount).toBe(2);
@@ -115,7 +122,7 @@ describe("resolveSemanticMappings", () => {
     expect(result.results).toHaveLength(3);
     expect(result.allDiagnostics).toHaveLength(1);
     expect(result.allDiagnostics[0]).toMatchObject({
-      code: "UNMAPPED_FIELD",
+      code: "INVALID_MAPPING",
     });
   });
 

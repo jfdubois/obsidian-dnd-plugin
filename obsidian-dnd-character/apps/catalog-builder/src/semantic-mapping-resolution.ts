@@ -16,7 +16,6 @@ function createDiagnostic(
 export function resolveSemanticMapping(
   registry: SemanticMappingRegistry,
   key: SemanticMappingKey,
-  rawField: string,
 ): SemanticMappingResult {
   const diagnostics: SemanticMappingDiagnostic[] = [];
 
@@ -33,31 +32,17 @@ export function resolveSemanticMapping(
     });
   }
 
-  if (typeof rawField !== "string" || rawField.length === 0) {
-    diagnostics.push(createDiagnostic({
-      code: "INVALID_MAPPING",
-      severity: "error",
-      message: "Raw field path must be a non-empty string.",
-    }));
-    return Object.freeze({
-      mapped: false,
-      mappingMethod: "structured" as MappingMethod,
-      diagnostics: Object.freeze(diagnostics),
-    });
-  }
-
   const entry = registry.mappings.find(
-    (m) => m.key.entityId === key.entityId && m.key.ruleset === key.ruleset && m.rawField === rawField,
+    (m) => m.key.entityId === key.entityId && m.key.ruleset === key.ruleset,
   );
 
   if (entry === undefined) {
     diagnostics.push(createDiagnostic({
-      code: "UNMAPPED_FIELD",
+      code: "INVALID_MAPPING",
       severity: "warning",
-      message: `No reviewed semantic mapping exists for entity "${key.entityId}" ruleset "${key.ruleset}" field "${rawField}".`,
+      message: `No reviewed semantic mapping exists for entity "${key.entityId}" ruleset "${key.ruleset}".`,
       entityId: key.entityId,
       ruleset: key.ruleset,
-      rawField,
     }));
     return Object.freeze({
       mapped: false,
@@ -78,7 +63,6 @@ export function resolveSemanticMapping(
 
 export interface SemanticMappingBatchInput {
   readonly key: SemanticMappingKey;
-  readonly rawField: string;
 }
 
 export interface SemanticMappingBatchResult {
@@ -98,7 +82,7 @@ export function resolveSemanticMappings(
   let unmappedCount = 0;
 
   for (const input of inputs) {
-    const result = resolveSemanticMapping(registry, input.key, input.rawField);
+    const result = resolveSemanticMapping(registry, input.key);
     results.push(result);
     allDiagnostics.push(...result.diagnostics);
     if (result.mapped) {

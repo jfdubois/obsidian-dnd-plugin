@@ -245,7 +245,6 @@ export {
 
 export {
   /* Semantic mapping types */
-  type MappingVersion,
   type SemanticMappingKey,
   type SemanticMappingEntry,
   type SemanticMappingRegistry,
@@ -256,12 +255,10 @@ export {
   /* Semantic mapping schema version */
   SEMANTIC_MAPPING_SCHEMA_VERSION,
   /* Semantic mapping guards */
-  isMappingVersion,
   isSemanticMappingKey,
   isSemanticMappingEntry,
   isSemanticMappingRegistry,
   /* Semantic mapping detection */
-  detectDisplayNameBranch,
   detectExecutableContent,
   /* Semantic mapping validation */
   validateSemanticMappingEntry,

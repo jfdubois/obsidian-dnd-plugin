@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest";
-import type { RuleEffectType, SheetProjection } from "@obsidian-dnd/catalog-contract";
+import type { RuleEffect, RuleEffectType, SheetProjection } from "@obsidian-dnd/catalog-contract";
+import {
+  isRuleEffect,
+  createAddAbilityEffect,
+  createRuleEffectMetadata,
+  createEffectPresentation,
+  createEffectOrigin,
+} from "@obsidian-dnd/catalog-contract";
+import { createEntityId, createSourceId } from "@obsidian-dnd/domain";
 import type { SemanticMappingEntry, SemanticMappingKey, SemanticMappingRegistry } from "./semantic-mapping";
 import {
   SEMANTIC_MAPPING_SCHEMA_VERSION,
   createSemanticMappingRegistry,
   validateSemanticMappingEntry,
   validateSemanticMappingRegistry,
-  detectDisplayNameBranch,
   detectExecutableContent,
   isSemanticMappingKey,
   isSemanticMappingEntry,
@@ -17,13 +24,24 @@ function makeKey(entityId: string, ruleset: "2014" | "2024"): SemanticMappingKey
   return Object.freeze({ entityId, ruleset });
 }
 
+function makeEffect(): RuleEffect {
+  return createAddAbilityEffect(
+    createRuleEffectMetadata(
+      "full",
+      createEffectPresentation("abilities", []),
+      createEffectOrigin(createEntityId("PHB:fighter"), createSourceId("phb"), "structured"),
+    ),
+    "STR",
+    1,
+  );
+}
+
 function makeEntry(overrides: Partial<SemanticMappingEntry> = {}): SemanticMappingEntry {
   return Object.freeze({
     key: makeKey("PHB:fighter", "2014"),
-    version: "1.0.0",
-    rawField: "proficiencies",
-    targetEffectType: "add-proficiency",
-    defaultProjection: "proficiencies",
+    mappingVersion: 1,
+    sourceRevision: "abc123",
+    effect: makeEffect(),
     reviewedBy: "test-reviewer",
     reviewedAt: "2024-01-01T00:00:00Z",
     ...overrides,
@@ -31,8 +49,8 @@ function makeEntry(overrides: Partial<SemanticMappingEntry> = {}): SemanticMappi
 }
 
 describe("SEMANTIC_MAPPING_SCHEMA_VERSION", () => {
-  it("is set to 1", () => {
-    expect(SEMANTIC_MAPPING_SCHEMA_VERSION).toBe(1);
+  it("is set to 2", () => {
+    expect(SEMANTIC_MAPPING_SCHEMA_VERSION).toBe(2);
   });
 });
 
@@ -62,16 +80,51 @@ describe("isSemanticMappingEntry", () => {
     expect(isSemanticMappingEntry(makeEntry())).toBe(true);
   });
 
-  it("rejects entries with invalid effect type", () => {
-    expect(isSemanticMappingEntry(makeEntry({ targetEffectType: "invalid-effect" as unknown as RuleEffectType }))).toBe(false);
+  it("accepts entries with optional fields omitted", () => {
+    const entry = makeEntry({ sourceFingerprint: undefined, defaultProjection: undefined });
+    expect(isSemanticMappingEntry(entry)).toBe(true);
+  });
+
+  it("accepts entries with optional fields present", () => {
+    const entry = makeEntry({ sourceFingerprint: "fp-123", defaultProjection: "abilities" });
+    expect(isSemanticMappingEntry(entry)).toBe(true);
+  });
+
+  it("rejects entries with missing effect", () => {
+    expect(isSemanticMappingEntry(makeEntry({ effect: undefined as unknown as RuleEffect }))).toBe(false);
+  });
+
+  it("rejects entries with malformed effect", () => {
+    expect(isSemanticMappingEntry(makeEntry({ effect: {} as unknown as RuleEffect }))).toBe(false);
+  });
+
+  it("rejects entries with invalid source revision", () => {
+    expect(isSemanticMappingEntry(makeEntry({ sourceRevision: "" }))).toBe(false);
+  });
+
+  it("rejects entries with invalid fingerprint format", () => {
+    expect(isSemanticMappingEntry(makeEntry({ sourceFingerprint: "" }))).toBe(false);
   });
 
   it("rejects entries with invalid projection", () => {
     expect(isSemanticMappingEntry(makeEntry({ defaultProjection: "invalid-projection" as unknown as SheetProjection }))).toBe(false);
   });
 
-  it("rejects entries with empty raw field", () => {
-    expect(isSemanticMappingEntry(makeEntry({ rawField: "" }))).toBe(false);
+  it("rejects entries with missing reviewer", () => {
+    expect(isSemanticMappingEntry(makeEntry({ reviewedBy: "" }))).toBe(false);
+  });
+
+  it("rejects entries with invalid review timestamp", () => {
+    expect(isSemanticMappingEntry(makeEntry({ reviewedAt: "not-a-date" }))).toBe(false);
+  });
+
+  it("rejects entries with function values", () => {
+    const entry = makeEntry();
+    expect(isSemanticMappingEntry({ ...entry, extraFn: (() => {}) as unknown as string })).toBe(false);
+  });
+
+  it("rejects entries with string mappingVersion", () => {
+    expect(isSemanticMappingEntry(makeEntry({ mappingVersion: "1.0" as unknown as number }))).toBe(false);
   });
 });
 
@@ -82,7 +135,7 @@ describe("isSemanticMappingRegistry", () => {
   });
 
   it("rejects registries with invalid entries", () => {
-    const invalid = { schemaVersion: 1, mappings: [{}] };
+    const invalid = { schemaVersion: 2, mappings: [{}] };
     expect(isSemanticMappingRegistry(invalid)).toBe(false);
   });
 });
@@ -108,91 +161,48 @@ describe("validateSemanticMappingEntry", () => {
     expect(diagnostics).toEqual([]);
   });
 
-  it("detects display name branching", () => {
-    const diagnostics = validateSemanticMappingEntry(
-      makeEntry({ rawField: "name" }),
-    );
+  it("detects invalid source revision", () => {
+    const diagnostics = validateSemanticMappingEntry(makeEntry({ sourceRevision: "" }));
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({
-      code: "DISPLAY_NAME_BRANCH",
-      severity: "error",
-    });
+    expect(diagnostics[0]).toMatchObject({ code: "INVALID_SOURCE_REVISION", severity: "error" });
   });
 
-  it("detects display name branching with displayName pattern", () => {
-    const diagnostics = validateSemanticMappingEntry(
-      makeEntry({ rawField: "displayName.value" }),
-    );
+  it("detects invalid fingerprint", () => {
+    const diagnostics = validateSemanticMappingEntry(makeEntry({ sourceFingerprint: "" }));
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({
-      code: "DISPLAY_NAME_BRANCH",
-      severity: "error",
-    });
+    expect(diagnostics[0]).toMatchObject({ code: "INVALID_FINGERPRINT", severity: "error" });
   });
 
-  it("detects executable content", () => {
-    const diagnostics = validateSemanticMappingEntry(
-      makeEntry({ rawField: "eval(malicious)" }),
-    );
+  it("detects missing reviewer", () => {
+    const diagnostics = validateSemanticMappingEntry(makeEntry({ reviewedBy: "" }));
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({
-      code: "EXECUTABLE_CONTENT",
-      severity: "error",
-    });
+    expect(diagnostics[0]).toMatchObject({ code: "MISSING_REVIEWER", severity: "error" });
   });
 
-  it("detects new Function pattern", () => {
-    const diagnostics = validateSemanticMappingEntry(
-      makeEntry({ rawField: "new Function('return 1')" }),
-    );
+  it("detects invalid timestamp", () => {
+    const diagnostics = validateSemanticMappingEntry(makeEntry({ reviewedAt: "not-a-date" }));
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({
-      code: "EXECUTABLE_CONTENT",
-      severity: "error",
-    });
-  });
-
-  it("detects script tag pattern", () => {
-    const diagnostics = validateSemanticMappingEntry(
-      makeEntry({ rawField: "<script>alert(1)</script>" }),
-    );
-    expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({
-      code: "EXECUTABLE_CONTENT",
-      severity: "error",
-    });
-  });
-
-  it("detects invalid effect type", () => {
-    const entry = makeEntry({ targetEffectType: "invalid-effect" as unknown as RuleEffectType });
-    const diagnostics = validateSemanticMappingEntry(entry as SemanticMappingEntry);
-    expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({
-      code: "INVALID_EFFECT_TYPE",
-      severity: "error",
-    });
+    expect(diagnostics[0]).toMatchObject({ code: "INVALID_TIMESTAMP", severity: "error" });
   });
 
   it("detects invalid projection", () => {
-    const entry = makeEntry({ defaultProjection: "invalid-projection" as unknown as SheetProjection });
-    const diagnostics = validateSemanticMappingEntry(entry as SemanticMappingEntry);
+    const diagnostics = validateSemanticMappingEntry(
+      makeEntry({ defaultProjection: "invalid-projection" as unknown as SheetProjection }),
+    );
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({
-      code: "INVALID_PROJECTION",
-      severity: "error",
-    });
+    expect(diagnostics[0]).toMatchObject({ code: "INVALID_PROJECTION", severity: "error" });
   });
 
   it("emits multiple diagnostics for compound errors", () => {
-    const entry = makeEntry({
-      rawField: "eval(name)",
-      targetEffectType: "invalid-effect" as unknown as RuleEffectType,
-    });
-    const diagnostics = validateSemanticMappingEntry(entry as SemanticMappingEntry);
+    const diagnostics = validateSemanticMappingEntry(makeEntry({
+      sourceRevision: "",
+      reviewedBy: "",
+      reviewedAt: "not-a-date",
+    }));
     expect(diagnostics).toHaveLength(3);
-    expect(diagnostics.map((d) => d.code)).toContain("DISPLAY_NAME_BRANCH");
-    expect(diagnostics.map((d) => d.code)).toContain("EXECUTABLE_CONTENT");
-    expect(diagnostics.map((d) => d.code)).toContain("INVALID_EFFECT_TYPE");
+    expect(diagnostics.map((d) => d.code)).toContain("INVALID_SOURCE_REVISION");
+    expect(diagnostics.map((d) => d.code)).toContain("MISSING_REVIEWER");
+    expect(diagnostics.map((d) => d.code)).toContain("INVALID_TIMESTAMP");
   });
 });
 
@@ -210,10 +220,7 @@ describe("validateSemanticMappingRegistry", () => {
     });
     const diagnostics = validateSemanticMappingRegistry(registry);
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({
-      code: "SCHEMA_VERSION_MISMATCH",
-      severity: "error",
-    });
+    expect(diagnostics[0]).toMatchObject({ code: "SCHEMA_VERSION_MISMATCH", severity: "error" });
   });
 
   it("detects duplicate mappings", () => {
@@ -221,33 +228,16 @@ describe("validateSemanticMappingRegistry", () => {
     const registry = createSemanticMappingRegistry([entry, entry]);
     const diagnostics = validateSemanticMappingRegistry(registry);
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0]).toMatchObject({
-      code: "DUPLICATE_MAPPING",
-      severity: "warning",
-    });
+    expect(diagnostics[0]).toMatchObject({ code: "DUPLICATE_MAPPING", severity: "warning" });
   });
 
   it("aggregates entry-level diagnostics", () => {
-    const badEntry = makeEntry({ rawField: "eval(name)" });
+    const badEntry = makeEntry({ sourceRevision: "", reviewedBy: "" });
     const registry = createSemanticMappingRegistry([badEntry]);
     const diagnostics = validateSemanticMappingRegistry(registry);
     expect(diagnostics).toHaveLength(2);
-    expect(diagnostics.map((d) => d.code)).toContain("DISPLAY_NAME_BRANCH");
-    expect(diagnostics.map((d) => d.code)).toContain("EXECUTABLE_CONTENT");
-  });
-});
-
-describe("detectDisplayNameBranch", () => {
-  it("detects name patterns", () => {
-    expect(detectDisplayNameBranch(makeEntry({ rawField: "name" }))).toBe(true);
-    expect(detectDisplayNameBranch(makeEntry({ rawField: "displayName" }))).toBe(true);
-    expect(detectDisplayNameBranch(makeEntry({ rawField: "display_name" }))).toBe(true);
-  });
-
-  it("does not flag safe field names", () => {
-    expect(detectDisplayNameBranch(makeEntry({ rawField: "proficiencies" }))).toBe(false);
-    expect(detectDisplayNameBranch(makeEntry({ rawField: "movement.walk" }))).toBe(false);
-    expect(detectDisplayNameBranch(makeEntry({ rawField: "senses.darkvision" }))).toBe(false);
+    expect(diagnostics.map((d) => d.code)).toContain("INVALID_SOURCE_REVISION");
+    expect(diagnostics.map((d) => d.code)).toContain("MISSING_REVIEWER");
   });
 });
 
@@ -272,6 +262,13 @@ describe("detectExecutableContent", () => {
     expect(detectExecutableContent("proficiencies")).toBe(false);
     expect(detectExecutableContent("movement.walk")).toBe(false);
     expect(detectExecutableContent("senses.darkvision")).toBe(false);
-    expect(detectExecutableContent("actions.attack.damage")).toBe(false);
+  });
+});
+
+describe("isRuleEffect integration", () => {
+  it("validates effect payload in entry", () => {
+    const effect = makeEffect();
+    expect(isRuleEffect(effect)).toBe(true);
+    expect(isSemanticMappingEntry(makeEntry({ effect }))).toBe(true);
   });
 });
