@@ -252,6 +252,8 @@ export {
   type SemanticMappingDiagnostic,
   type MappingMethod,
   type SemanticMappingResult,
+  type SemanticMappingSuccess,
+  type SemanticMappingFailure,
   /* Semantic mapping schema version */
   SEMANTIC_MAPPING_SCHEMA_VERSION,
   /* Semantic mapping guards */

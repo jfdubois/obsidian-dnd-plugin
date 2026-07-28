@@ -229,6 +229,16 @@ export function isSemanticMappingEntry(value: unknown): value is SemanticMapping
   // Validate effect
   if (!isRuleEffect(obj.effect)) return false;
 
+  // Validate effect origin method is "reviewed-mapping"
+  const effect = obj.effect as RuleEffect;
+  if (effect.origin !== undefined) {
+    if (effect.origin.method !== "reviewed-mapping") return false;
+    // Validate effect origin entityId matches key entityId
+    if (effect.origin.entityId !== obj.key.entityId) return false;
+  } else {
+    return false;
+  }
+
   // Validate defaultProjection (optional)
   if (obj.defaultProjection !== undefined) {
     if (!isSheetProjection(obj.defaultProjection)) return false;
@@ -308,29 +318,37 @@ export interface SemanticMappingDiagnostic {
 
 export type MappingMethod = "structured" | "reviewed-mapping";
 
-export interface SemanticMappingResult {
-  readonly mapped: boolean;
-  /** Deep-cloned RuleEffect from the mapping entry (only when mapped: true). */
-  readonly materializedEffect?: RuleEffect;
-  /** The mapping key used for the lookup. */
-  readonly mappingKey?: SemanticMappingKey;
-  /** Version of the mapping entry. */
-  readonly mappingVersion?: number;
-  /** Reviewer who approved the mapping. */
-  readonly reviewedBy?: string;
-  /** Timestamp when the mapping was reviewed. */
-  readonly reviewedAt?: string;
-  /** Source revision the mapping was created against. */
-  readonly sourceRevision?: string;
-  /** Source fingerprint if present in the mapping entry. */
+export interface SemanticMappingSuccess {
+  readonly mapped: true;
+  readonly materializedEffect: RuleEffect;
+  readonly mappingKey: SemanticMappingKey;
+  readonly mappingVersion: number;
+  readonly reviewedBy: string;
+  readonly reviewedAt: string;
+  readonly sourceRevision: string;
   readonly sourceFingerprint?: string;
-  /** Default projection if present in the mapping entry. */
   readonly defaultProjection?: SheetProjection;
-  /** Structured source provenance from the effect origin. */
-  readonly effectOrigin?: EffectOrigin;
-  readonly mappingMethod: MappingMethod;
+  readonly effectOrigin: EffectOrigin;
+  readonly mappingMethod: "reviewed-mapping";
   readonly diagnostics: readonly SemanticMappingDiagnostic[];
 }
+
+export interface SemanticMappingFailure {
+  readonly mapped: false;
+  readonly mappingMethod: MappingMethod;
+  readonly diagnostics: readonly SemanticMappingDiagnostic[];
+  readonly materializedEffect?: never;
+  readonly mappingKey?: never;
+  readonly mappingVersion?: never;
+  readonly reviewedBy?: never;
+  readonly reviewedAt?: never;
+  readonly sourceRevision?: never;
+  readonly sourceFingerprint?: never;
+  readonly defaultProjection?: never;
+  readonly effectOrigin?: never;
+}
+
+export type SemanticMappingResult = SemanticMappingSuccess | SemanticMappingFailure;
 
 /* ── Validation ─────────────────────────────────────────────────── */
 
@@ -454,6 +472,31 @@ export function validateSemanticMappingEntry(entry: unknown): readonly SemanticM
         message: "Mapping entry has invalid effect payload.",
         ...keyContext,
       }));
+    } else {
+      const effect = obj.effect as RuleEffect;
+      // Validate effect origin exists
+      if (effect.origin === undefined) {
+        diagnostics.push(createDiagnostic({
+          code: "INVALID_EFFECT",
+          severity: "error",
+          message: "Mapping entry effect is missing origin.",
+          ...keyContext,
+        }));
+      } else if (effect.origin.method !== "reviewed-mapping") {
+        diagnostics.push(createDiagnostic({
+          code: "INVALID_EFFECT",
+          severity: "error",
+          message: `Mapping entry effect origin method "${effect.origin.method}" is not allowed for reviewed mappings. Must be "reviewed-mapping".`,
+          ...keyContext,
+        }));
+      } else if (key && effect.origin.entityId !== key.entityId) {
+        diagnostics.push(createDiagnostic({
+          code: "INVALID_EFFECT",
+          severity: "error",
+          message: `Mapping entry effect origin entityId "${effect.origin.entityId}" does not match key entityId "${key.entityId}".`,
+          ...keyContext,
+        }));
+      }
     }
   } else {
     diagnostics.push(createDiagnostic({

@@ -28,7 +28,7 @@ function makeEffect(): RuleEffect {
     createRuleEffectMetadata(
       "full",
       createEffectPresentation("abilities", []),
-      createEffectOrigin(createEntityId("PHB:fighter"), createSourceId("phb"), "structured"),
+      createEffectOrigin(createEntityId("PHB:fighter"), createSourceId("phb"), "reviewed-mapping"),
     ),
     "STR",
     1,
@@ -338,12 +338,54 @@ describe("isSemanticMappingEntry", () => {
     const badEffect = {
       automationStatus: "full",
       presentation: { primary: "abilities", secondary: [] },
-      origin: { entityId: "PHB:fighter", sourceId: "phb", method: "structured" },
+      origin: { entityId: "PHB:fighter", sourceId: "phb", method: "reviewed-mapping" },
       type: "add-ability",
       ability: "INVALID_ABILITY",
       value: 1,
     };
     expect(isSemanticMappingEntry(makeEntry({ effect: badEffect as unknown as RuleEffect }))).toBe(false);
+  });
+
+  /* ── Origin method enforcement ─────────────────────────────── */
+
+  it("accepts entries with reviewed-mapping origin method", () => {
+    const entry = makeEntry();
+    expect(isSemanticMappingEntry(entry)).toBe(true);
+  });
+
+  it("rejects entries with structured origin method", () => {
+    const structuredEffect = createAddAbilityEffect(
+      createRuleEffectMetadata(
+        "full",
+        createEffectPresentation("abilities", []),
+        createEffectOrigin(createEntityId("PHB:fighter"), createSourceId("phb"), "structured"),
+      ),
+      "STR",
+      1,
+    );
+    expect(isSemanticMappingEntry(makeEntry({ effect: structuredEffect }))).toBe(false);
+  });
+
+  it("rejects entries with missing effect origin", () => {
+    const entry = makeEntry();
+    const effect = entry.effect as unknown as Record<string, unknown>;
+    const effectWithoutOrigin = { ...effect, origin: undefined };
+    expect(isSemanticMappingEntry(makeEntry({ effect: effectWithoutOrigin as unknown as RuleEffect }))).toBe(false);
+  });
+
+  /* ── Origin entity ID match ────────────────────────────────── */
+
+  it("rejects entries where origin entityId does not match key entityId", () => {
+    const mismatchedEffect = createAddAbilityEffect(
+      createRuleEffectMetadata(
+        "full",
+        createEffectPresentation("abilities", []),
+        createEffectOrigin(createEntityId("PHB:barbarian"), createSourceId("phb"), "reviewed-mapping"),
+      ),
+      "STR",
+      1,
+    );
+    expect(isSemanticMappingEntry(makeEntry({ effect: mismatchedEffect }))).toBe(false);
   });
 });
 
@@ -564,6 +606,40 @@ describe("validateSemanticMappingEntry", () => {
     });
     expect(Object.isFrozen(diagnostics)).toBe(true);
     expect(diagnostics.some((d) => d.code === "EXECUTABLE_CONTENT" || d.code === "INVALID_EFFECT")).toBe(true);
+  });
+
+  /* ── Origin method enforcement ─────────────────────────────── */
+
+  it("detects structured origin method as INVALID_EFFECT", () => {
+    const structuredEffect = createAddAbilityEffect(
+      createRuleEffectMetadata(
+        "full",
+        createEffectPresentation("abilities", []),
+        createEffectOrigin(createEntityId("PHB:fighter"), createSourceId("phb"), "structured"),
+      ),
+      "STR",
+      1,
+    );
+    const diagnostics = validateSemanticMappingEntry(makeEntry({ effect: structuredEffect }));
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]).toMatchObject({ code: "INVALID_EFFECT", severity: "error" });
+    expect(diagnostics[0]!.message).toContain("reviewed-mapping");
+  });
+
+  it("detects mismatched origin entityId as INVALID_EFFECT", () => {
+    const mismatchedEffect = createAddAbilityEffect(
+      createRuleEffectMetadata(
+        "full",
+        createEffectPresentation("abilities", []),
+        createEffectOrigin(createEntityId("PHB:barbarian"), createSourceId("phb"), "reviewed-mapping"),
+      ),
+      "STR",
+      1,
+    );
+    const diagnostics = validateSemanticMappingEntry(makeEntry({ effect: mismatchedEffect }));
+    expect(diagnostics).toHaveLength(1);
+    expect(diagnostics[0]).toMatchObject({ code: "INVALID_EFFECT", severity: "error" });
+    expect(diagnostics[0]!.message).toContain("entityId");
   });
 });
 

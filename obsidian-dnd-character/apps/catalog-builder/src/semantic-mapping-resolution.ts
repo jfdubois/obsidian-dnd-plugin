@@ -158,6 +158,8 @@ export function resolveSemanticMapping(
       entityKind: context.entityKind,
       sourcePath: context.sourcePath,
     }));
+    // Push original validation diagnostics so callers can inspect specific error codes
+    diagnostics.push(...entryDiagnostics);
     return Object.freeze({
       mapped: false,
       mappingMethod: "reviewed-mapping" as MappingMethod,
@@ -270,18 +272,25 @@ export function resolveSemanticMapping(
     }
   }
 
+  const materializedEffect = cloneRuleEffect(entry.effect);
+  const clonedKey = Object.freeze({
+    entityId: entry.key.entityId,
+    ruleset: entry.key.ruleset,
+    fieldId: entry.key.fieldId,
+  }) as SemanticMappingKey;
+
   return Object.freeze({
     mapped: true,
-    materializedEffect: cloneRuleEffect(entry.effect),
-    mappingKey: entry.key,
+    materializedEffect,
+    mappingKey: clonedKey,
     mappingVersion: entry.mappingVersion,
     reviewedBy: entry.reviewedBy,
     reviewedAt: entry.reviewedAt,
     sourceRevision: entry.sourceRevision,
     sourceFingerprint: entry.sourceFingerprint,
     defaultProjection: entry.defaultProjection,
-    effectOrigin: extractEffectOrigin(entry.effect),
-    mappingMethod: "reviewed-mapping" as MappingMethod,
+    effectOrigin: extractEffectOrigin(materializedEffect),
+    mappingMethod: "reviewed-mapping",
     diagnostics: Object.freeze([]),
   });
 }

@@ -24,10 +24,10 @@ function mkKey(eid: string, rs: "2014" | "2024" = "2014", fid: string = "profici
   return Object.freeze({ entityId: eid, ruleset: rs, fieldId: fid });
 }
 
-function mkEffect(): RuleEffect {
+function mkEffect(eid: string = "PHB:fighter"): RuleEffect {
   return createAddAbilityEffect(
     createRuleEffectMetadata("full", createEffectPresentation("abilities", []),
-      createEffectOrigin(createEntityId("PHB:fighter"), createSourceId("phb"), "structured")),
+      createEffectOrigin(createEntityId(eid), createSourceId("phb"), "reviewed-mapping")),
     "STR", 1,
   );
 }
@@ -36,9 +36,10 @@ const REV = "3c5d9d3175ca9637132011c75efd73aad7a2364d";
 const TS = "2024-01-01T00:00:00.000Z";
 
 function mkEntry(ov: Partial<SemanticMappingEntry> = {}): SemanticMappingEntry {
+  const key = ov.key ?? mkKey("PHB:fighter");
   return Object.freeze({
-    key: mkKey("PHB:fighter"), mappingVersion: 1, sourceRevision: REV,
-    effect: mkEffect(), reviewedBy: "test", reviewedAt: TS, ...ov,
+    key, mappingVersion: 1, sourceRevision: REV,
+    effect: mkEffect(key.entityId), reviewedBy: "test", reviewedAt: TS, ...ov,
   });
 }
 
@@ -358,11 +359,11 @@ describe("immutability", () => {
 });
 
 describe("materialized effect", () => {
-  function mkMetadata(): ReturnType<typeof createRuleEffectMetadata> {
+  function mkMetadata(eid: string = "PHB:fighter"): ReturnType<typeof createRuleEffectMetadata> {
     return createRuleEffectMetadata(
       "full",
       createEffectPresentation("abilities", []),
-      createEffectOrigin(createEntityId("PHB:fighter"), createSourceId("phb"), "structured"),
+      createEffectOrigin(createEntityId(eid), createSourceId("phb"), "reviewed-mapping"),
     );
   }
 
@@ -390,7 +391,7 @@ describe("materialized effect", () => {
 
   it("immunity effect is deep-cloned and validated", () => {
     const immunity = createDamageImmunity("fire");
-    const effect = createAddImmunityEffect(mkMetadata(), immunity);
+    const effect = createAddImmunityEffect(mkMetadata("PHB:fire-elemental"), immunity);
     const entry = Object.freeze({
       key: mkKey("PHB:fire-elemental"),
       mappingVersion: 1,
@@ -549,5 +550,152 @@ describe("materialized effect", () => {
     const cloned = r.materializedEffect as typeof effect;
     expect(cloned.predicate).not.toBe(effect.predicate);
     expect(cloned.predicate).toEqual(effect.predicate);
+  });
+
+  /* ── Discriminated result contract ─────────────────────────── */
+
+  it("success result has mapped: true with all required fields", () => {
+    const effect = createAddAbilityEffect(mkMetadata(), "STR", 1);
+    const entry = Object.freeze({
+      key: mkKey("PHB:fighter"),
+      mappingVersion: 1,
+      sourceRevision: REV,
+      effect,
+      reviewedBy: "test",
+      reviewedAt: TS,
+    } as SemanticMappingEntry);
+    const reg = createSemanticMappingRegistry([entry]);
+    const r = resolveSemanticMapping(reg, entry.key, mkCtx());
+
+    expect(r.mapped).toBe(true);
+    expect(r.mappingKey).toBeDefined();
+    expect(r.mappingVersion).toBe(1);
+    expect(r.reviewedBy).toBe("test");
+    expect(r.reviewedAt).toBe(TS);
+    expect(r.sourceRevision).toBe(REV);
+    expect(r.effectOrigin).toBeDefined();
+    expect(r.mappingMethod).toBe("reviewed-mapping");
+    expect(r.diagnostics).toEqual([]);
+  });
+
+  it("failure result has mapped: false with no materialized fields", () => {
+    const reg = createSemanticMappingRegistry([]);
+    const r = resolveSemanticMapping(reg, mkKey("PHB:rogue"), mkCtx());
+
+    expect(r.mapped).toBe(false);
+    expect(r.materializedEffect).toBeUndefined();
+    expect(r.mappingKey).toBeUndefined();
+    expect(r.mappingVersion).toBeUndefined();
+    expect(r.effectOrigin).toBeUndefined();
+    expect(r.reviewedBy).toBeUndefined();
+    expect(r.reviewedAt).toBeUndefined();
+    expect(r.sourceRevision).toBeUndefined();
+    expect(r.diagnostics).toHaveLength(1);
+  });
+
+  /* ── Key isolation ─────────────────────────────────────────── */
+
+  it("returned mapping key is frozen", () => {
+    const effect = createAddAbilityEffect(mkMetadata(), "STR", 1);
+    const entry = Object.freeze({
+      key: mkKey("PHB:fighter"),
+      mappingVersion: 1,
+      sourceRevision: REV,
+      effect,
+      reviewedBy: "test",
+      reviewedAt: TS,
+    } as SemanticMappingEntry);
+    const reg = createSemanticMappingRegistry([entry]);
+    const r = resolveSemanticMapping(reg, entry.key, mkCtx());
+
+    expect(r.mapped).toBe(true);
+    expect(Object.isFrozen(r.mappingKey)).toBe(true);
+  });
+
+  it("returned mapping key is not the same object as registry key", () => {
+    const effect = createAddAbilityEffect(mkMetadata(), "STR", 1);
+    const entry = Object.freeze({
+      key: mkKey("PHB:fighter"),
+      mappingVersion: 1,
+      sourceRevision: REV,
+      effect,
+      reviewedBy: "test",
+      reviewedAt: TS,
+    } as SemanticMappingEntry);
+    const reg = createSemanticMappingRegistry([entry]);
+    const r = resolveSemanticMapping(reg, entry.key, mkCtx());
+
+    expect(r.mapped).toBe(true);
+    expect(r.mappingKey).not.toBe(entry.key);
+    expect(r.mappingKey).toEqual(entry.key);
+  });
+
+  /* ── Origin consistency ────────────────────────────────────── */
+
+  it("effectOrigin matches materializedEffect origin", () => {
+    const effect = createAddAbilityEffect(mkMetadata(), "STR", 1);
+    const entry = Object.freeze({
+      key: mkKey("PHB:fighter"),
+      mappingVersion: 1,
+      sourceRevision: REV,
+      effect,
+      reviewedBy: "test",
+      reviewedAt: TS,
+    } as SemanticMappingEntry);
+    const reg = createSemanticMappingRegistry([entry]);
+    const r = resolveSemanticMapping(reg, entry.key, mkCtx());
+
+    expect(r.mapped).toBe(true);
+    expect(r.effectOrigin).toEqual(r.materializedEffect!.origin);
+  });
+
+  it("rejects entry with structured origin method during resolution", () => {
+    const structuredEffect = createAddAbilityEffect(
+      createRuleEffectMetadata(
+        "full",
+        createEffectPresentation("abilities", []),
+        createEffectOrigin(createEntityId("PHB:fighter"), createSourceId("phb"), "structured"),
+      ),
+      "STR",
+      1,
+    );
+    const entry = Object.freeze({
+      key: mkKey("PHB:fighter"),
+      mappingVersion: 1,
+      sourceRevision: REV,
+      effect: structuredEffect,
+      reviewedBy: "test",
+      reviewedAt: TS,
+    } as SemanticMappingEntry);
+    const reg = createSemanticMappingRegistry([entry]);
+    const r = resolveSemanticMapping(reg, entry.key, mkCtx());
+
+    expect(r.mapped).toBe(false);
+    expect(r.diagnostics.some((d) => d.code === "INVALID_EFFECT")).toBe(true);
+  });
+
+  it("rejects entry with mismatched origin entityId during resolution", () => {
+    const mismatchedEffect = createAddAbilityEffect(
+      createRuleEffectMetadata(
+        "full",
+        createEffectPresentation("abilities", []),
+        createEffectOrigin(createEntityId("PHB:barbarian"), createSourceId("phb"), "reviewed-mapping"),
+      ),
+      "STR",
+      1,
+    );
+    const entry = Object.freeze({
+      key: mkKey("PHB:fighter"),
+      mappingVersion: 1,
+      sourceRevision: REV,
+      effect: mismatchedEffect,
+      reviewedBy: "test",
+      reviewedAt: TS,
+    } as SemanticMappingEntry);
+    const reg = createSemanticMappingRegistry([entry]);
+    const r = resolveSemanticMapping(reg, entry.key, mkCtx());
+
+    expect(r.mapped).toBe(false);
+    expect(r.diagnostics.some((d) => d.code === "INVALID_EFFECT")).toBe(true);
   });
 });
