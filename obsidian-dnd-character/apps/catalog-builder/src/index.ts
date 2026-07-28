@@ -302,10 +302,14 @@ export {
 
 export {
   /* Species source scope types */
+  type FrozenReadonlySet,
   type SpeciesSourceScopeContext,
   type SpeciesSourceScopeInput,
+  type SpeciesParentIdentity,
   type SpeciesSourceScopeDiagnosticCode,
   type SpeciesSourceScopeDiagnostic,
+  type SpeciesSourceInventoryDiagnostic,
+  type KnownSpeciesSourceInventoryResult,
   type SpeciesSourceScopeClassification,
   type SpeciesSourceScopeResult,
   type SpeciesSourceScopeBatchResult,

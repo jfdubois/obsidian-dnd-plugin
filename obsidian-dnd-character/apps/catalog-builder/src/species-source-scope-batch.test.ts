@@ -7,7 +7,7 @@ function rec(source: string, name = "Test Species"): RawRecord {
 }
 
 const ctx = {
-  knownPinnedSources: Object.freeze(new Set(["MPMM", "VGM", "EEPC", "PHB", "XPHB"])),
+  knownPinnedSources: new Set(["MPMM", "VGM", "EEPC", "PHB", "XPHB"]),
 };
 
 /* ── Batch classification ──────────────────────────────────────── */
@@ -125,5 +125,94 @@ describe("batch immutability and freezing", () => {
   it("diagnostic objects are frozen", () => {
     const r = classifySpeciesSourceScopeBatch([{ record: rec("MPMM") }], ctx);
     expect(Object.isFrozen(r.diagnostics[0])).toBe(true);
+  });
+
+  it("each classification wrapper is frozen", () => {
+    const r = classifySpeciesSourceScopeBatch([{ record: rec("PHB") }], ctx);
+    expect(Object.isFrozen(r.classifications[0])).toBe(true);
+  });
+});
+
+/* ── Parent identity in batch ──────────────────────────────────── */
+
+describe("batch parent identity", () => {
+  it("failure diagnostics retain parent identity", () => {
+    const r = classifySpeciesSourceScopeBatch(
+      [
+        {
+          record: { name: "Hill Dwarf", source: "MPMM", remaining: {} },
+          parentIdentity: { name: "Dwarf", source: "PHB" },
+        },
+      ],
+      ctx,
+    );
+    expect(r.diagnostics).toHaveLength(1);
+    expect(r.diagnostics[0]?.recordIdentity.parent).toEqual({ name: "Dwarf", source: "PHB" });
+  });
+
+  it("inventory diagnostics remain separate from classification diagnostics", () => {
+    // Batch classification diagnostics are about scope classification,
+    // not about inventory collection.
+    const r = classifySpeciesSourceScopeBatch(
+      [
+        { record: rec("MPMM") },
+        { record: rec("PHB") },
+      ],
+      ctx,
+    );
+    // Classification diagnostics only include the MPMM failure
+    expect(r.diagnostics).toHaveLength(1);
+    expect(r.diagnostics[0]?.code).toBe("UNSUPPORTED_SPECIES_SOURCE");
+    // Classifications only include the PHB success
+    expect(r.classifications).toHaveLength(1);
+    expect(r.classifications[0]?.source).toBe("PHB");
+  });
+
+  it("represented rulesets remain deterministic", () => {
+    const r = classifySpeciesSourceScopeBatch(
+      [
+        { record: rec("XPHB"), recordIndex: 0 },
+        { record: rec("PHB"), recordIndex: 1 },
+        { record: rec("PHB"), recordIndex: 2 },
+      ],
+      ctx,
+    );
+    expect(r.representedRulesets).toEqual(["2024", "2014"]);
+  });
+});
+
+/* ── Unsupported and unknown exclusion ─────────────────────────── */
+
+describe("batch exclusion", () => {
+  it("unsupported records remain excluded", () => {
+    const r = classifySpeciesSourceScopeBatch(
+      [
+        { record: rec("MPMM"), recordIndex: 0 },
+        { record: rec("VGM"), recordIndex: 1 },
+      ],
+      ctx,
+    );
+    expect(r.classifications).toHaveLength(0);
+    expect(r.diagnostics).toHaveLength(2);
+    expect(r.diagnostics.map((d) => d.code)).toEqual([
+      "UNSUPPORTED_SPECIES_SOURCE",
+      "UNSUPPORTED_SPECIES_SOURCE",
+    ]);
+  });
+
+  it("unknown records remain excluded", () => {
+    const r = classifySpeciesSourceScopeBatch(
+      [
+        { record: rec("TST"), recordIndex: 0 },
+        { record: rec("FAKE"), recordIndex: 1 },
+      ],
+      ctx,
+    );
+    expect(r.classifications).toHaveLength(0);
+    expect(r.diagnostics).toHaveLength(2);
+    expect(r.diagnostics.map((d) => d.code)).toEqual([
+      "UNKNOWN_SOURCE",
+      "UNKNOWN_SOURCE",
+    ]);
   });
 });
