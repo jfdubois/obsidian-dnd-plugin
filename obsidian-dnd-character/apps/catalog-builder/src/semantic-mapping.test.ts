@@ -89,6 +89,45 @@ describe("isSemanticMappingKey", () => {
     expect(isSemanticMappingKey(undefined)).toBe(false);
     expect(isSemanticMappingKey("PHB:fighter")).toBe(false);
   });
+
+  it("rejects keys with extra property", () => {
+    expect(isSemanticMappingKey({ entityId: "PHB:fighter", ruleset: "2014", fieldId: "proficiencies", extra: "bad" })).toBe(false);
+  });
+
+  it("rejects whitespace-only entity ID", () => {
+    expect(isSemanticMappingKey({ entityId: "   ", ruleset: "2014", fieldId: "proficiencies" })).toBe(false);
+  });
+
+  it("rejects whitespace-only field ID", () => {
+    expect(isSemanticMappingKey({ entityId: "PHB:fighter", ruleset: "2014", fieldId: "   " })).toBe(false);
+  });
+
+  it("rejects padded entity ID", () => {
+    expect(isSemanticMappingKey({ entityId: " PHB:fighter ", ruleset: "2014", fieldId: "proficiencies" })).toBe(false);
+  });
+
+  it("rejects padded field ID", () => {
+    expect(isSemanticMappingKey({ entityId: "PHB:fighter", ruleset: "2014", fieldId: " proficiencies " })).toBe(false);
+  });
+
+  it("rejects accessor", () => {
+    const obj = { entityId: "PHB:fighter", ruleset: "2014" as const, fieldId: "proficiencies" };
+    Object.defineProperty(obj, "entityId", { get: () => "PHB:fighter", enumerable: true, configurable: true });
+    expect(isSemanticMappingKey(obj)).toBe(false);
+  });
+
+  it("rejects array", () => {
+    expect(isSemanticMappingKey(["PHB:fighter", "2014", "proficiencies"])).toBe(false);
+  });
+
+  it("rejects non-plain object", () => {
+    class CustomKey {
+      entityId = "PHB:fighter";
+      ruleset = "2014" as const;
+      fieldId = "proficiencies";
+    }
+    expect(isSemanticMappingKey(new CustomKey())).toBe(false);
+  });
 });
 
 /* ── Entry guard ────────────────────────────────────────────────── */
@@ -422,6 +461,109 @@ describe("validateSemanticMappingEntry", () => {
     const entry = makeEntry({ key: makeKey("PHB:fighter", "2014", "movement.walk") });
     const diagnostics = validateSemanticMappingEntry({ ...entry, sourceRevision: "" });
     expect(diagnostics[0]).toMatchObject({ fieldId: "movement.walk" });
+  });
+
+  /* ── Safety: never throws for unknown input ───────────────── */
+
+  it("does not throw for null", () => {
+    expect(() => validateSemanticMappingEntry(null)).not.toThrow();
+    const diagnostics = validateSemanticMappingEntry(null);
+    expect(Object.isFrozen(diagnostics)).toBe(true);
+    expect(diagnostics[0]).toMatchObject({ code: "INVALID_MAPPING", severity: "error" });
+  });
+
+  it("does not throw for undefined", () => {
+    expect(() => validateSemanticMappingEntry(undefined)).not.toThrow();
+    const diagnostics = validateSemanticMappingEntry(undefined);
+    expect(Object.isFrozen(diagnostics)).toBe(true);
+    expect(diagnostics[0]).toMatchObject({ code: "INVALID_MAPPING", severity: "error" });
+  });
+
+  it("does not throw for string primitive", () => {
+    expect(() => validateSemanticMappingEntry("not-an-entry")).not.toThrow();
+    const diagnostics = validateSemanticMappingEntry("not-an-entry");
+    expect(Object.isFrozen(diagnostics)).toBe(true);
+    expect(diagnostics[0]).toMatchObject({ code: "INVALID_MAPPING", severity: "error" });
+  });
+
+  it("does not throw for empty object", () => {
+    expect(() => validateSemanticMappingEntry({})).not.toThrow();
+    const diagnostics = validateSemanticMappingEntry({});
+    expect(Object.isFrozen(diagnostics)).toBe(true);
+    expect(diagnostics.some((d) => d.code === "INVALID_MAPPING")).toBe(true);
+  });
+
+  it("does not throw for missing key", () => {
+    expect(() => validateSemanticMappingEntry({ mappingVersion: 1 })).not.toThrow();
+    const diagnostics = validateSemanticMappingEntry({ mappingVersion: 1 });
+    expect(Object.isFrozen(diagnostics)).toBe(true);
+    expect(diagnostics.some((d) => d.code === "INVALID_MAPPING")).toBe(true);
+  });
+
+  it("does not throw for malformed key", () => {
+    expect(() => validateSemanticMappingEntry({ key: { entityId: "", ruleset: "2014", fieldId: "proficiencies" } })).not.toThrow();
+    const diagnostics = validateSemanticMappingEntry({ key: { entityId: "", ruleset: "2014", fieldId: "proficiencies" } });
+    expect(Object.isFrozen(diagnostics)).toBe(true);
+    expect(diagnostics.some((d) => d.code === "INVALID_MAPPING")).toBe(true);
+  });
+
+  it("does not throw for key with extra property", () => {
+    expect(() => validateSemanticMappingEntry({
+      key: { entityId: "PHB:fighter", ruleset: "2014", fieldId: "proficiencies", extra: "bad" },
+    })).not.toThrow();
+    const diagnostics = validateSemanticMappingEntry({
+      key: { entityId: "PHB:fighter", ruleset: "2014", fieldId: "proficiencies", extra: "bad" },
+    });
+    expect(Object.isFrozen(diagnostics)).toBe(true);
+    expect(diagnostics.some((d) => d.code === "INVALID_MAPPING")).toBe(true);
+  });
+
+  it("does not throw for missing effect", () => {
+    expect(() => validateSemanticMappingEntry({
+      key: makeKey("PHB:fighter", "2014"),
+      mappingVersion: 1,
+      sourceRevision: VALID_REVISION,
+      reviewedBy: "test-reviewer",
+      reviewedAt: VALID_TIMESTAMP,
+    })).not.toThrow();
+    const diagnostics = validateSemanticMappingEntry({
+      key: makeKey("PHB:fighter", "2014"),
+      mappingVersion: 1,
+      sourceRevision: VALID_REVISION,
+      reviewedBy: "test-reviewer",
+      reviewedAt: VALID_TIMESTAMP,
+    });
+    expect(Object.isFrozen(diagnostics)).toBe(true);
+    expect(diagnostics.some((d) => d.code === "INVALID_EFFECT")).toBe(true);
+  });
+
+  it("does not throw for unknown top-level property", () => {
+    const entry = makeEntry();
+    expect(() => validateSemanticMappingEntry({ ...entry, unknownProp: "value" })).not.toThrow();
+    const diagnostics = validateSemanticMappingEntry({ ...entry, unknownProp: "value" });
+    expect(Object.isFrozen(diagnostics)).toBe(true);
+    expect(diagnostics.some((d) => d.code === "INVALID_MAPPING")).toBe(true);
+  });
+
+  it("does not throw for nested function", () => {
+    expect(() => validateSemanticMappingEntry({
+      key: makeKey("PHB:fighter", "2014"),
+      mappingVersion: 1,
+      sourceRevision: VALID_REVISION,
+      effect: { type: "add-ability", ability: "STR", value: 1, metadata: { fn: () => {} } },
+      reviewedBy: "test-reviewer",
+      reviewedAt: VALID_TIMESTAMP,
+    })).not.toThrow();
+    const diagnostics = validateSemanticMappingEntry({
+      key: makeKey("PHB:fighter", "2014"),
+      mappingVersion: 1,
+      sourceRevision: VALID_REVISION,
+      effect: { type: "add-ability", ability: "STR", value: 1, metadata: { fn: () => {} } },
+      reviewedBy: "test-reviewer",
+      reviewedAt: VALID_TIMESTAMP,
+    });
+    expect(Object.isFrozen(diagnostics)).toBe(true);
+    expect(diagnostics.some((d) => d.code === "EXECUTABLE_CONTENT" || d.code === "INVALID_EFFECT")).toBe(true);
   });
 });
 

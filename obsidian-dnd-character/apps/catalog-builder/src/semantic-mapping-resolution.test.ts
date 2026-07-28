@@ -125,6 +125,63 @@ describe("resolveSemanticMapping", () => {
     });
   });
 
+  it("emits INVALID_MAPPING for key with extra property", () => {
+    const registry = createSemanticMappingRegistry([]);
+    const result = resolveSemanticMapping(registry, {
+      entityId: "PHB:fighter",
+      ruleset: "2014",
+      fieldId: "proficiencies",
+      extra: "bad",
+    } as SemanticMappingKey);
+
+    expect(result.mapped).toBe(false);
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "INVALID_MAPPING",
+      severity: "error",
+    });
+  });
+
+  it("emits INVALID_MAPPING for padded field ID", () => {
+    const registry = createSemanticMappingRegistry([]);
+    const result = resolveSemanticMapping(registry, {
+      entityId: "PHB:fighter",
+      ruleset: "2014",
+      fieldId: " proficiencies ",
+    } as SemanticMappingKey);
+
+    expect(result.mapped).toBe(false);
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "INVALID_MAPPING",
+      severity: "error",
+    });
+  });
+
+  it("emits INVALID_MAPPING for whitespace-only entity ID", () => {
+    const registry = createSemanticMappingRegistry([]);
+    const result = resolveSemanticMapping(registry, {
+      entityId: "   ",
+      ruleset: "2014",
+      fieldId: "proficiencies",
+    } as SemanticMappingKey);
+
+    expect(result.mapped).toBe(false);
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "INVALID_MAPPING",
+      severity: "error",
+    });
+  });
+
+  it("emits UNMAPPED_FIELD for valid unmatched key", () => {
+    const registry = createSemanticMappingRegistry([]);
+    const result = resolveSemanticMapping(registry, makeKey("PHB:rogue", "2014", "proficiencies"));
+
+    expect(result.mapped).toBe(false);
+    expect(result.diagnostics[0]).toMatchObject({
+      code: "UNMAPPED_FIELD",
+      severity: "warning",
+    });
+  });
+
   it("returns frozen results", () => {
     const entry = makeEntry();
     const registry = createSemanticMappingRegistry([entry]);

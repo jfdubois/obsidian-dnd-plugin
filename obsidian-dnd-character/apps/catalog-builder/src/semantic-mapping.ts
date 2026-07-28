@@ -16,11 +16,45 @@ export interface SemanticMappingKey {
 }
 
 export function isSemanticMappingKey(value: unknown): value is SemanticMappingKey {
-  if (typeof value !== "object" || value === null) return false;
+  // Reject non-objects, null, and arrays
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+
+  // Reject non-plain objects
+  const proto = Object.getPrototypeOf(value);
+  if (proto !== Object.prototype && proto !== null) return false;
+
+  // Reject symbol properties
+  if (Object.getOwnPropertySymbols(value).length > 0) return false;
+
+  // Check for accessors on own properties
+  const ownNames = Object.getOwnPropertyNames(value);
+  for (const name of ownNames) {
+    const desc = Object.getOwnPropertyDescriptor(value, name);
+    if (desc && (desc.get !== undefined || desc.set !== undefined)) return false;
+  }
+
   const obj = value as Record<string, unknown>;
-  if (typeof obj.entityId !== "string" || obj.entityId.length === 0) return false;
+
+  // Exact shape: reject unknown properties
+  for (const k of ownNames) {
+    if (!ALLOWED_KEY_KEYS.has(k)) return false;
+  }
+
+  // Validate entityId: non-empty string, trimmed, not whitespace-only
+  if (typeof obj.entityId !== "string") return false;
+  if (obj.entityId.length === 0) return false;
+  if (!/\S/.test(obj.entityId)) return false;
+  if (obj.entityId !== obj.entityId.trim()) return false;
+
+  // Validate ruleset
   if (!isRuleset(obj.ruleset)) return false;
-  if (typeof obj.fieldId !== "string" || obj.fieldId.length === 0) return false;
+
+  // Validate fieldId: non-empty string, trimmed, not whitespace-only
+  if (typeof obj.fieldId !== "string") return false;
+  if (obj.fieldId.length === 0) return false;
+  if (!/\S/.test(obj.fieldId)) return false;
+  if (obj.fieldId !== obj.fieldId.trim()) return false;
+
   return true;
 }
 
@@ -281,9 +315,176 @@ function createDiagnostic(
   return Object.freeze(overrides);
 }
 
-export function validateSemanticMappingEntry(entry: SemanticMappingEntry): readonly SemanticMappingDiagnostic[] {
+export function validateSemanticMappingEntry(entry: unknown): readonly SemanticMappingDiagnostic[] {
   const diagnostics: SemanticMappingDiagnostic[] = [];
-  const obj = entry as unknown as Record<string, unknown>;
+
+  // 1. Check that the value is an object
+  if (typeof entry !== "object" || entry === null) {
+    diagnostics.push(createDiagnostic({
+      code: "INVALID_MAPPING",
+      severity: "error",
+      message: "Mapping entry is not a valid object.",
+    }));
+    return Object.freeze(diagnostics);
+  }
+
+  const obj = entry as Record<string, unknown>;
+
+  // 2. Check for unknown top-level properties
+  const unknownProps: string[] = [];
+  for (const k of Object.keys(obj)) {
+    if (!ALLOWED_ENTRY_KEYS.has(k)) {
+      unknownProps.push(k);
+    }
+  }
+  if (unknownProps.length > 0) {
+    diagnostics.push(createDiagnostic({
+      code: "INVALID_MAPPING",
+      severity: "error",
+      message: `Mapping entry has unknown top-level properties: ${unknownProps.join(", ")}.`,
+    }));
+  }
+
+  // 3. Check that key exists and is a valid exact SemanticMappingKey
+  const keyValid = isSemanticMappingKey(obj.key);
+  if (!keyValid) {
+    diagnostics.push(createDiagnostic({
+      code: "INVALID_MAPPING",
+      severity: "error",
+      message: "Mapping entry has an invalid or missing key.",
+    }));
+  }
+
+  // Helper: safely access key fields for diagnostic context
+  const key = keyValid ? (obj.key as SemanticMappingKey) : undefined;
+  const keyContext: { entityId?: string; ruleset?: Ruleset; fieldId?: string } = key
+    ? { entityId: key.entityId, ruleset: key.ruleset, fieldId: key.fieldId }
+    : {};
+
+  // 4. Continue validating all safely accessible fields
+
+  // Mapping version validation
+  if (obj.mappingVersion !== undefined) {
+    if (!isValidMappingVersion(obj.mappingVersion)) {
+      diagnostics.push(createDiagnostic({
+        code: "INVALID_MAPPING",
+        severity: "error",
+        message: `Mapping entry has invalid mapping version "${obj.mappingVersion}".`,
+        ...keyContext,
+        mappingVersion: obj.mappingVersion as number,
+      }));
+    }
+  } else {
+    diagnostics.push(createDiagnostic({
+      code: "INVALID_MAPPING",
+      severity: "error",
+      message: "Mapping entry is missing mappingVersion.",
+      ...keyContext,
+    }));
+  }
+
+  // Source revision validation
+  if (obj.sourceRevision !== undefined) {
+    if (typeof obj.sourceRevision !== "string" || !isValidSourceRevision(obj.sourceRevision)) {
+      diagnostics.push(createDiagnostic({
+        code: "INVALID_SOURCE_REVISION",
+        severity: "error",
+        message: `Mapping entry has invalid source revision "${obj.sourceRevision}".`,
+        ...keyContext,
+        sourceRevision: typeof obj.sourceRevision === "string" ? obj.sourceRevision : undefined,
+      }));
+    }
+  } else {
+    diagnostics.push(createDiagnostic({
+      code: "INVALID_SOURCE_REVISION",
+      severity: "error",
+      message: "Mapping entry is missing sourceRevision.",
+      ...keyContext,
+    }));
+  }
+
+  // Fingerprint validation (optional field)
+  if (obj.sourceFingerprint !== undefined) {
+    if (typeof obj.sourceFingerprint !== "string" || !isValidFingerprint(obj.sourceFingerprint)) {
+      diagnostics.push(createDiagnostic({
+        code: "INVALID_FINGERPRINT",
+        severity: "error",
+        message: `Mapping entry has invalid source fingerprint "${obj.sourceFingerprint}".`,
+        ...keyContext,
+        sourceFingerprint: typeof obj.sourceFingerprint === "string" ? obj.sourceFingerprint : undefined,
+      }));
+    }
+  }
+
+  // Effect validation
+  if (obj.effect !== undefined) {
+    if (!isRuleEffect(obj.effect)) {
+      diagnostics.push(createDiagnostic({
+        code: "INVALID_EFFECT",
+        severity: "error",
+        message: "Mapping entry has invalid effect payload.",
+        ...keyContext,
+      }));
+    }
+  } else {
+    diagnostics.push(createDiagnostic({
+      code: "INVALID_EFFECT",
+      severity: "error",
+      message: "Mapping entry is missing effect.",
+      ...keyContext,
+    }));
+  }
+
+  // Default projection validation (optional field)
+  if (obj.defaultProjection !== undefined) {
+    if (!isSheetProjection(obj.defaultProjection)) {
+      diagnostics.push(createDiagnostic({
+        code: "INVALID_PROJECTION",
+        severity: "error",
+        message: `Mapping entry has invalid default projection "${obj.defaultProjection}".`,
+        ...keyContext,
+        defaultProjection: obj.defaultProjection as SheetProjection,
+      }));
+    }
+  }
+
+  // Reviewer validation
+  if (obj.reviewedBy !== undefined) {
+    if (typeof obj.reviewedBy !== "string" || !isValidReviewerIdentity(obj.reviewedBy)) {
+      diagnostics.push(createDiagnostic({
+        code: "MISSING_REVIEWER",
+        severity: "error",
+        message: "Mapping entry has invalid reviewer identity.",
+        ...keyContext,
+      }));
+    }
+  } else {
+    diagnostics.push(createDiagnostic({
+      code: "MISSING_REVIEWER",
+      severity: "error",
+      message: "Mapping entry is missing reviewedBy.",
+      ...keyContext,
+    }));
+  }
+
+  // Timestamp validation
+  if (obj.reviewedAt !== undefined) {
+    if (typeof obj.reviewedAt !== "string" || !isValidTimestamp(obj.reviewedAt)) {
+      diagnostics.push(createDiagnostic({
+        code: "INVALID_TIMESTAMP",
+        severity: "error",
+        message: `Mapping entry has invalid review timestamp "${obj.reviewedAt}".`,
+        ...keyContext,
+      }));
+    }
+  } else {
+    diagnostics.push(createDiagnostic({
+      code: "INVALID_TIMESTAMP",
+      severity: "error",
+      message: "Mapping entry is missing reviewedAt.",
+      ...keyContext,
+    }));
+  }
 
   // Recursive executable content check
   const execIssue = containsExecutableContent(obj);
@@ -291,100 +492,8 @@ export function validateSemanticMappingEntry(entry: SemanticMappingEntry): reado
     diagnostics.push(createDiagnostic({
       code: "EXECUTABLE_CONTENT",
       severity: "error",
-      message: `Mapping for entity "${entry.key.entityId}" field "${entry.key.fieldId}" contains executable content: ${execIssue}.`,
-      entityId: entry.key.entityId,
-      ruleset: entry.key.ruleset,
-      fieldId: entry.key.fieldId,
-    }));
-  }
-
-  // Source revision validation
-  if (typeof entry.sourceRevision !== "string" || !isValidSourceRevision(entry.sourceRevision)) {
-    diagnostics.push(createDiagnostic({
-      code: "INVALID_SOURCE_REVISION",
-      severity: "error",
-      message: `Mapping for entity "${entry.key.entityId}" field "${entry.key.fieldId}" has invalid source revision "${entry.sourceRevision}".`,
-      entityId: entry.key.entityId,
-      ruleset: entry.key.ruleset,
-      fieldId: entry.key.fieldId,
-      sourceRevision: entry.sourceRevision,
-    }));
-  }
-
-  // Fingerprint validation
-  if (entry.sourceFingerprint !== undefined) {
-    if (typeof entry.sourceFingerprint !== "string" || !isValidFingerprint(entry.sourceFingerprint)) {
-      diagnostics.push(createDiagnostic({
-        code: "INVALID_FINGERPRINT",
-        severity: "error",
-        message: `Mapping for entity "${entry.key.entityId}" field "${entry.key.fieldId}" has invalid source fingerprint "${entry.sourceFingerprint}".`,
-        entityId: entry.key.entityId,
-        ruleset: entry.key.ruleset,
-        fieldId: entry.key.fieldId,
-        sourceFingerprint: entry.sourceFingerprint,
-      }));
-    }
-  }
-
-  // Mapping version validation
-  if (!isValidMappingVersion(entry.mappingVersion)) {
-    diagnostics.push(createDiagnostic({
-      code: "INVALID_MAPPING",
-      severity: "error",
-      message: `Mapping for entity "${entry.key.entityId}" field "${entry.key.fieldId}" has invalid mapping version "${entry.mappingVersion}".`,
-      entityId: entry.key.entityId,
-      ruleset: entry.key.ruleset,
-      fieldId: entry.key.fieldId,
-      mappingVersion: entry.mappingVersion,
-    }));
-  }
-
-  // Effect validation
-  if (!isRuleEffect(entry.effect)) {
-    diagnostics.push(createDiagnostic({
-      code: "INVALID_EFFECT",
-      severity: "error",
-      message: `Mapping for entity "${entry.key.entityId}" field "${entry.key.fieldId}" has invalid effect payload.`,
-      entityId: entry.key.entityId,
-      ruleset: entry.key.ruleset,
-      fieldId: entry.key.fieldId,
-    }));
-  }
-
-  // Default projection validation
-  if (entry.defaultProjection !== undefined && !isSheetProjection(entry.defaultProjection)) {
-    diagnostics.push(createDiagnostic({
-      code: "INVALID_PROJECTION",
-      severity: "error",
-      message: `Mapping for entity "${entry.key.entityId}" field "${entry.key.fieldId}" has invalid default projection "${entry.defaultProjection}".`,
-      entityId: entry.key.entityId,
-      ruleset: entry.key.ruleset,
-      fieldId: entry.key.fieldId,
-      defaultProjection: entry.defaultProjection,
-    }));
-  }
-
-  // Reviewer validation
-  if (typeof entry.reviewedBy !== "string" || !isValidReviewerIdentity(entry.reviewedBy)) {
-    diagnostics.push(createDiagnostic({
-      code: "MISSING_REVIEWER",
-      severity: "error",
-      message: `Mapping for entity "${entry.key.entityId}" field "${entry.key.fieldId}" has invalid reviewer identity.`,
-      entityId: entry.key.entityId,
-      ruleset: entry.key.ruleset,
-      fieldId: entry.key.fieldId,
-    }));
-  }
-
-  // Timestamp validation
-  if (typeof entry.reviewedAt !== "string" || !isValidTimestamp(entry.reviewedAt)) {
-    diagnostics.push(createDiagnostic({
-      code: "INVALID_TIMESTAMP",
-      severity: "error",
-      message: `Mapping for entity "${entry.key.entityId}" field "${entry.key.fieldId}" has invalid review timestamp "${entry.reviewedAt}".`,
-      entityId: entry.key.entityId,
-      ruleset: entry.key.ruleset,
-      fieldId: entry.key.fieldId,
+      message: `Mapping entry contains executable content: ${execIssue}.`,
+      ...keyContext,
     }));
   }
 
