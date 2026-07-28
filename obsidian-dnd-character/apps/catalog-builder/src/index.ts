@@ -299,3 +299,20 @@ export {
   validateProjectionAssignment,
   validateDefaultProjections,
 } from "./projection-defaults";
+
+export {
+  /* Species source scope types */
+  type SpeciesSourceScopeContext,
+  type SpeciesSourceScopeInput,
+  type SpeciesSourceScopeDiagnosticCode,
+  type SpeciesSourceScopeDiagnostic,
+  type SpeciesSourceScopeClassification,
+  type SpeciesSourceScopeResult,
+  type SpeciesSourceScopeBatchResult,
+  /* Species source scope registry */
+  SUPPORTED_SPECIES_SOURCES,
+  /* Species source scope functions */
+  collectKnownSpeciesSources,
+  classifySpeciesSourceScope,
+  classifySpeciesSourceScopeBatch,
+} from "./species-source-scope";
