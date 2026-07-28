@@ -97,6 +97,7 @@ export {
 export {
   /* Canonical entity ID types */
   type CanonicalEntityKey,
+  type CanonicalEntityIdDiagnosticCode,
   type CanonicalEntityIdDiagnostic,
   type CanonicalEntityIdResult,
   type CanonicalEntityIdBatchResult,

@@ -110,6 +110,18 @@ describe("canonicalEntityNameSegment", () => {
   it("rejects whitespace-only string", () => {
     expect(() => canonicalEntityNameSegment("   ")).toThrow();
   });
+
+  it("rejects leading whitespace", () => {
+    expect(() => canonicalEntityNameSegment(" Human")).toThrow();
+  });
+
+  it("rejects trailing whitespace", () => {
+    expect(() => canonicalEntityNameSegment("Human ")).toThrow();
+  });
+
+  it("rejects both leading and trailing whitespace", () => {
+    expect(() => canonicalEntityNameSegment(" Human ")).toThrow();
+  });
 });
 
 describe("createCanonicalEntityId - basic IDs", () => {
@@ -204,6 +216,33 @@ describe("createCanonicalEntityId - collisions", () => {
     expect(result.successes.length).toBe(2);
     const collisions = result.diagnostics.filter((d) => d.code === "CANONICAL_ENTITY_ID_COLLISION");
     expect(collisions.length).toBe(0);
+  });
+
+  it("three equivalent inputs produce one success and two collisions", () => {
+    const result = createCanonicalEntityIds([
+      { kind: "species", ruleset: "2014", source: "PHB", name: "Human" },
+      { kind: "species", ruleset: "2014", source: "PHB", name: "human" },
+      { kind: "species", ruleset: "2014", source: "PHB", name: "HUMAN" },
+    ]);
+    expect(result.successes.length).toBe(1);
+    expect(result.successes[0]?.keyIndex).toBe(0);
+
+    const collisions = result.diagnostics.filter((d) => d.code === "CANONICAL_ENTITY_ID_COLLISION");
+    expect(collisions.length).toBe(2);
+
+    // Both collisions point to the first successful index
+    expect(collisions[0]?.conflictingIndex).toBe(0);
+    expect(collisions[1]?.conflictingIndex).toBe(0);
+
+    // Each collision preserves its own original key
+    expect(collisions[0]?.keyIndex).toBe(1);
+    expect(collisions[0]?.key?.name).toBe("human");
+    expect(collisions[1]?.keyIndex).toBe(2);
+    expect(collisions[1]?.key?.name).toBe("HUMAN");
+
+    // Both conflicting keys preserve the first original input
+    expect(collisions[0]?.conflictingKey?.name).toBe("Human");
+    expect(collisions[1]?.conflictingKey?.name).toBe("Human");
   });
 });
 
@@ -364,6 +403,350 @@ describe("createCanonicalEntityId - invalid inputs", () => {
       name: "   ",
     });
     expect(result.ok).toBe(false);
+  });
+});
+
+describe("createCanonicalEntityId - padded values", () => {
+  it("rejects leading whitespace in source", () => {
+    const result = createCanonicalEntityId({
+      kind: "species",
+      ruleset: "2014",
+      source: " PHB",
+      name: "Human",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.diagnostic.code).toBe("INVALID_CANONICAL_ENTITY_KEY");
+    }
+  });
+
+  it("rejects trailing whitespace in source", () => {
+    const result = createCanonicalEntityId({
+      kind: "species",
+      ruleset: "2014",
+      source: "PHB ",
+      name: "Human",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.diagnostic.code).toBe("INVALID_CANONICAL_ENTITY_KEY");
+    }
+  });
+
+  it("rejects both leading and trailing whitespace in source", () => {
+    const result = createCanonicalEntityId({
+      kind: "species",
+      ruleset: "2014",
+      source: " PHB ",
+      name: "Human",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.diagnostic.code).toBe("INVALID_CANONICAL_ENTITY_KEY");
+    }
+  });
+
+  it("rejects leading whitespace in name", () => {
+    const result = createCanonicalEntityId({
+      kind: "species",
+      ruleset: "2014",
+      source: "PHB",
+      name: " Human",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.diagnostic.code).toBe("INVALID_CANONICAL_ENTITY_KEY");
+    }
+  });
+
+  it("rejects trailing whitespace in name", () => {
+    const result = createCanonicalEntityId({
+      kind: "species",
+      ruleset: "2014",
+      source: "PHB",
+      name: "Human ",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.diagnostic.code).toBe("INVALID_CANONICAL_ENTITY_KEY");
+    }
+  });
+
+  it("rejects both leading and trailing whitespace in name", () => {
+    const result = createCanonicalEntityId({
+      kind: "species",
+      ruleset: "2014",
+      source: "PHB",
+      name: " Human ",
+    });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.diagnostic.code).toBe("INVALID_CANONICAL_ENTITY_KEY");
+    }
+  });
+
+  it("internal whitespace in name remains valid", () => {
+    const result = createCanonicalEntityId({
+      kind: "species",
+      ruleset: "2014",
+      source: "PHB",
+      name: "High   Elf",
+    });
+    expect(result.ok).toBe(true);
+  });
+});
+
+describe("createCanonicalEntityId - exact shape validation", () => {
+  it("rejects object with symbol data property", () => {
+    const sym = Symbol("extra");
+    const obj = {
+      kind: "species",
+      ruleset: "2014",
+      source: "PHB",
+      name: "Human",
+      [sym]: "secret",
+    };
+    const result = createCanonicalEntityId(obj);
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects object with symbol accessor", () => {
+    const sym = Symbol("accessor");
+    const obj = {
+      kind: "species",
+      ruleset: "2014",
+      source: "PHB",
+      name: "Human",
+    };
+    Object.defineProperty(obj, sym, {
+      get() { return "secret"; },
+      enumerable: false,
+    });
+    const result = createCanonicalEntityId(obj);
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects object with non-enumerable extra string property", () => {
+    const obj = {
+      kind: "species",
+      ruleset: "2014",
+      source: "PHB",
+      name: "Human",
+    };
+    Object.defineProperty(obj, "hidden", {
+      value: "secret",
+      enumerable: false,
+    });
+    const result = createCanonicalEntityId(obj);
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects object with getter on known property", () => {
+    const obj = {};
+    Object.defineProperty(obj, "kind", {
+      get() { return "species"; },
+      enumerable: true,
+    });
+    Object.defineProperty(obj, "ruleset", { value: "2014", enumerable: true });
+    Object.defineProperty(obj, "source", { value: "PHB", enumerable: true });
+    Object.defineProperty(obj, "name", { value: "Human", enumerable: true });
+    const result = createCanonicalEntityId(obj);
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects object with setter on known property", () => {
+    const obj = {};
+    Object.defineProperty(obj, "kind", { value: "species", enumerable: true });
+    Object.defineProperty(obj, "ruleset", { value: "2014", enumerable: true });
+    Object.defineProperty(obj, "source", { value: "PHB", enumerable: true });
+    Object.defineProperty(obj, "name", {
+      set(_v: unknown) {},
+      enumerable: true,
+    });
+    const result = createCanonicalEntityId(obj);
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects object with unknown enumerable property", () => {
+    const result = createCanonicalEntityId({
+      kind: "species",
+      ruleset: "2014",
+      source: "PHB",
+      name: "Human",
+      extra: "field",
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects object with missing field", () => {
+    const result = createCanonicalEntityId({
+      kind: "species",
+      ruleset: "2014",
+      source: "PHB",
+    });
+    expect(result.ok).toBe(false);
+  });
+
+  it("rejects class prototype instance", () => {
+    class Key {
+      kind = "species";
+      ruleset = "2014";
+      source = "PHB";
+      name = "Human";
+    }
+    const result = createCanonicalEntityId(new Key());
+    expect(result.ok).toBe(false);
+  });
+
+  it("accepts null-prototype key", () => {
+    const key = Object.create(null);
+    key.kind = "species";
+    key.ruleset = "2014";
+    key.source = "PHB";
+    key.name = "Human";
+    const result = createCanonicalEntityId(key);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(entityIdStr(result.id)).toBe("species:2014:phb:human");
+    }
+  });
+});
+
+describe("createCanonicalEntityId - original key preservation", () => {
+  it("canonicalKey preserves original source and name", () => {
+    const result = createCanonicalEntityId({
+      kind: "species",
+      ruleset: "2014",
+      source: "PHB",
+      name: "Human",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.canonicalKey.source).toBe("PHB");
+      expect(result.canonicalKey.name).toBe("Human");
+      expect(result.sourceId).toBe(result.sourceId); // branded
+      expect(entityIdStr(result.id)).toBe("species:2014:phb:human");
+    }
+  });
+
+  it("canonicalKey is cloned and frozen", () => {
+    const inputKey = {
+      kind: "species" as const,
+      ruleset: "2014" as const,
+      source: "PHB",
+      name: "Human",
+    };
+    const result = createCanonicalEntityId(inputKey);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(Object.isFrozen(result.canonicalKey)).toBe(true);
+      expect(result.canonicalKey).not.toBe(inputKey);
+    }
+  });
+
+  it("caller mutation does not change result canonicalKey", () => {
+    const inputKey = {
+      kind: "species" as const,
+      ruleset: "2014" as const,
+      source: "PHB",
+      name: "Human",
+    };
+    const result = createCanonicalEntityId(inputKey);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      // Mutate the input after creation
+      (inputKey as Record<string, unknown>).source = "MUTATED";
+      (inputKey as Record<string, unknown>).name = "MUTATED";
+      // Result must still preserve original values
+      expect(result.canonicalKey.source).toBe("PHB");
+      expect(result.canonicalKey.name).toBe("Human");
+    }
+  });
+});
+
+describe("createCanonicalEntityId - batch resilience", () => {
+  it("batch with mixed valid and invalid keys", () => {
+    const result = createCanonicalEntityIds([
+      { kind: "species", ruleset: "2014", source: "PHB", name: "Human" },
+      { kind: "species", ruleset: "2014", source: " PHB", name: "Human" },
+      { kind: "spell", ruleset: "2014", source: "PHB", name: "Fireball" },
+      { kind: "species", ruleset: "2014", source: "PHB", name: "Human " },
+      { kind: "feat", ruleset: "2014", source: "PHB", name: "Tough" },
+    ]);
+
+    // Does not throw
+    expect(result).toBeDefined();
+
+    // Three valid keys succeed
+    expect(result.successes.length).toBe(3);
+    expect(result.successes[0]?.keyIndex).toBe(0);
+    expect(result.successes[1]?.keyIndex).toBe(2);
+    expect(result.successes[2]?.keyIndex).toBe(4);
+
+    // Two malformed keys emit ordered diagnostics
+    expect(result.diagnostics.length).toBe(2);
+    expect(result.diagnostics[0]?.code).toBe("INVALID_CANONICAL_ENTITY_KEY");
+    expect(result.diagnostics[0]?.keyIndex).toBe(1);
+    expect(result.diagnostics[1]?.code).toBe("INVALID_CANONICAL_ENTITY_KEY");
+    expect(result.diagnostics[1]?.keyIndex).toBe(3);
+  });
+});
+
+describe("createCanonicalEntityId - collision key preservation", () => {
+  it("case-equivalent collision preserves original keys", () => {
+    const result = createCanonicalEntityIds([
+      { kind: "species", ruleset: "2014", source: "PHB", name: "Human" },
+      { kind: "species", ruleset: "2014", source: "PHB", name: "human" },
+    ]);
+
+    const collision = result.diagnostics.find((d) => d.code === "CANONICAL_ENTITY_ID_COLLISION");
+    expect(collision).toBeDefined();
+    if (collision) {
+      expect(collision.keyIndex).toBe(1);
+      expect(collision.conflictingIndex).toBe(0);
+      // key preserves later original input
+      expect(collision.key?.name).toBe("human");
+      // conflictingKey preserves first original input
+      expect(collision.conflictingKey?.name).toBe("Human");
+      // Both are frozen
+      expect(Object.isFrozen(collision.key!)).toBe(true);
+      expect(Object.isFrozen(collision.conflictingKey!)).toBe(true);
+    }
+  });
+
+  it("Unicode-equivalent collision preserves original keys", () => {
+    const composed = "\u00e9";
+    const decomposed = "e\u0301";
+    const result = createCanonicalEntityIds([
+      { kind: "species", ruleset: "2014", source: "PHB", name: `Cr${composed}ature` },
+      { kind: "species", ruleset: "2014", source: "PHB", name: `Cr${decomposed}ature` },
+    ]);
+
+    const collision = result.diagnostics.find((d) => d.code === "CANONICAL_ENTITY_ID_COLLISION");
+    expect(collision).toBeDefined();
+    if (collision) {
+      expect(collision.key?.name).toBe(`Cr${decomposed}ature`);
+      expect(collision.conflictingKey?.name).toBe(`Cr${composed}ature`);
+    }
+  });
+
+  it("collision keys are cloned; caller mutation does not affect diagnostics", () => {
+    const key1 = { kind: "species" as const, ruleset: "2014" as const, source: "PHB", name: "Human" };
+    const key2 = { kind: "species" as const, ruleset: "2014" as const, source: "PHB", name: "human" };
+    const result = createCanonicalEntityIds([key1, key2]);
+
+    const collision = result.diagnostics.find((d) => d.code === "CANONICAL_ENTITY_ID_COLLISION");
+    expect(collision).toBeDefined();
+
+    // Mutate caller-owned inputs
+    (key1 as Record<string, unknown>).name = "MUTATED1";
+    (key2 as Record<string, unknown>).name = "MUTATED2";
+
+    // Diagnostics must preserve original values
+    if (collision) {
+      expect(collision.conflictingKey?.name).toBe("Human");
+      expect(collision.key?.name).toBe("human");
+    }
   });
 });
 

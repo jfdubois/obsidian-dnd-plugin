@@ -12,8 +12,12 @@ export interface CanonicalEntityKey {
   readonly name: string;
 }
 
+export type CanonicalEntityIdDiagnosticCode =
+  | "INVALID_CANONICAL_ENTITY_KEY"
+  | "CANONICAL_ENTITY_ID_COLLISION";
+
 export interface CanonicalEntityIdDiagnostic {
-  readonly code: string;
+  readonly code: CanonicalEntityIdDiagnosticCode;
   readonly message: string;
   readonly keyIndex?: number;
   readonly conflictingIndex?: number;
@@ -64,7 +68,7 @@ export function canonicalSourceId(source: string): SourceId {
 
 export function canonicalEntityNameSegment(name: string): string {
   const trimmed = name.trim();
-  if (trimmed.length === 0) {
+  if (name !== trimmed || trimmed.length === 0) {
     throw new Error("canonicalEntityNameSegment: name must be a non-empty trimmed string");
   }
   const normalized = trimmed.normalize("NFKC").toLowerCase();
@@ -75,104 +79,122 @@ export function canonicalEntityNameSegment(name: string): string {
 
 /* ── Helpers ──────────────────────────────────────────────────── */
 
-function isPlainObject(value: unknown): value is Record<string, unknown> {
+function isValidPlainObject(value: unknown): value is Record<string, unknown> {
   if (value === null || typeof value !== "object") return false;
+  // Allow Object.prototype or null prototype (plain objects only)
   const proto = Object.getPrototypeOf(value);
   if (proto !== null && proto !== Object.prototype) return false;
   return true;
 }
 
+function makeInvalidDiagnostic(message: string): CanonicalEntityIdDiagnostic {
+  return Object.freeze({
+    code: "INVALID_CANONICAL_ENTITY_KEY" as CanonicalEntityIdDiagnosticCode,
+    message,
+  });
+}
+
+function makeFailureResult(message: string) {
+  return Object.freeze({
+    ok: false as const,
+    diagnostic: makeInvalidDiagnostic(message),
+  });
+}
+
+/* ── Exact own-key validation ─────────────────────────────────── */
+
+const REQUIRED_KEYS = new Set(["kind", "ruleset", "source", "name"]);
+
+function validateKeyShape(record: Record<string, unknown>): { ok: true } | { ok: false; message: string } {
+  // Use Reflect.ownKeys to get ALL own properties (string + symbol, enumerable + non-enumerable)
+  const allKeys = Reflect.ownKeys(record);
+
+  // Must have exactly 4 own keys
+  if (allKeys.length !== 4) {
+    return { ok: false, message: "Key must have exactly 4 own properties: kind, ruleset, source, name" };
+  }
+
+  // All keys must be strings (no symbol keys)
+  for (const key of allKeys) {
+    if (typeof key !== "string") {
+      return { ok: false, message: "Key must not have symbol properties" };
+    }
+    if (!REQUIRED_KEYS.has(key)) {
+      return { ok: false, message: `Key must not have unknown property: ${key}` };
+    }
+  }
+
+  // All four required keys must be present as enumerable data properties
+  for (const required of REQUIRED_KEYS) {
+    const desc = Object.getOwnPropertyDescriptor(record, required);
+    if (desc === undefined) {
+      return { ok: false, message: `Key is missing required property: ${required}` };
+    }
+    // Must be a data property (not an accessor)
+    if (typeof desc.get === "function" || typeof desc.set === "function") {
+      return { ok: false, message: `Key property "${required}" must be a data property, not an accessor` };
+    }
+    // Must be enumerable
+    if (desc.enumerable === false) {
+      return { ok: false, message: `Key property "${required}" must be enumerable` };
+    }
+  }
+
+  return { ok: true };
+}
+
 /* ── createCanonicalEntityId ──────────────────────────────────── */
 
 export function createCanonicalEntityId(key: unknown): CanonicalEntityIdResult {
-  if (!isPlainObject(key)) {
-    return Object.freeze({
-      ok: false as const,
-      diagnostic: Object.freeze({
-        code: "INVALID_CANONICAL_ENTITY_KEY",
-        message: "Key must be a plain object with exactly {kind, ruleset, source, name}",
-      }),
-    });
+  if (!isValidPlainObject(key)) {
+    return makeFailureResult("Key must be a plain object with exactly {kind, ruleset, source, name}");
   }
 
   const record = key as Record<string, unknown>;
-  const expectedFields = new Set(["kind", "ruleset", "source", "name"]);
-  const ownKeys = Object.keys(record);
 
-  if (ownKeys.length !== 4 || !expectedFields.has(ownKeys[0]!) || !expectedFields.has(ownKeys[1]!) || !expectedFields.has(ownKeys[2]!) || !expectedFields.has(ownKeys[3]!)) {
-    return Object.freeze({
-      ok: false as const,
-      diagnostic: Object.freeze({
-        code: "INVALID_CANONICAL_ENTITY_KEY",
-        message: "Key must be a plain object with exactly {kind, ruleset, source, name}",
-      }),
-    });
-  }
-
-  for (const field of ownKeys) {
-    const desc = Object.getOwnPropertyDescriptor(record, field);
-    if (desc === undefined || desc.get !== undefined || desc.set !== undefined) {
-      return Object.freeze({
-        ok: false as const,
-        diagnostic: Object.freeze({
-          code: "INVALID_CANONICAL_ENTITY_KEY",
-          message: "Key fields must be data properties, not accessors",
-        }),
-      });
-    }
+  // Validate exact own-key shape (symbols, non-enumerable, accessors, extra/missing keys)
+  const shapeCheck = validateKeyShape(record);
+  if (!shapeCheck.ok) {
+    return makeFailureResult(shapeCheck.message);
   }
 
   const { kind, ruleset, source, name } = record;
 
   if (!isRuleEntityKind(kind)) {
-    return Object.freeze({
-      ok: false as const,
-      diagnostic: Object.freeze({
-        code: "INVALID_CANONICAL_ENTITY_KEY",
-        message: `Invalid kind: ${JSON.stringify(kind)}`,
-      }),
-    });
+    return makeFailureResult(`Invalid kind: ${JSON.stringify(kind)}`);
   }
 
   if (!isRuleset(ruleset)) {
-    return Object.freeze({
-      ok: false as const,
-      diagnostic: Object.freeze({
-        code: "INVALID_CANONICAL_ENTITY_KEY",
-        message: `Invalid ruleset: ${JSON.stringify(ruleset)}`,
-      }),
-    });
+    return makeFailureResult(`Invalid ruleset: ${JSON.stringify(ruleset)}`);
   }
 
-  if (typeof source !== "string" || source.trim().length === 0) {
-    return Object.freeze({
-      ok: false as const,
-      diagnostic: Object.freeze({
-        code: "INVALID_CANONICAL_ENTITY_KEY",
-        message: "Source must be a non-empty trimmed string",
-      }),
-    });
+  // Validate source: must be string, non-empty after trim, and not padded
+  if (typeof source !== "string") {
+    return makeFailureResult("Source must be a non-empty trimmed string");
+  }
+  if (source !== source.trim() || source.trim().length === 0) {
+    return makeFailureResult("Source must be a non-empty trimmed string");
   }
 
-  if (typeof name !== "string" || name.trim().length === 0) {
-    return Object.freeze({
-      ok: false as const,
-      diagnostic: Object.freeze({
-        code: "INVALID_CANONICAL_ENTITY_KEY",
-        message: "Name must be a non-empty trimmed string",
-      }),
-    });
+  // Validate name: must be string, non-empty after trim, and not padded
+  if (typeof name !== "string") {
+    return makeFailureResult("Name must be a non-empty trimmed string");
+  }
+  if (name !== name.trim() || name.trim().length === 0) {
+    return makeFailureResult("Name must be a non-empty trimmed string");
   }
 
+  // Safe to call canonical helpers now (prevalidated)
   const canonicalSource = canonicalSourceId(source);
   const canonicalName = canonicalEntityNameSegment(name);
   const idStr = `${kind}:${ruleset}:${canonicalSource}:${canonicalName}`;
 
+  // Preserve original structured key (cloned and frozen)
   const canonicalKey = Object.freeze<CanonicalEntityKey>({
     kind: kind as RuleEntityKind,
     ruleset: ruleset as Ruleset,
-    source: canonicalSource,
-    name: canonicalName,
+    source,
+    name,
   });
 
   return Object.freeze({
@@ -195,7 +217,7 @@ export function createCanonicalEntityIds(keys: readonly unknown[]): CanonicalEnt
 
     if (!result.ok) {
       diagnostics.push(Object.freeze({
-        code: "INVALID_CANONICAL_ENTITY_KEY",
+        code: "INVALID_CANONICAL_ENTITY_KEY" as CanonicalEntityIdDiagnosticCode,
         message: result.diagnostic.message,
         keyIndex: i,
       }));
@@ -205,19 +227,39 @@ export function createCanonicalEntityIds(keys: readonly unknown[]): CanonicalEnt
     const idStr = result.id;
     if (seen.has(idStr)) {
       const prev = seen.get(idStr)!;
+      // Clone and freeze both keys for collision diagnostics
+      const clonedKey = Object.freeze<CanonicalEntityKey>({
+        kind: result.canonicalKey.kind,
+        ruleset: result.canonicalKey.ruleset,
+        source: result.canonicalKey.source,
+        name: result.canonicalKey.name,
+      });
+      const clonedConflictingKey = Object.freeze<CanonicalEntityKey>({
+        kind: prev.key.kind,
+        ruleset: prev.key.ruleset,
+        source: prev.key.source,
+        name: prev.key.name,
+      });
       diagnostics.push(Object.freeze({
-        code: "CANONICAL_ENTITY_ID_COLLISION",
+        code: "CANONICAL_ENTITY_ID_COLLISION" as CanonicalEntityIdDiagnosticCode,
         message: `Duplicate canonical ID: ${idStr}`,
         keyIndex: i,
         conflictingIndex: prev.index,
         generatedId: idStr,
-        key: result.canonicalKey,
-        conflictingKey: prev.key,
+        key: clonedKey,
+        conflictingKey: clonedConflictingKey,
       }));
       continue;
     }
 
-    seen.set(idStr, { index: i, key: result.canonicalKey });
+    // Store a clone of the canonical key in the seen map
+    const storedKey = Object.freeze<CanonicalEntityKey>({
+      kind: result.canonicalKey.kind,
+      ruleset: result.canonicalKey.ruleset,
+      source: result.canonicalKey.source,
+      name: result.canonicalKey.name,
+    });
+    seen.set(idStr, { index: i, key: storedKey });
     successes.push(Object.freeze({
       id: result.id,
       sourceId: result.sourceId,
