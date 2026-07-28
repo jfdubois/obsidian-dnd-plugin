@@ -1,15 +1,110 @@
 import { createHash } from "crypto";
 
 /**
+ * Validates that a value is a JSON-compatible structured value suitable for
+ * fingerprinting. Throws deterministic TypeError for unsupported values.
+ */
+function validateFingerprintValue(value: unknown, path: string = "root"): void {
+  if (value === undefined) {
+    throw new TypeError(`Unsupported value at "${path}": undefined is not allowed`);
+  }
+
+  if (value === null) {
+    return;
+  }
+
+  if (typeof value === "string") {
+    return;
+  }
+
+  if (typeof value === "boolean") {
+    return;
+  }
+
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      throw new TypeError(`Unsupported value at "${path}": ${value} is not a finite number`);
+    }
+    return;
+  }
+
+  if (typeof value === "function") {
+    throw new TypeError(`Unsupported value at "${path}": function is not allowed`);
+  }
+
+  if (typeof value === "symbol") {
+    throw new TypeError(`Unsupported value at "${path}": symbol is not allowed`);
+  }
+
+  if (typeof value === "bigint") {
+    throw new TypeError(`Unsupported value at "${path}": bigint is not allowed`);
+  }
+
+  if (typeof value !== "object") {
+    throw new TypeError(`Unsupported value at "${path}": unexpected type`);
+  }
+
+  // Check for non-plain objects
+  const proto = Object.getPrototypeOf(value);
+  if (proto !== Object.prototype && proto !== null) {
+    if (Array.isArray(value)) {
+      // Arrays are handled below
+    } else {
+      const ctorName = proto.constructor?.name ?? "unknown";
+      throw new TypeError(`Unsupported value at "${path}": ${ctorName} instance is not allowed`);
+    }
+  }
+
+  // Check for accessors and symbol-keyed properties
+  for (const sym of Object.getOwnPropertySymbols(value)) {
+    const desc = Object.getOwnPropertyDescriptor(value, sym);
+    if (desc && (desc.get !== undefined || desc.set !== undefined)) {
+      throw new TypeError(`Unsupported value at "${path}": symbol-keyed accessor is not allowed`);
+    }
+    throw new TypeError(`Unsupported value at "${path}": symbol-keyed property is not allowed`);
+  }
+
+  const ownNames = Object.getOwnPropertyNames(value);
+  for (const name of ownNames) {
+    const desc = Object.getOwnPropertyDescriptor(value, name);
+    if (desc && (desc.get !== undefined || desc.set !== undefined)) {
+      throw new TypeError(`Unsupported value at "${path}.${name}": accessor is not allowed`);
+    }
+  }
+
+  // Recurse into arrays
+  if (Array.isArray(value)) {
+    for (let i = 0; i < value.length; i++) {
+      validateFingerprintValue(value[i], `${path}[${i}]`);
+    }
+    return;
+  }
+
+  // Recurse into plain objects
+  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+    validateFingerprintValue(val, `${path}.${key}`);
+  }
+}
+
+/**
+ * Ordinal string comparison for deterministic key sorting.
+ * Does NOT use locale-sensitive comparison.
+ */
+function ordinalCompare(a: string, b: string): number {
+  if (a < b) return -1;
+  if (a > b) return 1;
+  return 0;
+}
+
+/**
  * Produces a canonical JSON string with sorted keys.
  * Handles nested objects and arrays recursively.
- * - Objects: keys are sorted lexicographically, values are recursed
+ * - Objects: keys are sorted ordinally, values are recursed
  * - Arrays: elements are recursed in order (order preserved)
  * - Primitives (string, number, boolean, null): serialized as-is
- * - Undefined values in object properties are skipped
  */
 function canonicalJson(value: unknown): string {
-  if (value === null || value === undefined) {
+  if (value === null) {
     return "null";
   }
 
@@ -18,11 +113,7 @@ function canonicalJson(value: unknown): string {
   }
 
   if (typeof value === "number") {
-    if (Number.isFinite(value)) {
-      return JSON.stringify(value);
-    }
-    // Infinity, -Infinity, NaN -> null for determinism
-    return "null";
+    return JSON.stringify(value);
   }
 
   if (typeof value === "boolean") {
@@ -37,28 +128,33 @@ function canonicalJson(value: unknown): string {
   if (typeof value === "object") {
     const entries: Array<[string, string]> = [];
     for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
-      if (val === undefined) {
-        continue;
-      }
       entries.push([key, canonicalJson(val)]);
     }
-    entries.sort((a, b) => a[0].localeCompare(b[0]));
+    entries.sort((a, b) => ordinalCompare(a[0], b[0]));
     const pairs = entries.map(([k, v]) => `${JSON.stringify(k)}:${v}`);
     return `{${pairs.join(",")}}`;
   }
 
-  // Fallback for any unexpected type (bigint, symbol, etc.)
+  /* istanbul ignore next */
   return "null";
 }
 
 /**
  * Computes a deterministic SHA-256 fingerprint from a structured input object.
- * - Sorts keys to be independent of insertion order
+ * - Validates all values are JSON-compatible structured values
+ * - Sorts keys ordinally to be independent of insertion order
  * - Serializes to canonical JSON
  * - Produces 64-char lowercase hex string
- * - Independent of memory addresses, machines, etc.
+ *
+ * Accepts: null, strings, booleans, finite numbers, arrays, plain objects
+ *          (with Object.prototype or null prototype).
+ *
+ * Rejects (throws TypeError): undefined, NaN, Infinity, -Infinity, functions,
+ * symbols, bigint, accessors, symbol-keyed properties, Date, RegExp, Map, Set,
+ * class instances, other non-plain objects, cyclic structures.
  */
 export function computeSourceFingerprint(input: Readonly<Record<string, unknown>>): string {
+  validateFingerprintValue(input);
   const canonical = canonicalJson(input);
   return createHash("sha256").update(canonical, "utf8").digest("hex");
 }

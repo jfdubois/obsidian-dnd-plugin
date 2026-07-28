@@ -60,12 +60,6 @@ describe("computeSourceFingerprint", () => {
     expect(computeSourceFingerprint({ n: null })).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it("skips undefined values in object properties", () => {
-    const fp1 = computeSourceFingerprint({ a: 1, b: undefined });
-    const fp2 = computeSourceFingerprint({ a: 1 });
-    expect(fp1).toBe(fp2);
-  });
-
   it("different inputs produce different fingerprints", () => {
     const fp1 = computeSourceFingerprint({ a: 1 });
     const fp2 = computeSourceFingerprint({ a: 2 });
@@ -109,5 +103,116 @@ describe("computeSourceFingerprint", () => {
       mixed: [1, "two", true, null, { a: 1 }],
     });
     expect(fp).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("null differs from missing key", () => {
+    const fp1 = computeSourceFingerprint({ a: null });
+    const fp2 = computeSourceFingerprint({});
+    expect(fp1).not.toBe(fp2);
+  });
+
+  it("primitive type differences matter", () => {
+    const fp1 = computeSourceFingerprint({ v: 1 });
+    const fp2 = computeSourceFingerprint({ v: "1" });
+    expect(fp1).not.toBe(fp2);
+  });
+
+  it("null-prototype objects are supported", () => {
+    const obj = Object.create(null);
+    obj.a = 1;
+    obj.b = 2;
+    const fp = computeSourceFingerprint(obj as Record<string, unknown>);
+    expect(fp).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("Unicode keys are handled correctly", () => {
+    const fp1 = computeSourceFingerprint({ "\u00e9": 1, "a": 2 });
+    const fp2 = computeSourceFingerprint({ "a": 2, "\u00e9": 1 });
+    expect(fp1).toBe(fp2);
+  });
+
+  it("repeated calls produce identical hashes", () => {
+    const input = { a: { z: 1, b: { x: true, y: false } }, c: [1, null, "hi"] };
+    const hashes = Array.from({ length: 5 }, () => computeSourceFingerprint(input));
+    expect(hashes.every((h) => h === hashes[0])).toBe(true);
+  });
+
+  describe("rejection of unsupported values", () => {
+    it("rejects undefined object property", () => {
+      expect(() => computeSourceFingerprint({ a: undefined })).toThrow(TypeError);
+    });
+
+    it("rejects undefined array value", () => {
+      expect(() => computeSourceFingerprint({ a: [undefined] })).toThrow(TypeError);
+    });
+
+    it("rejects NaN", () => {
+      expect(() => computeSourceFingerprint({ a: NaN })).toThrow(TypeError);
+    });
+
+    it("rejects positive infinity", () => {
+      expect(() => computeSourceFingerprint({ a: Infinity })).toThrow(TypeError);
+    });
+
+    it("rejects negative infinity", () => {
+      expect(() => computeSourceFingerprint({ a: -Infinity })).toThrow(TypeError);
+    });
+
+    it("rejects function", () => {
+      expect(() => computeSourceFingerprint({ a: () => {} })).toThrow(TypeError);
+    });
+
+    it("rejects symbol", () => {
+      expect(() => computeSourceFingerprint({ a: Symbol("test") })).toThrow(TypeError);
+    });
+
+    it("rejects bigint", () => {
+      expect(() => computeSourceFingerprint({ a: BigInt(42) })).toThrow(TypeError);
+    });
+
+    it("rejects accessor", () => {
+      const obj = { a: 1 };
+      Object.defineProperty(obj, "b", { get: () => 2, enumerable: true });
+      expect(() => computeSourceFingerprint(obj)).toThrow(TypeError);
+    });
+
+    it("rejects symbol property", () => {
+      const obj: Record<string | symbol, unknown> = { a: 1 };
+      obj[Symbol("sym")] = "value";
+      expect(() => computeSourceFingerprint(obj as Record<string, unknown>)).toThrow(TypeError);
+    });
+
+    it("rejects Date", () => {
+      expect(() => computeSourceFingerprint({ a: new Date() })).toThrow(TypeError);
+    });
+
+    it("rejects RegExp", () => {
+      expect(() => computeSourceFingerprint({ a: /test/ })).toThrow(TypeError);
+    });
+
+    it("rejects Map", () => {
+      expect(() => computeSourceFingerprint({ a: new Map() })).toThrow(TypeError);
+    });
+
+    it("rejects Set", () => {
+      expect(() => computeSourceFingerprint({ a: new Set() })).toThrow(TypeError);
+    });
+
+    it("rejects class instance", () => {
+      class Foo { bar = 1; }
+      expect(() => computeSourceFingerprint({ a: new Foo() })).toThrow(TypeError);
+    });
+
+    it("rejects cyclic object", () => {
+      const obj: Record<string, unknown> = { a: 1 };
+      obj.self = obj;
+      expect(() => computeSourceFingerprint(obj)).toThrow();
+    });
+
+    it("rejects cyclic array", () => {
+      const arr: unknown[] = [1, 2];
+      arr.push(arr);
+      expect(() => computeSourceFingerprint({ a: arr })).toThrow();
+    });
   });
 });

@@ -267,12 +267,18 @@ export {
 
 export {
   /* Semantic mapping resolution types */
+  type SemanticMappingResolutionContext,
   type SemanticMappingBatchInput,
   type SemanticMappingBatchResult,
   /* Semantic mapping resolution */
   resolveSemanticMapping,
   resolveSemanticMappings,
 } from "./semantic-mapping-resolution";
+
+export {
+  /* Semantic mapping fingerprint */
+  computeSourceFingerprint,
+} from "./semantic-mapping-fingerprint";
 
 export {
   /* Projection types */
