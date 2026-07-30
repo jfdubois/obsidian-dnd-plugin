@@ -330,3 +330,56 @@ export {
   classifySpeciesSourceScope,
   classifySpeciesSourceScopeBatch,
 } from "./species-source-scope";
+
+export {
+  /* Background source scope types */
+  type SupportedBackgroundSourceEntry,
+  type SupportedBackgroundSource,
+  type SupportedBackgroundRuleset,
+  type BackgroundSourceScopeContext,
+  type BackgroundSourceScopeInput,
+  type BackgroundSourceScopeDiagnosticCode,
+  type BackgroundSourceScopeDiagnostic,
+  type BackgroundSourceScopeSuccess,
+  type BackgroundSourceScopeFailure,
+  type BackgroundSourceScopeResult,
+  type BackgroundSourceScopeClassification,
+  type BackgroundSourceScopeBatchResult,
+  /* Background source scope registry */
+  SUPPORTED_BACKGROUND_SOURCES,
+  /* Background source scope functions */
+  classifyBackgroundSourceScope,
+  classifyBackgroundSourceScopeBatch,
+} from "./background-source-scope";
+
+export {
+  /* Class source scope types */
+  type SupportedClassSourceEntry,
+  type SupportedClassSource,
+  type SupportedClassRuleset,
+  type ClassSourceScopeContext,
+  type ClassSourceScopeInput,
+  type ClassSourceScopeDiagnosticCode,
+  type ClassSourceScopeDiagnostic,
+  type ClassSourceScopeSuccess,
+  type ClassSourceScopeFailure,
+  type ClassSourceScopeResult,
+  type ClassSourceScopeClassification,
+  type ClassSourceScopeBatchResult,
+  /* Class source scope registry */
+  SUPPORTED_CLASS_SOURCES,
+  /* Class source scope functions */
+  classifyClassSourceScope,
+  classifyClassSourceScopeBatch,
+} from "./class-source-scope";
+
+export {
+  /* Class index loader types */
+  type ClassIndexDiagnosticCode,
+  type ClassIndexDiagnostic,
+  type IndexedClassEntry,
+  type ClassIndexLoaderInput,
+  type ClassIndexLoaderResult,
+  /* Class index loader functions */
+  loadClassIndex,
+} from "./class-index-loader";
