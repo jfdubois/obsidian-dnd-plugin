@@ -230,7 +230,7 @@ Generate a valid versioned catalog using stable contracts.
   - Reject executable content and display-name branches.
   - Emit diagnostics for unmatched, invalid, or stale mappings.
 
-- [ ] **P4-T005 — Implement species normalizer**
+- [x] **P4-T005 — Implement species normalizer**
   - Core species from PHB and XPHB only (see ADR-011).
   - Retain source size information as display text or metadata; no structured size-selection mechanic (see ADR-010).
   - Use shared deterministic ID helper; no private species-only algorithm (see ADR-012).

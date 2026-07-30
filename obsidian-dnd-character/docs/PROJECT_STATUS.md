@@ -6,11 +6,11 @@ Phase 4 — Catalog normalization and publication
 
 ## Current task
 
-P4-T005 — Implement species normalizer
+P4-T006 — Implement background normalizer
 
 ## Last completed task
 
-P4-T004 — Implement semantic mapping and projection infrastructure
+P4-T005 — Implement species normalizer
 
 ## Branch baseline
 
@@ -24,10 +24,9 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing at pre-P4-T005 corrective readiness gate (typecheck, lint, 2224/2224 tests across 58 files).
-- `npm --prefix obsidian-dnd-character run build`: passing at pre-P4-T005 corrective readiness gate.
-- Focused prerequisite tests: 437 tests across 9 files, passing.
-- Tests: 2224 passing.
+- `npm --prefix obsidian-dnd-character run check`: passing post-P4-T005 (typecheck, lint, 2238/2238 tests across 59 files).
+- `npm --prefix obsidian-dnd-character run build`: passing post-P4-T005.
+- Tests: 2238 passing.
 
 ## Catalog baseline
 
@@ -46,15 +45,21 @@ None recorded.
 # Current phase ledger
 
 - Phase starting commit: b3598ccf62be42eddff2eaf9302ca636762f686c
-- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004
-- Current task: P4-T005
+- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005
+- Current task: P4-T006
 - Current retry: 0
-- Gate status: Pre-P4-T005 corrective readiness gate complete; P4-T005 ready to begin but not started.
+- Gate status: P4-T005 complete; P4-T006 ready to begin.
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-30 — P4-T005 — Species normalizer — complete
+Summary: Implemented species normalizer accepting resolved raw records and producing normalized SpeciesRule entities. Limited to PHB (2014) and XPHB (2024) per ADR-011 via species-source-scope classifier. Uses shared createCanonicalEntityId from domain per ADR-012. Retains size as display text per ADR-010. Extracts ability effects (array and object shapes), walk speed, darkvision, and narrative content. Excluded sources yield EXCLUDED_SOURCE diagnostics. Warns on unmapped language proficiencies, proficiencies, and missing size/speed. Returns frozen result objects. 14 tests covering positive normalization, excluded sources, unmapped fields, edge cases, and mixed batches.
+Validation: `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 2238/2238 tests across 59 files, EXIT 0). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Catalog-builder only. No Obsidian API use. Raw 5eTools structures contained within catalog-builder boundaries. Size selection deferred to P4-T005A. Optional-source expansion deferred to P4-T005B.
+Commit: see Git history for P4-T005.
 
 2026-07-28 — Pre-P4-T005 corrective readiness gate — complete
 Summary: Validated all corrective prerequisites from Microtasks A through F. Confirmed semantic mapping payload carries complete RuleEffect with reviewed provenance, mandatory freshness checks, fingerprint-based staleness detection, and reviewed-mapping materialization. Verified species source-scope registry restricted to PHB (2014) and XPHB (2024) with explicit diagnostics for optional, fabricated, and malformed sources. Verified canonical entity ID helper is shared, deterministic, and free of forbidden dependencies. Confirmed species size selection deferred to P4-T005A and optional-source expansion deferred to P4-T005B. Pinned 5eTools revision `3c5d9d3175ca9637132011c75efd73aad7a2364d` verified clean. GitHub CI #119 for commit `5fe58a6` passed.
@@ -68,8 +73,3 @@ Validation: `npm --prefix obsidian-dnd-character run test -- apps/catalog-builde
 Compatibility notes: Harness and documentation only. No production code, copy identity rules, source roles, race/subrace materialization, `_mod` executors, version expansion, templates, normalized catalog schemas, canonical ID construction, or roadmap checkboxes changed. No consumed directives remain in successful materialized representative outputs, and raw 5eTools data remains confined to catalog-builder boundaries.
 Next task: P4-T005 — ready to begin, not started.
 Commit: see Git history for final ingestion readiness verification.
-
-2026-07-26 — Prompt 3A-5 — Resolved-record debug fixture structured identity
-Summary: Replaced name-and-source fallback in resolved-record debug fixture source record location with full structured identity matching using exported `getRecordIdentity` and `recordMatchesIdentity` from copy-resolver. Added `SOURCE_RECORD_AMBIGUOUS` diagnostic code with `candidates` array carrying complete structured identities for every matching record. Fixture construction now uses the located boundary record instead of the detached input record. Complete structured identities preserved in chain step identities, terminal base for direct records, and fixture root identity. Added 7 new focused tests covering ambiguity detection, discriminator field distinctions (raceName, className, level), sourcePath isolation, identity retention, and no-fallback behavior.
-Validation: `npm --prefix obsidian-dnd-character run test -- apps/catalog-builder/src/resolved-record-debug-fixtures.test.ts` passes (19/19 tests, EXIT 0). `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 1686/1686 tests, EXIT 0). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
-Compatibility notes: Debug fixtures remain in-memory catalog-builder outputs only. No normalized catalog schemas, canonical ID construction, source-policy semantics, Obsidian API use, semantic mappings, or entity normalizer behavior modified. Copy-resolver exports `getRecordIdentity` and `recordMatchesIdentity` for reuse.
