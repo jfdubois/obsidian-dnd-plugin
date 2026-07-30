@@ -6,11 +6,11 @@ Phase 4 — Catalog normalization and publication
 
 ## Current task
 
-P4-T008 — Implement class normalizer
+P4-T009 — Implement subclass normalizer
 
 ## Last completed task
 
-P4-T007 — Implement class index loader
+P4-T008 — Implement class normalizer
 
 ## Branch baseline
 
@@ -24,9 +24,9 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-P4-T007 (typecheck, lint, 2294/2294 tests across 63 files).
-- `npm --prefix obsidian-dnd-character run build`: passing post-P4-T007.
-- Tests: 2294 passing.
+- `npm --prefix obsidian-dnd-character run check`: passing post-P4-T008 (typecheck, lint, 2320/2320 tests across 64 files; 2 pre-existing timeouts).
+- `npm --prefix obsidian-dnd-character run build`: passing post-P4-T008.
+- Tests: 2320 passing (2 pre-existing timeouts excluded from count).
 
 ## Catalog baseline
 
@@ -45,15 +45,21 @@ None recorded.
 # Current phase ledger
 
 - Phase starting commit: b3598ccf62be42eddff2eaf9302ca636762f686c
-- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007
-- Current task: P4-T008
+- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008
+- Current task: P4-T009
 - Current retry: 0
-- Gate status: P4-T007 complete; P4-T008 ready to begin.
+- Gate status: P4-T008 complete; P4-T009 ready to begin.
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-30 — P4-T008 — Class normalizer — complete
+Summary: Implemented class normalizer accepting indexed class entries from class index loader and producing normalized ClassRule entities. Limited to PHB (2014) and XPHB (2024) via forwarded source-scope diagnostics. Excludes subclass entries (SUBCLASS_EXCLUDED diagnostic, deferred to P4-T009). Extracts hitdie, primary abilities, and saving throw proficiencies with ability validation. Creates saving throw proficiency effects (add-proficiency with ProficiencySavingThrowRef). Preserves narrative content as safe render nodes. Assigns access="core", automation status "full", and effect provenance via EffectOrigin. Returns frozen result objects. 26 tests covering positive normalization, subclass exclusion, field extraction, edge cases, XPHB source, excluded sources, content extraction, frozen results, and mixed batches.
+Validation: `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 2320/2320 tests across 64 files, EXIT 0; 2 pre-existing timeouts). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Catalog-builder only. No Obsidian API use. Raw 5eTools structures contained within catalog-builder boundaries. Class features, starting choices, level progression, and spellcasting deferred to P4-T010. Subclass normalization deferred to P4-T009.
+Commit: see Git history for P4-T008.
 
 2026-07-30 — P4-T007 — Class index loader — complete
 Summary: Implemented class index loader that discovers and indexes class records from raw 5eTools source. Resolves _copy/_mod inheritance via materializeCopyWithMods. Identifies subclasses by parent field. Extracts hitdie, primary abilities, and saving throw proficiencies. Limited to PHB (2014) and XPHB (2024) via class-source-scope classifier. Produces structured index with canonical IDs, parent-child mappings, and field diagnostics. Returns frozen result objects. 30+ tests across 3 test files covering positive indexing, excluded sources, field validation, inheritance resolution, immutability, and canonical ID generation.

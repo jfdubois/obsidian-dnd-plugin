@@ -251,7 +251,7 @@ Generate a valid versioned catalog using stable contracts.
 
 - [x] **P4-T007 — Implement class index loader**
 
-- [ ] **P4-T008 — Implement class normalizer**
+- [x] **P4-T008 — Implement class normalizer**
 
 - [ ] **P4-T009 — Implement subclass normalizer**
 
