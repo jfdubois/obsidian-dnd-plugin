@@ -247,7 +247,7 @@ Generate a valid versioned catalog using stable contracts.
   - Expand species normalizer (and subsequent normalizers) to process registered optional sources.
   - Excluded sources continue to produce explicit diagnostics until registered.
 
-- [ ] **P4-T006 — Implement background normalizer**
+- [x] **P4-T006 — Implement background normalizer**
 
 - [ ] **P4-T007 — Implement class index loader**
 
