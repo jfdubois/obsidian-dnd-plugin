@@ -275,7 +275,7 @@ Generate a valid versioned catalog using stable contracts.
 
 - [x] **P4-T019 — Implement global reference resolver**
 
-- [ ] **P4-T020 — Implement compact indexes**
+- [x] **P4-T020 — Implement compact indexes**
 
 - [ ] **P4-T021 — Implement checksums and manifest generation**
 

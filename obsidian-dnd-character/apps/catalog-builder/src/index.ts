@@ -423,3 +423,21 @@ export {
   /* Reference resolver function */
   resolveReferences,
 } from "./reference-resolver";
+
+export {
+  /* Compact index builder types */
+  type CatalogableEntity,
+  type CompactIndexDiagnosticCode,
+  type CompactIndexDiagnostic,
+  type CatalogIndexResult,
+  type CompactIndexResult,
+  /* Compact index builder functions */
+  buildCompactIndex,
+  entityToSummary,
+  buildDetailPath,
+} from "./compact-index-builder";
+
+export {
+  /* Compact index tag generator */
+  generateTags,
+} from "./compact-index-tag-generator";
