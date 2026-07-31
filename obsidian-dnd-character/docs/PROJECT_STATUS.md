@@ -6,16 +6,16 @@ Phase 4 — Catalog normalization and publication
 
 ## Current task
 
-P4-T024 — Add golden catalog build tests
+Phase 4 gate — Catalog normalization and publication gate
 
 ## Last completed task
 
-P4-T023 — Implement atomic revision publication
+P4-T024 — Add golden catalog build tests
 
 ## Branch baseline
 
 - Branch: `dev`
-- Last synchronized commit: b58147f
+- Last synchronized commit: 595282b
 - Working tree expected: clean
 
 ## Blockers
@@ -24,9 +24,9 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-P4-T023 (typecheck, lint, 2766/2768 tests across 98 files, 2 skipped).
-- `npm --prefix obsidian-dnd-character run build`: passing post-P4-T023.
-- Tests: 2766 passing.
+- `npm --prefix obsidian-dnd-character run check`: passing post-P4-T024 (typecheck, lint, 2778/2780 tests across 99 files, 2 skipped).
+- `npm --prefix obsidian-dnd-character run build`: passing post-P4-T024.
+- Tests: 2778 passing.
 
 ## Catalog baseline
 
@@ -45,15 +45,21 @@ None recorded.
 # Current phase ledger
 
 - Phase starting commit: b3598ccf62be42eddff2eaf9302ca636762f686c
-- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008; P4-T009 — see Git history for P4-T009; P4-T010 — see Git history for P4-T010; P4-T011 — see Git history for P4-T011; P4-T012 — see Git history for P4-T012; P4-T013 — see Git history for P4-T013; P4-T014 — see Git history for P4-T014; P4-T015 — see Git history for P4-T015; P4-T016 — see Git history for P4-T016; P4-T017 — see Git history for P4-T017; P4-T018 — see Git history for P4-T018; P4-T019 — see Git history for P4-T019; P4-T020 — see Git history for P4-T020; P4-T021 — see Git history for P4-T021; P4-T022 — see Git history for P4-T022; P4-T023 — see Git history for P4-T023
-- Current task: P4-T024
+- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008; P4-T009 — see Git history for P4-T009; P4-T010 — see Git history for P4-T010; P4-T011 — see Git history for P4-T011; P4-T012 — see Git history for P4-T012; P4-T013 — see Git history for P4-T013; P4-T014 — see Git history for P4-T014; P4-T015 — see Git history for P4-T015; P4-T016 — see Git history for P4-T016; P4-T017 — see Git history for P4-T017; P4-T018 — see Git history for P4-T018; P4-T019 — see Git history for P4-T019; P4-T020 — see Git history for P4-T020; P4-T021 — see Git history for P4-T021; P4-T022 — see Git history for P4-T022; P4-T023 — see Git history for P4-T023; P4-T024 — see Git history for P4-T024
+- Current task: Phase 4 gate
 - Current retry: 0
-- Gate status: P4-T023 complete; P4-T024 ready to begin.
+- Gate status: P4-T024 complete; Phase 4 gate ready to begin.
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-31 — P4-T024 — Golden catalog build tests — complete
+Summary: Implemented golden catalog build tests exercising the complete catalog build pipeline with all 12 entity kinds. Tests verify zero duplicate IDs, zero unresolved references, both rulesets represented, core access classification, effect metadata (automation status, provenance, projections), reproducible builds, correct index file output for all 12 kinds, and correct entity detail file paths. Added ClassFeatureRule and SubclassFeatureRule to CatalogableEntity union in compact-index-tag-generator.ts. 12 tests covering full pipeline integration.
+Validation: `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 2778/2780 tests across 99 files, 2 skipped). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Catalog-builder only. No Obsidian API use. Golden test data and integration tests.
+Commit: 595282b
 
 2026-07-31 — P4-T023 — Atomic revision publication — complete
 Summary: Implemented atomic catalog publication (`publishCatalog`) with temp-write-verify-rename flow. Generates manifest, validation/inventory reports, entity files, and kind-index files into a temporary directory, verifies every file was written correctly, then performs atomic rename to final revision path. Rejects catalogs with invalid validation reports before any file I/O. All results are frozen. 18 tests across 3 test files covering successful publication, manifest writing, report writing, entity file writing, index file generation, frozen results, invalid validation report rejection, and directory cleanup on failure.

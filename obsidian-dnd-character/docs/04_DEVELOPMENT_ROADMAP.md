@@ -283,7 +283,7 @@ Generate a valid versioned catalog using stable contracts.
 
 - [x] **P4-T023 — Implement atomic revision publication**
 
-- [ ] **P4-T024 — Add golden catalog build tests**
+- [x] **P4-T024 — Add golden catalog build tests**
 
 Each entity normalizer must:
   - accept a resolved raw record;
