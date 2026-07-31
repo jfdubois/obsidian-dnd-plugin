@@ -259,7 +259,7 @@ Generate a valid versioned catalog using stable contracts.
 
 - [x] **P4-T011 — Implement subclass-feature normalizer**
 
-- [ ] **P4-T012 — Implement feat normalizer**
+- [x] **P4-T012 — Implement feat normalizer**
 
 - [ ] **P4-T013 — Implement optional-feature normalizer**
 
