@@ -6,11 +6,11 @@ Phase 4 — Catalog normalization and publication
 
 ## Current task
 
-P4-T019 — Implement global reference resolver
+P4-T020 — Implement compact indexes
 
 ## Last completed task
 
-P4-T018 — Implement canonical ID generator
+P4-T019 — Implement global reference resolver
 
 ## Branch baseline
 
@@ -24,9 +24,9 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-P4-T018 (typecheck, lint, 2658/2658 tests across 87 files, 2 skipped).
-- `npm --prefix obsidian-dnd-character run build`: passing post-P4-T018.
-- Tests: 2658 passing.
+- `npm --prefix obsidian-dnd-character run check`: passing post-P4-T019 (typecheck, lint, 2684/2684 tests across 89 files, 2 skipped).
+- `npm --prefix obsidian-dnd-character run build`: passing post-P4-T019.
+- Tests: 2684 passing.
 
 ## Catalog baseline
 
@@ -45,15 +45,21 @@ None recorded.
 # Current phase ledger
 
 - Phase starting commit: b3598ccf62be42eddff2eaf9302ca636762f686c
-- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008; P4-T009 — see Git history for P4-T009; P4-T010 — see Git history for P4-T010; P4-T011 — see Git history for P4-T011; P4-T012 — see Git history for P4-T012; P4-T013 — see Git history for P4-T013; P4-T014 — see Git history for P4-T014; P4-T015 — see Git history for P4-T015; P4-T016 — see Git history for P4-T016; P4-T017 — see Git history for P4-T017; P4-T018 — see Git history for P4-T018
-- Current task: P4-T019
+- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008; P4-T009 — see Git history for P4-T009; P4-T010 — see Git history for P4-T010; P4-T011 — see Git history for P4-T011; P4-T012 — see Git history for P4-T012; P4-T013 — see Git history for P4-T013; P4-T014 — see Git history for P4-T014; P4-T015 — see Git history for P4-T015; P4-T016 — see Git history for P4-T016; P4-T017 — see Git history for P4-T017; P4-T018 — see Git history for P4-T018; P4-T019 — see Git history for P4-T019
+- Current task: P4-T020
 - Current retry: 0
-- Gate status: P4-T018 complete; P4-T019 ready to begin.
+- Gate status: P4-T019 complete; P4-T020 ready to begin.
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-31 — P4-T019 — Global reference resolver — complete
+Summary: Implemented global reference resolver that resolves cross-entity references within the normalized catalog. Accepts all normalized entities, builds canonical ID index, resolves dependencies, prerequisites, language IDs, skill proficiencies, feature IDs, subclass IDs, level grants, and parent IDs across all entity types. Produces BROKEN_* diagnostics for missing targets. Pure, deterministic, frozen results. 26 tests across 2 test files covering empty input, frozen output, species language references, background skill/feature references, class subclass/level grant references, subclass/class-feature/subclass-feature parent IDs, entity-selection prerequisites, deduplication, non-entity prerequisite filtering, broken reference diagnostics, deterministic sorting, and mixed catalog handling.
+Validation: `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 2684/2684 tests across 89 files, 2 skipped). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Catalog-builder only. No Obsidian API use. Pure computation module.
+Commit: see Git history for P4-T019.
 
 2026-07-31 — P4-T018 — Canonical ID generator — complete
 Summary: Reviewed existing createCanonicalEntityId in domain package. Implementation was already complete, supporting all 12 entity kinds (class, race/species, background, feat, subclass, optional-feature, spell, item, skill, language). Added 251 lines of comprehensive tests covering: all supported entity kinds, deterministic output, proper slugification, ruleset inclusion, special character encoding, long name handling, numeric names, and single-character names. No implementation changes needed.

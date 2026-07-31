@@ -411,3 +411,15 @@ export {
   /* Optional-feature normalizer functions */
   normalizeOptionalFeatures,
 } from "./optional-feature-normalizer";
+
+export {
+  /* Reference resolver types */
+  type NormalizedEntity,
+  type ReferenceLink,
+  type RefResolverDiagnosticCode,
+  type RefResolverDiagnostic,
+  type ReferenceResolverInput,
+  type ReferenceResolverResult,
+  /* Reference resolver function */
+  resolveReferences,
+} from "./reference-resolver";
