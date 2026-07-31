@@ -6,11 +6,11 @@ Phase 4 — Catalog normalization and publication
 
 ## Current task
 
-P4-T016 — Implement item/base-item normalizer
+P4-T017 — Implement skills and languages normalizers
 
 ## Last completed task
 
-P4-T015 — Implement spell relation builder
+P4-T016 — Implement item/base-item normalizer
 
 ## Branch baseline
 
@@ -24,9 +24,9 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-P4-T015 (typecheck, lint, 2528/2528 tests across 79 files).
-- `npm --prefix obsidian-dnd-character run build`: passing post-P4-T015.
-- Tests: 2528 passing.
+- `npm --prefix obsidian-dnd-character run check`: passing post-P4-T016 (typecheck, lint, 2582/2582 tests across 83 files, 2 skipped).
+- `npm --prefix obsidian-dnd-character run build`: passing post-P4-T016.
+- Tests: 2582 passing.
 
 ## Catalog baseline
 
@@ -45,15 +45,21 @@ None recorded.
 # Current phase ledger
 
 - Phase starting commit: b3598ccf62be42eddff2eaf9302ca636762f686c
-- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008; P4-T009 — see Git history for P4-T009; P4-T010 — see Git history for P4-T010; P4-T011 — see Git history for P4-T011; P4-T012 — see Git history for P4-T012; P4-T013 — see Git history for P4-T013; P4-T014 — see Git history for P4-T014; P4-T015 — see Git history for P4-T015
-- Current task: P4-T016
+- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008; P4-T009 — see Git history for P4-T009; P4-T010 — see Git history for P4-T010; P4-T011 — see Git history for P4-T011; P4-T012 — see Git history for P4-T012; P4-T013 — see Git history for P4-T013; P4-T014 — see Git history for P4-T014; P4-T015 — see Git history for P4-T015; P4-T016 — see Git history for P4-T016
+- Current task: P4-T017
 - Current retry: 0
-- Gate status: P4-T015 complete; P4-T016 ready to begin.
+- Gate status: P4-T016 complete; P4-T017 ready to begin.
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-31 — P4-T016 — Item/base-item normalizer — complete
+Summary: Implemented item normalizer accepting resolved raw records and producing normalized ItemRule entities. Limited to PHB (2014) and XPHB (2024) via classifyItemSourceScope. Uses shared createCanonicalEntityId from domain. Extracts narrative content from entries, description, and entry fields. Extracts item category, rarity, cost (structured and string), weight, body slot, properties, attunement requirements, page numbers, and summaries. Non-core known sources yield EXCLUDED_SOURCE diagnostics. Unknown sources yield UNKNOWN_SOURCE diagnostics. Empty or whitespace-padded sources rejected with INVALID_SOURCE. Returns frozen result objects. 54 tests across 6 test files (52 positive, 2 negative) covering positive normalization, source exclusion, field extraction, content extraction, frozen results, canonical IDs, mixed batches, and diagnostic structure.
+Validation: `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 2582/2582 tests across 83 files, 2 skipped). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Catalog-builder only. No Obsidian API use. Raw 5eTools structures contained within catalog-builder boundaries.
+Commit: see Git history for P4-T016.
 
 2026-07-31 — P4-T015 — Spell relation builder — complete
 Summary: Implemented spell relation builder that connects normalized spell entities to prerequisite spells, higher-level versions, and school groupings. Produces prerequisite relations (from dependency and entity-selection prerequisite references), level-chain relations (adjacent levels grouped by name and ruleset), and school-group relations (spells grouped by school, sorted alphabetically). Emits BROKEN_PREREQUISITE_REF and BROKEN_DEPENDENCY_REF diagnostics for missing targets. Pure, deterministic, frozen results. 19 tests across 1 test file covering prerequisite relations, level chains, school groups, broken references, deduplication, cross-ruleset isolation, frozen results, deterministic sort order, and empty input.

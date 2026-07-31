@@ -267,7 +267,7 @@ Generate a valid versioned catalog using stable contracts.
 
 - [x] **P4-T015 — Implement spell relation builder**
 
-- [ ] **P4-T016 — Implement item/base-item normalizer**
+- [x] **P4-T016 — Implement item/base-item normalizer**
 
 - [ ] **P4-T017 — Implement skills and languages normalizers**
 
