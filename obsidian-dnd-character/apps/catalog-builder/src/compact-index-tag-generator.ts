@@ -3,6 +3,8 @@ import type {
   BackgroundRule,
   ClassRule,
   SubclassRule,
+  ClassFeatureRule,
+  SubclassFeatureRule,
   FeatRule,
   SpellRule,
   ItemRule,
@@ -18,6 +20,8 @@ export type CatalogableEntity =
   | BackgroundRule
   | ClassRule
   | SubclassRule
+  | ClassFeatureRule
+  | SubclassFeatureRule
   | FeatRule
   | SpellRule
   | ItemRule
