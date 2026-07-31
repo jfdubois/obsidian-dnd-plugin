@@ -6,11 +6,11 @@ Phase 4 — Catalog normalization and publication
 
 ## Current task
 
-P4-T022 — Implement validation/inventory reports
+P4-T023 — Implement atomic revision publication
 
 ## Last completed task
 
-P4-T021 — Implement checksums and manifest generation
+P4-T022 — Implement validation/inventory reports
 
 ## Branch baseline
 
@@ -45,15 +45,18 @@ None recorded.
 # Current phase ledger
 
 - Phase starting commit: b3598ccf62be42eddff2eaf9302ca636762f686c
-- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008; P4-T009 — see Git history for P4-T009; P4-T010 — see Git history for P4-T010; P4-T011 — see Git history for P4-T011; P4-T012 — see Git history for P4-T012; P4-T013 — see Git history for P4-T013; P4-T014 — see Git history for P4-T014; P4-T015 — see Git history for P4-T015; P4-T016 — see Git history for P4-T016; P4-T017 — see Git history for P4-T017; P4-T018 — see Git history for P4-T018; P4-T019 — see Git history for P4-T019; P4-T020 — see Git history for P4-T020; P4-T021 — see Git history for P4-T021
-- Current task: P4-T022
+- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008; P4-T009 — see Git history for P4-T009; P4-T010 — see Git history for P4-T010; P4-T011 — see Git history for P4-T011; P4-T012 — see Git history for P4-T012; P4-T013 — see Git history for P4-T013; P4-T014 — see Git history for P4-T014; P4-T015 — see Git history for P4-T015; P4-T016 — see Git history for P4-T016; P4-T017 — see Git history for P4-T017; P4-T018 — see Git history for P4-T018; P4-T019 — see Git history for P4-T019; P4-T020 — see Git history for P4-T020; P4-T021 — see Git history for P4-T021; P4-T022 — see Git history for P4-T022
+- Current task: P4-T023
 - Current retry: 0
-- Gate status: P4-T021 complete; P4-T022 ready to begin.
+- Gate status: P4-T022 complete; P4-T023 ready to begin.
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-31 — P4-T022 — Validation/inventory reports — complete
+Summary: Implemented catalog validation report (`buildValidationReport`) detecting duplicate IDs, unresolved references, ruleset coverage, access classification, effect completeness (automation/provenance), and unmapped narrative mechanics. Implemented inventory report (`buildInventoryReport`) with entity counts by kind/ruleset/access, unique source IDs, and ISO timestamp. Both produce frozen, deterministic output. 20 tests across 2 test files covering duplicate detection, unresolved references, ruleset/access coverage, effect completeness, unmapped narrative, frozen output, determinism, and all inventory report fields.
 
 2026-07-31 — P4-T021 — Checksums and manifest generation — complete
 Summary: Implemented SHA-256 checksum computation (`computeChecksum`, `computeChecksums`) and manifest generation (`generateManifest`) for catalog builder. Checksum functions use Node.js `crypto.createHash('sha256')` for deterministic hex digests. Manifest generator assembles `CatalogManifest` from build artifacts using `createCatalogManifest` factory. All output frozen. `generatedAt` is the only non-deterministic field (ISO timestamp). 18 tests across 2 test files covering SHA-256 correctness, determinism, batch checksums, sorted output, empty input, freezing, manifest validity, field preservation, ISO timestamp, single ruleset, all entity kinds, and reproducibility (CAT-001).

@@ -454,3 +454,21 @@ export {
   /* Manifest generator function */
   generateManifest,
 } from "./manifest-generator";
+
+export {
+  /* Validation report types */
+  type Diagnostic,
+  type UnresolvedReference,
+  type ValidationReportInput,
+  type ValidationReport,
+  /* Validation report function */
+  buildValidationReport,
+} from "./validation-report";
+
+export {
+  /* Inventory report types */
+  type InventoryReportInput,
+  type InventoryReport,
+  /* Inventory report function */
+  buildInventoryReport,
+} from "./inventory-report";
