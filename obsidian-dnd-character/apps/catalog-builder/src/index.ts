@@ -472,3 +472,11 @@ export {
   /* Inventory report function */
   buildInventoryReport,
 } from "./inventory-report";
+
+export {
+  /* Catalog publisher types */
+  type CatalogPublisherInput,
+  type PublishResult,
+  /* Catalog publisher function */
+  publishCatalog,
+} from "./catalog-publisher";
