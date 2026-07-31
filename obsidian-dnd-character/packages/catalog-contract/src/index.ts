@@ -408,6 +408,15 @@ export {
 } from "./entity-class-feature";
 
 export {
+  /* Subclass feature types */
+  type SubclassFeatureRule,
+  /* Subclass feature validator */
+  isSubclassFeatureRule,
+  /* Subclass feature factory */
+  createSubclassFeatureRule,
+} from "./entity-subclass-feature";
+
+export {
   /* Feat types */
   type FeatRule,
   /* Feat validator */

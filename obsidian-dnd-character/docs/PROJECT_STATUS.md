@@ -6,11 +6,11 @@ Phase 4 — Catalog normalization and publication
 
 ## Current task
 
-P4-T011 — Implement subclass-feature normalizer
+P4-T012 — Implement feat normalizer
 
 ## Last completed task
 
-P4-T010 — Implement class-feature normalizer
+P4-T011 — Implement subclass-feature normalizer
 
 ## Branch baseline
 
@@ -24,9 +24,9 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-P4-T010 (typecheck, lint, 2366/2369 tests across 68 files; 3 pre-existing timeouts).
-- `npm --prefix obsidian-dnd-character run build`: passing post-P4-T010.
-- Tests: 2366 passing (3 pre-existing timeouts excluded from count).
+- `npm --prefix obsidian-dnd-character run check`: passing post-P4-T011 (typecheck, lint, 2401/2402 tests across 70 files; 1 pre-existing timeout).
+- `npm --prefix obsidian-dnd-character run build`: passing post-P4-T011.
+- Tests: 2401 passing (1 pre-existing timeout excluded from count).
 
 ## Catalog baseline
 
@@ -45,15 +45,21 @@ None recorded.
 # Current phase ledger
 
 - Phase starting commit: b3598ccf62be42eddff2eaf9302ca636762f686c
-- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008; P4-T009 — see Git history for P4-T009; P4-T010 — see Git history for P4-T010
-- Current task: P4-T011
+- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008; P4-T009 — see Git history for P4-T009; P4-T010 — see Git history for P4-T010; P4-T011 — see Git history for P4-T011
+- Current task: P4-T012
 - Current retry: 0
-- Gate status: P4-T010 complete; P4-T011 ready to begin.
+- Gate status: P4-T011 complete; P4-T012 ready to begin.
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-30 — P4-T011 — Subclass-feature normalizer — complete
+Summary: Implemented subclass-feature normalizer accepting resolved raw records and producing normalized SubclassFeatureRule entities. Limited to PHB (2014) and XPHB (2024) via classifyClassSourceScope. Uses shared createCanonicalEntityId from domain. Extracts class name reference, subclass short name, level requirements, narrative content, page numbers, and summaries. Resolves parentId to canonical subclass ID. Non-core sources yield EXCLUDED_SOURCE diagnostics. Unknown sources yield UNKNOWN_SOURCE diagnostics. Missing className rejected with MISSING_CLASS_NAME. Missing or invalid subclassShortName rejected with MISSING_SUBCLASS_NAME. Missing or invalid level rejected with MISSING_LEVEL. Returns frozen result objects. 33 tests across 2 test files covering positive normalization, source exclusion, missing className, missing subclassShortName, missing level, boundary levels, content extraction, frozen results, mixed batches, and diagnostic structure.
+Validation: `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 2401/2402 tests across 70 files, 1 pre-existing timeout). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Catalog-builder only. No Obsidian API use. Raw 5eTools structures contained within catalog-builder boundaries. Prerequisites, effects, and choices deferred.
+Commit: see Git history for P4-T011.
 
 2026-07-30 — P4-T010 — Class-feature normalizer — complete
 Summary: Implemented class-feature normalizer accepting resolved raw records and producing normalized ClassFeatureRule entities. Limited to PHB (2014) and XPHB (2024) via classifyClassSourceScope. Uses shared createCanonicalEntityId from domain. Extracts class name reference, level requirements, narrative content, page numbers, and summaries. Resolves parentId to canonical class ID. Non-core sources yield EXCLUDED_SOURCE diagnostics. Unknown sources yield UNKNOWN_SOURCE diagnostics. Missing className rejected with MISSING_CLASS_NAME. Missing or invalid level rejected with MISSING_LEVEL. Returns frozen result objects. 28 tests across 2 test files covering positive normalization, source exclusion, missing className, missing level, boundary levels, content extraction, frozen results, mixed batches, and diagnostic structure.
