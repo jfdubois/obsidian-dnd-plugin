@@ -441,3 +441,16 @@ export {
   /* Compact index tag generator */
   generateTags,
 } from "./compact-index-tag-generator";
+
+export {
+  /* Checksum functions */
+  computeChecksum,
+  computeChecksums,
+} from "./checksum";
+
+export {
+  /* Manifest generator types */
+  type ManifestGeneratorInput,
+  /* Manifest generator function */
+  generateManifest,
+} from "./manifest-generator";

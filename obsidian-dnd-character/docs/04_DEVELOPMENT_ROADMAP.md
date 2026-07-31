@@ -277,7 +277,7 @@ Generate a valid versioned catalog using stable contracts.
 
 - [x] **P4-T020 — Implement compact indexes**
 
-- [ ] **P4-T021 — Implement checksums and manifest generation**
+- [x] **P4-T021 — Implement checksums and manifest generation**
 
 - [ ] **P4-T022 — Implement validation/inventory reports**
 
