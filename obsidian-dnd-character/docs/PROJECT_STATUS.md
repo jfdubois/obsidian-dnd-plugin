@@ -6,11 +6,11 @@ Phase 4 — Catalog normalization and publication
 
 ## Current task
 
-P4-T010 — Implement class-feature normalizer
+P4-T011 — Implement subclass-feature normalizer
 
 ## Last completed task
 
-P4-T009 — Implement subclass normalizer
+P4-T010 — Implement class-feature normalizer
 
 ## Branch baseline
 
@@ -24,9 +24,9 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-P4-T009 (typecheck, lint, 2339/2340 tests across 65 files; 1 pre-existing timeout).
-- `npm --prefix obsidian-dnd-character run build`: passing post-P4-T009.
-- Tests: 2339 passing (1 pre-existing timeout excluded from count).
+- `npm --prefix obsidian-dnd-character run check`: passing post-P4-T010 (typecheck, lint, 2366/2369 tests across 68 files; 3 pre-existing timeouts).
+- `npm --prefix obsidian-dnd-character run build`: passing post-P4-T010.
+- Tests: 2366 passing (3 pre-existing timeouts excluded from count).
 
 ## Catalog baseline
 
@@ -45,15 +45,21 @@ None recorded.
 # Current phase ledger
 
 - Phase starting commit: b3598ccf62be42eddff2eaf9302ca636762f686c
-- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008; P4-T009 — see Git history for P4-T009
-- Current task: P4-T010
+- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008; P4-T009 — see Git history for P4-T009; P4-T010 — see Git history for P4-T010
+- Current task: P4-T011
 - Current retry: 0
-- Gate status: P4-T009 complete; P4-T010 ready to begin.
+- Gate status: P4-T010 complete; P4-T011 ready to begin.
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-30 — P4-T010 — Class-feature normalizer — complete
+Summary: Implemented class-feature normalizer accepting resolved raw records and producing normalized ClassFeatureRule entities. Limited to PHB (2014) and XPHB (2024) via classifyClassSourceScope. Uses shared createCanonicalEntityId from domain. Extracts class name reference, level requirements, narrative content, page numbers, and summaries. Resolves parentId to canonical class ID. Non-core sources yield EXCLUDED_SOURCE diagnostics. Unknown sources yield UNKNOWN_SOURCE diagnostics. Missing className rejected with MISSING_CLASS_NAME. Missing or invalid level rejected with MISSING_LEVEL. Returns frozen result objects. 28 tests across 2 test files covering positive normalization, source exclusion, missing className, missing level, boundary levels, content extraction, frozen results, mixed batches, and diagnostic structure.
+Validation: `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 2366/2369 tests across 68 files, 3 pre-existing timeouts). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Catalog-builder only. No Obsidian API use. Raw 5eTools structures contained within catalog-builder boundaries. Prerequisites, effects, and choices deferred.
+Commit: see Git history for P4-T010.
 
 2026-07-30 — P4-T009 — Subclass normalizer — complete
 Summary: Implemented subclass normalizer accepting indexed class entries (isSubclass=true) from class index loader and producing normalized SubclassRule entities. Limited to PHB (2014) and XPHB (2024) via classifyClassSourceScope. Uses shared createCanonicalEntityId from domain. Extracts subclass name, parent class reference, narrative content, page numbers, and summaries. Resolves parentId to canonical class ID. Non-core sources yield EXCLUDED_SOURCE diagnostics. Base classes rejected with BASE_CLASS_MISDIRECTED. Missing or empty parentId rejected with MISSING_PARENT_ID. Returns frozen result objects. 20 tests across 2 test files covering positive normalization, source exclusion, base class rejection, parent ID validation, and canonical ID generation.
