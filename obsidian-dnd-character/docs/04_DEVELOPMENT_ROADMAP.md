@@ -281,7 +281,7 @@ Generate a valid versioned catalog using stable contracts.
 
 - [x] **P4-T022 — Implement validation/inventory reports**
 
-- [ ] **P4-T023 — Implement atomic revision publication**
+- [x] **P4-T023 — Implement atomic revision publication**
 
 - [ ] **P4-T024 — Add golden catalog build tests**
 
