@@ -263,7 +263,7 @@ Generate a valid versioned catalog using stable contracts.
 
 - [x] **P4-T013 — Implement optional-feature normalizer**
 
-- [ ] **P4-T014 — Implement spell normalizer**
+- [x] **P4-T014 — Implement spell normalizer**
 
 - [ ] **P4-T015 — Implement spell relation builder**
 

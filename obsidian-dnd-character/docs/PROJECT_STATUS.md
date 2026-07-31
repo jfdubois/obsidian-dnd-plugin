@@ -6,11 +6,11 @@ Phase 4 — Catalog normalization and publication
 
 ## Current task
 
-P4-T014 — Implement spell normalizer
+P4-T015 — Implement spell relation builder
 
 ## Last completed task
 
-P4-T013 — Implement optional-feature normalizer
+P4-T014 — Implement spell normalizer
 
 ## Branch baseline
 
@@ -24,9 +24,9 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-P4-T013 (typecheck, lint, 2466/2466 tests across 75 files).
-- `npm --prefix obsidian-dnd-character run build`: passing post-P4-T013.
-- Tests: 2466 passing.
+- `npm --prefix obsidian-dnd-character run check`: passing post-P4-T014 (typecheck, lint, 2509/2509 tests across 78 files).
+- `npm --prefix obsidian-dnd-character run build`: passing post-P4-T014.
+- Tests: 2509 passing.
 
 ## Catalog baseline
 
@@ -45,15 +45,21 @@ None recorded.
 # Current phase ledger
 
 - Phase starting commit: b3598ccf62be42eddff2eaf9302ca636762f686c
-- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008; P4-T009 — see Git history for P4-T009; P4-T010 — see Git history for P4-T010; P4-T011 — see Git history for P4-T011; P4-T012 — see Git history for P4-T012; P4-T013 — see Git history for P4-T013
-- Current task: P4-T014
+- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008; P4-T009 — see Git history for P4-T009; P4-T010 — see Git history for P4-T010; P4-T011 — see Git history for P4-T011; P4-T012 — see Git history for P4-T012; P4-T013 — see Git history for P4-T013; P4-T014 — see Git history for P4-T014
+- Current task: P4-T015
 - Current retry: 0
-- Gate status: P4-T013 complete; P4-T014 ready to begin.
+- Gate status: P4-T014 complete; P4-T015 ready to begin.
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-31 — P4-T014 — Spell normalizer — complete
+Summary: Implemented spell normalizer accepting resolved raw records and producing normalized SpellRule entities. Limited to PHB (2014) and XPHB (2024) via classifySpellSourceScope. Uses shared createCanonicalEntityId from domain. Extracts spell level, school (with code mapping), casting time, range, duration, concentration, ritual flag, narrative content, higher-level effects, page numbers, and summaries. Non-core known sources yield EXCLUDED_SOURCE diagnostics. Unknown sources yield UNKNOWN_SOURCE diagnostics. Missing required fields (level, casting time, range, duration) rejected with specific error diagnostics. Returns frozen result objects. 43 tests across 3 test files (25 positive, 18 negative) covering positive normalization, source exclusion, invalid sources, field extraction, school mapping, concentration detection, ritual detection, content extraction, higher-level effects, frozen results, canonical IDs, mixed batches, and diagnostic structure.
+Validation: `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 2509/2509 tests across 78 files). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Catalog-builder only. No Obsidian API use. Raw 5eTools structures contained within catalog-builder boundaries. Component parsing (V/S/M), saving throw, damage type, and area tags deferred.
+Commit: see Git history for P4-T014.
 
 2026-07-31 — P4-T013 — Optional-feature normalizer — complete
 Summary: Implemented optional-feature normalizer accepting resolved raw records and producing normalized OptionalFeatureRule entities. Limited to PHB (2014) and XPHB (2024) via classifyOptionalFeatureSourceScope. Uses shared createCanonicalEntityId from domain. Extracts narrative content from entries, description, and entry fields. Extracts page numbers and summaries. Non-core known sources yield EXCLUDED_SOURCE diagnostics. Unknown sources yield UNKNOWN_SOURCE diagnostics. Empty or whitespace-padded sources rejected with INVALID_SOURCE. Returns frozen result objects. 23 tests across 2 test files (10 positive, 13 negative) covering positive normalization, source exclusion, invalid sources, page number validation, content extraction, frozen results, canonical IDs, mixed batches, diagnostic structure, and unsupported narrative mechanics (ENG-008).
