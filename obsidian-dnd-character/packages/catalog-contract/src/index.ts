@@ -454,3 +454,26 @@ export {
   /* Optional-feature factory */
   createOptionalFeatureRule,
 } from "./entity-optional-feature";
+
+export {
+  /* Skill types */
+  type SkillRule,
+  /* Skill validator */
+  isSkillRule,
+  /* Skill factory */
+  createSkillRule,
+} from "./entity-skill";
+
+export {
+  /* Language types */
+  type LanguageRule,
+  type LanguageType,
+  /* Language constants */
+  LANGUAGE_TYPES,
+  /* Language guards */
+  isLanguageType,
+  /* Language validator */
+  isLanguageRule,
+  /* Language factory */
+  createLanguageRule,
+} from "./entity-language";
