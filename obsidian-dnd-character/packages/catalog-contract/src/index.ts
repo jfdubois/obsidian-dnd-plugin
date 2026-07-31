@@ -390,6 +390,15 @@ export {
 } from "./entity-background";
 
 export {
+  /* Subclass types */
+  type SubclassRule,
+  /* Subclass validator */
+  isSubclassRule,
+  /* Subclass factory */
+  createSubclassRule,
+} from "./entity-subclass";
+
+export {
   /* Feat types */
   type FeatRule,
   /* Feat validator */

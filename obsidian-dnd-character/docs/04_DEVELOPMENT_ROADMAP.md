@@ -253,7 +253,7 @@ Generate a valid versioned catalog using stable contracts.
 
 - [x] **P4-T008 — Implement class normalizer**
 
-- [ ] **P4-T009 — Implement subclass normalizer**
+- [x] **P4-T009 — Implement subclass normalizer**
 
 - [ ] **P4-T010 — Implement class-feature normalizer**
 

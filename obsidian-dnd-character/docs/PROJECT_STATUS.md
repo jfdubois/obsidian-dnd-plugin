@@ -6,11 +6,11 @@ Phase 4 — Catalog normalization and publication
 
 ## Current task
 
-P4-T009 — Implement subclass normalizer
+P4-T010 — Implement class-feature normalizer
 
 ## Last completed task
 
-P4-T008 — Implement class normalizer
+P4-T009 — Implement subclass normalizer
 
 ## Branch baseline
 
@@ -24,9 +24,9 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-P4-T008 (typecheck, lint, 2320/2320 tests across 64 files; 2 pre-existing timeouts).
-- `npm --prefix obsidian-dnd-character run build`: passing post-P4-T008.
-- Tests: 2320 passing (2 pre-existing timeouts excluded from count).
+- `npm --prefix obsidian-dnd-character run check`: passing post-P4-T009 (typecheck, lint, 2339/2340 tests across 65 files; 1 pre-existing timeout).
+- `npm --prefix obsidian-dnd-character run build`: passing post-P4-T009.
+- Tests: 2339 passing (1 pre-existing timeout excluded from count).
 
 ## Catalog baseline
 
@@ -45,15 +45,21 @@ None recorded.
 # Current phase ledger
 
 - Phase starting commit: b3598ccf62be42eddff2eaf9302ca636762f686c
-- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008
-- Current task: P4-T009
+- Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008; P4-T009 — see Git history for P4-T009
+- Current task: P4-T010
 - Current retry: 0
-- Gate status: P4-T008 complete; P4-T009 ready to begin.
+- Gate status: P4-T009 complete; P4-T010 ready to begin.
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-07-30 — P4-T009 — Subclass normalizer — complete
+Summary: Implemented subclass normalizer accepting indexed class entries (isSubclass=true) from class index loader and producing normalized SubclassRule entities. Limited to PHB (2014) and XPHB (2024) via classifyClassSourceScope. Uses shared createCanonicalEntityId from domain. Extracts subclass name, parent class reference, narrative content, page numbers, and summaries. Resolves parentId to canonical class ID. Non-core sources yield EXCLUDED_SOURCE diagnostics. Base classes rejected with BASE_CLASS_MISDIRECTED. Missing or empty parentId rejected with MISSING_PARENT_ID. Returns frozen result objects. 20 tests across 2 test files covering positive normalization, source exclusion, base class rejection, parent ID validation, and canonical ID generation.
+Validation: `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 2339/2340 tests across 65 files, 1 pre-existing timeout). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Catalog-builder only. No Obsidian API use. Raw 5eTools structures contained within catalog-builder boundaries. Subclass features deferred to P4-T011. Effects, choices, and prerequisites deferred.
+Commit: see Git history for P4-T009.
 
 2026-07-30 — P4-T008 — Class normalizer — complete
 Summary: Implemented class normalizer accepting indexed class entries from class index loader and producing normalized ClassRule entities. Limited to PHB (2014) and XPHB (2024) via forwarded source-scope diagnostics. Excludes subclass entries (SUBCLASS_EXCLUDED diagnostic, deferred to P4-T009). Extracts hitdie, primary abilities, and saving throw proficiencies with ability validation. Creates saving throw proficiency effects (add-proficiency with ProficiencySavingThrowRef). Preserves narrative content as safe render nodes. Assigns access="core", automation status "full", and effect provenance via EffectOrigin. Returns frozen result objects. 26 tests covering positive normalization, subclass exclusion, field extraction, edge cases, XPHB source, excluded sources, content extraction, frozen results, and mixed batches.
