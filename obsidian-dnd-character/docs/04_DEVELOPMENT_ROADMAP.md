@@ -301,13 +301,13 @@ Each entity normalizer must:
 
 ### Phase 4 gate
 
-- [ ] Zero duplicate IDs.
-- [ ] Zero unresolved references for included entities.
-- [ ] Both rulesets represented.
-- [ ] Core access classification verified against fixtures.
-- [ ] Every emitted effect has automation status, provenance, and projection metadata.
-- [ ] Unmapped narrative mechanics remain visible with diagnostics.
-- [ ] Build is reproducible for the same source commit/configuration.
+- [x] Zero duplicate IDs.
+- [x] Zero unresolved references for included entities.
+- [x] Both rulesets represented.
+- [x] Core access classification verified against fixtures.
+- [x] Every emitted effect has automation status, provenance, and projection metadata.
+- [x] Unmapped narrative mechanics remain visible with diagnostics.
+- [x] Build is reproducible for the same source commit/configuration.
 
 ---
 
