@@ -445,3 +445,12 @@ export {
   createItemCost,
   createItemRule,
 } from "./entity-item";
+
+export {
+  /* Optional-feature types */
+  type OptionalFeatureRule,
+  /* Optional-feature validator */
+  isOptionalFeatureRule,
+  /* Optional-feature factory */
+  createOptionalFeatureRule,
+} from "./entity-optional-feature";

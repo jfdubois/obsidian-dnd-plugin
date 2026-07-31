@@ -261,7 +261,7 @@ Generate a valid versioned catalog using stable contracts.
 
 - [x] **P4-T012 — Implement feat normalizer**
 
-- [ ] **P4-T013 — Implement optional-feature normalizer**
+- [x] **P4-T013 — Implement optional-feature normalizer**
 
 - [ ] **P4-T014 — Implement spell normalizer**
 

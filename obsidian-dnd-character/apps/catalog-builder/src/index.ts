@@ -383,3 +383,31 @@ export {
   /* Class index loader functions */
   loadClassIndex,
 } from "./class-index-loader";
+
+export {
+  /* Optional-feature source scope types */
+  type SupportedOptionalFeatureSourceEntry,
+  type SupportedOptionalFeatureSource,
+  type SupportedOptionalFeatureRuleset,
+  type OptionalFeatureSourceScopeContext,
+  type OptionalFeatureSourceScopeInput,
+  type OptionalFeatureSourceScopeDiagnosticCode,
+  type OptionalFeatureSourceScopeDiagnostic,
+  type OptionalFeatureSourceScopeSuccess,
+  type OptionalFeatureSourceScopeFailure,
+  type OptionalFeatureSourceScopeResult,
+  /* Optional-feature source scope registry */
+  SUPPORTED_OPTIONAL_FEATURE_SOURCES,
+  /* Optional-feature source scope functions */
+  classifyOptionalFeatureSourceScope,
+} from "./optional-feature-source-scope";
+
+export {
+  /* Optional-feature normalizer types */
+  type OptionalFeatureNormalizerDiagnosticCode,
+  type OptionalFeatureNormalizerDiagnostic,
+  type OptionalFeatureNormalizerInput,
+  type OptionalFeatureNormalizerResult,
+  /* Optional-feature normalizer functions */
+  normalizeOptionalFeatures,
+} from "./optional-feature-normalizer";
