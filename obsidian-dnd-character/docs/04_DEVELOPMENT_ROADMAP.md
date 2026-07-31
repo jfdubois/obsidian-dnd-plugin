@@ -271,7 +271,7 @@ Generate a valid versioned catalog using stable contracts.
 
 - [x] **P4-T017 — Implement skills and languages normalizers**
 
-- [ ] **P4-T018 — Implement canonical ID generator**
+- [x] **P4-T018 — Implement canonical ID generator**
 
 - [ ] **P4-T019 — Implement global reference resolver**
 

@@ -810,3 +810,254 @@ describe("createCanonicalEntityId - immutability", () => {
     }
   });
 });
+
+describe("createCanonicalEntityId - all entity kinds", () => {
+  it("produces valid ID for class kind", () => {
+    const result = createCanonicalEntityId({
+      kind: "class",
+      ruleset: "2014",
+      source: "PHB",
+      name: "Fighter",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(entityIdStr(result.id)).toBe("class:2014:phb:fighter");
+    }
+  });
+
+  it("produces valid ID for background kind", () => {
+    const result = createCanonicalEntityId({
+      kind: "background",
+      ruleset: "2014",
+      source: "PHB",
+      name: "Acolyte",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(entityIdStr(result.id)).toBe("background:2014:phb:acolyte");
+    }
+  });
+
+  it("produces valid ID for subclass kind", () => {
+    const result = createCanonicalEntityId({
+      kind: "subclass",
+      ruleset: "2014",
+      source: "PHB",
+      name: "Champion",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(entityIdStr(result.id)).toBe("subclass:2014:phb:champion");
+    }
+  });
+
+  it("produces valid ID for class-feature kind", () => {
+    const result = createCanonicalEntityId({
+      kind: "class-feature",
+      ruleset: "2014",
+      source: "PHB",
+      name: "Second Wind",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(entityIdStr(result.id)).toBe("class-feature:2014:phb:second-wind");
+    }
+  });
+
+  it("produces valid ID for subclass-feature kind", () => {
+    const result = createCanonicalEntityId({
+      kind: "subclass-feature",
+      ruleset: "2014",
+      source: "PHB",
+      name: "Improved Critical",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(entityIdStr(result.id)).toBe("subclass-feature:2014:phb:improved-critical");
+    }
+  });
+
+  it("produces valid ID for feat kind", () => {
+    const result = createCanonicalEntityId({
+      kind: "feat",
+      ruleset: "2014",
+      source: "PHB",
+      name: "Tough",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(entityIdStr(result.id)).toBe("feat:2014:phb:tough");
+    }
+  });
+
+  it("produces valid ID for item kind", () => {
+    const result = createCanonicalEntityId({
+      kind: "item",
+      ruleset: "2014",
+      source: "PHB",
+      name: "Longsword",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(entityIdStr(result.id)).toBe("item:2014:phb:longsword");
+    }
+  });
+
+  it("produces valid ID for optional-feature kind", () => {
+    const result = createCanonicalEntityId({
+      kind: "optional-feature",
+      ruleset: "2014",
+      source: "DMG",
+      name: "Additional Crossbow Expertise",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(entityIdStr(result.id)).toBe("optional-feature:2014:dmg:additional-crossbow-expertise");
+    }
+  });
+
+  it("produces valid ID for skill kind", () => {
+    const result = createCanonicalEntityId({
+      kind: "skill",
+      ruleset: "2014",
+      source: "PHB",
+      name: "Athletics",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(entityIdStr(result.id)).toBe("skill:2014:phb:athletics");
+    }
+  });
+
+  it("produces valid ID for language kind", () => {
+    const result = createCanonicalEntityId({
+      kind: "language",
+      ruleset: "2014",
+      source: "PHB",
+      name: "Common",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(entityIdStr(result.id)).toBe("language:2014:phb:common");
+    }
+  });
+
+  it("produces valid ID for species kind (2024 ruleset)", () => {
+    const result = createCanonicalEntityId({
+      kind: "species",
+      ruleset: "2024",
+      source: "XPHB",
+      name: "Human",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(entityIdStr(result.id)).toBe("species:2024:xphb:human");
+    }
+  });
+
+  it("produces valid ID for spell kind (2014 ruleset)", () => {
+    const result = createCanonicalEntityId({
+      kind: "spell",
+      ruleset: "2014",
+      source: "PHB",
+      name: "Fireball",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(entityIdStr(result.id)).toBe("spell:2014:phb:fireball");
+    }
+  });
+});
+
+describe("createCanonicalEntityId - name edge cases", () => {
+  it("handles very long name", () => {
+    const longName = "The Greatest and Most Magnificent Spell of All Time That Has Ever Been Cast";
+    const result = createCanonicalEntityId({
+      kind: "spell",
+      ruleset: "2014",
+      source: "PHB",
+      name: longName,
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const expected = "spell:2014:phb:the-greatest-and-most-magnificent-spell-of-all-time-that-has-ever-been-cast";
+      expect(entityIdStr(result.id)).toBe(expected);
+    }
+  });
+
+  it("handles name starting with number", () => {
+    const result = createCanonicalEntityId({
+      kind: "spell",
+      ruleset: "2014",
+      source: "PHB",
+      name: "3rd Level Spell",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(entityIdStr(result.id)).toBe("spell:2014:phb:3rd-level-spell");
+    }
+  });
+
+  it("handles single character name", () => {
+    const result = createCanonicalEntityId({
+      kind: "item",
+      ruleset: "2014",
+      source: "PHB",
+      name: "A",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(entityIdStr(result.id)).toBe("item:2014:phb:a");
+    }
+  });
+
+  it("handles name with consecutive special characters", () => {
+    const result = createCanonicalEntityId({
+      kind: "item",
+      ruleset: "2014",
+      source: "DMG",
+      name: "Ring of Protection +2",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(entityIdStr(result.id)).toBe("item:2014:dmg:ring-of-protection-%2B2");
+    }
+  });
+
+  it("handles name with parentheses", () => {
+    const result = createCanonicalEntityId({
+      kind: "spell",
+      ruleset: "2014",
+      source: "XGtE",
+      name: "Chromatic Orb (Acid)",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(entityIdStr(result.id)).toBe("spell:2014:xgte:chromatic-orb-%28acid%29");
+    }
+  });
+
+  it("deterministic output across multiple calls", () => {
+    const key = { kind: "class", ruleset: "2014", source: "PHB", name: "Fighter" };
+    const results = Array.from({ length: 10 }, () => createCanonicalEntityId(key));
+    const firstId = results[0];
+    expect(firstId?.ok).toBe(true);
+    if (firstId?.ok) {
+      for (const result of results) {
+        if (result.ok) {
+          expect(entityIdStr(result.id)).toBe(entityIdStr(firstId.id));
+        }
+      }
+    }
+  });
+
+  it("ruleset is included in ID", () => {
+    const r2014 = createCanonicalEntityId({ kind: "class", ruleset: "2014", source: "PHB", name: "Fighter" });
+    const r2024 = createCanonicalEntityId({ kind: "class", ruleset: "2024", source: "XPHB", name: "Fighter" });
+    expect(r2014.ok && r2024.ok).toBe(true);
+    if (r2014.ok && r2024.ok) {
+      expect(entityIdStr(r2014.id)).toContain(":2014:");
+      expect(entityIdStr(r2024.id)).toContain(":2024:");
+    }
+  });
+});
