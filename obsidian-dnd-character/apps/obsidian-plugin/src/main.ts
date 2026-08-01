@@ -21,10 +21,23 @@ export default class DndCharacterPlugin extends Plugin {
 			new CharacterSheetView(leaf),
 		);
 
-		// TODO (P6-T008): Register plugin commands
-		// this.addCommand(...);
+		// Register command to open character sheet in right sidebar (P6-T008)
+		this.addCommand({
+			id: 'open-character-sheet',
+			name: 'Open character sheet',
+			callback: async () => {
+				const leaf = this.app.workspace.getRightLeaf(false);
+				if (leaf) {
+					await leaf.setViewState({
+						type: DND_CHARACTER_SHEET_VIEW_TYPE,
+						state: {},
+					});
+					await this.app.workspace.revealLeaf(leaf);
+				}
+			},
+		});
 
-		// TODO (P6-T008): Register event listeners
+		// TODO (P6-T009): Register event listeners
 		// this.registerEvent(...);
 
 		// TODO (P6-T009): Register settings tab

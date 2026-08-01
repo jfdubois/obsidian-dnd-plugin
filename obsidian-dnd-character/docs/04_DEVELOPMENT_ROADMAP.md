@@ -348,7 +348,7 @@ Create the mobile-compatible plugin skeleton using verified public APIs.
 - [x] **P6-T005 — Implement settings schema and defaults**
 - [x] **P6-T006 — Implement settings tab**
 - [x] **P6-T007 — Register empty character-sheet view**
-- [ ] **P6-T008 — Add command to open right sidebar view**
+- [x] **P6-T008 — Add command to open right sidebar view**
 - [ ] **P6-T009 — Register cleanup-safe events**
 - [ ] **P6-T010 — Update API usage register for every symbol**
 - [ ] **P6-T011 — Manual desktop smoke test**

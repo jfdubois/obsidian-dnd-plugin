@@ -6,14 +6,15 @@ Every Obsidian API member used in this project must have an entry before it appe
 |---|---|---:|---|---|---|
 | `requestUrl` | `requestUrl(request: RequestUrlParam \| string): RequestUrlResponsePromise` | — | pending | catalog HTTP client | pending |
 | `Plugin.registerView` | `registerView(type: string, viewCreator: ViewCreator): void` | 0.9.7 | `main.ts` | character sheet view registration | view registered in onload |
-| `Workspace.getRightLeaf` | `getRightLeaf(split: boolean): WorkspaceLeaf \| null` | 0.9.7 | pending | right sidebar placement | pending |
-| `WorkspaceLeaf.setViewState` | `setViewState(viewState: ViewState, eState?: any): Promise<void>` | — | pending | activate view | pending |
+| `Workspace.getRightLeaf` | `getRightLeaf(split: boolean): WorkspaceLeaf \| null` | 0.9.7 | `main.ts` | get or create right sidebar leaf for character sheet | right leaf returned or null |
+| `WorkspaceLeaf.setViewState` | `setViewState(viewState: ViewState, eState?: any): Promise<void>` | — | `main.ts` | activate character sheet view in leaf | view type set on leaf |
+| `Workspace.revealLeaf` | `revealLeaf(leaf: WorkspaceLeaf): Promise<void>` | 1.7.2 | `main.ts` | uncollapse sidebar and bring leaf to foreground | sidebar opens with character sheet |
 | `Plugin.onload` | `onload(): Promise<void> \| void` | 0.9.7 | `main.ts` | plugin initialization lifecycle | console.log verification |
 | `Plugin.loadData` | `loadData(): Promise<any>` | 0.9.7 | `main.ts` | load persisted plugin settings | settings normalized on load |
 | `Plugin.saveData` | `saveData(data: any): Promise<void>` | 0.9.7 | `main.ts` | persist plugin settings on unload | settings saved on unload |
 | `Vault.cachedRead` | `cachedRead(file: TFile): Promise<string>` | 0.9.7 | pending | read display data | pending |
 | `Vault.process` | `process(file: TFile, fn: (data: string) => string, options?: DataWriteOptions): Promise<string>` | 1.1.0 | pending | atomic character update | pending |
-| `Plugin.addCommand` | `addCommand(command: Command): Command` | — | pending | register plugin commands | pending |
+| `Plugin.addCommand` | `addCommand(command: Command): Command` | 0.9.7 | `main.ts` | register command to open character sheet in right sidebar | command appears in command palette |
 | `Plugin.addSettingTab` | `addSettingTab(settingTab: PluginSettingTab): void` | 0.9.7 | `main.ts` | register settings tab | settings tab appears in Obsidian settings |
 | `PluginSettingTab` | `abstract class PluginSettingTab extends SettingTab { constructor(app: App, plugin: Plugin); display(): void; }` | 0.9.7 | `settings-tab.ts` | custom settings tab base class | tab renders with all settings |
 | `PluginSettingTab.display` | `display(): void` | 1.13.0 (deprecated, legacy pattern) | `settings-tab.ts` | render settings UI imperatively | settings fields appear on tab open |
