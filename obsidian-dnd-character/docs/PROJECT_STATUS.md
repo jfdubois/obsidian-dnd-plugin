@@ -6,11 +6,11 @@ Phase 6 — Obsidian plugin foundation
 
 ## Current task
 
-P6-T010 — Update API usage register for every symbol
+P6-T011 — Manual desktop smoke test
 
 ## Last completed task
 
-P6-T009 — Register cleanup-safe events
+P6-T010 — Update API usage register for every symbol
 
 ## Branch baseline
 
@@ -47,8 +47,8 @@ None recorded.
 - Phase starting commit: e19d6846ddb845e7dcc8ed23397da5db7cefc260
 - Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008; P4-T009 — see Git history for P4-T009; P4-T010 — see Git history for P4-T010; P4-T011 — see Git history for P4-T011; P4-T012 — see Git history for P4-T012; P4-T013 — see Git history for P4-T013; P4-T014 — see Git history for P4-T014; P4-T015 — see Git history for P4-T015; P4-T016 — see Git history for P4-T016; P4-T017 — see Git history for P4-T017; P4-T018 — see Git history for P4-T018; P4-T019 — see Git history for P4-T019; P4-T020 — see Git history for P4-T020; P4-T021 — see Git history for P4-T021; P4-T022 — see Git history for P4-T022; P4-T023 — see Git history for P4-T023; P4-T024 — see Git history for P4-T024
 - Completed Phase 5 task commits: P5-T001 — 4e44b20; P5-T002 — ef11547; P5-T003 — defb572; P5-T004 — 98697ed; P5-T005 — b4a561e; P5-T006 — 518fb19; P5-T007 — f8b5f3a; P5-T008 — 5a63cc7
-- Completed Phase 6 task commits: P6-T001 — see Git history for P6-T001; P6-T002 — see Git history for P6-T002; P6-T003 — no changes needed; P6-T004 — see Git history for P6-T004; P6-T005 — see Git history for P6-T005; P6-T006 — see Git history for P6-T006; P6-T007 — see Git history for P6-T007; P6-T008 — see Git history for P6-T008; P6-T009 — see Git history for P6-T009
-- Current task: P6-T010
+- Completed Phase 6 task commits: P6-T001 — see Git history for P6-T001; P6-T002 — see Git history for P6-T002; P6-T003 — no changes needed; P6-T004 — see Git history for P6-T004; P6-T005 — see Git history for P6-T005; P6-T006 — see Git history for P6-T006; P6-T007 — see Git history for P6-T007; P6-T008 — see Git history for P6-T008; P6-T009 — see Git history for P6-T009; P6-T010 — see Git history for P6-T010
+- Current task: P6-T011
 - Current retry: 0
 - Gate status: Phase 4 gate complete. Phase 5 gate complete.
 - Blocking issue: none
@@ -56,6 +56,12 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-01 — P6-T010 — Update API usage register for every symbol — complete
+Summary: Audited all Obsidian API symbols used in the plugin source code and ensured each is documented in docs/API_USAGE.md. Added 16 previously missing entries: Plugin, TAbstractFile, App, App.workspace, App.vault, WorkspaceLeaf, TextComponent.setPlaceholder, TextComponent.setValue, TextComponent.onChange, Setting.setDisabled, SettingTab.containerEl, ItemView.contentEl, ItemView.getViewType, ItemView.getDisplayText, ItemView.onOpen, ItemView.onClose. All signatures verified against pinned obsidian.d.ts.
+Validation: `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Documentation-only. No source code changes. Mobile-compatible.
+Commit: see Git history for P6-T010.
 
 2026-08-01 — P6-T009 — Register cleanup-safe events — complete
 Summary: Registered cleanup-safe vault event listeners for 'create', 'modify', 'delete', 'rename' events using this.registerEvent(). Event callbacks are placeholder console.log statements; actual event handling deferred to Phase 8. Events are automatically cleaned up by Obsidian Component lifecycle on plugin unload. Updated API_USAGE.md for Component.registerEvent and Vault.on (create/modify/delete/rename).

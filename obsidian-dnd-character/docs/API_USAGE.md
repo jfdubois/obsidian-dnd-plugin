@@ -35,6 +35,22 @@ Every Obsidian API member used in this project must have an entry before it appe
 | `ViewCreator` | `type ViewCreator = (leaf: WorkspaceLeaf) => View` | — | `main.ts` | view factory for registerView | view created on leaf |
 | `Vault.create` | `create(path: string, data: string, options?: DataWriteOptions): Promise<TFile>` | 0.9.7 | pending | create character file in vault | pending |
 | `Vault.createFolder` | `createFolder(path: string): Promise<TFolder>` | 0.9.7 | pending | create character folder | pending |
+| `Plugin` | `abstract class Plugin extends Component { app: App; manifest: PluginManifest; constructor(app: App, manifest: PluginManifest); }` | 0.9.7 | `main.ts` | plugin base class for DndCharacterPlugin | plugin extends Plugin |
+| `TAbstractFile` | `abstract class TAbstractFile { vault: Vault; path: string; name: string; }` | 0.9.7 | `main.ts` | type for vault event callback file parameter | typed in event handlers |
+| `App` | `class App { workspace: Workspace; vault: Vault; metadataCache: MetadataCache; }` | 0.9.7 | `settings-tab.ts` | app instance type for setting tab constructor | app passed to setting tab |
+| `App.workspace` | `workspace: Workspace` | 0.9.7 | `main.ts` | access workspace for leaf operations | workspace accessed in command |
+| `App.vault` | `vault: Vault` | 0.9.7 | `main.ts` | access vault for event registration | vault events registered |
+| `WorkspaceLeaf` | `class WorkspaceLeaf extends WorkspaceItem { view: View; openFile(file: TFile): Promise<void>; setViewState(viewState: ViewState): Promise<void>; }` | — | `views/character-sheet-view.ts` | leaf type for view constructor | leaf passed to view |
+| `TextComponent.setPlaceholder` | `setPlaceholder(placeholder: string): this` | 0.9.7 | `settings-tab.ts` | set placeholder text for text input | placeholder visible |
+| `TextComponent.setValue` | `setValue(value: string): this` | 0.9.7 | `settings-tab.ts` | set initial value for text input | value pre-filled |
+| `TextComponent.onChange` | `onChange(callback: (value: string) => any): this` | 0.9.7 | `settings-tab.ts` | react to text input changes | value persists on change |
+| `Setting.setDisabled` | `setDisabled(disabled: boolean): this` | 1.2.3 | `settings-tab.ts` | disable setting row (read-only display) | row appears disabled |
+| `SettingTab.containerEl` | `containerEl: HTMLElement` | — | `settings-tab.ts` | container element for setting tab content | container cleared and populated |
+| `ItemView.contentEl` | `contentEl: HTMLElement` | — | `views/character-sheet-view.ts` | DOM container for character sheet content | content rendered in element |
+| `ItemView.getViewType` | `abstract getViewType(): string` | 0.9.7 | `views/character-sheet-view.ts` | return view type identifier | returns dnd-character-sheet |
+| `ItemView.getDisplayText` | `abstract getDisplayText(): string` | 0.9.7 | `views/character-sheet-view.ts` | return display name for view tab | shows Character Sheet |
+| `ItemView.onOpen` | `protected onOpen(): Promise<void>` | 0.9.7 | `views/character-sheet-view.ts` | initialize view DOM on open | placeholder content rendered |
+| `ItemView.onClose` | `protected onClose(): Promise<void>` | 0.9.7 | `views/character-sheet-view.ts` | clean up view DOM on close | content cleared |
 
 ## Notes
 
