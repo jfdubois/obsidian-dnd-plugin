@@ -324,14 +324,14 @@ Serve immutable catalog revisions safely and simply.
   - Short/no-cache for `current.json`; immutable long cache for revision files.
 
 - [x] **P5-T005 — Add health check**
-- [ ] **P5-T006 — Add local HTTPS/VPN deployment notes**
-- [ ] **P5-T007 — Test desktop and mobile-reachable URLs**
-- [ ] **P5-T008 — Document update/rollback procedure**
+- [x] **P5-T006 — Add local HTTPS/VPN deployment notes**
+- [x] **P5-T007 — Test desktop and mobile-reachable URLs**
+- [x] **P5-T008 — Document update/rollback procedure**
 
 ### Phase 5 gate
 
-- [ ] Plugin-independent HTTP test can retrieve and validate a complete revision.
-- [ ] Previous revision can be restored without rebuilding plugin.
+- [x] Plugin-independent HTTP test can retrieve and validate a complete revision.
+- [x] Previous revision can be restored without rebuilding plugin.
 
 ---
 
