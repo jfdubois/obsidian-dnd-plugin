@@ -43,6 +43,7 @@ import type {
   EntityDetailResult,
   SchemaNegotiationResult,
 } from "./client";
+import { validateConnection } from "./connection-test";
 
 /* ── Constants ─────────────────────────────────────────────────── */
 
@@ -146,8 +147,9 @@ export class RequestUrlCatalogClient implements CatalogClient {
 
   async testConnection(): Promise<boolean> {
     try {
-      const _ = await this.fetchJson(this.baseUrl);
-      return true;
+      const data = await this.fetchJson(this.baseUrl);
+      const result = validateConnection(data);
+      return result.valid;
     } catch {
       return false;
     }

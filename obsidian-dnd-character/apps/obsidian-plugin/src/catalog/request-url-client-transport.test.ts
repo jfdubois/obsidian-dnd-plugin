@@ -33,7 +33,20 @@ function createMockManifest(catalogRevision: CatalogRevision): CatalogManifest {
     builderVersion: "0.1.0",
     generatedAt: "2026-01-01T00:00:00Z",
     rulesets: ["2024"],
-    entityKinds: ["species"],
+    entityKinds: [
+      "species",
+      "background",
+      "class",
+      "subclass",
+      "class-feature",
+      "subclass-feature",
+      "feat",
+      "spell",
+      "item",
+      "optional-feature",
+      "skill",
+      "language",
+    ],
     checksums: {},
   });
 }
@@ -124,7 +137,7 @@ describe("RequestUrlCatalogClient transport", () => {
 
     it("uses base URL for connection test", async () => {
       const client = new RequestUrlCatalogClient({ baseUrl });
-      mockResponse({ status: "ok" });
+      mockResponse(createMockManifest(revision));
 
       await client.testConnection();
 
@@ -218,7 +231,7 @@ describe("RequestUrlCatalogClient transport", () => {
         timeoutMs: 1000,
       });
 
-      mockResponse({ status: "ok" });
+      mockResponse(createMockManifest(revision));
 
       const result = await client.testConnection();
       expect(result).toBe(true);

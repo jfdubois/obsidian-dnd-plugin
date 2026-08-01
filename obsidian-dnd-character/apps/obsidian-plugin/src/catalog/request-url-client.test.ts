@@ -53,7 +53,20 @@ function createMockManifest(catalogRevision: CatalogRevision): CatalogManifest {
     builderVersion: "0.1.0",
     generatedAt: "2026-01-01T00:00:00Z",
     rulesets: ["2024"],
-    entityKinds: ["species"],
+    entityKinds: [
+      "species",
+      "background",
+      "class",
+      "subclass",
+      "class-feature",
+      "subclass-feature",
+      "feat",
+      "spell",
+      "item",
+      "optional-feature",
+      "skill",
+      "language",
+    ],
     checksums: {},
   });
 }
@@ -216,15 +229,38 @@ describe("RequestUrlCatalogClient", () => {
 
   /* ── testConnection ──────────────────────────────────────────── */
 
-  it("testConnection returns true on success", async () => {
-    mockResponse({ status: "ok" });
+  it("testConnection returns true for valid manifest", async () => {
+    mockResponse(createMockManifest(revision));
 
     const result = await client.testConnection();
     expect(result).toBe(true);
   });
 
-  it("testConnection returns false on error", async () => {
+  it("testConnection returns false for invalid manifest", async () => {
+    mockResponse({ status: "ok" });
+
+    const result = await client.testConnection();
+    expect(result).toBe(false);
+  });
+
+  it("testConnection returns false on network error", async () => {
     mockNetworkError();
+
+    const result = await client.testConnection();
+    expect(result).toBe(false);
+  });
+
+  it("testConnection returns false for wrong schema version", async () => {
+    const manifest = createMockManifest(revision);
+    mockResponse({ ...manifest, schemaVersion: 99 });
+
+    const result = await client.testConnection();
+    expect(result).toBe(false);
+  });
+
+  it("testConnection returns false for missing required entity kinds", async () => {
+    const manifest = createMockManifest(revision);
+    mockResponse({ ...manifest, entityKinds: ["skill"] });
 
     const result = await client.testConnection();
     expect(result).toBe(false);
