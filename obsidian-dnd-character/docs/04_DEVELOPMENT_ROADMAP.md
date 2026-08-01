@@ -343,7 +343,7 @@ Create the mobile-compatible plugin skeleton using verified public APIs.
 
 - [x] **P6-T001 — Scaffold from official sample structure**
 - [x] **P6-T002 — Create `manifest.json` and versions policy**
-- [ ] **P6-T003 — Configure esbuild and strict TypeScript**
+- [x] **P6-T003 — Configure esbuild and strict TypeScript**
 - [ ] **P6-T004 — Implement plugin lifecycle**
 - [ ] **P6-T005 — Implement settings schema and defaults**
 - [ ] **P6-T006 — Implement settings tab**
