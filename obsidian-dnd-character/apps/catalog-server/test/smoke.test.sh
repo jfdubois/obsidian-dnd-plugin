@@ -9,6 +9,51 @@
 #   4. non-existent files return 404
 #   5. cache headers: no-cache for current.json, immutable for
 #      revision files, short cache for other JSON
+#   6. server binds to 0.0.0.0 (mobile/LAN reachable)
+#
+# ── Expected catalog URL patterns ────────────────────────────
+# The plugin and mobile clients use these URL paths against the
+# catalog server (default port 8080):
+#
+#   GET /health
+#       Health check endpoint. Returns {"status":"healthy"}.
+#       Cache: no-cache, no-store, must-revalidate.
+#
+#   GET /catalog/v1/current.json
+#       Active revision pointer. Returns {"currentRevision":"<id>"}.
+#       Cache: no-cache, no-store, must-revalidate.
+#
+#   GET /catalog/v1/revisions/<id>/manifest.json
+#       Revision manifest with schema version and generation time.
+#       Cache: immutable (public, max-age=31536000).
+#
+#   GET /catalog/v1/revisions/<id>/entities/<kind>/<id>.json
+#       Individual entity records (species, feats, spells, etc.).
+#       Cache: immutable (public, max-age=31536000).
+#
+#   GET /catalog/v1/revisions/<id>/indexes/<kind>.json
+#       Index files listing entity IDs by kind.
+#       Cache: immutable (public, max-age=31536000).
+#
+#   GET /catalog/v1/revisions/<id>/reports/validation.json
+#       Build validation report (errors, warnings).
+#       Cache: immutable (public, max-age=31536000).
+#
+#   GET /catalog/v1/revisions/<id>/reports/inventory.json
+#       Build inventory report (entity counts by kind).
+#       Cache: immutable (public, max-age=31536000).
+#
+# ── Access patterns ──────────────────────────────────────────
+# Desktop (localhost):
+#   http://localhost:8080/<path>
+#
+# Mobile / LAN:
+#   http://<server-lan-ip>:8080/<path>
+#   e.g. http://192.168.1.100:8080/catalog/v1/current.json
+#
+# The server binds to 0.0.0.0:8080 so it is reachable from any
+# interface on the host machine, enabling mobile device access
+# on the same subnet.
 # ──────────────────────────────────────────────────────────────
 set -euo pipefail
 
@@ -85,11 +130,19 @@ cat > "$SAMPLE_DIR/catalog/v1/revisions/$REVISION_ID/indexes/species.json" <<'EO
 }
 EOF
 
-# A sample report file
+# A sample report file — validation
 cat > "$SAMPLE_DIR/catalog/v1/revisions/$REVISION_ID/reports/validation.json" <<'EOF'
 {
   "status": "pass",
   "errors": []
+}
+EOF
+
+# A sample report file — inventory
+cat > "$SAMPLE_DIR/catalog/v1/revisions/$REVISION_ID/reports/inventory.json" <<'EOF'
+{
+  "species": 1,
+  "total": 1
 }
 EOF
 
@@ -146,12 +199,20 @@ else
     report "index file (species.json) returns 200" "FAIL"
 fi
 
-# Test 5: Report file is served
+# Test 5: Report file (validation.json) is served
 RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT/catalog/v1/revisions/$REVISION_ID/reports/validation.json" 2>/dev/null || echo "000")
 if [ "$RESPONSE" = "200" ]; then
     report "report file (validation.json) returns 200" "PASS"
 else
     report "report file (validation.json) returns 200" "FAIL"
+fi
+
+# Test 5b: Report file (inventory.json) is served
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT/catalog/v1/revisions/$REVISION_ID/reports/inventory.json" 2>/dev/null || echo "000")
+if [ "$RESPONSE" = "200" ]; then
+    report "report file (inventory.json) returns 200" "PASS"
+else
+    report "report file (inventory.json) returns 200" "FAIL"
 fi
 
 # Test 6: Non-existent file returns 404
@@ -235,6 +296,14 @@ else
     report "revision report file has immutable Cache-Control (got: $REPORT_CACHE)" "FAIL"
 fi
 
+# Test 15b: Revision inventory report has immutable cache headers
+INVENTORY_CACHE=$(curl -s -I "http://localhost:$PORT/catalog/v1/revisions/$REVISION_ID/reports/inventory.json" 2>/dev/null | grep -i "cache-control" | tr -d '\r')
+if echo "$INVENTORY_CACHE" | grep -q "immutable"; then
+    report "revision inventory report has immutable Cache-Control" "PASS"
+else
+    report "revision inventory report has immutable Cache-Control (got: $INVENTORY_CACHE)" "FAIL"
+fi
+
 # ── Health check endpoint tests (P5-T005) ─────────────────────
 
 # Test 16: /health returns 200
@@ -274,6 +343,63 @@ if [ "$HEALTH_TYPE" = "application/json" ]; then
     report "/health returns application/json content type" "PASS"
 else
     report "/health returns application/json content type (got: $HEALTH_TYPE)" "FAIL"
+fi
+
+# ── Mobile / LAN reachability tests (P5-T007) ─────────────────
+
+# Test 21: Server binds to 0.0.0.0 (all interfaces)
+# When nginx listens on port 8080 without an IP, it binds to
+# 0.0.0.0. We verify this by checking the container's listening
+# sockets. If it only bound to 127.0.0.1, mobile devices on
+# the LAN could not reach the server.
+LISTEN_ADDRS=$(docker exec "$CONTAINER_NAME" ss -tlnp 2>/dev/null | grep ":8080" | awk '{print $4}' || true)
+if echo "$LISTEN_ADDRS" | grep -q "0.0.0.0:8080"; then
+    report "server binds to 0.0.0.0 (all interfaces)" "PASS"
+elif echo "$LISTEN_ADDRS" | grep -q "\*.*:8080"; then
+    report "server binds to 0.0.0.0 (all interfaces)" "PASS"
+else
+    report "server binds to 0.0.0.0 (all interfaces) (got: $LISTEN_ADDRS)" "FAIL"
+fi
+
+# Test 22: Server responds on 0.0.0.0 address
+# curl to 0.0.0.0 explicitly tests that the binding accepts
+# connections on the any-address interface, not just loopback.
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://0.0.0.0:$PORT/health" 2>/dev/null || echo "000")
+if [ "$RESPONSE" = "200" ]; then
+    report "server responds on 0.0.0.0:PORT/health" "PASS"
+else
+    report "server responds on 0.0.0.0:PORT/health (got: $RESPONSE)" "FAIL"
+fi
+
+# Test 23: Server responds on host LAN IP (mobile access pattern)
+# Get the first non-loopback IPv4 address of the host to simulate
+# a mobile device on the same subnet accessing the catalog server.
+LAN_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || true)
+if [ -n "$LAN_IP" ]; then
+    RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://$LAN_IP:$PORT/health" 2>/dev/null || echo "000")
+    if [ "$RESPONSE" = "200" ]; then
+        report "server responds on LAN IP ($LAN_IP)/health" "PASS"
+    else
+        report "server responds on LAN IP ($LAN_IP)/health (got: $RESPONSE)" "FAIL"
+    fi
+else
+    report "LAN IP reachability (skipped: no LAN IP detected)" "PASS"
+fi
+
+# Test 24: Catalog endpoints reachable via 0.0.0.0
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://0.0.0.0:$PORT/catalog/v1/current.json" 2>/dev/null || echo "000")
+if [ "$RESPONSE" = "200" ]; then
+    report "catalog/v1/current.json reachable via 0.0.0.0" "PASS"
+else
+    report "catalog/v1/current.json reachable via 0.0.0.0 (got: $RESPONSE)" "FAIL"
+fi
+
+# Test 25: Revision endpoints reachable via 0.0.0.0
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "http://0.0.0.0:$PORT/catalog/v1/revisions/$REVISION_ID/manifest.json" 2>/dev/null || echo "000")
+if [ "$RESPONSE" = "200" ]; then
+    report "revision manifest reachable via 0.0.0.0" "PASS"
+else
+    report "revision manifest reachable via 0.0.0.0 (got: $RESPONSE)" "FAIL"
 fi
 
 # ── Cleanup: remove temp data ─────────────────────────────────
