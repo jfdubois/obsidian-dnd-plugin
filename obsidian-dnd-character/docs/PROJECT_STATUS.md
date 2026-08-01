@@ -24,9 +24,10 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-Phase 5 gate (typecheck, lint, 2778/2780 tests across 99 files, 2 skipped).
-- `npm --prefix obsidian-dnd-character run build`: passing post-Phase 5 gate.
-- Tests: 2778 passing.
+- `npm --prefix obsidian-dnd-character run check`: passing post-Phase 6 gate (typecheck, lint, 2821/2823 tests across 102 files, 2 skipped).
+- `npm --prefix obsidian-dnd-character run build`: passing post-Phase 6 gate.
+- `npm --workspace @obsidian-dnd/obsidian-plugin run bundle`: passing (CJS, obsidian external, no prohibited deps).
+- Tests: 2821 passing.
 
 ## Catalog baseline
 
@@ -39,12 +40,15 @@ None recorded.
 
 - Obsidian API snapshot: pinned (SHA-256 `ed358aa…`).
 - Sample plugin: pinned at commit `23c165f`.
-- Minimum app version: not selected.
-- Plugin version: not initialized.
+- Minimum app version: 1.7.2.
+- Plugin version: 0.1.0.
+- isDesktopOnly: false.
+- Bundle: CJS format, obsidian external, no prohibited deps (4112 bytes minified).
 
 # Current phase ledger
 
-- Phase starting commit: e19d6846ddb845e7dcc8ed23397da5db7cefc260
+- Phase 4 starting commit: e19d6846ddb845e7dcc8ed23397da5db7cefc260
+- Phase 6 starting commit: 764127f (compatibility corrections commit)
 - Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008; P4-T009 — see Git history for P4-T009; P4-T010 — see Git history for P4-T010; P4-T011 — see Git history for P4-T011; P4-T012 — see Git history for P4-T012; P4-T013 — see Git history for P4-T013; P4-T014 — see Git history for P4-T014; P4-T015 — see Git history for P4-T015; P4-T016 — see Git history for P4-T016; P4-T017 — see Git history for P4-T017; P4-T018 — see Git history for P4-T018; P4-T019 — see Git history for P4-T019; P4-T020 — see Git history for P4-T020; P4-T021 — see Git history for P4-T021; P4-T022 — see Git history for P4-T022; P4-T023 — see Git history for P4-T023; P4-T024 — see Git history for P4-T024
 - Completed Phase 5 task commits: P5-T001 — 4e44b20; P5-T002 — ef11547; P5-T003 — defb572; P5-T004 — 98697ed; P5-T005 — b4a561e; P5-T006 — 518fb19; P5-T007 — f8b5f3a; P5-T008 — 5a63cc7
 - Completed Phase 6 task commits: P6-T001 — see Git history for P6-T001; P6-T002 — see Git history for P6-T002; P6-T003 — no changes needed; P6-T004 — see Git history for P6-T004; P6-T005 — see Git history for P6-T005; P6-T006 — see Git history for P6-T006; P6-T007 — see Git history for P6-T007; P6-T008 — see Git history for P6-T008; P6-T009 — see Git history for P6-T009; P6-T010 — see Git history for P6-T010; P6-T011 — see Git history for P6-T011; P6-T012 — see Git history for P6-T012
@@ -56,6 +60,11 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-01 — Post-gate compatibility corrections — complete
+Summary: Corrected Phase 6 compatibility gaps: minAppVersion 1.7.0→1.7.2 (required for Workspace.revealLeaf), package.json version 0.0.0→0.1.0 (aligned with manifest), versions.json created with {"0.1.0": "1.7.2"}, API_USAGE.md corrected for PluginSettingTab.display and Plugin.onload signatures.
+Validation: `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint, 2821/2823 tests). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0). `npm --workspace @obsidian-dnd/obsidian-plugin run bundle` passes (CJS, obsidian external, no prohibited deps).
+Commit: 764127f
 
 2026-08-01 — Phase 6 gate — complete
 Summary: All 12 Phase 6 tasks completed. Gate criteria verified: (1) Plugin loads/unloads cleanly — no errors in build or typecheck, all 2778 tests pass. (2) View opens in documented right leaf — getRightLeaf(false) guarded on mobile, viewtype "dnd-character-sheet" registered. (3) No undocumented API usage — all Obsidian APIs documented in API_USAGE.md. (4) isDesktopOnly remains false — confirmed in manifest.json. Phase 6 delivered mobile-compatible plugin skeleton with settings, view, and command registration.
