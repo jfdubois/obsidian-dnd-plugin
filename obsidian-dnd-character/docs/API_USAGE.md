@@ -14,7 +14,15 @@ Every Obsidian API member used in this project must have an entry before it appe
 | `Vault.cachedRead` | `cachedRead(file: TFile): Promise<string>` | 0.9.7 | pending | read display data | pending |
 | `Vault.process` | `process(file: TFile, fn: (data: string) => string, options?: DataWriteOptions): Promise<string>` | 1.1.0 | pending | atomic character update | pending |
 | `Plugin.addCommand` | `addCommand(command: Command): Command` | — | pending | register plugin commands | pending |
-| `Plugin.addSettingTab` | `addSettingTab(settingTab: PluginSettingTab): void` | 0.9.7 | pending | settings tab | pending |
+| `Plugin.addSettingTab` | `addSettingTab(settingTab: PluginSettingTab): void` | 0.9.7 | `main.ts` | register settings tab | settings tab appears in Obsidian settings |
+| `PluginSettingTab` | `abstract class PluginSettingTab extends SettingTab { constructor(app: App, plugin: Plugin); display(): void; }` | 0.9.7 | `settings-tab.ts` | custom settings tab base class | tab renders with all settings |
+| `PluginSettingTab.display` | `display(): void` | 1.13.0 (deprecated, legacy pattern) | `settings-tab.ts` | render settings UI imperatively | settings fields appear on tab open |
+| `Setting` | `class Setting { constructor(containerEl: HTMLElement); }` | 0.9.7 | `settings-tab.ts` | setting row container | rows render in tab |
+| `Setting.setName` | `setName(name: string): this` | 0.9.7 | `settings-tab.ts` | label for setting row | label text visible |
+| `Setting.setDesc` | `setDesc(desc: string \| DocumentFragment): this` | 0.9.7 | `settings-tab.ts` | description for setting row | description text visible |
+| `Setting.addText` | `addText(cb: (component: TextComponent) => any): this` | 0.9.7 | `settings-tab.ts` | editable text input for setting | input renders and persists on change |
+| `TextComponent` | `class TextComponent extends AbstractTextComponent<HTMLInputElement>` | 0.9.7 | `settings-tab.ts` | text input component | input value editable |
+| `Setting.setHeading` | `setHeading(): this` | 0.9.16 | `settings-tab.ts` | section heading | heading renders as section divider |
 | `Component.onunload` | `onunload(): void` | 0.9.7 | `main.ts` | cleanup on unload | console.log verification |
 | `Component.register` | `register(cb: () => any): void` | 0.9.7 | pending | register cleanup callback | pending |
 | `Component.registerEvent` | `registerEvent(eventRef: EventRef): void` | 0.9.7 | pending | register event listener cleanup | pending |

@@ -2,6 +2,7 @@ import { Plugin } from 'obsidian';
 
 import type { DndCharacterPluginSettings } from './settings';
 import { DEFAULT_SETTINGS, normalizeSettings } from './settings';
+import { DndCharacterPluginSettingTab } from './settings-tab';
 
 export default class DndCharacterPlugin extends Plugin {
 	settings: DndCharacterPluginSettings = DEFAULT_SETTINGS;
@@ -21,7 +22,7 @@ export default class DndCharacterPlugin extends Plugin {
 		// this.registerEvent(...);
 
 		// TODO (P6-T009): Register settings tab
-		// this.addSettingTab(...);
+		this.addSettingTab(new DndCharacterPluginSettingTab(this.app, this));
 
 		console.log('D&D Character Manager plugin loaded!');
 	}
