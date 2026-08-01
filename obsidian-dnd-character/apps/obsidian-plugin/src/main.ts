@@ -3,6 +3,10 @@ import { Plugin } from 'obsidian';
 import type { DndCharacterPluginSettings } from './settings';
 import { DEFAULT_SETTINGS, normalizeSettings } from './settings';
 import { DndCharacterPluginSettingTab } from './settings-tab';
+import {
+	CharacterSheetView,
+	DND_CHARACTER_SHEET_VIEW_TYPE,
+} from './views/character-sheet-view';
 
 export default class DndCharacterPlugin extends Plugin {
 	settings: DndCharacterPluginSettings = DEFAULT_SETTINGS;
@@ -12,10 +16,12 @@ export default class DndCharacterPlugin extends Plugin {
 
 		await this.loadSettings();
 
-		// TODO (P6-T006): Register custom views (character sheet sidebar)
-		// this.registerView(...);
+		// Register character sheet view (P6-T007)
+		this.registerView(DND_CHARACTER_SHEET_VIEW_TYPE, (leaf) =>
+			new CharacterSheetView(leaf),
+		);
 
-		// TODO (P6-T007): Register plugin commands
+		// TODO (P6-T008): Register plugin commands
 		// this.addCommand(...);
 
 		// TODO (P6-T008): Register event listeners

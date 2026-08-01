@@ -5,7 +5,7 @@ Every Obsidian API member used in this project must have an entry before it appe
 | Symbol | Verified signature | `@since` | Used in | Purpose | Manual test |
 |---|---|---:|---|---|---|
 | `requestUrl` | `requestUrl(request: RequestUrlParam \| string): RequestUrlResponsePromise` | — | pending | catalog HTTP client | pending |
-| `Plugin.registerView` | `registerView(type: string, viewCreator: ViewCreator): void` | 0.9.7 | pending | character sidebar view | pending |
+| `Plugin.registerView` | `registerView(type: string, viewCreator: ViewCreator): void` | 0.9.7 | `main.ts` | character sheet view registration | view registered in onload |
 | `Workspace.getRightLeaf` | `getRightLeaf(split: boolean): WorkspaceLeaf \| null` | 0.9.7 | pending | right sidebar placement | pending |
 | `WorkspaceLeaf.setViewState` | `setViewState(viewState: ViewState, eState?: any): Promise<void>` | — | pending | activate view | pending |
 | `Plugin.onload` | `onload(): Promise<void> \| void` | 0.9.7 | `main.ts` | plugin initialization lifecycle | console.log verification |
@@ -26,8 +26,8 @@ Every Obsidian API member used in this project must have an entry before it appe
 | `Component.onunload` | `onunload(): void` | 0.9.7 | `main.ts` | cleanup on unload | console.log verification |
 | `Component.register` | `register(cb: () => any): void` | 0.9.7 | pending | register cleanup callback | pending |
 | `Component.registerEvent` | `registerEvent(eventRef: EventRef): void` | 0.9.7 | pending | register event listener cleanup | pending |
-| `ItemView` | `abstract class ItemView extends View { contentEl: HTMLElement; constructor(leaf: WorkspaceLeaf); }` | 0.9.7 | pending | character sheet view base | pending |
-| `ViewCreator` | `type ViewCreator = (leaf: WorkspaceLeaf) => View` | — | pending | view factory for registerView | pending |
+| `ItemView` | `abstract class ItemView extends View { contentEl: HTMLElement; constructor(leaf: WorkspaceLeaf); }` | 0.9.7 | `views/character-sheet-view.ts` | character sheet view base | view renders placeholder |
+| `ViewCreator` | `type ViewCreator = (leaf: WorkspaceLeaf) => View` | — | `main.ts` | view factory for registerView | view created on leaf |
 | `Vault.create` | `create(path: string, data: string, options?: DataWriteOptions): Promise<TFile>` | 0.9.7 | pending | create character file in vault | pending |
 | `Vault.createFolder` | `createFolder(path: string): Promise<TFolder>` | 0.9.7 | pending | create character folder | pending |
 
