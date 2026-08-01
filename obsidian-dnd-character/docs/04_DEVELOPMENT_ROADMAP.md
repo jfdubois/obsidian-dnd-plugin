@@ -342,7 +342,7 @@ Serve immutable catalog revisions safely and simply.
 Create the mobile-compatible plugin skeleton using verified public APIs.
 
 - [x] **P6-T001 — Scaffold from official sample structure**
-- [ ] **P6-T002 — Create `manifest.json` and versions policy**
+- [x] **P6-T002 — Create `manifest.json` and versions policy**
 - [ ] **P6-T003 — Configure esbuild and strict TypeScript**
 - [ ] **P6-T004 — Implement plugin lifecycle**
 - [ ] **P6-T005 — Implement settings schema and defaults**

@@ -6,7 +6,7 @@ Phase 6 — Obsidian plugin foundation
 
 ## Current task
 
-P6-T002 — Create `manifest.json` and versions policy
+P6-T003 — Configure esbuild and strict TypeScript
 
 ## Last completed task
 
@@ -47,8 +47,8 @@ None recorded.
 - Phase starting commit: e19d6846ddb845e7dcc8ed23397da5db7cefc260
 - Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008; P4-T009 — see Git history for P4-T009; P4-T010 — see Git history for P4-T010; P4-T011 — see Git history for P4-T011; P4-T012 — see Git history for P4-T012; P4-T013 — see Git history for P4-T013; P4-T014 — see Git history for P4-T014; P4-T015 — see Git history for P4-T015; P4-T016 — see Git history for P4-T016; P4-T017 — see Git history for P4-T017; P4-T018 — see Git history for P4-T018; P4-T019 — see Git history for P4-T019; P4-T020 — see Git history for P4-T020; P4-T021 — see Git history for P4-T021; P4-T022 — see Git history for P4-T022; P4-T023 — see Git history for P4-T023; P4-T024 — see Git history for P4-T024
 - Completed Phase 5 task commits: P5-T001 — 4e44b20; P5-T002 — ef11547; P5-T003 — defb572; P5-T004 — 98697ed; P5-T005 — b4a561e; P5-T006 — 518fb19; P5-T007 — f8b5f3a; P5-T008 — 5a63cc7
-- Completed Phase 6 task commits: P6-T001 — see Git history for P6-T001
-- Current task: P6-T002
+- Completed Phase 6 task commits: P6-T001 — see Git history for P6-T001; P6-T002 — see Git history for P6-T002
+- Current task: P6-T003
 - Current retry: 0
 - Gate status: Phase 4 gate complete. Phase 5 gate complete.
 - Blocking issue: none
@@ -56,6 +56,12 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-01 — P6-T002 — Create manifest.json and versions policy — complete
+Summary: Updated manifest.json version to 0.1.0 (first pre-release), minAppVersion to 1.7.0 (conservative minimum compatible with pinned API snapshot). isDesktopOnly remains false.
+Validation: `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 2777/2780 tests, 1 pre-existing timeout). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Manifest versioning only. No code changes.
+Commit: see Git history for P6-T002.
 
 2026-08-01 — P6-T001 — Scaffold from official sample structure — complete
 Summary: Created Obsidian plugin skeleton from official sample structure. Added src/main.ts (empty Plugin class), manifest.json (isDesktopOnly: false), esbuild.config.mjs, .gitignore. Updated package.json with obsidian/esbuild devDeps. Fixed eslint.config.js nested config ignore patterns.
