@@ -26,7 +26,11 @@ Every Obsidian API member used in this project must have an entry before it appe
 | `Setting.setHeading` | `setHeading(): this` | 0.9.16 | `settings-tab.ts` | section heading | heading renders as section divider |
 | `Component.onunload` | `onunload(): void` | 0.9.7 | `main.ts` | cleanup on unload | console.log verification |
 | `Component.register` | `register(cb: () => any): void` | 0.9.7 | pending | register cleanup callback | pending |
-| `Component.registerEvent` | `registerEvent(eventRef: EventRef): void` | 0.9.7 | pending | register event listener cleanup | pending |
+| `Component.registerEvent` | `registerEvent(eventRef: EventRef): void` | 0.9.7 | `main.ts` | register cleanup-safe vault event listeners | events auto-cleaned on plugin unload |
+| `Vault.on` (create) | `on(name: 'create', callback: (file: TAbstractFile) => any, ctx?: any): EventRef` | 0.9.7 | `main.ts` | listen for vault file creation | console.log on file create |
+| `Vault.on` (modify) | `on(name: 'modify', callback: (file: TAbstractFile) => any, ctx?: any): EventRef` | 0.9.7 | `main.ts` | listen for vault file modification | console.log on file modify |
+| `Vault.on` (delete) | `on(name: 'delete', callback: (file: TAbstractFile) => any, ctx?: any): EventRef` | 0.9.7 | `main.ts` | listen for vault file deletion | console.log on file delete |
+| `Vault.on` (rename) | `on(name: 'rename', callback: (file: TAbstractFile, oldPath: string) => any, ctx?: any): EventRef` | 0.9.7 | `main.ts` | listen for vault file rename | console.log on file rename |
 | `ItemView` | `abstract class ItemView extends View { contentEl: HTMLElement; constructor(leaf: WorkspaceLeaf); }` | 0.9.7 | `views/character-sheet-view.ts` | character sheet view base | view renders placeholder |
 | `ViewCreator` | `type ViewCreator = (leaf: WorkspaceLeaf) => View` | — | `main.ts` | view factory for registerView | view created on leaf |
 | `Vault.create` | `create(path: string, data: string, options?: DataWriteOptions): Promise<TFile>` | 0.9.7 | pending | create character file in vault | pending |

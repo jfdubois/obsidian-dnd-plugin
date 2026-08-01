@@ -1,4 +1,5 @@
 import { Plugin } from 'obsidian';
+import type { TAbstractFile } from 'obsidian';
 
 import type { DndCharacterPluginSettings } from './settings';
 import { DEFAULT_SETTINGS, normalizeSettings } from './settings';
@@ -37,10 +38,31 @@ export default class DndCharacterPlugin extends Plugin {
 			},
 		});
 
-		// TODO (P6-T009): Register event listeners
-		// this.registerEvent(...);
+		// Register cleanup-safe vault events (P6-T009)
+		this.registerEvent(
+			this.app.vault.on('create', (file: TAbstractFile) => {
+				console.log(`[D&D Character] Vault file created: ${file.path}`);
+			}),
+		);
+		this.registerEvent(
+			this.app.vault.on('modify', (file: TAbstractFile) => {
+				console.log(`[D&D Character] Vault file modified: ${file.path}`);
+			}),
+		);
+		this.registerEvent(
+			this.app.vault.on('delete', (file: TAbstractFile) => {
+				console.log(`[D&D Character] Vault file deleted: ${file.path}`);
+			}),
+		);
+		this.registerEvent(
+			this.app.vault.on('rename', (file: TAbstractFile, oldPath: string) => {
+				console.log(
+					`[D&D Character] Vault file renamed: ${oldPath} -> ${file.path}`,
+				);
+			}),
+		);
 
-		// TODO (P6-T009): Register settings tab
+		// Register settings tab (P6-T006)
 		this.addSettingTab(new DndCharacterPluginSettingTab(this.app, this));
 
 		console.log('D&D Character Manager plugin loaded!');
