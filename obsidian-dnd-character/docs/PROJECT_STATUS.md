@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Phase 4 — Catalog normalization and publication
+Phase 5 — Docker catalog server
 
 ## Current task
 
