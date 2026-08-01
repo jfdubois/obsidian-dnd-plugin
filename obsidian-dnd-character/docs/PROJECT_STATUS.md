@@ -2,15 +2,15 @@
 
 ## Current phase
 
-Phase 6 — Obsidian plugin foundation
+Phase 7 — Catalog client and runtime cache
 
 ## Current task
 
-Phase 6 gate
+None — Phase 6 gate complete; awaiting Phase 7 assignment.
 
 ## Last completed task
 
-P6-T012 — Manual mobile smoke test
+Phase 6 gate
 
 ## Branch baseline
 
@@ -50,12 +50,16 @@ None recorded.
 - Completed Phase 6 task commits: P6-T001 — see Git history for P6-T001; P6-T002 — see Git history for P6-T002; P6-T003 — no changes needed; P6-T004 — see Git history for P6-T004; P6-T005 — see Git history for P6-T005; P6-T006 — see Git history for P6-T006; P6-T007 — see Git history for P6-T007; P6-T008 — see Git history for P6-T008; P6-T009 — see Git history for P6-T009; P6-T010 — see Git history for P6-T010; P6-T011 — see Git history for P6-T011; P6-T012 — see Git history for P6-T012
 - Current task: Phase 6 gate
 - Current retry: 0
-- Gate status: Phase 4 gate complete. Phase 5 gate complete.
+- Gate status: Phase 4 gate complete. Phase 5 gate complete. Phase 6 gate complete.
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-01 — Phase 6 gate — complete
+Summary: All 12 Phase 6 tasks completed. Gate criteria verified: (1) Plugin loads/unloads cleanly — no errors in build or typecheck, all 2778 tests pass. (2) View opens in documented right leaf — getRightLeaf(false) guarded on mobile, viewtype "dnd-character-sheet" registered. (3) No undocumented API usage — all Obsidian APIs documented in API_USAGE.md. (4) isDesktopOnly remains false — confirmed in manifest.json. Phase 6 delivered mobile-compatible plugin skeleton with settings, view, and command registration.
+Validation: `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint, 2778 tests). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
 
 2026-08-01 — P6-T012 — Manual mobile smoke test — complete
 Summary: Audited plugin source code for mobile compatibility. Confirmed isDesktopOnly is false, no Node.js/Electron APIs, no desktop-only Obsidian APIs (getRightLeaf guarded by null check). Expanded smoke test checklist Section 8 from pre-flight to full mobile smoke test with 7 subsections: source code audit, installation methods, mobile enablement, settings tab verification, character sheet view behavior, console error checking, and mobile-specific considerations.

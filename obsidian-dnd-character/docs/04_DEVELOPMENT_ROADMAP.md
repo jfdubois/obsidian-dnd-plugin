@@ -356,10 +356,10 @@ Create the mobile-compatible plugin skeleton using verified public APIs.
 
 ### Phase 6 gate
 
-- [ ] Plugin loads/unloads cleanly.
-- [ ] View opens in documented right leaf.
-- [ ] No undocumented API usage.
-- [ ] `isDesktopOnly` remains false.
+- [x] Plugin loads/unloads cleanly.
+- [x] View opens in documented right leaf.
+- [x] No undocumented API usage.
+- [x] `isDesktopOnly` remains false.
 
 ---
 
