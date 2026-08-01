@@ -41,6 +41,7 @@ export default tseslint.config(
       "references/**",
       "external/**",
       "test/**",
+      "apps/obsidian-plugin/main.js",
     ],
   },
 );
