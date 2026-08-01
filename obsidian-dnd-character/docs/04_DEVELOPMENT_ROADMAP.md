@@ -319,7 +319,7 @@ Serve immutable catalog revisions safely and simply.
 
 - [x] **P5-T001 — Create static server container**
 - [x] **P5-T002 — Create Docker Compose service**
-- [ ] **P5-T003 — Mount generated catalog read-only**
+- [x] **P5-T003 — Mount generated catalog read-only**
 - [ ] **P5-T004 — Configure cache headers**
   - Short/no-cache for `current.json`; immutable long cache for revision files.
 

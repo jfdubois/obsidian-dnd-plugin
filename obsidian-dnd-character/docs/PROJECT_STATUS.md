@@ -6,7 +6,7 @@ Phase 5 — Docker catalog server
 
 ## Current task
 
-P5-T003 — Mount generated catalog read-only
+P5-T004 — Configure cache headers
 
 ## Last completed task
 
@@ -46,8 +46,8 @@ None recorded.
 
 - Phase starting commit: 73963047e285a221adf8e800825feba817e10ec2
 - Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008; P4-T009 — see Git history for P4-T009; P4-T010 — see Git history for P4-T010; P4-T011 — see Git history for P4-T011; P4-T012 — see Git history for P4-T012; P4-T013 — see Git history for P4-T013; P4-T014 — see Git history for P4-T014; P4-T015 — see Git history for P4-T015; P4-T016 — see Git history for P4-T016; P4-T017 — see Git history for P4-T017; P4-T018 — see Git history for P4-T018; P4-T019 — see Git history for P4-T019; P4-T020 — see Git history for P4-T020; P4-T021 — see Git history for P4-T021; P4-T022 — see Git history for P4-T022; P4-T023 — see Git history for P4-T023; P4-T024 — see Git history for P4-T024
-- Completed Phase 5 task commits: P5-T001 — see Git history for P5-T001; P5-T002 — see Git history for P5-T002
-- Current task: P5-T003
+- Completed Phase 5 task commits: P5-T001 — see Git history for P5-T001; P5-T002 — see Git history for P5-T002; P5-T003 — see Git history for P5-T003
+- Current task: P5-T004
 - Current retry: 0
 - Gate status: Phase 4 gate complete. Phase 5 gate pending.
 - Blocking issue: none
@@ -55,6 +55,12 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-01 — P5-T003 — Mount generated catalog read-only — complete
+Summary: Updated docker-compose.yml to mount the generated catalog directory as read-only volume. Host path configurable via CATALOG_DATA_PATH env var (default ./catalog), mounted to /usr/share/nginx/html/catalog with :ro suffix. Updated .env.example with CATALOG_DATA_PATH documentation.
+Validation: `npm --prefix obsidian-dnd-character run build` passes (EXIT 0). Docker compose validation: NOT AVAILABLE.
+Compatibility notes: Catalog-server only. No Obsidian API use. Docker Compose configuration change.
+Commit: see Git history for P5-T003.
 
 2026-08-01 — P5-T002 — Create Docker Compose service — complete
 Summary: Created docker-compose.yml defining the catalog-server service with build context referencing P5-T001 Dockerfile, configurable port mapping (CATALOG_SERVER_PORT, default 8080), restart: unless-stopped policy, and commented placeholder for P5-T003 read-only volume mount. Added .env.example for documented configurable settings.
