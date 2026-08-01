@@ -6,7 +6,7 @@ Phase 5 — Docker catalog server
 
 ## Current task
 
-P5-T004 — Configure cache headers
+P5-T006 — Add local HTTPS/VPN deployment notes
 
 ## Last completed task
 
@@ -46,8 +46,8 @@ None recorded.
 
 - Phase starting commit: 73963047e285a221adf8e800825feba817e10ec2
 - Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008; P4-T009 — see Git history for P4-T009; P4-T010 — see Git history for P4-T010; P4-T011 — see Git history for P4-T011; P4-T012 — see Git history for P4-T012; P4-T013 — see Git history for P4-T013; P4-T014 — see Git history for P4-T014; P4-T015 — see Git history for P4-T015; P4-T016 — see Git history for P4-T016; P4-T017 — see Git history for P4-T017; P4-T018 — see Git history for P4-T018; P4-T019 — see Git history for P4-T019; P4-T020 — see Git history for P4-T020; P4-T021 — see Git history for P4-T021; P4-T022 — see Git history for P4-T022; P4-T023 — see Git history for P4-T023; P4-T024 — see Git history for P4-T024
-- Completed Phase 5 task commits: P5-T001 — see Git history for P5-T001; P5-T002 — see Git history for P5-T002; P5-T003 — see Git history for P5-T003
-- Current task: P5-T004
+- Completed Phase 5 task commits: P5-T001 — see Git history for P5-T001; P5-T002 — see Git history for P5-T002; P5-T003 — see Git history for P5-T003; P5-T004 — see Git history for P5-T004; P5-T005 — see Git history for P5-T005
+- Current task: P5-T006
 - Current retry: 0
 - Gate status: Phase 4 gate complete. Phase 5 gate pending.
 - Blocking issue: none
