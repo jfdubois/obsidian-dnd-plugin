@@ -7,6 +7,8 @@
 #   2. container starts and serves static files
 #   3. JSON files return correct content type
 #   4. non-existent files return 404
+#   5. cache headers: no-cache for current.json, immutable for
+#      revision files, short cache for other JSON
 # ──────────────────────────────────────────────────────────────
 set -euo pipefail
 
@@ -91,6 +93,13 @@ cat > "$SAMPLE_DIR/catalog/v1/revisions/$REVISION_ID/reports/validation.json" <<
 }
 EOF
 
+# current.json (the active revision pointer)
+cat > "$SAMPLE_DIR/catalog/v1/current.json" <<'EOF'
+{
+  "currentRevision": "smoke-test-rev-001"
+}
+EOF
+
 # ── Step 3: Start container with sample data ──────────────────
 echo ">> Starting container..."
 docker run -d \
@@ -167,6 +176,63 @@ if [ "$RESPONSE" = "404" ] || [ "$RESPONSE" = "403" ]; then
     report "directory listing is disabled" "PASS"
 else
     report "directory listing is disabled (got: $RESPONSE)" "FAIL"
+fi
+
+# ── Cache header tests ────────────────────────────────────────
+
+# Test 9: current.json has no-cache headers
+CACHE_HEADER=$(curl -s -I "http://localhost:$PORT/catalog/v1/current.json" 2>/dev/null | grep -i "cache-control" | tr -d '\r' | awk '{print $2}')
+if [ "$CACHE_HEADER" = "no-cache," ] || [ "$CACHE_HEADER" = "no-cache" ]; then
+    report "current.json has no-cache Cache-Control header" "PASS"
+else
+    report "current.json has no-cache Cache-Control header (got: $CACHE_HEADER)" "FAIL"
+fi
+
+# Test 10: current.json has no-store directive
+CACHE_FULL=$(curl -s -I "http://localhost:$PORT/catalog/v1/current.json" 2>/dev/null | grep -i "cache-control" | tr -d '\r')
+if echo "$CACHE_FULL" | grep -q "no-store"; then
+    report "current.json has no-store in Cache-Control" "PASS"
+else
+    report "current.json has no-store in Cache-Control (got: $CACHE_FULL)" "FAIL"
+fi
+
+# Test 11: current.json has must-revalidate directive
+if echo "$CACHE_FULL" | grep -q "must-revalidate"; then
+    report "current.json has must-revalidate in Cache-Control" "PASS"
+else
+    report "current.json has must-revalidate in Cache-Control (got: $CACHE_FULL)" "FAIL"
+fi
+
+# Test 12: Revision files have immutable cache headers
+REVISION_CACHE=$(curl -s -I "http://localhost:$PORT/catalog/v1/revisions/$REVISION_ID/manifest.json" 2>/dev/null | grep -i "cache-control" | tr -d '\r')
+if echo "$REVISION_CACHE" | grep -q "immutable"; then
+    report "revision manifest.json has immutable Cache-Control" "PASS"
+else
+    report "revision manifest.json has immutable Cache-Control (got: $REVISION_CACHE)" "FAIL"
+fi
+
+# Test 13: Revision entity files have immutable cache headers
+ENTITY_CACHE=$(curl -s -I "http://localhost:$PORT/catalog/v1/revisions/$REVISION_ID/entities/species/human.json" 2>/dev/null | grep -i "cache-control" | tr -d '\r')
+if echo "$ENTITY_CACHE" | grep -q "immutable"; then
+    report "revision entity file has immutable Cache-Control" "PASS"
+else
+    report "revision entity file has immutable Cache-Control (got: $ENTITY_CACHE)" "FAIL"
+fi
+
+# Test 14: Revision index files have immutable cache headers
+INDEX_CACHE=$(curl -s -I "http://localhost:$PORT/catalog/v1/revisions/$REVISION_ID/indexes/species.json" 2>/dev/null | grep -i "cache-control" | tr -d '\r')
+if echo "$INDEX_CACHE" | grep -q "immutable"; then
+    report "revision index file has immutable Cache-Control" "PASS"
+else
+    report "revision index file has immutable Cache-Control (got: $INDEX_CACHE)" "FAIL"
+fi
+
+# Test 15: Revision report files have immutable cache headers
+REPORT_CACHE=$(curl -s -I "http://localhost:$PORT/catalog/v1/revisions/$REVISION_ID/reports/validation.json" 2>/dev/null | grep -i "cache-control" | tr -d '\r')
+if echo "$REPORT_CACHE" | grep -q "immutable"; then
+    report "revision report file has immutable Cache-Control" "PASS"
+else
+    report "revision report file has immutable Cache-Control (got: $REPORT_CACHE)" "FAIL"
 fi
 
 # ── Cleanup: remove temp data ─────────────────────────────────
