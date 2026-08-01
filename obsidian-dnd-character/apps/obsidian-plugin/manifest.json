@@ -2,7 +2,7 @@
 	"id": "obsidian-dnd-character",
 	"name": "D&D Character Manager",
 	"version": "0.1.0",
-	"minAppVersion": "1.7.0",
+	"minAppVersion": "1.7.2",
 	"description": "D&D character management for Obsidian.",
 	"author": "obsidian-dnd",
 	"authorUrl": "",

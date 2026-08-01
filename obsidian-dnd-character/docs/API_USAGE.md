@@ -17,7 +17,7 @@ Every Obsidian API member used in this project must have an entry before it appe
 | `Plugin.addCommand` | `addCommand(command: Command): Command` | 0.9.7 | `main.ts` | register command to open character sheet in right sidebar | command appears in command palette |
 | `Plugin.addSettingTab` | `addSettingTab(settingTab: PluginSettingTab): void` | 0.9.7 | `main.ts` | register settings tab | settings tab appears in Obsidian settings |
 | `PluginSettingTab` | `abstract class PluginSettingTab extends SettingTab { constructor(app: App, plugin: Plugin); display(): void; }` | 0.9.7 | `settings-tab.ts` | custom settings tab base class | tab renders with all settings |
-| `PluginSettingTab.display` | `display(): void` | 1.13.0 (deprecated, legacy pattern) | `settings-tab.ts` | render settings UI imperatively | settings fields appear on tab open |
+| `PluginSettingTab.display` | `display(): void` | 0.9.7 (deprecated since 1.13.0, legacy imperative fallback) | `settings-tab.ts` | render settings UI imperatively | settings fields appear on tab open |
 | `Setting` | `class Setting { constructor(containerEl: HTMLElement); }` | 0.9.7 | `settings-tab.ts` | setting row container | rows render in tab |
 | `Setting.setName` | `setName(name: string): this` | 0.9.7 | `settings-tab.ts` | label for setting row | label text visible |
 | `Setting.setDesc` | `setDesc(desc: string \| DocumentFragment): this` | 0.9.7 | `settings-tab.ts` | description for setting row | description text visible |
