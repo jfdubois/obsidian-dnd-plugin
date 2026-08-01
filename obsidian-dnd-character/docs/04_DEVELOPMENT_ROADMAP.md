@@ -371,7 +371,7 @@ Connect the plugin to compatible catalog revisions and support offline cached us
 
 - [x] **P7-T001 — Implement catalog client interface**
 - [x] **P7-T002 — Implement `requestUrl` transport**
-- [ ] **P7-T003 — Implement connection test**
+- [x] **P7-T003 — Implement connection test**
 - [ ] **P7-T004 — Validate `current.json` and manifest**
 - [ ] **P7-T005 — Implement supported-schema negotiation**
 - [ ] **P7-T006 — Download and validate source metadata**
