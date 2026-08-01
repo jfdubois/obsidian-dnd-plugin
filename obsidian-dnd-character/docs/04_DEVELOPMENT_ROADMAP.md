@@ -351,7 +351,7 @@ Create the mobile-compatible plugin skeleton using verified public APIs.
 - [x] **P6-T008 — Add command to open right sidebar view**
 - [x] **P6-T009 — Register cleanup-safe events**
 - [x] **P6-T010 — Update API usage register for every symbol**
-- [ ] **P6-T011 — Manual desktop smoke test**
+- [x] **P6-T011 — Manual desktop smoke test**
 - [ ] **P6-T012 — Manual mobile smoke test**
 
 ### Phase 6 gate
