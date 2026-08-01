@@ -14,6 +14,9 @@ COPY nginx.conf /etc/nginx/nginx.conf
 # Ensure the catalog root exists (mount or copy at runtime).
 RUN mkdir -p /usr/share/nginx/html/catalog
 
+# P5-T005: Copy health check endpoint into the image.
+COPY public/health.json /usr/share/nginx/html/health.json
+
 # Non-privileged port.
 EXPOSE 8080
 

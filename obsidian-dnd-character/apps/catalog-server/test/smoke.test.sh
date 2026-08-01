@@ -235,6 +235,47 @@ else
     report "revision report file has immutable Cache-Control (got: $REPORT_CACHE)" "FAIL"
 fi
 
+# ── Health check endpoint tests (P5-T005) ─────────────────────
+
+# Test 16: /health returns 200
+HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:$PORT/health" 2>/dev/null || echo "000")
+if [ "$HEALTH_STATUS" = "200" ]; then
+    report "/health endpoint returns 200" "PASS"
+else
+    report "/health endpoint returns 200 (got: $HEALTH_STATUS)" "FAIL"
+fi
+
+# Test 17: /health returns correct JSON body
+HEALTH_BODY=$(curl -s "http://localhost:$PORT/health" 2>/dev/null)
+if echo "$HEALTH_BODY" | grep -q '"status".*"healthy"'; then
+    report "/health returns {\"status\": \"healthy\"}" "PASS"
+else
+    report "/health returns correct JSON body (got: $HEALTH_BODY)" "FAIL"
+fi
+
+# Test 18: /health has no-cache Cache-Control header
+HEALTH_CACHE=$(curl -s -I "http://localhost:$PORT/health" 2>/dev/null | grep -i "cache-control" | tr -d '\r')
+if echo "$HEALTH_CACHE" | grep -q "no-cache"; then
+    report "/health has no-cache Cache-Control header" "PASS"
+else
+    report "/health has no-cache Cache-Control header (got: $HEALTH_CACHE)" "FAIL"
+fi
+
+# Test 19: /health has no-store in Cache-Control
+if echo "$HEALTH_CACHE" | grep -q "no-store"; then
+    report "/health has no-store in Cache-Control" "PASS"
+else
+    report "/health has no-store in Cache-Control (got: $HEALTH_CACHE)" "FAIL"
+fi
+
+# Test 20: /health returns application/json content type
+HEALTH_TYPE=$(curl -s -I "http://localhost:$PORT/health" 2>/dev/null | grep -i "content-type" | tr -d '\r' | awk '{print $2}')
+if [ "$HEALTH_TYPE" = "application/json" ]; then
+    report "/health returns application/json content type" "PASS"
+else
+    report "/health returns application/json content type (got: $HEALTH_TYPE)" "FAIL"
+fi
+
 # ── Cleanup: remove temp data ─────────────────────────────────
 rm -rf "$SAMPLE_DIR"
 
