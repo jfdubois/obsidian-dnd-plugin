@@ -370,7 +370,7 @@ Create the mobile-compatible plugin skeleton using verified public APIs.
 Connect the plugin to compatible catalog revisions and support offline cached use.
 
 - [x] **P7-T001 — Implement catalog client interface**
-- [ ] **P7-T002 — Implement `requestUrl` transport**
+- [x] **P7-T002 — Implement `requestUrl` transport**
 - [ ] **P7-T003 — Implement connection test**
 - [ ] **P7-T004 — Validate `current.json` and manifest**
 - [ ] **P7-T005 — Implement supported-schema negotiation**

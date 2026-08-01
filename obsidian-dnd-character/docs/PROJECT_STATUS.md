@@ -6,7 +6,7 @@ Phase 7 — Catalog client and runtime cache
 
 ## Current task
 
-P7-T001 — Implement catalog client interface (in progress)
+P7-T002 — Implement `requestUrl` transport (in progress)
 
 ## Last completed task
 
@@ -53,8 +53,8 @@ None recorded.
 - Completed Phase 5 task commits: P5-T001 — 4e44b20; P5-T002 — ef11547; P5-T003 — defb572; P5-T004 — 98697ed; P5-T005 — b4a561e; P5-T006 — 518fb19; P5-T007 — f8b5f3a; P5-T008 — 5a63cc7
 - Completed Phase 6 task commits: P6-T001 — see Git history for P6-T001; P6-T002 — see Git history for P6-T002; P6-T003 — no changes needed; P6-T004 — see Git history for P6-T004; P6-T005 — see Git history for P6-T005; P6-T006 — see Git history for P6-T006; P6-T007 — see Git history for P6-T007; P6-T008 — see Git history for P6-T008; P6-T009 — see Git history for P6-T009; P6-T010 — see Git history for P6-T010; P6-T011 — see Git history for P6-T011; P6-T012 — see Git history for P6-T012
 - Phase 7 starting commit: 0dab1ff
-- Completed Phase 7 task commits: P7-T001 — see Git history for P7-T001
-- Current task: P7-T001 — Implement catalog client interface
+- Completed Phase 7 task commits: P7-T001 — see Git history for P7-T001; P7-T002 — see Git history for P7-T002
+- Current task: P7-T002 — Implement `requestUrl` transport
 - Current retry: 0
 - Gate status: Phase 4 gate complete. Phase 5 gate complete. Phase 6 gate complete.
 - Blocking issue: none
@@ -62,6 +62,12 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-01 — P7-T002 — Implement `requestUrl` transport — complete
+Summary: Implemented RequestUrlCatalogClient class implementing CatalogClient interface using Obsidian's requestUrl API. All 6 methods: fetchManifest, fetchSources, fetchIndex, fetchEntity, testConnection, negotiateSchema. URL pattern: {baseUrl}/{revision}/{endpoint}. Schema validation using catalog-contract type guards. Error handling with CatalogClientError (status codes, network failures, timeouts). 29 tests covering interface compliance, all fetch methods, URL construction, error wrapping, timeout behavior, and request configuration.
+Validation: `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint, 2867/2869 tests). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Uses requestUrl (documented in API_USAGE.md). No `any` used. Mobile-compatible.
+Commit: see Git history for P7-T002.
 
 2026-08-01 — P7-T001 — Implement catalog client interface — complete
 Summary: Created catalog client interface (CatalogClient) with 6 methods: fetchManifest, fetchSources, fetchIndex, fetchEntity, testConnection, negotiateSchema. Supporting types: CatalogClientConfig, CatalogClientError, EntityDetailResult, SchemaNegotiationResult. Imports from @obsidian-dnd/domain and @obsidian-dnd/catalog-contract only. 15 tests covering interface structure, types, signatures, and schema negotiation behavior.

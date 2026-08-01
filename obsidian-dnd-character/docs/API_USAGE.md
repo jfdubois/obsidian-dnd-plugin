@@ -4,7 +4,7 @@ Every Obsidian API member used in this project must have an entry before it appe
 
 | Symbol | Verified signature | `@since` | Used in | Purpose | Manual test |
 |---|---|---:|---|---|---|
-| `requestUrl` | `requestUrl(request: RequestUrlParam \| string): RequestUrlResponsePromise` | — | pending | catalog HTTP client | pending |
+| `requestUrl` | `requestUrl(request: RequestUrlParam \| string): RequestUrlResponsePromise` | — | `request-url-client.ts` | catalog HTTP client | mocked in transport tests |
 | `Plugin.registerView` | `registerView(type: string, viewCreator: ViewCreator): void` | 0.9.7 | `main.ts` | character sheet view registration | view registered in onload |
 | `Workspace.getRightLeaf` | `getRightLeaf(split: boolean): WorkspaceLeaf \| null` | 0.9.7 | `main.ts` | get or create right sidebar leaf for character sheet | right leaf returned or null |
 | `WorkspaceLeaf.setViewState` | `setViewState(viewState: ViewState, eState?: any): Promise<void>` | — | `main.ts` | activate character sheet view in leaf | view type set on leaf |
