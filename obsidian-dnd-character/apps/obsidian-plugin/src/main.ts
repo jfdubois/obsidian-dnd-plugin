@@ -1,11 +1,15 @@
 import { Plugin } from 'obsidian';
 
+import type { DndCharacterPluginSettings } from './settings';
+import { DEFAULT_SETTINGS, normalizeSettings } from './settings';
+
 export default class DndCharacterPlugin extends Plugin {
+	settings: DndCharacterPluginSettings = DEFAULT_SETTINGS;
+
 	async onload() {
 		console.log('Loading D&D Character Manager plugin');
 
-		// TODO (P6-T005): Load plugin settings
-		// await this.loadSettings();
+		await this.loadSettings();
 
 		// TODO (P6-T006): Register custom views (character sheet sidebar)
 		// this.registerView(...);
@@ -22,7 +26,14 @@ export default class DndCharacterPlugin extends Plugin {
 		console.log('D&D Character Manager plugin loaded!');
 	}
 
+	async loadSettings() {
+		const raw = await this.loadData();
+		this.settings = normalizeSettings(raw);
+	}
+
 	onunload() {
+		void this.saveData(this.settings);
+
 		// Cleanup: Obsidian Component lifecycle automatically handles:
 		// - Unregistering events registered via this.registerEvent()
 		// - Removing DOM event listeners registered via this.registerDomEvent()

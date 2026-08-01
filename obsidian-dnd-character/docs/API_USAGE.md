@@ -9,8 +9,8 @@ Every Obsidian API member used in this project must have an entry before it appe
 | `Workspace.getRightLeaf` | `getRightLeaf(split: boolean): WorkspaceLeaf \| null` | 0.9.7 | pending | right sidebar placement | pending |
 | `WorkspaceLeaf.setViewState` | `setViewState(viewState: ViewState, eState?: any): Promise<void>` | — | pending | activate view | pending |
 | `Plugin.onload` | `onload(): Promise<void> \| void` | 0.9.7 | `main.ts` | plugin initialization lifecycle | console.log verification |
-| `Plugin.loadData` | `loadData(): Promise<any>` | 0.9.7 | pending | plugin settings | pending |
-| `Plugin.saveData` | `saveData(data: any): Promise<void>` | 0.9.7 | pending | plugin settings | pending |
+| `Plugin.loadData` | `loadData(): Promise<any>` | 0.9.7 | `main.ts` | load persisted plugin settings | settings normalized on load |
+| `Plugin.saveData` | `saveData(data: any): Promise<void>` | 0.9.7 | `main.ts` | persist plugin settings on unload | settings saved on unload |
 | `Vault.cachedRead` | `cachedRead(file: TFile): Promise<string>` | 0.9.7 | pending | read display data | pending |
 | `Vault.process` | `process(file: TFile, fn: (data: string) => string, options?: DataWriteOptions): Promise<string>` | 1.1.0 | pending | atomic character update | pending |
 | `Plugin.addCommand` | `addCommand(command: Command): Command` | — | pending | register plugin commands | pending |
