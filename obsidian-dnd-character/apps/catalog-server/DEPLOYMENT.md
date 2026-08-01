@@ -19,17 +19,19 @@ curl http://localhost:8080/health
 docker compose down
 ```
 
-The server listens on port **8080** by default. Override with `CATALOG_SERVER_PORT`:
+The server listens on port **8080** by default on all interfaces (`0.0.0.0`). Override with `CATALOG_PORT` and `CATALOG_BIND_ADDRESS`:
 
 ```bash
-CATALOG_SERVER_PORT=9090 docker compose up -d
+CATALOG_PORT=9090 docker compose up -d
+CATALOG_BIND_ADDRESS=127.0.0.1 docker compose up -d  # Restrict to loopback only
 ```
 
 ## Environment Variables
 
 | Variable | Default | Description |
 |---|---|---|
-| `CATALOG_SERVER_PORT` | `8080` | Host port mapped to the container's internal port 8080. |
+| `CATALOG_PORT` | `8080` | Host port mapped to the container's internal port 8080. |
+| `CATALOG_BIND_ADDRESS` | `0.0.0.0` | Host interface to bind to. Use `0.0.0.0` for all interfaces, `127.0.0.1` for loopback only. |
 | `CATALOG_DATA_PATH` | `./catalog` | Host path to the generated catalog directory. Mounted read-only at `/usr/share/nginx/html/catalog` inside the container. |
 
 Copy `.env.example` to `.env` and adjust values before running `docker compose up`.
@@ -192,7 +194,7 @@ The Docker healthcheck probes this endpoint every 30 seconds. Use it to verify t
 | Symptom | Check |
 |---|---|
 | Container fails to start | `docker compose logs catalog-server` |
-| Port conflict | Verify `CATALOG_SERVER_PORT` is not in use: `ss -tlnp \| grep <port>` |
+| Port conflict | Verify `CATALOG_PORT` is not in use: `ss -tlnp \| grep <port>` |
 | Catalog data not served | Ensure `CATALOG_DATA_PATH` points to a directory containing `catalog/v1/current.json` |
 | Mobile device cannot connect | Verify firewall allows inbound traffic on the configured port; try pinging the server IP from the mobile device |
 | HTTPS proxy not reaching server | Confirm the proxy can resolve `localhost:8080` or the server's LAN IP |

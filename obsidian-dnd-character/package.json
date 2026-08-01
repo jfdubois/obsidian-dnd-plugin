@@ -21,7 +21,7 @@
     "build": "tsc -b",
     "dev:plugin": "npm run dev --workspace=apps/obsidian-plugin",
     "build:catalog": "npm run build --workspace=apps/catalog-builder",
-    "docker:catalog": "docker compose -f services/docker-compose.yml up -d"
+    "docker:catalog": "docker compose -f apps/catalog-server/docker-compose.yml up -d"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
