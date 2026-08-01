@@ -1,0 +1,10 @@
+{
+	"id": "obsidian-dnd-character",
+	"name": "D&D Character Manager",
+	"version": "0.0.0",
+	"minAppVersion": "1.0.0",
+	"description": "D&D character management for Obsidian.",
+	"author": "obsidian-dnd",
+	"authorUrl": "",
+	"isDesktopOnly": false
+}
