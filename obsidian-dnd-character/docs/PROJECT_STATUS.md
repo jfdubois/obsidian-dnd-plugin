@@ -2,15 +2,15 @@
 
 ## Current phase
 
-Phase 5 — Docker catalog server
+Phase 6 — Obsidian plugin foundation
 
 ## Current task
 
-Phase 5 gate — complete
+P6-T001 — Scaffold from official sample structure
 
 ## Last completed task
 
-Phase 4 gate — Catalog normalization and publication gate
+Phase 5 gate — Docker catalog server gate
 
 ## Branch baseline
 
@@ -24,8 +24,8 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-P4-T024 (typecheck, lint, 2778/2780 tests across 99 files, 2 skipped).
-- `npm --prefix obsidian-dnd-character run build`: passing post-P4-T024.
+- `npm --prefix obsidian-dnd-character run check`: passing post-Phase 5 gate (typecheck, lint, 2778/2780 tests across 99 files, 2 skipped).
+- `npm --prefix obsidian-dnd-character run build`: passing post-Phase 5 gate.
 - Tests: 2778 passing.
 
 ## Catalog baseline
@@ -46,8 +46,8 @@ None recorded.
 
 - Phase starting commit: 73963047e285a221adf8e800825feba817e10ec2
 - Completed Phase 4 task commits: P4-T001 — see Git history for P4-T001; P4-T002 — see Git history for P4-T002; P4-T003 — see Git history for P4-T003; P4-T004 — see Git history for P4-T004; P4-T005 — see Git history for P4-T005; P4-T006 — see Git history for P4-T006; P4-T007 — see Git history for P4-T007; P4-T008 — see Git history for P4-T008; P4-T009 — see Git history for P4-T009; P4-T010 — see Git history for P4-T010; P4-T011 — see Git history for P4-T011; P4-T012 — see Git history for P4-T012; P4-T013 — see Git history for P4-T013; P4-T014 — see Git history for P4-T014; P4-T015 — see Git history for P4-T015; P4-T016 — see Git history for P4-T016; P4-T017 — see Git history for P4-T017; P4-T018 — see Git history for P4-T018; P4-T019 — see Git history for P4-T019; P4-T020 — see Git history for P4-T020; P4-T021 — see Git history for P4-T021; P4-T022 — see Git history for P4-T022; P4-T023 — see Git history for P4-T023; P4-T024 — see Git history for P4-T024
-- Completed Phase 5 task commits: P5-T001 — see Git history for P5-T001; P5-T002 — see Git history for P5-T002; P5-T003 — see Git history for P5-T003; P5-T004 — see Git history for P5-T004; P5-T005 — see Git history for P5-T005; P5-T006 — see Git history for P5-T006; P5-T007 — see Git history for P5-T007; P5-T008 — see Git history for P5-T008
-- Current task: Phase 5 gate complete
+- Completed Phase 5 task commits: P5-T001 — 4e44b20; P5-T002 — ef11547; P5-T003 — defb572; P5-T004 — 98697ed; P5-T005 — b4a561e; P5-T006 — 518fb19; P5-T007 — f8b5f3a; P5-T008 — 5a63cc7
+- Current task: P6-T001
 - Current retry: 0
 - Gate status: Phase 4 gate complete. Phase 5 gate complete.
 - Blocking issue: none
@@ -55,6 +55,12 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-01 — Post-gate correction — Repair phase 5 operator wiring — complete
+Summary: Corrected Docker operator wiring in catalog server configuration to ensure proper catalog revision serving. Structural fix to nginx configuration and Docker Compose service definition.
+Validation: `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint + 2778/2780 tests across 99 files, 2 skipped). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Catalog-server Docker configuration only. No plugin code changes.
+Commit: 398bba0
 
 2026-08-01 — Phase 5 gate — Docker catalog server gate — complete
 Summary: Phase 5 gate verified. All 2 gate criteria pass: plugin-independent HTTP smoke tests retrieve and validate complete catalog revisions (manifest, entities, indexes, reports, current.json); previous revision restore documented and architecturally supported via immutable read-only mounts and host-side catalog replacement. 8 task commits, clean tree, check and build pass.
