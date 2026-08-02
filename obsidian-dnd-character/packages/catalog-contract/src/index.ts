@@ -519,3 +519,17 @@ export {
   isCacheExpired,
   isCacheValid,
 } from "./cache-envelope";
+
+export {
+  /* Cache store interface */
+  type CatalogCacheStore,
+  /* In-memory cache store implementation */
+  InMemoryCatalogCacheStore,
+} from "./cache-store";
+
+export {
+  /* Cache stats type */
+  type CacheStats,
+  /* Cache manager class (also usable as type) */
+  CatalogCacheManager,
+} from "./cache-manager";
