@@ -550,3 +550,19 @@ export {
   type CacheStoreDiagnostic,
   type CacheStoreDiagnosticReason,
 } from "./cache-store-diagnostic";
+
+export {
+  /* Runtime error class */
+  CatalogRuntimeError,
+} from "./catalog-runtime-error";
+
+export {
+  /* Runtime service class */
+  CatalogRuntimeService,
+  /* Activation state type */
+  type CatalogActivationState,
+  /* Diagnostics type */
+  type CatalogRuntimeDiagnostics,
+  /* Fetcher type */
+  type Fetcher,
+} from "./catalog-runtime-service";
