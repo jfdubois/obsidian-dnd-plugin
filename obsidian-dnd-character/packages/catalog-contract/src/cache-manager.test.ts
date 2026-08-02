@@ -264,3 +264,166 @@ describe("CatalogCacheManager with TTL expiration", () => {
     expect(manager.stats().misses).toBe(1);
   });
 });
+
+/* ── getCached ─────────────────────────────────────────────────── */
+
+describe("CatalogCacheManager getCached", () => {
+  it("returns envelope for existing key", async () => {
+    const manager = createManager();
+    const revision = createCatalogRevision("rev-001");
+
+    await manager.fetch("key:1", () => Promise.resolve("data"), revision, "h");
+    const envelope = await manager.getCached("key:1");
+
+    expect(envelope).not.toBeNull();
+    expect(envelope!.value).toBe("data");
+  });
+
+  it("returns null for missing key", async () => {
+    const manager = createManager();
+    const envelope = await manager.getCached("missing");
+
+    expect(envelope).toBeNull();
+  });
+
+  it("returns expired envelope", async () => {
+    const store = createStore();
+    const manager = new CatalogCacheManager(
+      store,
+      createTtlExpiration(1000),
+    );
+
+    const { createCacheEnvelope } = await import("./cache-envelope");
+    const oldEnvelope = createCacheEnvelope({
+      cacheSchemaVersion: 1,
+      catalogRevision: createCatalogRevision("rev-001"),
+      inputHash: "h",
+      createdAt: new Date(Date.now() - 5000).toISOString(),
+      expiration: createTtlExpiration(1000),
+      value: "stale",
+    });
+    await store.set("key:1", oldEnvelope);
+
+    const envelope = await manager.getCached("key:1");
+    expect(envelope).not.toBeNull();
+    expect(envelope!.value).toBe("stale");
+  });
+
+  it("does not increment hit stats", async () => {
+    const manager = createManager();
+    const revision = createCatalogRevision("rev-001");
+
+    await manager.fetch("key:1", () => Promise.resolve("data"), revision, "h");
+    const before = manager.stats();
+
+    await manager.getCached("key:1");
+    const after = manager.stats();
+
+    expect(after.hits).toBe(before.hits);
+    expect(after.misses).toBe(before.misses);
+  });
+});
+
+/* ── fetchWithOfflineFallback ──────────────────────────────────── */
+
+describe("CatalogCacheManager fetchWithOfflineFallback", () => {
+  it("returns cached data on network error", async () => {
+    const store = createStore();
+    const manager = new CatalogCacheManager(
+      store,
+      createNoExpiryExpiration(),
+    );
+    const revision = createCatalogRevision("rev-001");
+
+    // Pre-populate cache
+    await manager.fetch(
+      "key:1",
+      () => Promise.resolve("original"),
+      revision,
+      "h",
+    );
+
+    // Network error triggers fallback
+    const networkErr = new Error("network error");
+    const result = await manager.fetchWithOfflineFallback(
+      "key:1",
+      () => Promise.reject(networkErr),
+      revision,
+      "h",
+    );
+
+    expect(result.fromCache).toBe(true);
+    expect(result.stale).toBe(false);
+    expect(result.envelope.value).toBe("original");
+  });
+
+  it("re-throws when no cache exists", async () => {
+    const manager = createManager();
+    const revision = createCatalogRevision("rev-001");
+    const networkErr = new Error("network error");
+
+    await expect(
+      manager.fetchWithOfflineFallback(
+        "missing",
+        () => Promise.reject(networkErr),
+        revision,
+        "h",
+      ),
+    ).rejects.toThrow("network error");
+  });
+
+  it("returns fromCache=true for valid hits", async () => {
+    const manager = createManager();
+    const revision = createCatalogRevision("rev-001");
+
+    // Pre-populate
+    await manager.fetch(
+      "key:1",
+      () => Promise.resolve("data"),
+      revision,
+      "h",
+    );
+
+    const result = await manager.fetchWithOfflineFallback(
+      "key:1",
+      () => Promise.resolve("should-not-call"),
+      revision,
+      "h",
+    );
+
+    expect(result.fromCache).toBe(true);
+    expect(result.stale).toBe(false);
+    expect(result.envelope.value).toBe("data");
+  });
+
+  it("returns stale=true for expired fallback", async () => {
+    const store = createStore();
+    const manager = new CatalogCacheManager(
+      store,
+      createTtlExpiration(1000),
+    );
+
+    const { createCacheEnvelope } = await import("./cache-envelope");
+    const oldEnvelope = createCacheEnvelope({
+      cacheSchemaVersion: 1,
+      catalogRevision: createCatalogRevision("rev-001"),
+      inputHash: "h",
+      createdAt: new Date(Date.now() - 5000).toISOString(),
+      expiration: createTtlExpiration(1000),
+      value: "stale-data",
+    });
+    await store.set("key:1", oldEnvelope);
+
+    const networkErr = new Error("network error");
+    const result = await manager.fetchWithOfflineFallback(
+      "key:1",
+      () => Promise.reject(networkErr),
+      createCatalogRevision("rev-001"),
+      "h",
+    );
+
+    expect(result.fromCache).toBe(true);
+    expect(result.stale).toBe(true);
+    expect(result.envelope.value).toBe("stale-data");
+  });
+});

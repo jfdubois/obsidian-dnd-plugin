@@ -118,4 +118,55 @@ export class CatalogCacheManager {
       size: this.store.size(),
     };
   }
+
+  /**
+   * Return the raw cached envelope for a key, regardless of
+   * expiration or revision/hash validity.
+   *
+   * Returns null if no entry exists. Does not count as a
+   * cache hit (no stats tracking). Pure read-through to store.
+   */
+  async getCached<T>(key: string): Promise<CacheEnvelope<T> | null> {
+    return this.store.get<T>(key);
+  }
+
+  /**
+   * Fetch with offline fallback behavior.
+   *
+   * First attempts normal fetch(). If the underlying fetchFn
+   * throws (e.g. network error), falls back to stale cached
+   * data. If no cached data exists, re-throws the original
+   * error.
+   *
+   * @returns envelope with flags indicating source and freshness
+   */
+  async fetchWithOfflineFallback<T>(
+    key: string,
+    fetchFn: () => Promise<T>,
+    revision: CatalogRevision,
+    inputHash: string,
+  ): Promise<{
+    envelope: CacheEnvelope<T>;
+    fromCache: boolean;
+    stale: boolean;
+  }> {
+    const hitsBefore = this.hits;
+    try {
+      const envelope = await this.fetch<T>(
+        key,
+        fetchFn,
+        revision,
+        inputHash,
+      );
+      const fromCache = this.hits > hitsBefore;
+      return { envelope, fromCache, stale: false };
+    } catch (error) {
+      const cached = await this.getCached<T>(key);
+      if (cached !== null) {
+        const isStale = !isCacheValid(cached, revision, inputHash);
+        return { envelope: cached, fromCache: true, stale: isStale };
+      }
+      throw error;
+    }
+  }
 }
