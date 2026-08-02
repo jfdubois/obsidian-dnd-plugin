@@ -282,6 +282,50 @@ describe("RequestUrlCatalogClient", () => {
     );
   });
 
+  it("fetchIndex throws on invalid entry in array", async () => {
+    mockResponse([
+      createMockEntitySummary(),
+      { invalid: "entry" },
+    ]);
+
+    await expect(client.fetchIndex(revision, "class")).rejects.toThrow(
+      "Invalid index for class: entry at index 1",
+    );
+  });
+
+  it("fetchIndex throws on 404 with status code", async () => {
+    mockResponse({}, 404);
+
+    const error = await client.fetchIndex(revision, "feat").catch((e) => e);
+    expect((error as CatalogClientError).status).toBe(404);
+  });
+
+  it("fetchIndex throws on network failure", async () => {
+    mockNetworkError();
+
+    const error = await client.fetchIndex(revision, "background").catch((e) => e);
+    expect((error as CatalogClientError).cause).toBeDefined();
+  });
+
+  it("fetchIndex returns multiple summaries", async () => {
+    const summaries = [
+      createMockEntitySummary(),
+      createMockEntitySummary(),
+    ];
+    mockResponse(summaries);
+
+    const result = await client.fetchIndex(revision, "spell");
+    expect(result).toHaveLength(2);
+    expect(result).toEqual(summaries);
+  });
+
+  it("fetchIndex accepts empty array", async () => {
+    mockResponse([]);
+
+    const result = await client.fetchIndex(revision, "item");
+    expect(result).toEqual([]);
+  });
+
   /* ── fetchEntity ─────────────────────────────────────────────── */
 
   it("fetchEntity returns entity detail result on 200", async () => {
