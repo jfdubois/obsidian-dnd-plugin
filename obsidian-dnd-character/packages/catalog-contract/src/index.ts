@@ -493,3 +493,29 @@ export {
   /* Entity detail response validator */
   isEntityDetailResponse,
 } from "./entity-detail";
+
+export {
+  /* Cache envelope schema version */
+  CACHE_SCHEMA_VERSION,
+  /* Cache envelope types */
+  type CacheSchemaVersion,
+  type CacheEnvelope,
+  /* Expiration policy types */
+  type CacheExpirationPolicy,
+  type CacheExpirationNoExpiry,
+  type CacheExpirationTtl,
+  type CacheExpirationAbsolute,
+  /* Cache envelope validator */
+  isCacheEnvelope,
+  /* Expiration policy validator */
+  isCacheExpirationPolicy,
+  /* Cache envelope factory */
+  createCacheEnvelope,
+  /* Expiration policy factories */
+  createNoExpiryExpiration,
+  createTtlExpiration,
+  createAbsoluteExpiration,
+  /* Cache validity helpers */
+  isCacheExpired,
+  isCacheValid,
+} from "./cache-envelope";
