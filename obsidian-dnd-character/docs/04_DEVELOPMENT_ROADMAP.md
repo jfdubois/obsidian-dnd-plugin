@@ -376,7 +376,7 @@ Connect the plugin to compatible catalog revisions and support offline cached us
 - [x] **P7-T005 — Implement supported-schema negotiation**
 - [x] **P7-T006 — Download and validate source metadata**
 - [x] **P7-T007 — Download and validate indexes**
-- [ ] **P7-T008 — Lazy-load entity details**
+- [x] **P7-T008 — Lazy-load entity details**
 - [ ] **P7-T009 — Implement cache envelopes**
 - [ ] **P7-T010 — Implement cache invalidation**
 - [ ] **P7-T011 — Implement offline fallback**
