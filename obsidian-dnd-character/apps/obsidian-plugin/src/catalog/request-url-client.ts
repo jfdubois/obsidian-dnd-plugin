@@ -36,6 +36,7 @@ import {
   isCatalogSource,
   isCatalogEntitySummary,
   isCurrentRevision,
+  isEntityDetailResponse,
   CATALOG_SCHEMA_VERSION,
 } from "@obsidian-dnd/catalog-contract";
 import type {
@@ -152,10 +153,16 @@ export class RequestUrlCatalogClient implements CatalogClient {
     entityId: EntityId,
   ): Promise<EntityDetailResult> {
     const url = this.buildUrl(catalogRevision, `entity/${entityIdStr(entityId)}`);
-    const data = await this.fetchJson(url);
+    const raw = await this.fetchJson(url);
+
+    if (!isEntityDetailResponse(raw)) {
+      throw this.createError(
+        `Invalid entity detail for ${entityIdStr(entityId)}: response does not match any known entity rule schema`,
+      );
+    }
 
     return {
-      data,
+      data: raw,
       catalogRevision,
     };
   }

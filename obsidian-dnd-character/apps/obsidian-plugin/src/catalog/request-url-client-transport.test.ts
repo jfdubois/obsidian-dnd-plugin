@@ -10,10 +10,15 @@ import { RequestUrlCatalogClient } from "./request-url-client";
 import {
   createCatalogRevision,
   createEntityId,
+  createSourceId,
 } from "@obsidian-dnd/domain";
 import type { CatalogRevision, EntityId } from "@obsidian-dnd/domain";
-import type { CatalogManifest } from "@obsidian-dnd/catalog-contract";
-import { createCatalogManifest } from "@obsidian-dnd/catalog-contract";
+import type { CatalogManifest, EntityDetailResponse } from "@obsidian-dnd/catalog-contract";
+import {
+  createCatalogManifest,
+  createSpeciesRule,
+  createRenderParagraph,
+} from "@obsidian-dnd/catalog-contract";
 
 /* ── Mock setup ────────────────────────────────────────────────── */
 
@@ -63,6 +68,27 @@ function mockResponse(json: unknown, status = 200) {
 
 function mockNetworkError() {
   mockRequestUrl.mockRejectedValue(new Error("network failure"));
+}
+
+function createMockEntityDetail(): EntityDetailResponse {
+  return createSpeciesRule(
+    createEntityId("species:2024:xphb:human"),
+    "Human",
+    createSourceId("xphb"),
+    "2024",
+    "core",
+    "Medium",
+    30,
+    false,
+    [],
+    [],
+    [createRenderParagraph("A classic humanoid species.")],
+    [],
+    [],
+    [],
+    [],
+    false,
+  );
 }
 
 /* ── Tests ─────────────────────────────────────────────────────── */
@@ -123,14 +149,14 @@ describe("RequestUrlCatalogClient transport", () => {
 
     it("constructs correct entity URL with entity id", async () => {
       const client = new RequestUrlCatalogClient({ baseUrl });
-      mockResponse({});
+      mockResponse(createMockEntityDetail());
 
-      const entityId: EntityId = createEntityId("class:2024:xphb:fighter");
+      const entityId: EntityId = createEntityId("species:2024:xphb:human");
       await client.fetchEntity(revision, entityId);
 
       expect(mockRequestUrl).toHaveBeenCalledWith(
         expect.objectContaining({
-          url: `${baseUrl}/rev-001/entity/class:2024:xphb:fighter`,
+          url: `${baseUrl}/rev-001/entity/species:2024:xphb:human`,
         }),
       );
     });

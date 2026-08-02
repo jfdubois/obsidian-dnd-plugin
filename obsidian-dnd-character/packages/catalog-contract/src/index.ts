@@ -486,3 +486,10 @@ export {
   /* Language factory */
   createLanguageRule,
 } from "./entity-language";
+
+export {
+  /* Entity detail response types */
+  type EntityDetailResponse,
+  /* Entity detail response validator */
+  isEntityDetailResponse,
+} from "./entity-detail";

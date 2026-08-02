@@ -26,6 +26,7 @@ import type {
   CatalogManifest,
   CatalogSource,
   CatalogEntitySummary,
+  EntityDetailResponse,
 } from "@obsidian-dnd/catalog-contract";
 
 /* ── Configuration ─────────────────────────────────────────────── */
@@ -59,13 +60,13 @@ export interface CatalogClientError {
 
 /**
  * Result of fetching an individual entity detail.
- * The `data` field is typed as `unknown` because the shape
- * depends on the entity kind. Callers should validate the
- * returned data against the expected entity rule type.
+ * The `data` field is a discriminated union of all entity
+ * rule types, validated against the catalog contract schema
+ * before being returned to the caller.
  */
 export interface EntityDetailResult {
-  /** The raw entity detail payload. */
-  data: unknown;
+  /** The validated entity detail payload. */
+  data: EntityDetailResponse;
   /** The catalog revision this detail came from. */
   catalogRevision: CatalogRevision;
 }

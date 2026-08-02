@@ -20,13 +20,22 @@ import type {
   CatalogManifest,
   CatalogSource,
   CatalogEntitySummary,
+  EntityDetailResponse,
+} from "@obsidian-dnd/catalog-contract";
+import {
+  createSpeciesRule,
+  createRenderParagraph,
 } from "@obsidian-dnd/catalog-contract";
 import type {
   CatalogRevision,
   RuleEntityKind,
   EntityId,
 } from "@obsidian-dnd/domain";
-import { createCatalogRevision } from "@obsidian-dnd/domain";
+import {
+  createCatalogRevision,
+  createEntityId,
+  createSourceId,
+} from "@obsidian-dnd/domain";
 
 /* ── Mock implementation for contract validation ───────────────── */
 
@@ -127,12 +136,31 @@ describe("CatalogClient interface", () => {
 
   it("EntityDetailResult has required fields", () => {
     const revision = createCatalogRevision("rev-001");
+    const entityDetail: EntityDetailResponse = createSpeciesRule(
+      createEntityId("species:2024:xphb:human"),
+      "Human",
+      createSourceId("xphb"),
+      "2024",
+      "core",
+      "Medium",
+      30,
+      false,
+      [],
+      [],
+      [createRenderParagraph("A classic humanoid species.")],
+      [],
+      [],
+      [],
+      [],
+      false,
+    );
     const result: EntityDetailResult = {
-      data: { name: "Test Entity" },
+      data: entityDetail,
       catalogRevision: revision,
     };
     expect(result.catalogRevision).toBe(revision);
-    expect(result.data).toEqual({ name: "Test Entity" });
+    expect(result.data.name).toBe("Human");
+    expect(result.data.kind).toBe("species");
   });
 
   it("SchemaNegotiationResult has required fields", () => {

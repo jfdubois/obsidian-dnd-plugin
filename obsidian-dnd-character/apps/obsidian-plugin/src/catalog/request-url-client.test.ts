@@ -28,11 +28,14 @@ import type {
   CatalogManifest,
   CatalogSource,
   CatalogEntitySummary,
+  EntityDetailResponse,
 } from "@obsidian-dnd/catalog-contract";
 import {
   createCatalogManifest,
   createCatalogSource,
   createCatalogEntitySummary,
+  createSpeciesRule,
+  createRenderParagraph,
 } from "@obsidian-dnd/catalog-contract";
 
 /* ── Mock setup ────────────────────────────────────────────────── */
@@ -93,6 +96,27 @@ function createMockEntitySummary(): CatalogEntitySummary {
     tags: ["base"],
     detailPath: "species/human.json",
   });
+}
+
+function createMockEntityDetail(): EntityDetailResponse {
+  return createSpeciesRule(
+    createEntityId("species:2024:xphb:human"),
+    "Human",
+    createSourceId("xphb"),
+    "2024",
+    "core",
+    "Medium",
+    30,
+    false,
+    [],
+    [],
+    [createRenderParagraph("A classic humanoid species.")],
+    [],
+    [],
+    [],
+    [],
+    false,
+  );
 }
 
 function mockResponse(json: unknown, status = 200) {
@@ -329,22 +353,30 @@ describe("RequestUrlCatalogClient", () => {
   /* ── fetchEntity ─────────────────────────────────────────────── */
 
   it("fetchEntity returns entity detail result on 200", async () => {
-    const entityData = { name: "Fireball", level: 3 };
-    mockResponse(entityData);
+    const entityDetail = createMockEntityDetail();
+    mockResponse(entityDetail);
 
-    const entityId: EntityId = createEntityId("spell:2024:xphb:fireball");
+    const entityId: EntityId = createEntityId("species:2024:xphb:human");
     const result = await client.fetchEntity(revision, entityId);
 
-    expect(result.data).toEqual(entityData);
+    expect(result.data).toEqual(entityDetail);
     expect(result.catalogRevision).toBe(revision);
   });
 
   it("fetchEntity throws on 500 with status code", async () => {
     mockResponse({}, 500);
 
-    const entityId: EntityId = createEntityId("spell:2024:xphb:fireball");
+    const entityId: EntityId = createEntityId("species:2024:xphb:human");
     const error = await client.fetchEntity(revision, entityId).catch((e) => e);
     expect((error as CatalogClientError).status).toBe(500);
+  });
+
+  it("fetchEntity throws on invalid entity detail response", async () => {
+    mockResponse({ name: "Invalid", level: 3 });
+
+    const entityId: EntityId = createEntityId("species:2024:xphb:human");
+    const error = await client.fetchEntity(revision, entityId).catch((e) => e);
+    expect((error as CatalogClientError).message).toContain("Invalid entity detail");
   });
 
   /* ── testConnection ──────────────────────────────────────────── */
