@@ -220,6 +220,50 @@ describe("RequestUrlCatalogClient", () => {
     );
   });
 
+  it("fetchSources throws on invalid source entry in array", async () => {
+    mockResponse([
+      createMockSource(),
+      { invalid: "entry" },
+    ]);
+
+    await expect(client.fetchSources(revision)).rejects.toThrow(
+      "Invalid sources: entry at index 1",
+    );
+  });
+
+  it("fetchSources throws on 404 with status code", async () => {
+    mockResponse({}, 404);
+
+    const error = await client.fetchSources(revision).catch((e) => e);
+    expect((error as CatalogClientError).status).toBe(404);
+  });
+
+  it("fetchSources throws on network failure", async () => {
+    mockNetworkError();
+
+    const error = await client.fetchSources(revision).catch((e) => e);
+    expect((error as CatalogClientError).cause).toBeDefined();
+  });
+
+  it("fetchSources returns multiple sources", async () => {
+    const sources = [
+      createMockSource(),
+      createMockSource(),
+    ];
+    mockResponse(sources);
+
+    const result = await client.fetchSources(revision);
+    expect(result).toHaveLength(2);
+    expect(result).toEqual(sources);
+  });
+
+  it("fetchSources accepts empty array", async () => {
+    mockResponse([]);
+
+    const result = await client.fetchSources(revision);
+    expect(result).toEqual([]);
+  });
+
   /* ── fetchIndex ──────────────────────────────────────────────── */
 
   it("fetchIndex returns parsed index on 200", async () => {
