@@ -19,6 +19,15 @@ export {
 } from "./schema-version";
 
 export {
+  /* Current revision pointer types */
+  type CurrentRevision,
+  /* Current revision pointer factory */
+  createCurrentRevision,
+  /* Current revision pointer validator */
+  isCurrentRevision,
+} from "./current-revision";
+
+export {
   /* Source metadata types */
   type CatalogSource,
   /* Source metadata factory */

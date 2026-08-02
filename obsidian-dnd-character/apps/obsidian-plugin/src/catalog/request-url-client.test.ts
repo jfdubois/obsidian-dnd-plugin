@@ -130,12 +130,44 @@ describe("RequestUrlCatalogClient", () => {
   });
 
   it("satisfies the CatalogClient interface", () => {
+    expect(typeof client.fetchCurrentRevision).toBe("function");
     expect(typeof client.fetchManifest).toBe("function");
     expect(typeof client.fetchSources).toBe("function");
     expect(typeof client.fetchIndex).toBe("function");
     expect(typeof client.fetchEntity).toBe("function");
     expect(typeof client.testConnection).toBe("function");
     expect(typeof client.negotiateSchema).toBe("function");
+  });
+
+  /* ── fetchCurrentRevision ────────────────────────────────────── */
+
+  it("fetchCurrentRevision returns revision string for valid current.json", async () => {
+    mockResponse({ currentRevision: "smoke-test-rev-001" });
+
+    const result = await client.fetchCurrentRevision();
+    expect(result).toBe("smoke-test-rev-001");
+  });
+
+  it("fetchCurrentRevision throws on invalid current.json", async () => {
+    mockResponse({ invalid: "data" });
+
+    await expect(client.fetchCurrentRevision()).rejects.toThrow(
+      "Invalid current.json",
+    );
+  });
+
+  it("fetchCurrentRevision throws on network failure", async () => {
+    mockNetworkError();
+
+    const error = await client.fetchCurrentRevision().catch((e) => e);
+    expect((error as CatalogClientError).cause).toBeDefined();
+  });
+
+  it("fetchCurrentRevision throws on 404", async () => {
+    mockResponse({}, 404);
+
+    const error = await client.fetchCurrentRevision().catch((e) => e);
+    expect((error as CatalogClientError).status).toBe(404);
   });
 
   /* ── fetchManifest ───────────────────────────────────────────── */
@@ -229,38 +261,79 @@ describe("RequestUrlCatalogClient", () => {
 
   /* ── testConnection ──────────────────────────────────────────── */
 
-  it("testConnection returns true for valid manifest", async () => {
-    mockResponse(createMockManifest(revision));
+  it("testConnection returns true when current.json and manifest are valid", async () => {
+    const manifest = createMockManifest(revision);
+    mockRequestUrl.mockResolvedValueOnce({
+      status: 200,
+      headers: { "content-type": "application/json" },
+      arrayBuffer: new ArrayBuffer(0),
+      json: { currentRevision: "rev-001" },
+      text: JSON.stringify({ currentRevision: "rev-001" }),
+    });
+    mockRequestUrl.mockResolvedValueOnce({
+      status: 200,
+      headers: { "content-type": "application/json" },
+      arrayBuffer: new ArrayBuffer(0),
+      json: manifest,
+      text: JSON.stringify(manifest),
+    });
 
     const result = await client.testConnection();
     expect(result).toBe(true);
   });
 
-  it("testConnection returns false for invalid manifest", async () => {
-    mockResponse({ status: "ok" });
+  it("testConnection returns false when current.json is invalid", async () => {
+    mockResponse({ invalid: "data" });
 
     const result = await client.testConnection();
     expect(result).toBe(false);
   });
 
-  it("testConnection returns false on network error", async () => {
+  it("testConnection returns false on network error during current.json fetch", async () => {
     mockNetworkError();
 
     const result = await client.testConnection();
     expect(result).toBe(false);
   });
 
-  it("testConnection returns false for wrong schema version", async () => {
-    const manifest = createMockManifest(revision);
-    mockResponse({ ...manifest, schemaVersion: 99 });
+  it("testConnection returns false when manifest validation fails", async () => {
+    mockRequestUrl.mockResolvedValueOnce({
+      status: 200,
+      headers: { "content-type": "application/json" },
+      arrayBuffer: new ArrayBuffer(0),
+      json: { currentRevision: "rev-001" },
+      text: JSON.stringify({ currentRevision: "rev-001" }),
+    });
+    // Manifest with wrong schema version
+    const badManifest = createMockManifest(revision);
+    mockRequestUrl.mockResolvedValueOnce({
+      status: 200,
+      headers: { "content-type": "application/json" },
+      arrayBuffer: new ArrayBuffer(0),
+      json: { ...badManifest, schemaVersion: 99 },
+      text: JSON.stringify({ ...badManifest, schemaVersion: 99 }),
+    });
 
     const result = await client.testConnection();
     expect(result).toBe(false);
   });
 
-  it("testConnection returns false for missing required entity kinds", async () => {
+  it("testConnection returns false when manifest missing required entity kinds", async () => {
+    mockRequestUrl.mockResolvedValueOnce({
+      status: 200,
+      headers: { "content-type": "application/json" },
+      arrayBuffer: new ArrayBuffer(0),
+      json: { currentRevision: "rev-001" },
+      text: JSON.stringify({ currentRevision: "rev-001" }),
+    });
     const manifest = createMockManifest(revision);
-    mockResponse({ ...manifest, entityKinds: ["skill"] });
+    mockRequestUrl.mockResolvedValueOnce({
+      status: 200,
+      headers: { "content-type": "application/json" },
+      arrayBuffer: new ArrayBuffer(0),
+      json: { ...manifest, entityKinds: ["skill"] },
+      text: JSON.stringify({ ...manifest, entityKinds: ["skill"] }),
+    });
 
     const result = await client.testConnection();
     expect(result).toBe(false);

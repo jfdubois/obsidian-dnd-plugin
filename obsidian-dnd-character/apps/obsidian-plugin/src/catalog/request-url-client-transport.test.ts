@@ -135,15 +135,29 @@ describe("RequestUrlCatalogClient transport", () => {
       );
     });
 
-    it("uses base URL for connection test", async () => {
+    it("uses base URL + /current.json for connection test", async () => {
       const client = new RequestUrlCatalogClient({ baseUrl });
-      mockResponse(createMockManifest(revision));
+      mockRequestUrl.mockResolvedValueOnce({
+        status: 200,
+        headers: { "content-type": "application/json" },
+        arrayBuffer: new ArrayBuffer(0),
+        json: { currentRevision: "rev-001" },
+        text: JSON.stringify({ currentRevision: "rev-001" }),
+      });
+      mockRequestUrl.mockResolvedValueOnce({
+        status: 200,
+        headers: { "content-type": "application/json" },
+        arrayBuffer: new ArrayBuffer(0),
+        json: createMockManifest(revision),
+        text: JSON.stringify(createMockManifest(revision)),
+      });
 
       await client.testConnection();
 
-      expect(mockRequestUrl).toHaveBeenCalledWith(
+      expect(mockRequestUrl).toHaveBeenNthCalledWith(
+        1,
         expect.objectContaining({
-          url: baseUrl,
+          url: `${baseUrl}/current.json`,
         }),
       );
     });
@@ -231,7 +245,20 @@ describe("RequestUrlCatalogClient transport", () => {
         timeoutMs: 1000,
       });
 
-      mockResponse(createMockManifest(revision));
+      mockRequestUrl.mockResolvedValueOnce({
+        status: 200,
+        headers: { "content-type": "application/json" },
+        arrayBuffer: new ArrayBuffer(0),
+        json: { currentRevision: "rev-001" },
+        text: JSON.stringify({ currentRevision: "rev-001" }),
+      });
+      mockRequestUrl.mockResolvedValueOnce({
+        status: 200,
+        headers: { "content-type": "application/json" },
+        arrayBuffer: new ArrayBuffer(0),
+        json: createMockManifest(revision),
+        text: JSON.stringify(createMockManifest(revision)),
+      });
 
       const result = await client.testConnection();
       expect(result).toBe(true);

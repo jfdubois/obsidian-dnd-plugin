@@ -8,11 +8,11 @@
  * URL pattern: {baseUrl}/{revision}/{endpoint}
  *
  * Endpoints:
+ * - /current.json    → fetchCurrentRevision
  * - /manifest        → fetchManifest
  * - /sources         → fetchSources
  * - /index/{kind}    → fetchIndex
  * - /entity/{id}     → fetchEntity
- * - /                → testConnection
  */
 
 import { requestUrl } from "obsidian";
@@ -24,6 +24,7 @@ import type {
 import {
   catalogRevisionStr,
   entityIdStr,
+  createCatalogRevision,
 } from "@obsidian-dnd/domain";
 import type {
   CatalogManifest,
@@ -34,6 +35,7 @@ import {
   isCatalogManifest,
   isCatalogSource,
   isCatalogEntitySummary,
+  isCurrentRevision,
   CATALOG_SCHEMA_VERSION,
 } from "@obsidian-dnd/catalog-contract";
 import type {
@@ -58,6 +60,21 @@ export class RequestUrlCatalogClient implements CatalogClient {
   constructor(config: CatalogClientConfig) {
     this.baseUrl = config.baseUrl.replace(/\/+$/, "");
     this.timeoutMs = config.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  }
+
+  /* ── Current revision pointer ────────────────────────────────── */
+
+  async fetchCurrentRevision(): Promise<string> {
+    const url = `${this.baseUrl}/current.json`;
+    const data = await this.fetchJson(url);
+
+    if (!isCurrentRevision(data)) {
+      throw this.createError(
+        "Invalid current.json: response does not match CurrentRevision schema",
+      );
+    }
+
+    return data.currentRevision;
   }
 
   /* ── Manifest ────────────────────────────────────────────────── */
@@ -147,8 +164,11 @@ export class RequestUrlCatalogClient implements CatalogClient {
 
   async testConnection(): Promise<boolean> {
     try {
-      const data = await this.fetchJson(this.baseUrl);
-      const result = validateConnection(data);
+      const revisionId = await this.fetchCurrentRevision();
+      const manifest = await this.fetchManifest(
+        createCatalogRevision(revisionId),
+      );
+      const result = validateConnection(manifest);
       return result.valid;
     } catch {
       return false;

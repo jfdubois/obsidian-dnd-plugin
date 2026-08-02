@@ -42,6 +42,10 @@ class MockCatalogClient implements CatalogClient {
     this.config = config;
   }
 
+  async fetchCurrentRevision(): Promise<string> {
+    throw new Error("Mock not implemented");
+  }
+
   async fetchManifest(_catalogRevision: CatalogRevision): Promise<CatalogManifest> {
     throw new Error("Mock not implemented");
   }
@@ -79,6 +83,7 @@ describe("CatalogClient interface", () => {
   it("MockCatalogClient satisfies the CatalogClient interface", () => {
     const client = new MockCatalogClient({ baseUrl: "https://example.com" });
     expect(client).toBeDefined();
+    expect(typeof client.fetchCurrentRevision).toBe("function");
     expect(typeof client.fetchManifest).toBe("function");
     expect(typeof client.fetchSources).toBe("function");
     expect(typeof client.fetchIndex).toBe("function");
@@ -154,6 +159,12 @@ describe("CatalogClient interface", () => {
 });
 
 describe("CatalogClient method signatures", () => {
+  it("fetchCurrentRevision returns Promise<string>", () => {
+    const client = new MockCatalogClient({ baseUrl: "https://example.com" });
+    expectTypeOf(client.fetchCurrentRevision).parameter(0).toBeUndefined();
+    expectTypeOf(client.fetchCurrentRevision).returns.toEqualTypeOf<Promise<string>>();
+  });
+
   it("fetchManifest accepts CatalogRevision and returns Promise<CatalogManifest>", () => {
     const client = new MockCatalogClient({ baseUrl: "https://example.com" });
     expectTypeOf(client.fetchManifest).parameter(0).toEqualTypeOf<CatalogRevision>();

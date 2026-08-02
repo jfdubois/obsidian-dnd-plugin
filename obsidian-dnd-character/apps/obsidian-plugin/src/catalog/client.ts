@@ -90,6 +90,21 @@ export interface SchemaNegotiationResult {
 /* ── Catalog client interface ──────────────────────────────────── */
 
 export interface CatalogClient {
+  /* ── Current revision pointer ────────────────────────────────── */
+
+  /**
+   * Fetch the current revision pointer from the catalog server.
+   *
+   * Requests the `current.json` file at the server root, which
+   * contains the identifier of the active catalog revision.
+   * The response is validated against the CurrentRevision schema
+   * before the revision string is returned.
+   *
+   * @returns The active catalog revision identifier string.
+   * @throws {CatalogClientError} if current.json cannot be fetched or is invalid.
+   */
+  fetchCurrentRevision(): Promise<string>;
+
   /* ── Manifest ────────────────────────────────────────────────── */
 
   /**
