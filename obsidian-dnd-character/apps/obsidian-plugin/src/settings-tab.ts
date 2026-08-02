@@ -1,9 +1,10 @@
 /** Plugin settings tab UI for the D&D Character Manager. */
 
-import type { App, Plugin } from 'obsidian';
+import type { App, ButtonComponent, Plugin } from 'obsidian';
 import { PluginSettingTab, Setting } from 'obsidian';
 
 import type { DndCharacterPluginSettings } from './settings';
+import { RequestUrlCatalogClient } from './catalog/request-url-client';
 
 interface PluginInstance {
 	settings: DndCharacterPluginSettings;
@@ -12,10 +13,16 @@ interface PluginInstance {
 
 export class DndCharacterPluginSettingTab extends PluginSettingTab {
 	plugin: PluginInstance;
+	catalogStatus: string;
+	private statusSetting: Setting | null;
+	private testButton: ButtonComponent | null;
 
 	constructor(app: App, plugin: PluginInstance) {
 		super(app, plugin as unknown as Plugin);
 		this.plugin = plugin;
+		this.catalogStatus = 'Not configured';
+		this.statusSetting = null;
+		this.testButton = null;
 	}
 
 	display(): void {
@@ -38,6 +45,9 @@ export class DndCharacterPluginSettingTab extends PluginSettingTab {
 					.onChange(async (value) => {
 						this.plugin.settings.catalogServerUrl = value;
 						await this.plugin.saveData(this.plugin.settings);
+						if (value === '') {
+							this.updateStatus('Not configured');
+						}
 					}),
 			);
 
@@ -53,6 +63,38 @@ export class DndCharacterPluginSettingTab extends PluginSettingTab {
 						await this.plugin.saveData(this.plugin.settings);
 					}),
 			);
+
+		/* ---------- Catalog status ---------- */
+
+		this.statusSetting = new Setting(containerEl)
+			.setName('Catalog status')
+			.setDesc(this.catalogStatus)
+			.setDisabled(true);
+
+		new Setting(containerEl)
+			.addButton((button) => {
+				this.testButton = button;
+				button
+					.setButtonText('Test connection')
+					.onClick(async () => {
+						const url = this.plugin.settings.catalogServerUrl;
+						if (url === '') {
+							this.updateStatus('Not configured');
+							return;
+						}
+						this.updateStatus('Testing...');
+						button.setDisabled(true);
+						try {
+							const client = new RequestUrlCatalogClient({ baseUrl: url });
+							const connected = await client.testConnection();
+							this.updateStatus(connected ? 'Connected' : 'Disconnected');
+						} catch {
+							this.updateStatus('Disconnected');
+						} finally {
+							button.setDisabled(false);
+						}
+					});
+			});
 
 		/* ---------- Characters section ---------- */
 
@@ -85,5 +127,12 @@ export class DndCharacterPluginSettingTab extends PluginSettingTab {
 			.setName('Settings schema version')
 			.setDesc(`Current settings schema version: ${this.plugin.settings.schemaVersion}.`)
 			.setDisabled(true);
+	}
+
+	private updateStatus(status: string): void {
+		this.catalogStatus = status;
+		if (this.statusSetting) {
+			this.statusSetting.setDesc(status);
+		}
 	}
 }
