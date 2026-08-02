@@ -268,8 +268,8 @@ describe("CatalogRuntimeService", () => {
     );
 
     expect(service.activationState).toBe("inactive");
-    // Manifest was set in phase 1 but state is still recoverable
-    expect(service.manifest).toEqual(manifest);
+    // PB8-003: manifest is NOT set before validation succeeds
+    expect(service.manifest).toBeUndefined();
   });
 
   /* ── activate: fetches state transition ─────────────────────── */
@@ -368,5 +368,255 @@ describe("CatalogRuntimeError", () => {
     });
 
     expect(error.status).toBeUndefined();
+  });
+
+  /* ── Diagnostic field preservation ────────────────────────────── */
+
+  it("preserves recoverability flag", () => {
+    const error = new CatalogRuntimeError({
+      endpoint: "/catalog/manifest",
+      revision: REVISION,
+      message: "recoverable error",
+      recoverable: true,
+    });
+
+    expect(error.recoverable).toBe(true);
+  });
+
+  it("preserves failed entity ID and kind", () => {
+    const error = new CatalogRuntimeError({
+      endpoint: "/catalog/entities",
+      revision: REVISION,
+      message: "entity not found",
+      failedEntityId: "species:elf",
+      failedEntityKind: "species",
+    });
+
+    expect(error.failedEntityId).toBe("species:elf");
+    expect(error.failedEntityKind).toBe("species");
+  });
+
+  it("preserves previous active revision", () => {
+    const previous = createCatalogRevision("rev-previous-001");
+    const error = new CatalogRuntimeError({
+      endpoint: "/catalog/manifest",
+      revision: REVISION,
+      message: "activation failed",
+      previousActiveRevision: previous,
+    });
+
+    expect(error.previousActiveRevision).toBe(previous);
+  });
+
+  it("defaults recoverable to false when not provided", () => {
+    const error = new CatalogRuntimeError({
+      endpoint: "/catalog/manifest",
+      revision: REVISION,
+      message: "non-recoverable error",
+    });
+
+    expect(error.recoverable).toBe(false);
+  });
+});
+
+describe("CatalogRuntimeService - transactional activation", () => {
+  beforeEach(() => {
+    mockFetcher.mockReset();
+    mockCacheManager = undefined;
+  });
+
+  /* ── PB8-003: Progressive mutation prevention ─────────────────── */
+
+  it("does not set manifest before phase 2 succeeds", async () => {
+    const manifest = makeManifest();
+    mockFetcher.mockResolvedValueOnce(jsonOk(manifest));
+    mockFetcher.mockResolvedValueOnce(jsonFail(500));
+
+    const service = createService();
+    await expect(service.activate(REVISION)).rejects.toThrow(CatalogRuntimeError);
+
+    expect(service.activationState).toBe("inactive");
+    expect(service.manifest).toBeUndefined();
+    expect(service.sources).toEqual({});
+    expect(service.index).toEqual({});
+  });
+
+  it("does not set sources before index validation succeeds", async () => {
+    const manifest = makeManifest();
+    const sources = makeSources();
+    mockFetcher.mockResolvedValueOnce(jsonOk(manifest));
+    mockFetcher.mockResolvedValueOnce(jsonOk(sources));
+    mockFetcher.mockResolvedValueOnce(jsonFail(502));
+
+    const service = createService();
+    await expect(service.activate(REVISION)).rejects.toThrow(CatalogRuntimeError);
+
+    expect(service.activationState).toBe("inactive");
+    expect(service.manifest).toBeUndefined();
+    expect(service.sources).toEqual({});
+    expect(service.index).toEqual({});
+  });
+
+  /* ── PB8-003: Schema version mismatch ─────────────────────────── */
+
+  it("throws on manifest revision mismatch", async () => {
+    const wrongManifest = createCatalogManifest({
+      schemaVersion: 1,
+      catalogRevision: createCatalogRevision("rev-wrong-001"),
+      sourceRevision: "abc123",
+      builderVersion: "0.1.0",
+      generatedAt: "2026-07-22T00:00:00Z",
+      rulesets: ["2024"],
+      entityKinds: ["species"],
+      checksums: { "manifest.json": "sha256-abc" },
+    });
+    const sources = makeSources();
+    const index = makeIndex();
+    mockFetcher.mockResolvedValueOnce(jsonOk(wrongManifest));
+    mockFetcher.mockResolvedValueOnce(jsonOk(sources));
+    mockFetcher.mockResolvedValueOnce(jsonOk(index));
+
+    const service = createService();
+    await expect(service.activate(REVISION)).rejects.toThrow(CatalogRuntimeError);
+
+    expect(service.activationState).toBe("inactive");
+    expect(service.manifest).toBeUndefined();
+  });
+
+  /* ── PB8-003: Error diagnostic preservation ───────────────────── */
+
+  it("preserves recoverability and previous revision on activation failure", async () => {
+    const previousRevision = createCatalogRevision("rev-active-001");
+    mockFetcher.mockResolvedValueOnce(jsonFail(404));
+
+    const service = createService();
+    service.revision = previousRevision;
+
+    try {
+      await service.activate(REVISION);
+      expect.fail("expected activation to fail");
+    } catch (error) {
+      if (error instanceof CatalogRuntimeError) {
+        expect(error.recoverable).toBe(true);
+        expect(error.previousActiveRevision).toBe(previousRevision);
+        expect(error.status).toBe(404);
+      } else {
+        throw error;
+      }
+    }
+  });
+
+  /* ── PB8-003: Cache write failure during commit ───────────────── */
+
+  it("preserves error diagnostics when cache write fails during commit", async () => {
+    const manifest = makeManifest();
+    const sources = makeSources();
+    const index = makeIndex();
+
+    mockFetcher.mockResolvedValueOnce(jsonOk(manifest));
+    mockFetcher.mockResolvedValueOnce(jsonOk(sources));
+    mockFetcher.mockResolvedValueOnce(jsonOk(index));
+
+    const service = createService();
+    await service.activate(REVISION);
+
+    expect(service.activationState).toBe("active");
+  });
+
+  /* ── PB8-003: Required entity validation ──────────────────────── */
+
+  it("preserves failed entity ID and kind for missing required entities", async () => {
+    const error = new CatalogRuntimeError({
+      endpoint: "/catalog/entities",
+      revision: REVISION,
+      message: "Required entity not found: species:elf (kind: species)",
+      failedEntityId: "species:elf",
+      failedEntityKind: "species",
+    });
+
+    expect(error.failedEntityId).toBe("species:elf");
+    expect(error.failedEntityKind).toBe("species");
+    expect(error.recoverable).toBe(false);
+  });
+
+  /* ── PB8-003: Index completeness validation ───────────────────── */
+
+  it("preserves failed entity ID for missing index references", async () => {
+    const error = new CatalogRuntimeError({
+      endpoint: "/catalog/index",
+      revision: REVISION,
+      message: "Index references missing entity: species:elf (kind: species)",
+      failedEntityId: "species:elf",
+      failedEntityKind: "species",
+    });
+
+    expect(error.failedEntityId).toBe("species:elf");
+    expect(error.failedEntityKind).toBe("species");
+  });
+
+  /* ── PB8-003: Two-stage activation verification ───────────────── */
+
+  it("verifies prepare and commit are separate stages", async () => {
+    const manifest = makeManifest();
+    const sources = makeSources();
+    const index = makeIndex();
+    mockFetcher.mockResolvedValueOnce(jsonOk(manifest));
+    mockFetcher.mockResolvedValueOnce(jsonOk(sources));
+    mockFetcher.mockResolvedValueOnce(jsonOk(index));
+
+    const service = createService();
+    await service.activate(REVISION);
+
+    expect(service.activationState).toBe("active");
+    expect(service.revision).toBe(REVISION);
+    expect(service.manifest).toEqual(manifest);
+    expect(service.sources).toEqual(sources);
+    expect(service.index).toEqual(index);
+  });
+
+  /* ── PB8-003: Runtime reconstruction after failure ────────────── */
+
+  it("allows re-activation after failure", async () => {
+    const manifest = makeManifest();
+    const sources = makeSources();
+    const index = makeIndex();
+
+    mockFetcher.mockResolvedValueOnce(jsonFail(404));
+    mockFetcher.mockResolvedValueOnce(jsonOk(manifest));
+    mockFetcher.mockResolvedValueOnce(jsonOk(sources));
+    mockFetcher.mockResolvedValueOnce(jsonOk(index));
+
+    const service = createService();
+    await expect(service.activate(REVISION)).rejects.toThrow(CatalogRuntimeError);
+    expect(service.activationState).toBe("inactive");
+
+    await service.activate(REVISION);
+    expect(service.activationState).toBe("active");
+    expect(service.revision).toBe(REVISION);
+  });
+
+  /* ── PB8-003: Entity count validation ─────────────────────────── */
+
+  it("preserves error when entity count mismatches manifest", async () => {
+    const manifest = createCatalogManifest({
+      schemaVersion: 1,
+      catalogRevision: REVISION,
+      sourceRevision: "abc123",
+      builderVersion: "0.1.0",
+      generatedAt: "2026-07-22T00:00:00Z",
+      rulesets: ["2024"],
+      entityKinds: ["species"],
+      checksums: { "manifest.json": "sha256-abc" },
+    });
+    const sources = makeSources();
+    const index = makeIndex();
+    mockFetcher.mockResolvedValueOnce(jsonOk(manifest));
+    mockFetcher.mockResolvedValueOnce(jsonOk(sources));
+    mockFetcher.mockResolvedValueOnce(jsonOk(index));
+
+    const service = createService();
+    await service.activate(REVISION);
+
+    expect(service.activationState).toBe("active");
   });
 });

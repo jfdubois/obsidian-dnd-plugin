@@ -31,6 +31,16 @@ export interface CatalogRuntimeDiagnostics {
 export type Fetcher = (input: string, init?: RequestInit) => Promise<Response>;
 
 /**
+ * Internal candidate state for two-stage activation.
+ */
+type CandidateState = {
+  revision: CatalogRevision;
+  manifest: CatalogManifest;
+  sources: Record<string, CatalogSource>;
+  index: Record<string, CatalogEntitySummary[]>;
+};
+
+/**
  * Two-phase, transactional catalog revision activation service.
  *
  * Phase 1 — `fetchManifest`: validates manifest, sets internal manifest,
@@ -204,22 +214,32 @@ export class CatalogRuntimeService {
    * (`activationState` is set to `'inactive'`).
    */
   public async activate(revision: CatalogRevision): Promise<void> {
-    this.revision = revision;
+    const previousRevision = this.revision;
     this.activationState = 'fetching';
 
     try {
-      await this.fetchManifest(revision);
-      await this.fetchSourcesAndIndex(revision);
+      const candidate = await this.prepareCandidate(revision);
+      await this.validateCandidate(candidate);
+      this.commitCandidate(candidate);
       this.activationState = 'active';
     } catch (error) {
       this.activationState = 'inactive';
       if (error instanceof CatalogRuntimeError) {
-        throw error;
+        throw new CatalogRuntimeError({
+          endpoint: error.endpoint,
+          revision,
+          message: error.message,
+          status: error.status,
+          recoverable: true,
+          previousActiveRevision: previousRevision,
+        });
       }
       throw new CatalogRuntimeError({
         endpoint: 'unknown',
         revision,
         message: error instanceof Error ? error.message : String(error),
+        recoverable: true,
+        previousActiveRevision: previousRevision,
       });
     }
   }
@@ -255,6 +275,138 @@ export class CatalogRuntimeService {
       sourceCount: Object.keys(this.sources).length,
       indexEntryCount: Object.keys(this.index).length,
     };
+  }
+
+  // ------------------------------------------------------------------
+  // Candidate staging (two-stage activation)
+  // ------------------------------------------------------------------
+
+  private async prepareCandidate(revision: CatalogRevision): Promise<CandidateState> {
+    const manifest = await this.fetchManifestCandidate(revision);
+    const { sources, index } = await this.fetchSourcesAndIndexCandidate(revision);
+    return { revision, manifest, sources, index };
+  }
+
+  private async fetchManifestCandidate(revision: CatalogRevision): Promise<CatalogManifest> {
+    const endpoint = `${this.baseUrl}/catalog/manifest`;
+    const response = await this.fetchWithStatus(endpoint);
+
+    if (!response.ok) {
+      throw new CatalogRuntimeError({
+        endpoint,
+        revision,
+        message: `Manifest fetch failed with status ${response.status}`,
+        status: response.status,
+      });
+    }
+
+    const raw = await response.json();
+
+    if (!isCatalogManifest(raw)) {
+      throw new CatalogRuntimeError({
+        endpoint,
+        revision,
+        message: 'Manifest response failed structural validation',
+      });
+    }
+
+    return raw;
+  }
+
+  private async fetchSourcesAndIndexCandidate(revision: CatalogRevision): Promise<{ sources: Record<string, CatalogSource>; index: Record<string, CatalogEntitySummary[]> }> {
+    const sourcesEndpoint = `${this.baseUrl}/catalog/sources`;
+    const indexEndpoint = `${this.baseUrl}/catalog/index`;
+
+    const sourcesResponse = await this.fetchWithStatus(sourcesEndpoint);
+    if (!sourcesResponse.ok) {
+      throw new CatalogRuntimeError({
+        endpoint: sourcesEndpoint,
+        revision,
+        message: `Sources fetch failed with status ${sourcesResponse.status}`,
+        status: sourcesResponse.status,
+      });
+    }
+
+    const sourcesRaw = await sourcesResponse.json();
+    if (typeof sourcesRaw !== 'object' || sourcesRaw === null) {
+      throw new CatalogRuntimeError({
+        endpoint: sourcesEndpoint,
+        revision,
+        message: 'Sources response is not an object',
+      });
+    }
+
+    const validatedSources: Record<string, CatalogSource> = {};
+    for (const [key, value] of Object.entries(sourcesRaw)) {
+      if (!isCatalogSource(value)) {
+        throw new CatalogRuntimeError({
+          endpoint: sourcesEndpoint,
+          revision,
+          message: `Source entry "${key}" failed structural validation`,
+        });
+      }
+      validatedSources[key] = value;
+    }
+
+    const indexResponse = await this.fetchWithStatus(indexEndpoint);
+    if (!indexResponse.ok) {
+      throw new CatalogRuntimeError({
+        endpoint: indexEndpoint,
+        revision,
+        message: `Index fetch failed with status ${indexResponse.status}`,
+        status: indexResponse.status,
+      });
+    }
+
+    const indexRaw = await indexResponse.json();
+    if (typeof indexRaw !== 'object' || indexRaw === null) {
+      throw new CatalogRuntimeError({
+        endpoint: indexEndpoint,
+        revision,
+        message: 'Index response is not an object',
+      });
+    }
+
+    const validatedIndex: Record<string, CatalogEntitySummary[]> = {};
+    for (const [key, value] of Object.entries(indexRaw)) {
+      if (!Array.isArray(value)) {
+        throw new CatalogRuntimeError({
+          endpoint: indexEndpoint,
+          revision,
+          message: `Index entry "${key}" is not an array`,
+        });
+      }
+      for (let i = 0; i < value.length; i++) {
+        if (!isCatalogEntitySummary(value[i])) {
+          throw new CatalogRuntimeError({
+            endpoint: indexEndpoint,
+            revision,
+            message: `Index entry "${key}[${i}]" failed structural validation`,
+          });
+        }
+      }
+      validatedIndex[key] = value;
+    }
+
+    return { sources: validatedSources, index: validatedIndex };
+  }
+
+  private async validateCandidate(candidate: CandidateState): Promise<void> {
+    if (candidate.manifest.catalogRevision !== candidate.revision) {
+      throw new CatalogRuntimeError({
+        endpoint: `${this.baseUrl}/catalog/manifest`,
+        revision: candidate.revision,
+        message: `Manifest revision mismatch: expected ${candidate.revision}, got ${candidate.manifest.catalogRevision}`,
+      });
+    }
+  }
+
+  private commitCandidate(candidate: CandidateState): void {
+    this.revision = candidate.revision;
+    this.manifest = candidate.manifest;
+    this.sources = candidate.sources;
+    this.index = candidate.index;
+    void this.cacheManager?.invalidateByRevision(candidate.revision);
   }
 
   // ------------------------------------------------------------------
