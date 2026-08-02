@@ -72,6 +72,7 @@ function mockResponse(json: unknown) {
 const rev = createCatalogRevision("rev-001");
 const srcId = createSourceId("xphb");
 const humanId = createEntityId("species:2024:xphb:human");
+const humanDetailPath = "species/human.json";
 
 function mockManifest() {
   mockResponse(createCatalogManifest({
@@ -160,7 +161,7 @@ describe("Transport + Cache Integration", () => {
 
   it("fetchEntity populates cache and returns entity detail", async () => {
     mockEntity();
-    const result = await manager.fetch("entity:human", () => client.fetchEntity(rev, humanId), rev, "h");
+    const result = await manager.fetch("entity:human", () => client.fetchEntity(rev, humanDetailPath), rev, "h");
     expect(mockRequestUrl).toHaveBeenCalledTimes(1);
     expect(result.value.data.name).toBe("Human");
     expect(result.value.catalogRevision).toBe("rev-001");

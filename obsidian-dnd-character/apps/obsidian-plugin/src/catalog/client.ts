@@ -20,7 +20,6 @@
 import type {
   CatalogRevision,
   RuleEntityKind,
-  EntityId,
 } from "@obsidian-dnd/domain";
 import type {
   CatalogManifest,
@@ -163,13 +162,13 @@ export interface CatalogClient {
    * (e.g. {@link SpeciesRule}, {@link SpellRule}).
    *
    * @param catalogRevision - The catalog revision to fetch.
-   * @param entityId - The canonical entity identifier.
+   * @param detailPath - Static-file-relative path (e.g. "species/human.json").
    * @returns The entity detail result with raw data and revision.
    * @throws {CatalogClientError} if the entity cannot be fetched.
    */
   fetchEntity(
     catalogRevision: CatalogRevision,
-    entityId: EntityId,
+    detailPath: string,
   ): Promise<EntityDetailResult>;
 
   /* ── Connection test ─────────────────────────────────────────── */

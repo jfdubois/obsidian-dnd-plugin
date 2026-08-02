@@ -5,25 +5,23 @@
  * catalog server. All responses are validated against the catalog
  * contract types before being returned to callers.
  *
- * URL pattern: {baseUrl}/{revision}/{endpoint}
+ * URL pattern: {baseUrl}/{revision}/{artifact}
  *
- * Endpoints:
- * - /current.json    → fetchCurrentRevision
- * - /manifest        → fetchManifest
- * - /sources         → fetchSources
- * - /index/{kind}    → fetchIndex
- * - /entity/{id}     → fetchEntity
+ * Artifacts (static file layout):
+ * - /current.json       → fetchCurrentRevision
+ * - /manifest.json      → fetchManifest
+ * - /sources.json       → fetchSources
+ * - /indexes/{kind}.json → fetchIndex
+ * - /{detailPath}       → fetchEntity
  */
 
 import { requestUrl } from "obsidian";
 import type {
   CatalogRevision,
   RuleEntityKind,
-  EntityId,
 } from "@obsidian-dnd/domain";
 import {
   catalogRevisionStr,
-  entityIdStr,
   createCatalogRevision,
 } from "@obsidian-dnd/domain";
 import type {
@@ -51,6 +49,78 @@ import { validateConnection } from "./connection-test";
 /* ── Constants ─────────────────────────────────────────────────── */
 
 const DEFAULT_TIMEOUT_MS = 30_000;
+
+/**
+ * Maps each RuleEntityKind to the exact index filename
+ * the publisher writes under the `indexes/` directory.
+ */
+const KIND_INDEX_FILENAME: Record<RuleEntityKind, string> = {
+  species: "species.json",
+  background: "backgrounds.json",
+  class: "classes.json",
+  subclass: "subclasses.json",
+  "class-feature": "class-features.json",
+  "subclass-feature": "subclass-features.json",
+  feat: "feats.json",
+  spell: "spells.json",
+  item: "items.json",
+  "optional-feature": "optional-features.json",
+  skill: "skills.json",
+  language: "languages.json",
+} as const;
+
+/**
+ * Validates that the artifact path is safe for URL construction.
+ *
+ * Rules:
+ * 1. Must be a non-empty string
+ * 2. Must not contain ".." path segments
+ * 3. Must not be absolute (no leading "/" or drive letter)
+ * 4. Must not contain URL schemes (http://, https://, javascript:, data:)
+ * 5. Must not contain null bytes
+ * 6. Must not contain control characters
+ * 7. Must end with ".json"
+ *
+ * @throws Error if the path is unsafe
+ */
+export function validateArtifactPath(path: string): void {
+  if (typeof path !== "string" || path.length === 0) {
+    throw new Error("Artifact path must be a non-empty string");
+  }
+
+  if (path.includes("..")) {
+    throw new Error("Artifact path must not contain '..' path segments");
+  }
+
+  if (path.startsWith("/") || /^[a-zA-Z]:/.test(path)) {
+    throw new Error("Artifact path must not be absolute");
+  }
+
+  const lower = path.toLowerCase();
+  if (
+    lower.startsWith("http://") ||
+    lower.startsWith("https://") ||
+    lower.startsWith("javascript:") ||
+    lower.startsWith("data:")
+  ) {
+    throw new Error("Artifact path must not contain URL schemes");
+  }
+
+  if (path.includes("\0")) {
+    throw new Error("Artifact path must not contain null bytes");
+  }
+
+  for (let i = 0; i < path.length; i++) {
+    const code = path.charCodeAt(i);
+    if (code < 0x20 && code !== 0x09) {
+      throw new Error("Artifact path must not contain control characters");
+    }
+  }
+
+  if (!path.endsWith(".json")) {
+    throw new Error("Artifact path must end with '.json'");
+  }
+}
 
 /* ── Implementation ────────────────────────────────────────────── */
 
@@ -83,7 +153,7 @@ export class RequestUrlCatalogClient implements CatalogClient {
   async fetchManifest(
     catalogRevision: CatalogRevision,
   ): Promise<CatalogManifest> {
-    const url = this.buildUrl(catalogRevision, "manifest");
+    const url = this.buildUrl(catalogRevision, "manifest.json");
     const data = await this.fetchJson(url);
 
     if (!isCatalogManifest(data)) {
@@ -100,7 +170,7 @@ export class RequestUrlCatalogClient implements CatalogClient {
   async fetchSources(
     catalogRevision: CatalogRevision,
   ): Promise<CatalogSource[]> {
-    const url = this.buildUrl(catalogRevision, "sources");
+    const url = this.buildUrl(catalogRevision, "sources.json");
     const data = await this.fetchJson(url);
 
     if (!Array.isArray(data)) {
@@ -126,7 +196,8 @@ export class RequestUrlCatalogClient implements CatalogClient {
     catalogRevision: CatalogRevision,
     entityKind: RuleEntityKind,
   ): Promise<CatalogEntitySummary[]> {
-    const url = this.buildUrl(catalogRevision, `index/${entityKind}`);
+    const indexFilename = KIND_INDEX_FILENAME[entityKind];
+    const url = this.buildUrl(catalogRevision, `indexes/${indexFilename}`);
     const data = await this.fetchJson(url);
 
     if (!Array.isArray(data)) {
@@ -150,14 +221,15 @@ export class RequestUrlCatalogClient implements CatalogClient {
 
   async fetchEntity(
     catalogRevision: CatalogRevision,
-    entityId: EntityId,
+    detailPath: string,
   ): Promise<EntityDetailResult> {
-    const url = this.buildUrl(catalogRevision, `entity/${entityIdStr(entityId)}`);
+    validateArtifactPath(detailPath);
+    const url = this.buildUrl(catalogRevision, detailPath);
     const raw = await this.fetchJson(url);
 
     if (!isEntityDetailResponse(raw)) {
       throw this.createError(
-        `Invalid entity detail for ${entityIdStr(entityId)}: response does not match any known entity rule schema`,
+        `Invalid entity detail for ${detailPath}: response does not match any known entity rule schema`,
       );
     }
 

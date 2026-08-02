@@ -30,7 +30,6 @@ import {
 import type {
   CatalogRevision,
   RuleEntityKind,
-  EntityId,
 } from "@obsidian-dnd/domain";
 import type {
   CatalogClient,
@@ -148,13 +147,13 @@ export class CatalogService {
    */
   async fetchEntity(
     revision: CatalogRevision,
-    entityId: EntityId,
+    detailPath: string,
   ): Promise<EntityDetailResult> {
-    const key = buildEntityCacheKey(revision, entityId);
-    const inputHash = `entity:${revision}:${entityId}`;
+    const key = buildEntityCacheKey(revision, detailPath);
+    const inputHash = `entity:${revision}:${detailPath}`;
     const envelope = await this.manager.fetch(
       key,
-      () => this.client.fetchEntity(revision, entityId),
+      () => this.client.fetchEntity(revision, detailPath),
       revision,
       inputHash,
     );

@@ -9,11 +9,11 @@
  *   catalog-manifest/<revision>
  *   catalog-sources/<revision>
  *   catalog-index/<revision>/<kind>
- *   entity/<revision>/<entity-id>
+ *   entity/<revision>/<detail-path>
  */
 
-import type { CatalogRevision, RuleEntityKind, EntityId } from "@obsidian-dnd/domain";
-import { catalogRevisionStr, entityIdStr } from "@obsidian-dnd/domain";
+import type { CatalogRevision, RuleEntityKind } from "@obsidian-dnd/domain";
+import { catalogRevisionStr } from "@obsidian-dnd/domain";
 
 /* ── Namespace prefixes ────────────────────────────────────────── */
 
@@ -61,13 +61,13 @@ export function buildIndexCacheKey(
 /**
  * Build a cache key for an individual entity detail entry.
  *
- * Produces: `entity/<revision>/<entity-id>`
+ * Produces: `entity/<revision>/<detail-path>`
  */
 export function buildEntityCacheKey(
   catalogRevision: CatalogRevision,
-  entityId: EntityId,
+  detailPath: string,
 ): string {
-  return `${NS_ENTITY}/${catalogRevisionStr(catalogRevision)}/${entityIdStr(entityId)}`;
+  return `${NS_ENTITY}/${catalogRevisionStr(catalogRevision)}/${detailPath}`;
 }
 
 /* ── Key parsing (for invalidation and diagnostics) ────────────── */

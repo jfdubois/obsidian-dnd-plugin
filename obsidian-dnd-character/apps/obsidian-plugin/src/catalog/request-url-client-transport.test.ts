@@ -12,7 +12,7 @@ import {
   createEntityId,
   createSourceId,
 } from "@obsidian-dnd/domain";
-import type { CatalogRevision, EntityId } from "@obsidian-dnd/domain";
+import type { CatalogRevision } from "@obsidian-dnd/domain";
 import type { CatalogManifest, EntityDetailResponse } from "@obsidian-dnd/catalog-contract";
 import {
   createCatalogManifest,
@@ -116,7 +116,7 @@ describe("RequestUrlCatalogClient transport", () => {
 
       expect(mockRequestUrl).toHaveBeenCalledWith(
         expect.objectContaining({
-          url: `${baseUrl}/rev-001/manifest`,
+          url: `${baseUrl}/rev-001/manifest.json`,
         }),
       );
     });
@@ -129,7 +129,7 @@ describe("RequestUrlCatalogClient transport", () => {
 
       expect(mockRequestUrl).toHaveBeenCalledWith(
         expect.objectContaining({
-          url: `${baseUrl}/rev-001/sources`,
+          url: `${baseUrl}/rev-001/sources.json`,
         }),
       );
     });
@@ -142,21 +142,20 @@ describe("RequestUrlCatalogClient transport", () => {
 
       expect(mockRequestUrl).toHaveBeenCalledWith(
         expect.objectContaining({
-          url: `${baseUrl}/rev-001/index/spell`,
+          url: `${baseUrl}/rev-001/indexes/spells.json`,
         }),
       );
     });
 
-    it("constructs correct entity URL with entity id", async () => {
+    it("constructs correct entity URL with detail path", async () => {
       const client = new RequestUrlCatalogClient({ baseUrl });
       mockResponse(createMockEntityDetail());
 
-      const entityId: EntityId = createEntityId("species:2024:xphb:human");
-      await client.fetchEntity(revision, entityId);
+      await client.fetchEntity(revision, "species/human.json");
 
       expect(mockRequestUrl).toHaveBeenCalledWith(
         expect.objectContaining({
-          url: `${baseUrl}/rev-001/entity/species:2024:xphb:human`,
+          url: `${baseUrl}/rev-001/species/human.json`,
         }),
       );
     });
@@ -198,7 +197,7 @@ describe("RequestUrlCatalogClient transport", () => {
 
       expect(mockRequestUrl).toHaveBeenCalledWith(
         expect.objectContaining({
-          url: `${baseUrl}/rev-001/manifest`,
+          url: `${baseUrl}/rev-001/manifest.json`,
         }),
       );
     });

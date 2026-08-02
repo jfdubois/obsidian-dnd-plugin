@@ -17,7 +17,6 @@ import {
 import type {
   CatalogRevision,
   RuleEntityKind,
-  EntityId,
 } from "@obsidian-dnd/domain";
 import { createCatalogRevision } from "@obsidian-dnd/domain";
 
@@ -64,7 +63,7 @@ class MockCatalogClient implements CatalogClient {
 
   async fetchEntity(
     _revision: CatalogRevision,
-    _id: EntityId,
+    _detailPath: string,
   ): Promise<EntityDetailResult> {
     throw new Error("not implemented");
   }

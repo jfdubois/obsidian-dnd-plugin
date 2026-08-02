@@ -2,13 +2,14 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { publishCatalog } from "./catalog-publisher";
-import type { CatalogEntitySummary } from "@obsidian-dnd/catalog-contract";
+import type { CatalogEntitySummary, CatalogSource } from "@obsidian-dnd/catalog-contract";
 import {
   createValidInput,
   createTestSummary,
   createTempRoot,
   cleanupTempRoot,
 } from "./catalog-publisher-test-helpers";
+import { createSourceId } from "@obsidian-dnd/domain";
 
 let tempRoot: string;
 
@@ -149,6 +150,41 @@ describe("publishCatalog — positive", () => {
       tempRoot, "catalog", "v1", "revisions", "test-rev-001", "entities", "feat", "tough.json",
     );
     expect(fs.existsSync(featPath)).toBe(true);
+  });
+
+  it("writes sources.json when sources are provided", () => {
+    const sources: CatalogSource[] = [
+      {
+        id: createSourceId("PHB"),
+        name: "Player's Handbook",
+        abbreviation: "PHB",
+        ruleset: "2024",
+        category: "core",
+      },
+    ];
+    const input = { ...createValidInput(tempRoot), sources };
+    publishCatalog(input);
+
+    const sourcesPath = path.join(
+      tempRoot, "catalog", "v1", "revisions", "test-rev-001", "sources.json",
+    );
+    expect(fs.existsSync(sourcesPath)).toBe(true);
+
+    const written = JSON.parse(fs.readFileSync(sourcesPath, "utf8"));
+    expect(Array.isArray(written)).toBe(true);
+    expect(written).toHaveLength(1);
+    expect(written[0].id).toBe("PHB");
+    expect(written[0].name).toBe("Player's Handbook");
+  });
+
+  it("does not write sources.json when sources are empty", () => {
+    const input = { ...createValidInput(tempRoot), sources: [] };
+    publishCatalog(input);
+
+    const sourcesPath = path.join(
+      tempRoot, "catalog", "v1", "revisions", "test-rev-001", "sources.json",
+    );
+    expect(fs.existsSync(sourcesPath)).toBe(false);
   });
 });
 

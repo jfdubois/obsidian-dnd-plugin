@@ -29,7 +29,6 @@ import {
 import type {
   CatalogRevision,
   RuleEntityKind,
-  EntityId,
 } from "@obsidian-dnd/domain";
 import {
   createCatalogRevision,
@@ -72,7 +71,7 @@ class MockCatalogClient implements CatalogClient {
 
   async fetchEntity(
     _catalogRevision: CatalogRevision,
-    _entityId: EntityId,
+    _detailPath: string,
   ): Promise<EntityDetailResult> {
     throw new Error("Mock not implemented");
   }
@@ -212,10 +211,10 @@ describe("CatalogClient method signatures", () => {
     expectTypeOf(client.fetchIndex).returns.toEqualTypeOf<Promise<CatalogEntitySummary[]>>();
   });
 
-  it("fetchEntity accepts CatalogRevision and EntityId", () => {
+  it("fetchEntity accepts CatalogRevision and detailPath string", () => {
     const client = new MockCatalogClient({ baseUrl: "https://example.com" });
     expectTypeOf(client.fetchEntity).parameter(0).toEqualTypeOf<CatalogRevision>();
-    expectTypeOf(client.fetchEntity).parameter(1).toEqualTypeOf<EntityId>();
+    expectTypeOf(client.fetchEntity).parameter(1).toEqualTypeOf<string>();
     expectTypeOf(client.fetchEntity).returns.toEqualTypeOf<Promise<EntityDetailResult>>();
   });
 

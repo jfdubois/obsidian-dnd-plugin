@@ -17,7 +17,6 @@ import type {
 import { RequestUrlCatalogClient } from "./request-url-client";
 import type {
   CatalogRevision,
-  EntityId,
 } from "@obsidian-dnd/domain";
 import {
   createCatalogRevision,
@@ -137,8 +136,9 @@ function mockNetworkError() {
 
 describe("RequestUrlCatalogClient", () => {
   const revision: CatalogRevision = createCatalogRevision("rev-001");
+  const baseUrl = "https://catalog.example.com/catalog/v1";
   const config: CatalogClientConfig = {
-    baseUrl: "https://catalog.example.com/catalog/v1",
+    baseUrl,
     timeoutMs: 5000,
   };
 
@@ -356,8 +356,8 @@ describe("RequestUrlCatalogClient", () => {
     const entityDetail = createMockEntityDetail();
     mockResponse(entityDetail);
 
-    const entityId: EntityId = createEntityId("species:2024:xphb:human");
-    const result = await client.fetchEntity(revision, entityId);
+    const detailPath = "species/human.json";
+    const result = await client.fetchEntity(revision, detailPath);
 
     expect(result.data).toEqual(entityDetail);
     expect(result.catalogRevision).toBe(revision);
@@ -366,16 +366,16 @@ describe("RequestUrlCatalogClient", () => {
   it("fetchEntity throws on 500 with status code", async () => {
     mockResponse({}, 500);
 
-    const entityId: EntityId = createEntityId("species:2024:xphb:human");
-    const error = await client.fetchEntity(revision, entityId).catch((e) => e);
+    const detailPath = "species/human.json";
+    const error = await client.fetchEntity(revision, detailPath).catch((e) => e);
     expect((error as CatalogClientError).status).toBe(500);
   });
 
   it("fetchEntity throws on invalid entity detail response", async () => {
     mockResponse({ name: "Invalid", level: 3 });
 
-    const entityId: EntityId = createEntityId("species:2024:xphb:human");
-    const error = await client.fetchEntity(revision, entityId).catch((e) => e);
+    const detailPath = "species/human.json";
+    const error = await client.fetchEntity(revision, detailPath).catch((e) => e);
     expect((error as CatalogClientError).message).toContain("Invalid entity detail");
   });
 
@@ -477,5 +477,119 @@ describe("RequestUrlCatalogClient", () => {
     expect(result.serverSchemaVersion).toBe(2);
     expect(result.pluginSchemaVersion).toBe(1);
     expect(result.reason).toContain("2");
+  });
+
+  /* ── URL construction ────────────────────────────────────────── */
+
+  it("fetchManifest builds URL with manifest.json", async () => {
+    mockResponse(createMockManifest(revision));
+    await client.fetchManifest(revision);
+    expect(mockRequestUrl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: `${baseUrl}/rev-001/manifest.json`,
+      }),
+    );
+  });
+
+  it("fetchSources builds URL with sources.json", async () => {
+    mockResponse([]);
+    await client.fetchSources(revision);
+    expect(mockRequestUrl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: `${baseUrl}/rev-001/sources.json`,
+      }),
+    );
+  });
+
+  it("fetchIndex builds URL with indexes/{kind}.json", async () => {
+    mockResponse([]);
+    await client.fetchIndex(revision, "species");
+    expect(mockRequestUrl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: `${baseUrl}/rev-001/indexes/species.json`,
+      }),
+    );
+  });
+
+  it("fetchIndex builds URL with indexes/classes.json for class kind", async () => {
+    mockResponse([]);
+    await client.fetchIndex(revision, "class");
+    expect(mockRequestUrl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: `${baseUrl}/rev-001/indexes/classes.json`,
+      }),
+    );
+  });
+
+  it("fetchEntity builds URL with detailPath", async () => {
+    mockResponse(createMockEntityDetail());
+    await client.fetchEntity(revision, "species/human.json");
+    expect(mockRequestUrl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: `${baseUrl}/rev-001/species/human.json`,
+      }),
+    );
+  });
+
+  /* ── Path validation ─────────────────────────────────────────── */
+
+  it("fetchEntity rejects empty path", async () => {
+    const error = await client.fetchEntity(revision, "").catch((e) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("non-empty");
+  });
+
+  it("fetchEntity rejects path with .. segments", async () => {
+    const error = await client.fetchEntity(revision, "../etc/passwd").catch((e) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("..");
+  });
+
+  it("fetchEntity rejects absolute path", async () => {
+    const error = await client.fetchEntity(revision, "/etc/passwd").catch((e) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("absolute");
+  });
+
+  it("fetchEntity rejects http scheme", async () => {
+    const error = await client.fetchEntity(revision, "http://evil.com/data").catch((e) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("URL schemes");
+  });
+
+  it("fetchEntity rejects javascript scheme", async () => {
+    const error = await client.fetchEntity(revision, "javascript:alert(1)").catch((e) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("URL schemes");
+  });
+
+  it("fetchEntity rejects data scheme", async () => {
+    const error = await client.fetchEntity(revision, "data:text/html,<script>").catch((e) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("URL schemes");
+  });
+
+  it("fetchEntity rejects null bytes", async () => {
+    const error = await client.fetchEntity(revision, "species/human\0.json").catch((e) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("null bytes");
+  });
+
+  it("fetchEntity rejects control characters", async () => {
+    const error = await client.fetchEntity(revision, "species/human\x01.json").catch((e) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("control characters");
+  });
+
+  it("fetchEntity rejects path without .json extension", async () => {
+    const error = await client.fetchEntity(revision, "species/human.txt").catch((e) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain(".json");
+  });
+
+  it("fetchEntity accepts valid nested path", async () => {
+    mockResponse(createMockEntityDetail());
+    await client.fetchEntity(revision, "entities/species/human.json");
+    expect(mockRequestUrl).toHaveBeenCalledTimes(1);
   });
 });

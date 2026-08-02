@@ -1,6 +1,6 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { CatalogManifest, CatalogEntitySummary } from "@obsidian-dnd/catalog-contract";
+import type { CatalogManifest, CatalogEntitySummary, CatalogSource } from "@obsidian-dnd/catalog-contract";
 import type { RuleEntityKind } from "@obsidian-dnd/domain";
 import type { ValidationReport } from "./validation-report";
 import type { InventoryReport } from "./inventory-report";
@@ -31,6 +31,8 @@ export interface CatalogPublisherInput {
   readonly entities: Record<string, string>;
   readonly validationReport: ValidationReport;
   readonly inventoryReport: InventoryReport;
+  /** Optional source metadata. When present, emitted as sources.json. */
+  readonly sources?: CatalogSource[];
 }
 
 /* ── Result type ───────────────────────────────────────────────── */
@@ -53,6 +55,11 @@ function buildFileMap(input: CatalogPublisherInput): Map<string, string> {
 
   /* Manifest */
   files.set("manifest.json", JSON.stringify(input.manifest, null, 2));
+
+  /* Sources (optional) */
+  if (input.sources !== undefined && input.sources.length > 0) {
+    files.set("sources.json", JSON.stringify(input.sources, null, 2));
+  }
 
   /* Reports */
   files.set("reports/validation.json", JSON.stringify(input.validationReport, null, 2));
