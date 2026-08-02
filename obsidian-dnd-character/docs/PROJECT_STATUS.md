@@ -6,11 +6,11 @@ Phase 7 — Catalog client and runtime cache
 
 ## Current task
 
-P7-T007 — Download and validate indexes
+P7-T008 — Lazy-load entity details
 
 ## Last completed task
 
-P7-T006 — Download and validate source metadata
+P7-T007 — Download and validate indexes
 
 ## Branch baseline
 
@@ -24,10 +24,10 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-P7-T006 (typecheck, lint, 2908/2910 tests across 105 files, 2 skipped).
-- `npm --prefix obsidian-dnd-character run build`: passing post-P7-T006.
+- `npm --prefix obsidian-dnd-character run check`: passing post-P7-T007 (typecheck, lint, 2913/2915 tests across 105 files, 2 skipped).
+- `npm --prefix obsidian-dnd-character run build`: passing post-P7-T007.
 - `npm --workspace @obsidian-dnd/obsidian-plugin run bundle`: passing (CJS, obsidian external, no prohibited deps).
-- Tests: 2908 passing.
+- Tests: 2913 passing.
 
 ## Catalog baseline
 
@@ -53,8 +53,8 @@ None recorded.
 - Completed Phase 5 task commits: P5-T001 — 4e44b20; P5-T002 — ef11547; P5-T003 — defb572; P5-T004 — 98697ed; P5-T005 — b4a561e; P5-T006 — 518fb19; P5-T007 — f8b5f3a; P5-T008 — 5a63cc7
 - Completed Phase 6 task commits: P6-T001 — see Git history for P6-T001; P6-T002 — see Git history for P6-T002; P6-T003 — no changes needed; P6-T004 — see Git history for P6-T004; P6-T005 — see Git history for P6-T005; P6-T006 — see Git history for P6-T006; P6-T007 — see Git history for P6-T007; P6-T008 — see Git history for P6-T008; P6-T009 — see Git history for P6-T009; P6-T010 — see Git history for P6-T010; P6-T011 — see Git history for P6-T011; P6-T012 — see Git history for P6-T012
 - Phase 7 starting commit: 0dab1ff
-- Completed Phase 7 task commits: P7-T001 — see Git history for P7-T001; P7-T002 — see Git history for P7-T002; P7-T003 — see Git history for P7-T003; P7-T004 — 92c9fac; P7-T005 — no changes needed; P7-T006 — a407fd0
-- Current task: P7-T007 — Download and validate indexes
+- Completed Phase 7 task commits: P7-T001 — see Git history for P7-T001; P7-T002 — see Git history for P7-T002; P7-T003 — see Git history for P7-T003; P7-T004 — 92c9fac; P7-T005 — no changes needed; P7-T006 — a407fd0; P7-T007 — 65b8c2e
+- Current task: P7-T008 — Lazy-load entity details
 - Current retry: 0
 - Gate status: Phase 4 gate complete. Phase 5 gate complete. Phase 6 gate complete.
 - Blocking issue: none
@@ -62,6 +62,12 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-01 — P7-T007 — Download and validate indexes — complete
+Summary: fetchIndex already fully implemented in RequestUrlCatalogClient. Added 5 boundary tests: invalid entry in array, 404 with status code, network failure with cause, multiple summaries, empty array. Tests follow established pattern matching fetchSources coverage.
+Validation: `npm --prefix obsidian-dnd-character run check` passes (2913/2915 tests). `npm --prefix obsidian-dnd-character run build` passes.
+Compatibility notes: Test additions only. No `any`, mobile-compatible.
+Commit: 65b8c2e
 
 2026-08-01 — P7-T006 — Download and validate source metadata — complete
 Summary: fetchSources already fully implemented in RequestUrlCatalogClient. Added 5 boundary tests: invalid source entry in array, 404 with status code, network failure with cause, multiple sources, empty array. Tests follow established pattern matching fetchManifest and fetchIndex coverage.
