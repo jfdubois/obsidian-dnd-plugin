@@ -8,9 +8,14 @@ import {
 	CharacterSheetView,
 	DND_CHARACTER_SHEET_VIEW_TYPE,
 } from './views/character-sheet-view';
+import type { CatalogClient } from './catalog/client';
+import { RequestUrlCatalogClient } from './catalog/request-url-client';
+import { CatalogService } from './catalog/catalog-service';
 
 export default class DndCharacterPlugin extends Plugin {
 	settings: DndCharacterPluginSettings = DEFAULT_SETTINGS;
+	/** Catalog runtime service, lazily initialized on first access. */
+	catalogService: CatalogService | null = null;
 
 	async onload() {
 		console.log('Loading D&D Character Manager plugin');
@@ -73,7 +78,32 @@ export default class DndCharacterPlugin extends Plugin {
 		this.settings = normalizeSettings(raw);
 	}
 
+	/**
+	 * Get the catalog service, initializing it lazily on first access.
+	 * The service uses the catalog URL from plugin settings.
+	 */
+	async getCatalogService(): Promise<CatalogService> {
+		if (this.catalogService !== null) {
+			return this.catalogService;
+		}
+
+		// Build catalog client from settings.
+		const client: CatalogClient = new RequestUrlCatalogClient({
+			baseUrl: this.settings.catalogServerUrl,
+			timeoutMs: 5000,
+		});
+
+		this.catalogService = new CatalogService(this, client);
+		await this.catalogService.initialize();
+		return this.catalogService;
+	}
+
 	onunload() {
+		// Persist catalog cache before unloading.
+		if (this.catalogService !== null) {
+			void this.catalogService.dispose();
+		}
+
 		void this.saveData(this.settings);
 
 		// Cleanup: Obsidian Component lifecycle automatically handles:

@@ -533,3 +533,20 @@ export {
   /* Cache manager class (also usable as type) */
   CatalogCacheManager,
 } from "./cache-manager";
+
+export {
+  /* Cache key builders */
+  buildManifestCacheKey,
+  buildSourcesCacheKey,
+  buildIndexCacheKey,
+  buildEntityCacheKey,
+  /* Cache key parser */
+  parseCacheKey,
+  isCatalogCacheKey,
+} from "./cache-keys";
+
+export {
+  /* Cache store diagnostic types */
+  type CacheStoreDiagnostic,
+  type CacheStoreDiagnosticReason,
+} from "./cache-store-diagnostic";

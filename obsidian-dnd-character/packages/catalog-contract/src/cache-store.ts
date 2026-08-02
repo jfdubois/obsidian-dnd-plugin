@@ -10,6 +10,7 @@
  */
 
 import type { CacheEnvelope } from "./cache-envelope";
+import type { CacheStoreDiagnostic } from "./cache-store-diagnostic";
 import type { CatalogRevision } from "@obsidian-dnd/domain";
 
 /* ── Store interface ────────────────────────────────────────────── */
@@ -33,7 +34,10 @@ export interface CatalogCacheStore {
   /** Remove all entries for a catalog revision. Returns count. */
   invalidateByRevision(revision: CatalogRevision): Promise<number>;
 
-  /** Remove all entries. Returns the number removed. */
+  /**
+   * Remove all catalog cache entries. Does not affect non-cache
+   * plugin data stored in the same backend. Returns the number removed.
+   */
   clear(): Promise<number>;
 
   /** List all cache keys. */
@@ -41,6 +45,13 @@ export interface CatalogCacheStore {
 
   /** Current number of entries in the store. */
   size(): number;
+
+  /**
+   * Return diagnostics for any malformed entries currently
+   * in the store. In-memory stores return an empty array;
+   * persistent stores scan on load and report issues.
+   */
+  diagnostics(): CacheStoreDiagnostic[];
 }
 
 /* ── In-memory implementation ───────────────────────────────────── */
@@ -97,5 +108,10 @@ export class InMemoryCatalogCacheStore implements CatalogCacheStore {
 
   size(): number {
     return this.entries.size;
+  }
+
+  diagnostics(): CacheStoreDiagnostic[] {
+    // In-memory store only holds valid envelopes.
+    return [];
   }
 }
