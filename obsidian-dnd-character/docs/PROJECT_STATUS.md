@@ -6,11 +6,11 @@ Phase 7 — Catalog client and runtime cache
 
 ## Current task
 
-P7-T003 — Implement connection test (in progress)
+P7-T005 — Implement supported-schema negotiation
 
 ## Last completed task
 
-Phase 6 gate
+P7-T004 — Validate `current.json` and manifest
 
 ## Branch baseline
 
@@ -24,10 +24,10 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-Phase 6 gate (typecheck, lint, 2821/2823 tests across 102 files, 2 skipped).
-- `npm --prefix obsidian-dnd-character run build`: passing post-Phase 6 gate.
+- `npm --prefix obsidian-dnd-character run check`: passing post-P7-T004 (typecheck, lint, 2903/2905 tests across 105 files, 2 skipped).
+- `npm --prefix obsidian-dnd-character run build`: passing post-P7-T004.
 - `npm --workspace @obsidian-dnd/obsidian-plugin run bundle`: passing (CJS, obsidian external, no prohibited deps).
-- Tests: 2821 passing.
+- Tests: 2903 passing.
 
 ## Catalog baseline
 
@@ -53,8 +53,8 @@ None recorded.
 - Completed Phase 5 task commits: P5-T001 — 4e44b20; P5-T002 — ef11547; P5-T003 — defb572; P5-T004 — 98697ed; P5-T005 — b4a561e; P5-T006 — 518fb19; P5-T007 — f8b5f3a; P5-T008 — 5a63cc7
 - Completed Phase 6 task commits: P6-T001 — see Git history for P6-T001; P6-T002 — see Git history for P6-T002; P6-T003 — no changes needed; P6-T004 — see Git history for P6-T004; P6-T005 — see Git history for P6-T005; P6-T006 — see Git history for P6-T006; P6-T007 — see Git history for P6-T007; P6-T008 — see Git history for P6-T008; P6-T009 — see Git history for P6-T009; P6-T010 — see Git history for P6-T010; P6-T011 — see Git history for P6-T011; P6-T012 — see Git history for P6-T012
 - Phase 7 starting commit: 0dab1ff
-- Completed Phase 7 task commits: P7-T001 — see Git history for P7-T001; P7-T002 — see Git history for P7-T002; P7-T003 — see Git history for P7-T003
-- Current task: P7-T003 — Implement connection test
+- Completed Phase 7 task commits: P7-T001 — see Git history for P7-T001; P7-T002 — see Git history for P7-T002; P7-T003 — see Git history for P7-T003; P7-T004 — 92c9fac
+- Current task: P7-T005 — Implement supported-schema negotiation
 - Current retry: 0
 - Gate status: Phase 4 gate complete. Phase 5 gate complete. Phase 6 gate complete.
 - Blocking issue: none
@@ -62,6 +62,12 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-01 — P7-T004 — Validate `current.json` and manifest — complete
+Summary: Added CurrentRevision contract type (interface, guard, factory) to catalog-contract package. Added fetchCurrentRevision method to CatalogClient interface and implemented it in RequestUrlCatalogClient. Updated testConnection to fetch current.json first, resolve the revision ID, then fetch the manifest for that revision before validating connection. 13 new tests for CurrentRevision type, 7 new tests for fetchCurrentRevision, updated 5 testConnection tests for two-request pipeline.
+Validation: `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint, 2903/2905 tests). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0).
+Compatibility notes: Pure contract and client logic. No Obsidian API changes. No `any` used. Mobile-compatible.
+Commit: 92c9fac
 
 2026-08-01 — P7-T003 — Implement connection test — complete
 Summary: Implemented validateConnection function that validates catalog manifests against FR-001 requirements: manifest shape (isCatalogManifest guard), API version (CATALOG_API_VERSION), catalog schema version (CATALOG_SCHEMA_VERSION), rulesets (non-empty, enforced by guard), and required entity indexes (species, background, class, feat, spell, item). RequestUrlCatalogClient.testConnection now calls validateConnection and returns result.valid. 18 tests covering positive validation, all negative failure modes, multiple failures, and client integration.
