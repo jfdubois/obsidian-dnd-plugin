@@ -377,18 +377,18 @@ Connect the plugin to compatible catalog revisions and support offline cached us
 - [x] **P7-T006 — Download and validate source metadata**
 - [x] **P7-T007 — Download and validate indexes**
 - [x] **P7-T008 — Lazy-load entity details**
-- [ ] **P7-T009 — Implement cache envelopes**
-- [ ] **P7-T010 — Implement cache invalidation**
-- [ ] **P7-T011 — Implement offline fallback**
-- [ ] **P7-T012 — Implement revision activation validation**
-- [ ] **P7-T013 — Display catalog status in settings**
-- [ ] **P7-T014 — Add transport/cache tests with mocked responses**
+- [x] **P7-T009 — Implement cache envelopes**
+- [x] **P7-T010 — Implement cache invalidation**
+- [x] **P7-T011 — Implement offline fallback**
+- [x] **P7-T012 — Implement revision activation validation**
+- [x] **P7-T013 — Display catalog status in settings**
+- [x] **P7-T014 — Add transport/cache tests with mocked responses**
 
 ### Phase 7 gate
 
-- [ ] A compatible catalog activates.
-- [ ] An incompatible catalog is rejected without losing current cache.
-- [ ] Cached entity can be loaded with server stopped.
+- [x] A compatible catalog activates.
+- [x] An incompatible catalog is rejected without losing current cache.
+- [x] Cached entity can be loaded with server stopped.
 
 ---
 
