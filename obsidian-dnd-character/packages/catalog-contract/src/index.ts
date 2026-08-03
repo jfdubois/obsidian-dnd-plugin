@@ -574,6 +574,12 @@ export {
   type CatalogRuntimeDiagnostics,
   /* Fetcher type */
   type Fetcher,
+  /* Required catalog reference type */
+  type RequiredCatalogReference,
+  /* Required catalog reference guard */
+  isRequiredCatalogReference,
+  /* Activation options type */
+  type ActivateOptions,
 } from "./catalog-runtime-service";
 
 export {

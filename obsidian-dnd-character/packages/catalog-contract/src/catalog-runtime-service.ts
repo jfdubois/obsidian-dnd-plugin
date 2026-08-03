@@ -1,5 +1,5 @@
-import type { CatalogRevision } from '@obsidian-dnd/domain';
-import { createCatalogRevision } from '@obsidian-dnd/domain';
+import type { CatalogRevision, EntityId, RuleEntityKind } from '@obsidian-dnd/domain';
+import { createCatalogRevision, isEntityId, isRuleEntityKind } from '@obsidian-dnd/domain';
 import type { CatalogManifest } from './catalog-manifest';
 import type { CatalogSource } from './source-metadata';
 import type { CatalogEntitySummary } from './entity-summary';
@@ -23,6 +23,39 @@ import {
  * Activation state machine for the catalog runtime service.
  */
 export type CatalogActivationState = 'inactive' | 'fetching' | 'active';
+
+/**
+ * A reference to a required catalog entity that must be validated
+ * before activation can complete.
+ */
+export interface RequiredCatalogReference {
+  entityId: EntityId;
+  kind: RuleEntityKind;
+}
+
+/**
+ * Validate that an unknown value is a well-formed required catalog
+ * reference.
+ */
+export function isRequiredCatalogReference(value: unknown): value is RequiredCatalogReference {
+  if (typeof value !== 'object' || value === null) return false;
+  const obj = value as Record<string, unknown>;
+  if (!isEntityId(obj.entityId)) return false;
+  if (!isRuleEntityKind(obj.kind)) return false;
+  return true;
+}
+
+/**
+ * Options for the {@link CatalogRuntimeService.activate} method.
+ */
+export interface ActivateOptions {
+  /**
+   * Entities that must be present and valid in the candidate catalog
+   * before activation completes. An empty array or omission skips
+   * required-entity validation.
+   */
+  requiredReferences?: RequiredCatalogReference[];
+}
 
 /**
  * Diagnostics snapshot returned by {@link CatalogRuntimeService.diagnostics}.
@@ -49,6 +82,7 @@ type CandidateState = {
   manifest: CatalogManifest;
   sources: Record<string, CatalogSource>;
   index: Record<string, CatalogEntitySummary[]>;
+  requiredEntities: Map<EntityId, EntityDetailResponse>;
 };
 
 /**
@@ -70,6 +104,7 @@ export class CatalogRuntimeService {
   public sources: Record<string, CatalogSource> = {};
   public index: Record<string, CatalogEntitySummary[]> = {};
   public activationState: CatalogActivationState = 'inactive';
+  public requiredEntities: Map<EntityId, EntityDetailResponse> = new Map();
 
   private readonly fetcher: Fetcher;
   private readonly cacheManager: CatalogCacheManager | undefined;
@@ -92,21 +127,24 @@ export class CatalogRuntimeService {
    * Activates the catalog by discovering the current revision from
    * `current.json`, then preparing and committing a candidate.
    *
+   * Optionally validates required entity references before commit.
    * On success sets `activationState` to `'active'`.
    * On failure preserves former active state and throws
    * {@link CatalogRuntimeError} with recoverability diagnostics.
    */
-  public async activate(): Promise<void> {
+  public async activate(options?: ActivateOptions): Promise<void> {
     const previousRevision = this.revision;
     const previousManifest = this.manifest;
     const previousSources = this.sources;
     const previousIndex = this.index;
     const previousState = this.activationState;
+    const previousRequiredEntities = this.requiredEntities;
     this.activationState = 'fetching';
 
     try {
       const candidate = await this.prepareCandidate();
       this.validateCandidate(candidate);
+      await this.validateRequiredEntities(candidate, options?.requiredReferences);
       this.commitCandidate(candidate);
       this.activationState = 'active';
     } catch (error) {
@@ -115,6 +153,7 @@ export class CatalogRuntimeService {
       this.sources = previousSources;
       this.index = previousIndex;
       this.activationState = previousState;
+      this.requiredEntities = previousRequiredEntities;
 
       if (error instanceof CatalogRuntimeError) {
         throw new CatalogRuntimeError({
@@ -176,6 +215,154 @@ export class CatalogRuntimeService {
   }
 
   // ------------------------------------------------------------------
+  // Required entity validation
+  // ------------------------------------------------------------------
+
+  /**
+   * Validates all required catalog entity references against the
+   * candidate indexes and fetched entity artifacts.
+   *
+   * For each reference:
+   * 1. Locate its summary across prepared indexes.
+   * 2. Require exact ID match.
+   * 3. Require exact kind match.
+   * 4. Use the already-validated detailPath.
+   * 5. Fetch the immutable entity artifact.
+   * 6. Runtime-validate it as a normalized entity.
+   * 7. Require returned entity ID to match.
+   * 8. Require returned entity kind to match.
+   * 9. Retain the validated entity in candidate state.
+   *
+   * Fails preparation before activation when any required entity
+   * is unresolved or invalid.
+   */
+  private async validateRequiredEntities(
+    candidate: CandidateState,
+    references?: RequiredCatalogReference[],
+  ): Promise<void> {
+    if (!references || references.length === 0) return;
+
+    // Deduplicate by entity ID while detecting kind conflicts
+    const deduped = new Map<string, RequiredCatalogReference>();
+    for (const ref of references) {
+      const key = String(ref.entityId);
+      const existing = deduped.get(key);
+      if (existing) {
+        if (existing.kind !== ref.kind) {
+          throw new CatalogRuntimeError({
+            endpoint: this.buildUrl(candidate.revision, 'indexes'),
+            revision: candidate.revision,
+            message: `Required entity "${key}" referenced with conflicting kinds: "${existing.kind}" and "${ref.kind}"`,
+            recoverable: true,
+            failedEntityId: key,
+            failedEntityKind: ref.kind,
+          });
+        }
+        // Same ID and kind — skip duplicate
+        continue;
+      }
+      deduped.set(key, ref);
+    }
+
+    const validatedEntities = new Map<EntityId, EntityDetailResponse>();
+
+    for (const ref of deduped.values()) {
+      const entityIdStr = String(ref.entityId);
+
+      // 1. Locate summary across prepared indexes
+      const summary = this.findSummaryInIndex(candidate.index, ref.entityId, ref.kind);
+      if (!summary) {
+        throw new CatalogRuntimeError({
+          endpoint: this.buildUrl(candidate.revision, 'indexes'),
+          revision: candidate.revision,
+          message: `Required entity "${entityIdStr}" (kind: "${ref.kind}") not found in candidate indexes`,
+          recoverable: true,
+          failedEntityId: entityIdStr,
+          failedEntityKind: ref.kind,
+        });
+      }
+
+      // 2-3. Exact ID and kind match (already enforced by findSummaryInIndex)
+
+      // 4. Use already-validated detailPath from summary
+      const detailPath = summary.detailPath;
+
+      // 5. Fetch the immutable entity artifact
+      const endpoint = this.buildUrl(candidate.revision, detailPath);
+      const response = await this.fetchWithStatus(endpoint);
+
+      if (!response.ok) {
+        throw new CatalogRuntimeError({
+          endpoint,
+          revision: candidate.revision,
+          message: `Required entity "${entityIdStr}" fetch failed with status ${response.status}`,
+          status: response.status,
+          recoverable: true,
+          failedEntityId: entityIdStr,
+          failedEntityKind: ref.kind,
+        });
+      }
+
+      const raw = await response.json();
+
+      // 6. Runtime-validate as normalized entity
+      if (!isEntityDetailResponse(raw)) {
+        throw new CatalogRuntimeError({
+          endpoint,
+          revision: candidate.revision,
+          message: `Required entity "${entityIdStr}" failed structural validation`,
+          recoverable: true,
+          failedEntityId: entityIdStr,
+          failedEntityKind: ref.kind,
+        });
+      }
+
+      // 7. Require returned entity ID to match
+      if (raw.id !== ref.entityId) {
+        throw new CatalogRuntimeError({
+          endpoint,
+          revision: candidate.revision,
+          message: `Required entity ID mismatch: expected "${entityIdStr}", got "${raw.id}"`,
+          recoverable: true,
+          failedEntityId: entityIdStr,
+          failedEntityKind: ref.kind,
+        });
+      }
+
+      // 8. Require returned entity kind to match
+      if (raw.kind !== ref.kind) {
+        throw new CatalogRuntimeError({
+          endpoint,
+          revision: candidate.revision,
+          message: `Required entity kind mismatch: expected "${ref.kind}", got "${raw.kind}"`,
+          recoverable: true,
+          failedEntityId: entityIdStr,
+          failedEntityKind: ref.kind,
+        });
+      }
+
+      // 9. Retain validated entity in candidate state
+      validatedEntities.set(ref.entityId, raw);
+    }
+
+    candidate.requiredEntities = validatedEntities;
+  }
+
+  /**
+   * Searches all prepared indexes for a summary matching the given
+   * entity ID and kind. Returns the first match or undefined.
+   */
+  private findSummaryInIndex(
+    index: Record<string, CatalogEntitySummary[]>,
+    entityId: EntityId,
+    kind: RuleEntityKind,
+  ): CatalogEntitySummary | undefined {
+    const entries = index[kind];
+    if (!entries) return undefined;
+    return entries.find((entry) => entry.id === entityId);
+  }
+
+  // ------------------------------------------------------------------
   // Reset
   // ------------------------------------------------------------------
 
@@ -188,6 +375,7 @@ export class CatalogRuntimeService {
     this.sources = {};
     this.index = {};
     this.activationState = 'inactive';
+    this.requiredEntities = new Map();
   }
 
   // ------------------------------------------------------------------
@@ -217,7 +405,7 @@ export class CatalogRuntimeService {
     const manifest = await this.fetchManifestForRevision(revision);
     const sources = await this.fetchSourcesForRevision(revision);
     const index = await this.fetchIndexesForRevision(revision, manifest);
-    return { revision, manifest, sources, index };
+    return { revision, manifest, sources, index, requiredEntities: new Map() };
   }
 
   private async fetchCurrentRevision(): Promise<CatalogRevision> {
@@ -519,6 +707,7 @@ export class CatalogRuntimeService {
     this.manifest = candidate.manifest;
     this.sources = candidate.sources;
     this.index = candidate.index;
+    this.requiredEntities = candidate.requiredEntities;
     void this.cacheManager?.invalidateByRevision(candidate.revision);
   }
 
