@@ -155,6 +155,7 @@ describe('CatalogRuntimeService — error diagnostics', () => {
       if (error instanceof CatalogRuntimeError) {
         expect(error.endpoint).toContain('current.json');
         expect(error.status).toBe(404);
+        expect(error.revision).toBeUndefined();
       } else {
         throw error;
       }
@@ -172,6 +173,97 @@ describe('CatalogRuntimeService — error diagnostics', () => {
       if (error instanceof CatalogRuntimeError) {
         expect(error.recoverable).toBe(true);
         expect(error.message).toBe('network failure');
+        expect(error.revision).toBeUndefined();
+      } else {
+        throw error;
+      }
+    }
+  });
+
+  /* ── Revision boundary enforcement ─────────────────────────── */
+
+  it('empty currentRevision is rejected with undefined error revision', async () => {
+    mockFetcher.mockResolvedValueOnce(jsonOk({ currentRevision: '' }));
+
+    const service = createService();
+    try {
+      await service.activate();
+      expect.fail('expected activation to fail');
+    } catch (error) {
+      if (error instanceof CatalogRuntimeError) {
+        expect(error.revision).toBeUndefined();
+        expect(error.endpoint).toContain('current.json');
+        expect(error.message).toContain('structural validation');
+      } else {
+        throw error;
+      }
+    }
+  });
+
+  it('non-string currentRevision is rejected with undefined error revision', async () => {
+    mockFetcher.mockResolvedValueOnce(jsonOk({ currentRevision: 123 }));
+
+    const service = createService();
+    try {
+      await service.activate();
+      expect.fail('expected activation to fail');
+    } catch (error) {
+      if (error instanceof CatalogRuntimeError) {
+        expect(error.revision).toBeUndefined();
+        expect(error.endpoint).toContain('current.json');
+      } else {
+        throw error;
+      }
+    }
+  });
+
+  it('malformed current pointer contains no fabricated revision', async () => {
+    mockFetcher.mockResolvedValueOnce(jsonOk({}));
+
+    const service = createService();
+    try {
+      await service.activate();
+      expect.fail('expected activation to fail');
+    } catch (error) {
+      if (error instanceof CatalogRuntimeError) {
+        expect(error.revision).toBeUndefined();
+        expect(error.endpoint).toContain('current.json');
+      } else {
+        throw error;
+      }
+    }
+  });
+
+  it('transport failure before revision discovery contains no fabricated revision', async () => {
+    mockFetcher.mockResolvedValueOnce(jsonFail(500));
+
+    const service = createService();
+    try {
+      await service.activate();
+      expect.fail('expected activation to fail');
+    } catch (error) {
+      if (error instanceof CatalogRuntimeError) {
+        expect(error.revision).toBeUndefined();
+        expect(error.endpoint).toContain('current.json');
+        expect(error.status).toBe(500);
+      } else {
+        throw error;
+      }
+    }
+  });
+
+  it('failure after revision discovery retains the valid candidate revision', async () => {
+    mockFetcher.mockResolvedValueOnce(jsonOk({ currentRevision: 'rev-test-001' }));
+    mockFetcher.mockResolvedValueOnce(jsonFail(404));
+
+    const service = createService();
+    try {
+      await service.activate();
+      expect.fail('expected activation to fail');
+    } catch (error) {
+      if (error instanceof CatalogRuntimeError) {
+        expect(error.revision).toBe(createCatalogRevision('rev-test-001'));
+        expect(error.endpoint).toContain('manifest.json');
       } else {
         throw error;
       }

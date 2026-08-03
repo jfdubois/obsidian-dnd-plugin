@@ -130,7 +130,7 @@ export class CatalogRuntimeService {
       }
       throw new CatalogRuntimeError({
         endpoint: 'unknown',
-        revision: createCatalogRevision('unknown'),
+        revision: undefined,
         message: error instanceof Error ? error.message : String(error),
         recoverable: true,
         previousActiveRevision: previousRevision,
@@ -227,7 +227,7 @@ export class CatalogRuntimeService {
     if (!response.ok) {
       throw new CatalogRuntimeError({
         endpoint,
-        revision: Object.seal({}) as unknown as CatalogRevision,
+        revision: undefined,
         message: `Current revision fetch failed with status ${response.status}`,
         status: response.status,
       });
@@ -238,7 +238,7 @@ export class CatalogRuntimeService {
     if (!isCurrentRevision(raw)) {
       throw new CatalogRuntimeError({
         endpoint,
-        revision: Object.seal({}) as unknown as CatalogRevision,
+        revision: undefined,
         message: 'Current revision response failed structural validation',
       });
     }

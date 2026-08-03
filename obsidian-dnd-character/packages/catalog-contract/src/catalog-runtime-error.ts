@@ -10,7 +10,7 @@ import type { CatalogRevision } from '@obsidian-dnd/domain';
  */
 export class CatalogRuntimeError extends Error {
   public readonly endpoint: string;
-  public readonly revision: CatalogRevision;
+  public readonly revision: CatalogRevision | undefined;
   public readonly status: number | undefined;
   public readonly recoverable: boolean;
   public readonly failedEntityId: string | undefined;
@@ -19,7 +19,7 @@ export class CatalogRuntimeError extends Error {
 
   public constructor(options: {
     endpoint: string;
-    revision: CatalogRevision;
+    revision?: CatalogRevision;
     message: string;
     status?: number;
     recoverable?: boolean;
