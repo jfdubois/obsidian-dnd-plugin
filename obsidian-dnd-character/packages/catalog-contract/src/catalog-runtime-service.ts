@@ -24,13 +24,17 @@ import {
   createCacheEnvelope,
   createNoExpiryExpiration,
   isCacheEnvelope,
-  isCacheValid,
+  validateCacheEnvelopeCompatibility,
 } from './cache-envelope';
 import {
   buildManifestCacheKey,
   buildSourcesCacheKey,
   buildIndexCacheKey,
   buildEntityCacheKey,
+  buildManifestInputHash,
+  buildSourcesInputHash,
+  buildIndexInputHash,
+  buildEntityInputHash,
 } from './cache-keys';
 
 /**
@@ -495,8 +499,20 @@ export class CatalogRuntimeService {
     }
     const manifest = manifestEnvelope.value;
 
-    // Validate manifest envelope metadata (including inputHash)
-    if (!isCacheValid(manifestEnvelope, revision, manifest.sourceRevision)) {
+    // Validate manifest envelope metadata with exact schema version
+    const manifestHash = buildManifestInputHash(manifest.sourceRevision);
+    const manifestCompat = validateCacheEnvelopeCompatibility(
+      manifestEnvelope,
+      revision,
+      manifestHash,
+    );
+    if (manifestCompat === 'version-mismatch') {
+      return { success: false, reason: 'manifest-envelope-version-mismatch' };
+    }
+    if (manifestCompat === 'revision-mismatch') {
+      return { success: false, reason: 'manifest-envelope-revision-mismatch' };
+    }
+    if (manifestCompat !== null) {
       return { success: false, reason: 'manifest-envelope-invalid' };
     }
 
@@ -524,11 +540,23 @@ export class CatalogRuntimeService {
       return { success: false, reason: 'sources-missing' };
     }
 
-    // Validate sources envelope metadata (including inputHash)
+    // Validate sources envelope metadata with exact schema version
     if (!isCacheEnvelope(sourcesEnvelope)) {
       return { success: false, reason: 'sources-envelope-invalid' };
     }
-    if (!isCacheValid(sourcesEnvelope, revision, manifest.sourceRevision)) {
+    const sourcesHash = buildSourcesInputHash(manifest.sourceRevision);
+    const sourcesCompat = validateCacheEnvelopeCompatibility(
+      sourcesEnvelope,
+      revision,
+      sourcesHash,
+    );
+    if (sourcesCompat === 'version-mismatch') {
+      return { success: false, reason: 'sources-envelope-version-mismatch' };
+    }
+    if (sourcesCompat === 'revision-mismatch') {
+      return { success: false, reason: 'sources-envelope-revision-mismatch' };
+    }
+    if (sourcesCompat !== null) {
       return { success: false, reason: 'sources-envelope-invalid' };
     }
 
@@ -553,12 +581,23 @@ export class CatalogRuntimeService {
         return { success: false, reason: 'index-missing' };
       }
 
-      // Validate index envelope metadata (including inputHash)
+      // Validate index envelope metadata with exact schema version
       if (!isCacheEnvelope(indexEnvelope)) {
         return { success: false, reason: 'index-envelope-invalid' };
       }
-      const expectedIndexHash = `${manifest.sourceRevision}:${kind}`;
-      if (!isCacheValid(indexEnvelope, revision, expectedIndexHash)) {
+      const expectedIndexHash = buildIndexInputHash(manifest.sourceRevision, kind);
+      const indexCompat = validateCacheEnvelopeCompatibility(
+        indexEnvelope,
+        revision,
+        expectedIndexHash,
+      );
+      if (indexCompat === 'version-mismatch') {
+        return { success: false, reason: 'index-envelope-version-mismatch' };
+      }
+      if (indexCompat === 'revision-mismatch') {
+        return { success: false, reason: 'index-envelope-revision-mismatch' };
+      }
+      if (indexCompat !== null) {
         return { success: false, reason: 'index-envelope-invalid' };
       }
 
@@ -940,50 +979,50 @@ export class CatalogRuntimeService {
     const { revision, manifest, sources, index, requiredEntities } = candidate;
     const expiration = createNoExpiryExpiration();
     const createdAt = new Date().toISOString();
-    const inputHash = manifest.sourceRevision;
+    const sourceRevision = manifest.sourceRevision;
 
-    // Stage manifest
+    // Stage manifest with canonical input hash
     await cm.set(buildManifestCacheKey(revision), createCacheEnvelope({
       cacheSchemaVersion: CACHE_SCHEMA_VERSION,
       catalogRevision: revision,
-      inputHash,
+      inputHash: buildManifestInputHash(sourceRevision),
       createdAt,
       expiration,
       value: manifest,
     }));
 
-    // Stage sources
+    // Stage sources with canonical input hash
     await cm.set(buildSourcesCacheKey(revision), createCacheEnvelope({
       cacheSchemaVersion: CACHE_SCHEMA_VERSION,
       catalogRevision: revision,
-      inputHash,
+      inputHash: buildSourcesInputHash(sourceRevision),
       createdAt,
       expiration,
       value: sources,
     }));
 
-    // Stage per-kind indexes
+    // Stage per-kind indexes with canonical input hash
     for (const kind of manifest.entityKinds) {
       const entries = index[kind];
       if (!entries) continue;
       await cm.set(buildIndexCacheKey(revision, kind), createCacheEnvelope({
         cacheSchemaVersion: CACHE_SCHEMA_VERSION,
         catalogRevision: revision,
-        inputHash: `${inputHash}:${kind}`,
+        inputHash: buildIndexInputHash(sourceRevision, kind),
         createdAt,
         expiration,
         value: entries,
       }));
     }
 
-    // Stage required entities
+    // Stage required entities with canonical input hash
     for (const [entityId, entity] of requiredEntities) {
       const summary = this.findSummaryInIndex(index, entityId, entity.kind);
       if (!summary) continue;
       await cm.set(buildEntityCacheKey(revision, entityId), createCacheEnvelope({
         cacheSchemaVersion: CACHE_SCHEMA_VERSION,
         catalogRevision: revision,
-        inputHash: `${inputHash}:${entityId}`,
+        inputHash: buildEntityInputHash(sourceRevision, entityId),
         createdAt,
         expiration,
         value: entity,

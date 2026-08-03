@@ -74,6 +74,64 @@ export function buildEntityCacheKey(
   return `${NS_ENTITY}/${catalogRevisionStr(catalogRevision)}/${entityId}`;
 }
 
+/* ── Canonical input-hash builders ────────────────────────────────
+   Every cache envelope stores an inputHash that fingerprints the
+   inputs that produced the cached value. These builders ensure a
+   single, deterministic format used by both staging and restoration.
+
+   Format:
+     manifest inputHash:  <sourceRevision>
+     sources inputHash:   <sourceRevision>
+     index inputHash:     <sourceRevision>:<kind>
+     entity inputHash:    <sourceRevision>:<entityId>
+                                                                  */
+
+/**
+ * Build the canonical input hash for a manifest cache envelope.
+ *
+ * Produces: `<sourceRevision>`
+ */
+export function buildManifestInputHash(sourceRevision: string): string {
+  return sourceRevision;
+}
+
+/**
+ * Build the canonical input hash for a sources cache envelope.
+ *
+ * Produces: `<sourceRevision>`
+ */
+export function buildSourcesInputHash(sourceRevision: string): string {
+  return sourceRevision;
+}
+
+/**
+ * Build the canonical input hash for an index-by-kind cache envelope.
+ *
+ * Produces: `<sourceRevision>:<kind>`
+ */
+export function buildIndexInputHash(
+  sourceRevision: string,
+  entityKind: RuleEntityKind,
+): string {
+  return `${sourceRevision}:${entityKind}`;
+}
+
+/**
+ * Build the canonical input hash for an entity-by-id cache envelope.
+ *
+ * Produces: `<sourceRevision>:<entityId>`
+ *
+ * This format is used by both the runtime service staging logic
+ * and the plugin adapter entity fetcher, ensuring the same hash
+ * is used for cache hits and misses.
+ */
+export function buildEntityInputHash(
+  sourceRevision: string,
+  entityId: string,
+): string {
+  return `${sourceRevision}:${entityId}`;
+}
+
 /* ── Key parsing (for invalidation and diagnostics) ────────────── */
 
 /**

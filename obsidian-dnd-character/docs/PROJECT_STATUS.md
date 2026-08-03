@@ -1,16 +1,16 @@
 # Project Status
 
-## Current phase
+## Current work
 
-Phase 7 — Catalog client and runtime cache
+PB8-003-R2 — Catalog activation corrections (post-Phase-7 readiness)
 
-## Current task
+## Current corrective task
 
-P7-T009 — Implement cache envelopes
+PB8-003-R2-D2-R2 — Enforce cache schema compatibility and prove production offline entity loading
 
-## Last completed task
+## Last completed corrective task
 
-P7-T008 — Lazy-load entity details
+PB8-003-R2-D2-R1 — Repair cache restoration blocking findings
 
 ## Branch baseline
 
@@ -24,10 +24,10 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-PB8-003-R2-D2-R1 (typecheck, lint, 3215/3217 tests across 125 files, 2 skipped).
-- `npm --prefix obsidian-dnd-character run build`: passing post-PB8-003-R2-D2-R1.
+- `npm --prefix obsidian-dnd-character run check`: passing post-PB8-003-R2-D2-R2 (typecheck, lint, 3257/3259 tests across 131 files, 2 skipped).
+- `npm --prefix obsidian-dnd-character run build`: passing post-PB8-003-R2-D2-R2.
 - `npm --workspace @obsidian-dnd/obsidian-plugin run bundle`: passing (CJS, obsidian external, no prohibited deps).
-- Tests: 3215 passing.
+- Tests: 3257 passing.
 
 ## Catalog baseline
 
@@ -54,14 +54,23 @@ None recorded.
 - Completed Phase 6 task commits: P6-T001 — see Git history for P6-T001; P6-T002 — see Git history for P6-T002; P6-T003 — no changes needed; P6-T004 — see Git history for P6-T004; P6-T005 — see Git history for P6-T005; P6-T006 — see Git history for P6-T006; P6-T007 — see Git history for P6-T007; P6-T008 — see Git history for P6-T008; P6-T009 — see Git history for P6-T009; P6-T010 — see Git history for P6-T010; P6-T011 — see Git history for P6-T011; P6-T012 — see Git history for P6-T012
 - Phase 7 starting commit: 0dab1ff
 - Completed Phase 7 task commits: P7-T001 — see Git history for P7-T001; P7-T002 — see Git history for P7-T002; P7-T003 — see Git history for P7-T003; P7-T004 — 92c9fac; P7-T005 — no changes needed; P7-T006 — a407fd0; P7-T007 — 65b8c2e; P7-T008 — 0ceaabc
-- Current task: P7-T009 — Implement cache envelopes
-- Current retry: 0
-- Gate status: Phase 4 gate complete. Phase 5 gate complete. Phase 6 gate complete.
+- Phase 7 gate: complete
+- Corrective campaign PB8-003-R2 active (post-Phase-7 readiness work)
+- Current corrective task: PB8-003-R2-D2-R2
+- Last completed corrective task: PB8-003-R2-D2-R1
+- Next corrective task: PB8-003-R2-E1
+- Gate status: Phase 4 gate complete. Phase 5 gate complete. Phase 6 gate complete. Phase 7 gate complete.
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-03 — PB8-003-R2-D2-R2 — Enforce cache schema compatibility and prove production offline entity loading — complete
+Summary: Fixed 4 defects: (1) exact cache schema version enforcement via isCacheEnvelopeVersionCompatible() and validateCacheEnvelopeCompatibility() with specific failure reasons; (2) canonical input-hash builders (buildManifestInputHash, buildSourcesInputHash, buildIndexInputHash, buildEntityInputHash) in cache-keys.ts; (3) unified entity hash between staging and production entity loading; (4) structured restoration diagnostics with distinct version-mismatch and hash-mismatch reasons. Updated CatalogService.fetchEntity() to use buildEntityInputHash(). Added 6 new test files (all under 300 lines).
+Validation: `npm --prefix obsidian-dnd-character run check` passes (3257/3259 tests). `npm --prefix obsidian-dnd-character run build` passes. `npm --workspace @obsidian-dnd/obsidian-plugin run bundle` passes.
+Compatibility notes: Pure contract and plugin logic. No new Obsidian API. No `any`, mobile-compatible. Offline entity test uses cm.getCached() directly (full production proof requires plugin-package test).
+Commit: see Git history for PB8-003-R2-D2-R2.
 
 2026-08-03 — PB8-003-R2-D2-R1 — Repair cache restoration blocking findings — complete
 Summary: Fixed 5 blocking gaps in cache restoration: (1) ActiveRevisionPersistence.load() now returns Promise<unknown> for untrusted boundary; (2) full envelope metadata validation with inputHash via isCacheValid(); (3) CatalogRestoreResult discriminated union with 21 specific failure reasons; (4) positive test for cached entity detail readability after restoration; (5) plugin wiring with ObsidianActiveRevisionPersistence adapter, createObsidianFetcher(), and CatalogRuntimeService construction with restoreFromCache() call during startup.

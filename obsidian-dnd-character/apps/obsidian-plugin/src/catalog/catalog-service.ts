@@ -31,6 +31,7 @@ import {
   buildSourcesCacheKey,
   buildIndexCacheKey,
   buildEntityCacheKey,
+  buildEntityInputHash,
 } from "@obsidian-dnd/catalog-contract";
 import type {
   CatalogRevision,
@@ -180,16 +181,18 @@ export class CatalogService {
    * Fetch a single entity detail with caching.
    *
    * @param revision - The catalog revision to fetch from.
+   * @param sourceRevision - The source revision used for the canonical input hash.
    * @param entityId - Canonical entity ID used as cache key identity.
    * @param detailPath - Catalog retrieval path used for the network fetch.
    */
   async fetchEntity(
     revision: CatalogRevision,
+    sourceRevision: string,
     entityId: string,
     detailPath: string,
   ): Promise<EntityDetailResult> {
     const key = buildEntityCacheKey(revision, entityId);
-    const inputHash = `entity:${revision}:${entityId}`;
+    const inputHash = buildEntityInputHash(sourceRevision, entityId);
     const envelope = await this.manager.fetch(
       key,
       () => this.client.fetchEntity(revision, detailPath),

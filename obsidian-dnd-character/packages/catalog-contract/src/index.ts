@@ -527,6 +527,10 @@ export {
   /* Cache validity helpers */
   isCacheExpired,
   isCacheValid,
+  /* Schema version compatibility */
+  isCacheEnvelopeVersionCompatible,
+  validateCacheEnvelopeCompatibility,
+  type CacheEnvelopeCompatibilityReason,
 } from "./cache-envelope";
 
 export {
@@ -549,6 +553,11 @@ export {
   buildSourcesCacheKey,
   buildIndexCacheKey,
   buildEntityCacheKey,
+  /* Canonical input hash builders */
+  buildManifestInputHash,
+  buildSourcesInputHash,
+  buildIndexInputHash,
+  buildEntityInputHash,
   /* Cache key parser */
   parseCacheKey,
   isCatalogCacheKey,

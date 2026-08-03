@@ -219,6 +219,72 @@ export function isCacheValid(
   return true;
 }
 
+/* ── Schema version compatibility ──────────────────────────────────
+
+   Exact-match validation: the envelope's cacheSchemaVersion must
+   equal the current CACHE_SCHEMA_VERSION. Accepting >= 1 permits
+   future schema versions that may be structurally incompatible.  */
+
+/**
+ * Check whether a cache envelope's schema version exactly matches
+ * the current cache schema version.
+ *
+ * Returns false if the schema version is any value other than
+ * the current CACHE_SCHEMA_VERSION.
+ */
+export function isCacheEnvelopeVersionCompatible(
+  envelope: CacheEnvelope<unknown>,
+): boolean {
+  return envelope.cacheSchemaVersion === CACHE_SCHEMA_VERSION;
+}
+
+/**
+ * Specific failure reasons for cache envelope compatibility checks.
+ *
+ * Used by restoreFromCache to provide actionable diagnostics
+ * instead of a bare boolean.
+ */
+export type CacheEnvelopeCompatibilityReason =
+  | 'version-mismatch'
+  | 'revision-mismatch'
+  | 'input-hash-mismatch'
+  | 'expired';
+
+/**
+ * Validate a cache envelope against expected metadata with exact
+ * schema version enforcement.
+ *
+ * Returns null if the envelope is compatible, or a specific
+ * failure reason if it is not. Checks are performed in priority
+ * order: schema version, revision, input hash, expiration.
+ *
+ * @param envelope - The cache envelope to validate.
+ * @param expectedCatalogRevision - The expected catalog revision.
+ * @param expectedInputHash - The expected input hash.
+ * @param now - Current date for expiration checks (default: now).
+ * @returns null if compatible, or a failure reason string.
+ */
+export function validateCacheEnvelopeCompatibility(
+  envelope: CacheEnvelope<unknown>,
+  expectedCatalogRevision: CatalogRevision,
+  expectedInputHash: string,
+  now: Date = new Date(),
+): CacheEnvelopeCompatibilityReason | null {
+  if (!isCacheEnvelopeVersionCompatible(envelope)) {
+    return 'version-mismatch';
+  }
+  if (envelope.catalogRevision !== expectedCatalogRevision) {
+    return 'revision-mismatch';
+  }
+  if (envelope.inputHash !== expectedInputHash) {
+    return 'input-hash-mismatch';
+  }
+  if (isCacheExpired(envelope, now)) {
+    return 'expired';
+  }
+  return null;
+}
+
 /* ── Expiration policy factories ───────────────────────────────── */
 
 export function createNoExpiryExpiration(): CacheExpirationNoExpiry {
