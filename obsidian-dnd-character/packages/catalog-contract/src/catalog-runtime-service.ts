@@ -419,6 +419,95 @@ export class CatalogRuntimeService {
         }
       }
     }
+
+    // Invariant: summary kind matches containing index kind
+    for (const [kind, entries] of Object.entries(candidate.index)) {
+      for (const entry of entries) {
+        if (entry.kind !== kind) {
+          throw new CatalogRuntimeError({
+            endpoint: this.buildUrl(candidate.revision, `indexes/${KIND_INDEX_FILENAME[kind as keyof typeof KIND_INDEX_FILENAME]}`),
+            revision: candidate.revision,
+            message: `Index entry "${entry.id}" has kind "${entry.kind}" but is in index "${kind}"`,
+            failedEntityId: entry.id,
+            failedEntityKind: kind,
+          });
+        }
+      }
+    }
+
+    // Invariant: validate every detailPath during preparation
+    for (const [kind, entries] of Object.entries(candidate.index)) {
+      for (const entry of entries) {
+        try {
+          validateArtifactPath(entry.detailPath);
+        } catch (pathError) {
+          throw new CatalogRuntimeError({
+            endpoint: this.buildUrl(candidate.revision, `indexes/${KIND_INDEX_FILENAME[kind as keyof typeof KIND_INDEX_FILENAME]}`),
+            revision: candidate.revision,
+            message: `Index entry "${entry.id}" has invalid detailPath "${entry.detailPath}": ${pathError instanceof Error ? pathError.message : String(pathError)}`,
+            failedEntityId: entry.id,
+            failedEntityKind: kind,
+          });
+        }
+      }
+    }
+
+    // Invariant: no duplicate entity IDs within one index
+    for (const [kind, entries] of Object.entries(candidate.index)) {
+      const seenIds = new Set<string>();
+      for (const entry of entries) {
+        if (seenIds.has(entry.id)) {
+          throw new CatalogRuntimeError({
+            endpoint: this.buildUrl(candidate.revision, `indexes/${KIND_INDEX_FILENAME[kind as keyof typeof KIND_INDEX_FILENAME]}`),
+            revision: candidate.revision,
+            message: `Duplicate entity ID "${entry.id}" within index "${kind}"`,
+            failedEntityId: entry.id,
+            failedEntityKind: kind,
+          });
+        }
+        seenIds.add(entry.id);
+      }
+    }
+
+    // Invariant: no duplicate entity IDs across indexes
+    const allIds = new Map<string, string>();
+    for (const [kind, entries] of Object.entries(candidate.index)) {
+      for (const entry of entries) {
+        const existingKind = allIds.get(entry.id);
+        if (existingKind !== undefined && existingKind !== kind) {
+          throw new CatalogRuntimeError({
+            endpoint: this.buildUrl(candidate.revision, `indexes/${KIND_INDEX_FILENAME[kind as keyof typeof KIND_INDEX_FILENAME]}`),
+            revision: candidate.revision,
+            message: `Entity ID "${entry.id}" exists in both index "${existingKind}" and "${kind}"`,
+            failedEntityId: entry.id,
+            failedEntityKind: kind,
+          });
+        }
+        if (!allIds.has(entry.id)) {
+          allIds.set(entry.id, kind);
+        }
+      }
+    }
+
+    // Invariant: no detail path assigned to different entity IDs
+    const pathToEntity = new Map<string, string>();
+    for (const [kind, entries] of Object.entries(candidate.index)) {
+      for (const entry of entries) {
+        const existingEntityId = pathToEntity.get(entry.detailPath);
+        if (existingEntityId !== undefined && existingEntityId !== entry.id) {
+          throw new CatalogRuntimeError({
+            endpoint: this.buildUrl(candidate.revision, `indexes/${KIND_INDEX_FILENAME[kind as keyof typeof KIND_INDEX_FILENAME]}`),
+            revision: candidate.revision,
+            message: `Detail path "${entry.detailPath}" assigned to both entity "${existingEntityId}" and "${entry.id}"`,
+            failedEntityId: entry.id,
+            failedEntityKind: kind,
+          });
+        }
+        if (!pathToEntity.has(entry.detailPath)) {
+          pathToEntity.set(entry.detailPath, entry.id);
+        }
+      }
+    }
   }
 
   // ------------------------------------------------------------------
