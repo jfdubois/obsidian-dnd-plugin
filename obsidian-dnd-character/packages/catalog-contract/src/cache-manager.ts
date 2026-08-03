@@ -89,6 +89,14 @@ export class CatalogCacheManager {
     return envelope;
   }
 
+  /**
+   * Store a pre-built cache envelope under the given key.
+   * Delegates directly to the underlying store.
+   */
+  async set<T>(key: string, envelope: CacheEnvelope<T>): Promise<void> {
+    return this.store.set(key, envelope);
+  }
+
   /** Remove a single cache entry. Returns true if it existed. */
   async invalidate(key: string): Promise<boolean> {
     return this.store.invalidate(key);

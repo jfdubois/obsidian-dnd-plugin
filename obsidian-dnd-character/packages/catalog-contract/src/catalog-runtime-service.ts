@@ -18,6 +18,17 @@ import {
   validateSchemaVersion,
   validateRequiredEntityKinds,
 } from './compatibility-validation';
+import {
+  CACHE_SCHEMA_VERSION,
+  createCacheEnvelope,
+  createNoExpiryExpiration,
+} from './cache-envelope';
+import {
+  buildManifestCacheKey,
+  buildSourcesCacheKey,
+  buildIndexCacheKey,
+  buildEntityCacheKey,
+} from './cache-keys';
 
 /**
  * Activation state machine for the catalog runtime service.
@@ -145,6 +156,7 @@ export class CatalogRuntimeService {
       const candidate = await this.prepareCandidate();
       this.validateCandidate(candidate);
       await this.validateRequiredEntities(candidate, options?.requiredReferences);
+      await this.stageCandidateToCache(candidate);
       this.commitCandidate(candidate);
       this.activationState = 'active';
     } catch (error) {
@@ -699,6 +711,80 @@ export class CatalogRuntimeService {
   }
 
   // ------------------------------------------------------------------
+  // Candidate cache staging
+  // ------------------------------------------------------------------
+
+  /**
+   * Stages all validated candidate artifacts into revision-specific
+   * cache namespaces before active-pointer persistence.
+   *
+   * Writes manifest, sources, per-kind indexes, and any required
+   * entities fetched during validation. Uses canonical cache keys
+   * and validated cache envelopes with no-expiry expiration.
+   *
+   * If a cache manager is not configured, staging is a no-op.
+   * Any write failure throws and aborts activation, preserving
+   * the former active state and cache.
+   */
+  private async stageCandidateToCache(candidate: CandidateState): Promise<void> {
+    const cm = this.cacheManager;
+    if (!cm) return;
+
+    const { revision, manifest, sources, index, requiredEntities } = candidate;
+    const expiration = createNoExpiryExpiration();
+    const createdAt = new Date().toISOString();
+    const inputHash = manifest.sourceRevision;
+
+    // Stage manifest
+    await cm.set(buildManifestCacheKey(revision), createCacheEnvelope({
+      cacheSchemaVersion: CACHE_SCHEMA_VERSION,
+      catalogRevision: revision,
+      inputHash,
+      createdAt,
+      expiration,
+      value: manifest,
+    }));
+
+    // Stage sources
+    await cm.set(buildSourcesCacheKey(revision), createCacheEnvelope({
+      cacheSchemaVersion: CACHE_SCHEMA_VERSION,
+      catalogRevision: revision,
+      inputHash,
+      createdAt,
+      expiration,
+      value: sources,
+    }));
+
+    // Stage per-kind indexes
+    for (const kind of manifest.entityKinds) {
+      const entries = index[kind];
+      if (!entries) continue;
+      await cm.set(buildIndexCacheKey(revision, kind), createCacheEnvelope({
+        cacheSchemaVersion: CACHE_SCHEMA_VERSION,
+        catalogRevision: revision,
+        inputHash: `${inputHash}:${kind}`,
+        createdAt,
+        expiration,
+        value: entries,
+      }));
+    }
+
+    // Stage required entities
+    for (const [entityId, entity] of requiredEntities) {
+      const summary = this.findSummaryInIndex(index, entityId, entity.kind);
+      if (!summary) continue;
+      await cm.set(buildEntityCacheKey(revision, summary.detailPath), createCacheEnvelope({
+        cacheSchemaVersion: CACHE_SCHEMA_VERSION,
+        catalogRevision: revision,
+        inputHash: `${inputHash}:${entityId}`,
+        createdAt,
+        expiration,
+        value: entity,
+      }));
+    }
+  }
+
+  // ------------------------------------------------------------------
   // Candidate commit (Phase 2)
   // ------------------------------------------------------------------
 
@@ -708,7 +794,6 @@ export class CatalogRuntimeService {
     this.sources = candidate.sources;
     this.index = candidate.index;
     this.requiredEntities = candidate.requiredEntities;
-    void this.cacheManager?.invalidateByRevision(candidate.revision);
   }
 
   // ------------------------------------------------------------------
