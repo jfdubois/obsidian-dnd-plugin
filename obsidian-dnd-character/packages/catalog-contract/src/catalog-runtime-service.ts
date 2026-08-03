@@ -14,6 +14,10 @@ import { CatalogRuntimeError } from './catalog-runtime-error';
 import { KIND_INDEX_FILENAME } from './kind-index-mapping';
 import { validateArtifactPath } from './artifact-path-utils';
 import { buildCatalogArtifactUrl } from './catalog-artifact-path';
+import {
+  validateSchemaVersion,
+  validateRequiredEntityKinds,
+} from './compatibility-validation';
 
 /**
  * Activation state machine for the catalog runtime service.
@@ -359,6 +363,26 @@ export class CatalogRuntimeService {
   // ------------------------------------------------------------------
 
   private validateCandidate(candidate: CandidateState): void {
+    // FR-001: Validate schema version compatibility
+    const schemaError = validateSchemaVersion(candidate.manifest);
+    if (schemaError !== null) {
+      throw new CatalogRuntimeError({
+        endpoint: this.buildUrl(candidate.revision, 'manifest.json'),
+        revision: candidate.revision,
+        message: schemaError,
+      });
+    }
+
+    // FR-001: Validate required entity kinds
+    const kindsError = validateRequiredEntityKinds(candidate.manifest);
+    if (kindsError !== null) {
+      throw new CatalogRuntimeError({
+        endpoint: this.buildUrl(candidate.revision, 'manifest.json'),
+        revision: candidate.revision,
+        message: kindsError,
+      });
+    }
+
     // Verify manifest revision matches discovered revision
     if (candidate.manifest.catalogRevision !== candidate.revision) {
       throw new CatalogRuntimeError({

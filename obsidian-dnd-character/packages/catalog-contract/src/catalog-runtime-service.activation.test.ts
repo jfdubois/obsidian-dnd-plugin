@@ -9,6 +9,7 @@ import {
   createEntityId,
   createSourceId,
 } from '@obsidian-dnd/domain';
+import { CATALOG_SCHEMA_VERSION } from './schema-version';
 
 const REVISION = createCatalogRevision('rev-test-001');
 
@@ -21,6 +22,18 @@ const makeManifest = () =>
     generatedAt: '2026-07-22T00:00:00Z',
     rulesets: ['2024'],
     entityKinds: ['species'],
+    checksums: { 'manifest.json': 'sha256-abc' },
+  });
+
+const makeFullManifest = () =>
+  createCatalogManifest({
+    schemaVersion: CATALOG_SCHEMA_VERSION,
+    catalogRevision: REVISION,
+    sourceRevision: 'abc123',
+    builderVersion: '0.1.0',
+    generatedAt: '2026-07-22T00:00:00Z',
+    rulesets: ['2024'],
+    entityKinds: ['species', 'background', 'class', 'feat', 'spell', 'item'],
     checksums: { 'manifest.json': 'sha256-abc' },
   });
 
@@ -57,6 +70,19 @@ function createService() {
   });
 }
 
+/**
+ * Set up mock fetcher for a full manifest with all required entity kinds.
+ * Mocks: current.json, manifest.json, sources.json, then one index per entity kind.
+ */
+function mockFullFetch(manifest: ReturnType<typeof makeFullManifest>, sources: ReturnType<typeof makeSources>, indexByKind: Record<string, ReturnType<typeof makeIndex>>) {
+  mockFetcher.mockResolvedValueOnce(jsonOk({ currentRevision: 'rev-test-001' }));
+  mockFetcher.mockResolvedValueOnce(jsonOk(manifest));
+  mockFetcher.mockResolvedValueOnce(jsonOk(sources));
+  for (const kind of manifest.entityKinds) {
+    mockFetcher.mockResolvedValueOnce(jsonOk(indexByKind[kind] ?? []));
+  }
+}
+
 const jsonOk = (data: unknown) =>
   Promise.resolve({
     ok: true,
@@ -77,14 +103,11 @@ describe('CatalogRuntimeService — activation', () => {
   });
 
   it('discovers revision from current.json and activates successfully', async () => {
-    const manifest = makeManifest();
+    const manifest = makeFullManifest();
     const sources = makeSources();
     const index = makeIndex();
 
-    mockFetcher.mockResolvedValueOnce(jsonOk({ currentRevision: 'rev-test-001' }));
-    mockFetcher.mockResolvedValueOnce(jsonOk(manifest));
-    mockFetcher.mockResolvedValueOnce(jsonOk(sources));
-    mockFetcher.mockResolvedValueOnce(jsonOk(index));
+    mockFullFetch(manifest, sources, { species: index });
 
     const service = createService();
     await service.activate();
@@ -168,21 +191,18 @@ describe('CatalogRuntimeService — activation', () => {
 
   it('preserves inactive state on manifest revision mismatch', async () => {
     const wrongManifest = createCatalogManifest({
-      schemaVersion: 1,
+      schemaVersion: CATALOG_SCHEMA_VERSION,
       catalogRevision: createCatalogRevision('rev-wrong-001'),
       sourceRevision: 'abc123',
       builderVersion: '0.1.0',
       generatedAt: '2026-07-22T00:00:00Z',
       rulesets: ['2024'],
-      entityKinds: ['species'],
+      entityKinds: ['species', 'background', 'class', 'feat', 'spell', 'item'],
       checksums: { 'manifest.json': 'sha256-abc' },
     });
     const sources = makeSources();
     const index = makeIndex();
-    mockFetcher.mockResolvedValueOnce(jsonOk({ currentRevision: 'rev-test-001' }));
-    mockFetcher.mockResolvedValueOnce(jsonOk(wrongManifest));
-    mockFetcher.mockResolvedValueOnce(jsonOk(sources));
-    mockFetcher.mockResolvedValueOnce(jsonOk(index));
+    mockFullFetch(wrongManifest, sources, { species: index });
 
     const service = createService();
     await expect(service.activate()).rejects.toThrow(CatalogRuntimeError);
@@ -192,7 +212,7 @@ describe('CatalogRuntimeService — activation', () => {
   });
 
   it('preserves inactive state when index references unknown source', async () => {
-    const manifest = makeManifest();
+    const manifest = makeFullManifest();
     const sources = makeSources();
     const badIndex = [
       createCatalogEntitySummary({
@@ -207,10 +227,7 @@ describe('CatalogRuntimeService — activation', () => {
         detailPath: 'entities/species/elf.json',
       }),
     ];
-    mockFetcher.mockResolvedValueOnce(jsonOk({ currentRevision: 'rev-test-001' }));
-    mockFetcher.mockResolvedValueOnce(jsonOk(manifest));
-    mockFetcher.mockResolvedValueOnce(jsonOk(sources));
-    mockFetcher.mockResolvedValueOnce(jsonOk(badIndex));
+    mockFullFetch(manifest, sources, { species: badIndex });
 
     const service = createService();
     await expect(service.activate()).rejects.toThrow(CatalogRuntimeError);
@@ -218,5 +235,64 @@ describe('CatalogRuntimeService — activation', () => {
     expect(service.activationState).toBe('inactive');
     expect(service.manifest).toBeUndefined();
     expect(service.sources).toEqual({});
+  });
+
+  it('preserves inactive state when schema version is incompatible', async () => {
+    const badManifest = createCatalogManifest({
+      schemaVersion: 99,
+      catalogRevision: REVISION,
+      sourceRevision: 'abc123',
+      builderVersion: '0.1.0',
+      generatedAt: '2026-07-22T00:00:00Z',
+      rulesets: ['2024'],
+      entityKinds: ['species', 'background', 'class', 'feat', 'spell', 'item'],
+      checksums: { 'manifest.json': 'sha256-abc' },
+    });
+    const sources = makeSources();
+    const index = makeIndex();
+    mockFullFetch(badManifest, sources, { species: index });
+
+    const service = createService();
+    await expect(service.activate()).rejects.toThrow(
+      `Unsupported schema version: 99 (expected ${CATALOG_SCHEMA_VERSION})`,
+    );
+
+    expect(service.activationState).toBe('inactive');
+    expect(service.manifest).toBeUndefined();
+  });
+
+  it('preserves inactive state when required entity kinds are missing', async () => {
+    const manifest = makeManifest();
+    const sources = makeSources();
+    const index = makeIndex();
+    mockFetcher.mockResolvedValueOnce(jsonOk({ currentRevision: 'rev-test-001' }));
+    mockFetcher.mockResolvedValueOnce(jsonOk(manifest));
+    mockFetcher.mockResolvedValueOnce(jsonOk(sources));
+    for (const _kind of manifest.entityKinds) {
+      mockFetcher.mockResolvedValueOnce(jsonOk(index));
+    }
+
+    const service = createService();
+    await expect(service.activate()).rejects.toThrow(
+      /Missing required entity kinds:/,
+    );
+
+    expect(service.activationState).toBe('inactive');
+    expect(service.manifest).toBeUndefined();
+  });
+
+  it('activates successfully when schema version matches and all required kinds present', async () => {
+    const manifest = makeFullManifest();
+    const sources = makeSources();
+    const index = makeIndex();
+
+    mockFullFetch(manifest, sources, { species: index });
+
+    const service = createService();
+    await service.activate();
+
+    expect(service.activationState).toBe('active');
+    expect(service.revision).toBe(REVISION);
+    expect(service.manifest).toEqual(manifest);
   });
 });

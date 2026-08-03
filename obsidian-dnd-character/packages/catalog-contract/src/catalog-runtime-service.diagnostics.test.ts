@@ -9,10 +9,11 @@ import {
   createEntityId,
   createSourceId,
 } from '@obsidian-dnd/domain';
+import { CATALOG_SCHEMA_VERSION } from './schema-version';
 
 const REVISION = createCatalogRevision('rev-test-001');
 
-const makeManifest = () =>
+const _makeManifest = () =>
   createCatalogManifest({
     schemaVersion: 1,
     catalogRevision: REVISION,
@@ -21,6 +22,18 @@ const makeManifest = () =>
     generatedAt: '2026-07-22T00:00:00Z',
     rulesets: ['2024'],
     entityKinds: ['species'],
+    checksums: { 'manifest.json': 'sha256-abc' },
+  });
+
+const makeFullManifest = () =>
+  createCatalogManifest({
+    schemaVersion: CATALOG_SCHEMA_VERSION,
+    catalogRevision: REVISION,
+    sourceRevision: 'abc123',
+    builderVersion: '0.1.0',
+    generatedAt: '2026-07-22T00:00:00Z',
+    rulesets: ['2024'],
+    entityKinds: ['species', 'background', 'class', 'feat', 'spell', 'item'],
     checksums: { 'manifest.json': 'sha256-abc' },
   });
 
@@ -89,14 +102,16 @@ describe('CatalogRuntimeService — diagnostics and lifecycle', () => {
   });
 
   it('returns correct diagnostics after successful activation', async () => {
-    const manifest = makeManifest();
+    const manifest = makeFullManifest();
     const sources = makeSources();
     const index = makeIndex();
 
     mockFetcher.mockResolvedValueOnce(jsonOk({ currentRevision: 'rev-test-001' }));
     mockFetcher.mockResolvedValueOnce(jsonOk(manifest));
     mockFetcher.mockResolvedValueOnce(jsonOk(sources));
-    mockFetcher.mockResolvedValueOnce(jsonOk(index));
+    for (const kind of manifest.entityKinds) {
+      mockFetcher.mockResolvedValueOnce(jsonOk(kind === 'species' ? index : []));
+    }
 
     const service = createService();
     await service.activate();
@@ -107,18 +122,20 @@ describe('CatalogRuntimeService — diagnostics and lifecycle', () => {
     expect(diag.activationState).toBe('active');
     expect(diag.manifestPresent).toBe(true);
     expect(diag.sourceCount).toBe(1);
-    expect(diag.indexEntryCount).toBe(1);
+    expect(diag.indexEntryCount).toBe(6);
   });
 
   it('reset clears all state and returns to inactive', async () => {
-    const manifest = makeManifest();
+    const manifest = makeFullManifest();
     const sources = makeSources();
     const index = makeIndex();
 
     mockFetcher.mockResolvedValueOnce(jsonOk({ currentRevision: 'rev-test-001' }));
     mockFetcher.mockResolvedValueOnce(jsonOk(manifest));
     mockFetcher.mockResolvedValueOnce(jsonOk(sources));
-    mockFetcher.mockResolvedValueOnce(jsonOk(index));
+    for (const kind of manifest.entityKinds) {
+      mockFetcher.mockResolvedValueOnce(jsonOk(kind === 'species' ? index : []));
+    }
 
     const service = createService();
     await service.activate();
@@ -134,7 +151,7 @@ describe('CatalogRuntimeService — diagnostics and lifecycle', () => {
   });
 
   it('allows re-activation after failure', async () => {
-    const manifest = makeManifest();
+    const manifest = makeFullManifest();
     const sources = makeSources();
     const index = makeIndex();
 
@@ -142,7 +159,9 @@ describe('CatalogRuntimeService — diagnostics and lifecycle', () => {
     mockFetcher.mockResolvedValueOnce(jsonOk({ currentRevision: 'rev-test-001' }));
     mockFetcher.mockResolvedValueOnce(jsonOk(manifest));
     mockFetcher.mockResolvedValueOnce(jsonOk(sources));
-    mockFetcher.mockResolvedValueOnce(jsonOk(index));
+    for (const kind of manifest.entityKinds) {
+      mockFetcher.mockResolvedValueOnce(jsonOk(kind === 'species' ? index : []));
+    }
 
     const service = createService();
     await expect(service.activate()).rejects.toThrow(CatalogRuntimeError);

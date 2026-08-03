@@ -19,6 +19,15 @@ export {
 } from "./schema-version";
 
 export {
+  /* Required entity kinds constant */
+  REQUIRED_ENTITY_KINDS,
+  /* Schema version validation */
+  validateSchemaVersion,
+  /* Required entity kinds validation */
+  validateRequiredEntityKinds,
+} from "./compatibility-validation";
+
+export {
   /* Current revision pointer types */
   type CurrentRevision,
   /* Current revision pointer factory */

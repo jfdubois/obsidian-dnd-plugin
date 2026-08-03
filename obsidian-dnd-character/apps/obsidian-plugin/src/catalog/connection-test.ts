@@ -15,23 +15,9 @@ import type { CatalogManifest } from "@obsidian-dnd/catalog-contract";
 import {
   isCatalogManifest,
   CATALOG_API_VERSION,
-  CATALOG_SCHEMA_VERSION,
+  validateSchemaVersion,
+  validateRequiredEntityKinds,
 } from "@obsidian-dnd/catalog-contract";
-import type { RuleEntityKind } from "@obsidian-dnd/domain";
-
-/* ── Required entity kinds ───────────────────────────────────────
-   The minimum set of entity kinds a catalog must expose for the
-   plugin to function (character creation requires species,
-   background, class, feat, spell, item).                       */
-
-const REQUIRED_ENTITY_KINDS: ReadonlySet<RuleEntityKind> = new Set([
-  "species",
-  "background",
-  "class",
-  "feat",
-  "spell",
-  "item",
-]);
 
 /* ── Result type ───────────────────────────────────────────────── */
 
@@ -89,10 +75,9 @@ export function validateConnection(
   }
 
   /* 3. Validate catalog schema version */
-  if (m.schemaVersion !== CATALOG_SCHEMA_VERSION) {
-    errors.push(
-      `Unsupported schema version: ${m.schemaVersion} (expected ${CATALOG_SCHEMA_VERSION})`,
-    );
+  const schemaError = validateSchemaVersion(m);
+  if (schemaError !== null) {
+    errors.push(schemaError);
   }
 
   /* 4. Validate rulesets
@@ -100,17 +85,9 @@ export function validateConnection(
       we rely on the guard here) */
 
   /* 5. Validate required entity indexes */
-  const manifestKinds = new Set(m.entityKinds);
-  const missingKinds: RuleEntityKind[] = [];
-  for (const required of REQUIRED_ENTITY_KINDS) {
-    if (!manifestKinds.has(required)) {
-      missingKinds.push(required);
-    }
-  }
-  if (missingKinds.length > 0) {
-    errors.push(
-      `Missing required entity kinds: ${missingKinds.join(", ")}`,
-    );
+  const kindsError = validateRequiredEntityKinds(m);
+  if (kindsError !== null) {
+    errors.push(kindsError);
   }
 
   return {

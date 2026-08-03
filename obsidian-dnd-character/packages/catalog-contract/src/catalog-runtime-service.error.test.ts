@@ -9,10 +9,11 @@ import {
   createEntityId,
   createSourceId,
 } from '@obsidian-dnd/domain';
+import { CATALOG_SCHEMA_VERSION } from './schema-version';
 
 const REVISION = createCatalogRevision('rev-test-001');
 
-const makeManifest = () =>
+const _makeManifest = () =>
   createCatalogManifest({
     schemaVersion: 1,
     catalogRevision: REVISION,
@@ -82,7 +83,16 @@ describe('CatalogRuntimeService — error diagnostics', () => {
   });
 
   it('preserves failed entity ID and kind on source reference failure', async () => {
-    const manifest = makeManifest();
+    const manifest = createCatalogManifest({
+      schemaVersion: CATALOG_SCHEMA_VERSION,
+      catalogRevision: REVISION,
+      sourceRevision: 'abc123',
+      builderVersion: '0.1.0',
+      generatedAt: '2026-07-22T00:00:00Z',
+      rulesets: ['2024'],
+      entityKinds: ['species', 'background', 'class', 'feat', 'spell', 'item'],
+      checksums: { 'manifest.json': 'sha256-abc' },
+    });
     const sources = makeSources();
     const badIndex = [
       createCatalogEntitySummary({
@@ -100,7 +110,9 @@ describe('CatalogRuntimeService — error diagnostics', () => {
     mockFetcher.mockResolvedValueOnce(jsonOk({ currentRevision: 'rev-test-001' }));
     mockFetcher.mockResolvedValueOnce(jsonOk(manifest));
     mockFetcher.mockResolvedValueOnce(jsonOk(sources));
-    mockFetcher.mockResolvedValueOnce(jsonOk(badIndex));
+    for (const kind of manifest.entityKinds) {
+      mockFetcher.mockResolvedValueOnce(jsonOk(kind === 'species' ? badIndex : []));
+    }
 
     const service = createService();
     try {
