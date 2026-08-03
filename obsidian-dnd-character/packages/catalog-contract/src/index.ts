@@ -580,6 +580,8 @@ export {
   isRequiredCatalogReference,
   /* Activation options type */
   type ActivateOptions,
+  /* Cache restoration result type */
+  type CatalogRestoreResult,
 } from "./catalog-runtime-service";
 
 export {

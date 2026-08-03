@@ -59,7 +59,7 @@ function createMockPersistence(options: { failSave?: boolean; failSecondSave?: b
   let _count = 0;
   const calls: Array<typeof REV_A> = [];
   const persistence: ActiveRevisionPersistence = {
-    async load() { return _saved ?? null; },
+    async load() { return _saved as unknown ?? null; },
     async save(revision) {
       _count += 1;
       calls.push(revision);

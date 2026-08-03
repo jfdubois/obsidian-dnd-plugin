@@ -15,6 +15,10 @@ import {
   populateCache,
   mockFetcher,
 } from './catalog-runtime-service.cache-restoration-helpers';
+import { createCacheEnvelope, createNoExpiryExpiration } from './cache-envelope';
+import { buildEntityCacheKey } from './cache-keys';
+import { createSpeciesRule } from './entity-species';
+import { createEntityId, createSourceId } from '@obsidian-dnd/domain';
 
 describe('CatalogRuntimeService — restoreFromCache (positive)', () => {
   beforeEach(() => {
@@ -44,7 +48,7 @@ describe('CatalogRuntimeService — restoreFromCache (positive)', () => {
     });
 
     const result = await service.restoreFromCache();
-    expect(result).toBe(true);
+    expect(result.success).toBe(true);
     expect(service.activationState).toBe('active');
     expect(service.revision).toBe(REV_A);
     expect(service.manifest).toBe(manifest);
@@ -121,7 +125,7 @@ describe('CatalogRuntimeService — restoreFromCache (positive)', () => {
     });
 
     const result = await service.restoreFromCache();
-    expect(result).toBe(true);
+    expect(result.success).toBe(true);
 
     // Verify staged entities are accessible in the restored index
     const species = service.index['species'];
@@ -162,7 +166,7 @@ describe('CatalogRuntimeService — restoreFromCache (positive)', () => {
     });
 
     const result = await service.restoreFromCache();
-    expect(result).toBe(true);
+    expect(result.success).toBe(true);
 
     // Verify all public properties reflect the restored state
     expect(service.revision).toBe(REV_A);
@@ -177,5 +181,56 @@ describe('CatalogRuntimeService — restoreFromCache (positive)', () => {
     expect(service.index).toHaveProperty('spell');
     expect(service.index).toHaveProperty('item');
     expect(service.activationState).toBe('active');
+  });
+
+  it('returns cached entity detail from valid envelope after restoration', async () => {
+    const persistence = createMockPersistence('rev-a');
+    const { cm, store } = createMockCacheManager();
+    const manifest = makeManifest(REV_A);
+    const sources = makeSources();
+    const indexByKind = {
+      species: [sp('human')],
+      background: [bg('acolyte')],
+      class: [cls('barbarian')],
+      feat: [feat('tough')],
+      spell: [spell('fireball')],
+      item: [item('dagger')],
+    };
+    populateCache(store, REV_A, manifest, sources, indexByKind);
+
+    // Cache an entity detail envelope with valid metadata
+    const humanId = createEntityId('species:human');
+    const entityDetail = createSpeciesRule(
+      humanId, 'Human', createSourceId('phb'), '2024', 'core',
+      'Medium', 30, false, [], [], [], [], [], [], [], false,
+    );
+    store.set(buildEntityCacheKey(REV_A, 'species:human'), createCacheEnvelope({
+      cacheSchemaVersion: 1,
+      catalogRevision: REV_A,
+      inputHash: manifest.sourceRevision,
+      createdAt: '2026-07-22T00:00:00Z',
+      expiration: createNoExpiryExpiration(),
+      value: entityDetail,
+    }));
+
+    const service = new CatalogRuntimeService({
+      baseUrl: 'https://catalog.example.com',
+      fetcher: mockFetcher,
+      cacheManager: cm,
+      activeRevisionPersistence: persistence,
+    });
+
+    const result = await service.restoreFromCache();
+    expect(result.success).toBe(true);
+    expect(service.activationState).toBe('active');
+
+    // Retrieve entity detail from cache via cache manager
+    const entityEnvelope = await cm.getCached(buildEntityCacheKey(REV_A, 'species:human'));
+    expect(entityEnvelope).not.toBeNull();
+    expect(entityEnvelope!.cacheSchemaVersion).toBe(1);
+    expect(entityEnvelope!.catalogRevision).toBe(REV_A);
+    expect(entityEnvelope!.value).toEqual(entityDetail);
+    // Verify no network call was made
+    expect(mockFetcher).not.toHaveBeenCalled();
   });
 });

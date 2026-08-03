@@ -21,14 +21,22 @@ import type { CatalogRevision } from '@obsidian-dnd/domain';
  * Implementations must be idempotent and safe to call multiple
  * times. The `load` method returns `null` when no pointer has
  * been persisted yet.
+ *
+ * IMPORTANT: `load()` returns `unknown` because persisted data
+ * is an untrusted external boundary. Callers must validate the
+ * return value before using it as a `CatalogRevision`.
  */
 export interface ActiveRevisionPersistence {
   /**
    * Load the currently persisted active revision pointer.
    *
-   * @returns The persisted revision, or `null` if no pointer exists.
+   * Returns `unknown` because persisted data is an untrusted
+   * external boundary. Callers must validate the result before
+   * using it as a `CatalogRevision`.
+   *
+   * @returns The persisted value (validate before use), or `null` if no pointer exists.
    */
-  load(): Promise<CatalogRevision | null>;
+  load(): Promise<unknown>;
 
   /**
    * Persist the active revision pointer.

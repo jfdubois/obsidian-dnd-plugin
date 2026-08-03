@@ -93,7 +93,9 @@ export default class DndCharacterPlugin extends Plugin {
 			timeoutMs: 5000,
 		});
 
-		this.catalogService = new CatalogService(this, client);
+		this.catalogService = new CatalogService(this, client, {
+			baseUrl: this.settings.catalogServerUrl,
+		});
 		await this.catalogService.initialize();
 		return this.catalogService;
 	}

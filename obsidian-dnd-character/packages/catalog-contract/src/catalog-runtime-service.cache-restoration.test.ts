@@ -36,7 +36,7 @@ describe('CatalogRuntimeService — restoreFromCache (negative)', () => {
       cacheManager: cm,
     });
     const result = await service.restoreFromCache();
-    expect(result).toBe(false);
+    expect(result.success).toBe(false);
     expect(service.activationState).toBe('inactive');
   });
 
@@ -48,7 +48,7 @@ describe('CatalogRuntimeService — restoreFromCache (negative)', () => {
       activeRevisionPersistence: persistence,
     });
     const result = await service.restoreFromCache();
-    expect(result).toBe(false);
+    expect(result.success).toBe(false);
     expect(service.activationState).toBe('inactive');
   });
 
@@ -62,7 +62,7 @@ describe('CatalogRuntimeService — restoreFromCache (negative)', () => {
       activeRevisionPersistence: persistence,
     });
     const result = await service.restoreFromCache();
-    expect(result).toBe(false);
+    expect(result.success).toBe(false);
     expect(service.activationState).toBe('inactive');
   });
 
@@ -76,7 +76,7 @@ describe('CatalogRuntimeService — restoreFromCache (negative)', () => {
       activeRevisionPersistence: persistence,
     });
     const result = await service.restoreFromCache();
-    expect(result).toBe(false);
+    expect(result.success).toBe(false);
     expect(service.activationState).toBe('inactive');
   });
 
@@ -90,7 +90,7 @@ describe('CatalogRuntimeService — restoreFromCache (negative)', () => {
       activeRevisionPersistence: persistence,
     });
     const result = await service.restoreFromCache();
-    expect(result).toBe(false);
+    expect(result.success).toBe(false);
     expect(service.activationState).toBe('inactive');
   });
 
@@ -115,7 +115,7 @@ describe('CatalogRuntimeService — restoreFromCache (negative)', () => {
       activeRevisionPersistence: persistence,
     });
     const result = await service.restoreFromCache();
-    expect(result).toBe(false);
+    expect(result.success).toBe(false);
     expect(service.activationState).toBe('inactive');
   });
 
@@ -138,7 +138,7 @@ describe('CatalogRuntimeService — restoreFromCache (negative)', () => {
       activeRevisionPersistence: persistence,
     });
     const result = await service.restoreFromCache();
-    expect(result).toBe(false);
+    expect(result.success).toBe(false);
     expect(service.activationState).toBe('inactive');
   });
 
@@ -161,7 +161,7 @@ describe('CatalogRuntimeService — restoreFromCache (negative)', () => {
       activeRevisionPersistence: persistence,
     });
     const result = await service.restoreFromCache();
-    expect(result).toBe(false);
+    expect(result.success).toBe(false);
     expect(service.activationState).toBe('inactive');
   });
 
@@ -207,7 +207,7 @@ describe('CatalogRuntimeService — restoreFromCache (negative)', () => {
       activeRevisionPersistence: persistence,
     });
     const result = await service.restoreFromCache();
-    expect(result).toBe(false);
+    expect(result.success).toBe(false);
     expect(service.activationState).toBe('inactive');
   });
 
@@ -231,7 +231,7 @@ describe('CatalogRuntimeService — restoreFromCache (negative)', () => {
       activeRevisionPersistence: persistence,
     });
     const result = await service.restoreFromCache();
-    expect(result).toBe(false);
+    expect(result.success).toBe(false);
     expect(service.activationState).toBe('inactive');
   });
 
@@ -259,7 +259,7 @@ describe('CatalogRuntimeService — restoreFromCache (negative)', () => {
       activeRevisionPersistence: persistence,
     });
     const result = await service.restoreFromCache();
-    expect(result).toBe(false);
+    expect(result.success).toBe(false);
     expect(service.activationState).toBe('inactive');
   });
 
@@ -291,7 +291,7 @@ describe('CatalogRuntimeService — restoreFromCache (negative)', () => {
       activeRevisionPersistence: persistence,
     });
     const result = await service.restoreFromCache();
-    expect(result).toBe(false);
+    expect(result.success).toBe(false);
     expect(service.activationState).toBe('inactive');
   });
 });

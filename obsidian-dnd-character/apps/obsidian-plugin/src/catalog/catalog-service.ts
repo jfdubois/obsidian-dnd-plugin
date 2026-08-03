@@ -5,6 +5,7 @@
  * - {@link PersistentCatalogCacheStore} for persistent storage
  * - {@link CatalogCacheManager} for cache management
  * - {@link CatalogClient} for network transport
+ * - {@link CatalogRuntimeService} for two-phase activation and cache restoration
  *
  * Provides high-level catalog access methods with caching
  * and offline fallback behavior.
@@ -19,8 +20,12 @@ import type {
   CatalogManifest,
   CatalogSource,
   CatalogEntitySummary,
+  CatalogRestoreResult,
 } from "@obsidian-dnd/catalog-contract";
-import { CatalogCacheManager as CatalogCacheManagerClass } from "@obsidian-dnd/catalog-contract";
+import {
+  CatalogCacheManager as CatalogCacheManagerClass,
+  CatalogRuntimeService as RuntimeServiceClass,
+} from "@obsidian-dnd/catalog-contract";
 import {
   buildManifestCacheKey,
   buildSourcesCacheKey,
@@ -36,12 +41,16 @@ import type {
   EntityDetailResult,
 } from "./client";
 import { PersistentCatalogCacheStore } from "./persistent-cache-store";
+import { ObsidianActiveRevisionPersistence } from "./obsidian-active-revision-persistence";
+import { createObsidianFetcher } from "./obsidian-fetcher-adapter";
 
 /* ── Configuration ──────────────────────────────────────────────── */
 
 export interface CatalogServiceConfig {
   /** Default cache expiration policy. */
   defaultExpiration?: CacheExpirationPolicy;
+  /** Base URL of the catalog server (required for runtime service). */
+  baseUrl?: string;
 }
 
 const DEFAULT_EXPIRATION: CacheExpirationPolicy = {
@@ -52,16 +61,19 @@ const DEFAULT_EXPIRATION: CacheExpirationPolicy = {
 /* ── Service ────────────────────────────────────────────────────── */
 
 export class CatalogService {
+  private plugin: Plugin;
   private store: PersistentCatalogCacheStore;
   private manager: CatalogCacheManager;
   private client: CatalogClient;
   private config: CatalogServiceConfig;
+  private runtimeService: RuntimeServiceClass | null;
 
   constructor(
     plugin: Plugin,
     client: CatalogClient,
     config: CatalogServiceConfig = {},
   ) {
+    this.plugin = plugin;
     this.config = config;
     this.client = client;
     this.store = new PersistentCatalogCacheStore(plugin);
@@ -69,16 +81,38 @@ export class CatalogService {
       this.store,
       config.defaultExpiration ?? DEFAULT_EXPIRATION,
     );
+    this.runtimeService = null;
+    if (config.baseUrl) {
+      const persistence = new ObsidianActiveRevisionPersistence(plugin);
+      const fetcher = createObsidianFetcher();
+      this.runtimeService = new RuntimeServiceClass({
+        baseUrl: config.baseUrl,
+        fetcher,
+        cacheManager: this.manager,
+        activeRevisionPersistence: persistence,
+      });
+    }
   }
 
   /* ── Lifecycle ──────────────────────────────────────────────── */
 
   /**
    * Initialize the service by loading persisted cache data
-   * from disk. Call once during plugin onload.
+   * from disk and attempting cache restoration. Call once
+   * during plugin onload.
+   *
+   * @returns Result of the cache restoration attempt, or a
+   *          failure result if no base URL is configured.
    */
-  async initialize(): Promise<void> {
+  async initialize(): Promise<CatalogRestoreResult> {
     await this.store.initialize();
+    if (this.runtimeService === null) {
+      return {
+        success: false,
+        reason: "no-persistence",
+      };
+    }
+    return this.runtimeService.restoreFromCache();
   }
 
   /**

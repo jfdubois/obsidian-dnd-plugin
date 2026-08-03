@@ -4,7 +4,6 @@ import { createCatalogSource } from './source-metadata';
 import type { CatalogEntitySummary } from './entity-summary';
 import { createCatalogEntitySummary } from './entity-summary';
 import {
-  type CatalogRevision,
   createCatalogRevision,
   createEntityId,
   createSourceId,
@@ -126,7 +125,7 @@ export const item = (id: string) =>
 
 export function createMockPersistence(persistedRevision: string | null): ActiveRevisionPersistence {
   return {
-    load: vi.fn(() => Promise.resolve(persistedRevision as CatalogRevision | null)),
+    load: vi.fn(() => Promise.resolve(persistedRevision as unknown)),
     save: vi.fn(() => Promise.resolve()),
     clear: vi.fn(() => Promise.resolve()),
   };

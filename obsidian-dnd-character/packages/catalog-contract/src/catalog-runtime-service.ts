@@ -23,6 +23,8 @@ import {
   CACHE_SCHEMA_VERSION,
   createCacheEnvelope,
   createNoExpiryExpiration,
+  isCacheEnvelope,
+  isCacheValid,
 } from './cache-envelope';
 import {
   buildManifestCacheKey,
@@ -85,6 +87,42 @@ export interface CatalogRuntimeDiagnostics {
  * Minimal fetch-compatible signature for dependency injection and testing.
  */
 export type Fetcher = (input: string, init?: RequestInit) => Promise<Response>;
+
+/**
+ * Result of a cache restoration attempt.
+ *
+ * Discriminated union that provides specific failure reasons
+ * instead of a bare boolean.
+ */
+export type CatalogRestoreResult =
+  | { success: true; revision: CatalogRevision }
+  | {
+      success: false;
+      reason:
+        | 'no-persistence'
+        | 'no-cache-manager'
+        | 'invalid-pointer'
+        | 'manifest-missing'
+        | 'manifest-envelope-invalid'
+        | 'manifest-envelope-version-mismatch'
+        | 'manifest-envelope-revision-mismatch'
+        | 'manifest-malformed'
+        | 'schema-incompatible'
+        | 'missing-entity-kinds'
+        | 'manifest-revision-mismatch'
+        | 'sources-missing'
+        | 'sources-envelope-invalid'
+        | 'sources-envelope-version-mismatch'
+        | 'sources-envelope-revision-mismatch'
+        | 'sources-malformed'
+        | 'index-missing'
+        | 'index-envelope-invalid'
+        | 'index-envelope-version-mismatch'
+        | 'index-envelope-revision-mismatch'
+        | 'index-malformed'
+        | 'index-invariants-violated'
+        | 'detail-path-invalid';
+    };
 
 /**
  * Internal candidate state for two-stage activation.
@@ -404,32 +442,36 @@ export class CatalogRuntimeService {
    * without making any network calls.
    *
    * Restoration flow:
-   * 1. Load persisted active-revision pointer.
+   * 1. Load persisted active-revision pointer (untrusted, validate).
    * 2. Validate the pointer is a non-empty string.
    * 3. Convert via branded revision factory.
    * 4. Load cached manifest for that revision.
-   * 5. Validate manifest compatibility (schema version, entity kinds).
-   * 6. Require manifest revision equals persisted revision.
-   * 7. Load cached sources for that revision.
-   * 8. Load cached per-kind indexes for that revision.
-   * 9. Reapply index invariants via candidate validation.
-   * 10. Restore snapshot into active state.
-   * 11. Set activationState to 'active'.
-   * 12. Zero network calls made.
-   * 13. On failure, preserve unrelated cache entries.
+   * 5. Validate manifest envelope metadata (schema version, revision, hash).
+   * 6. Validate manifest structural integrity and compatibility.
+   * 7. Require manifest revision equals persisted revision.
+   * 8. Load cached sources for that revision.
+   * 9. Validate sources envelope metadata.
+   * 10. Load cached per-kind indexes for that revision.
+   * 11. Validate each index envelope metadata.
+   * 12. Reapply index invariants via candidate validation.
+   * 13. Restore snapshot into active state.
+   * 14. Set activationState to 'active'.
    *
-   * @returns true if restoration succeeded, false otherwise.
+   * @returns CatalogRestoreResult with success/failure and specific reason.
    */
-  public async restoreFromCache(): Promise<boolean> {
+  public async restoreFromCache(): Promise<CatalogRestoreResult> {
     // Require both persistence store and cache manager
     const store = this.activeRevisionPersistence;
     const cm = this.cacheManager;
-    if (!store || !cm) return false;
+    if (!store) return { success: false, reason: 'no-persistence' };
+    if (!cm) return { success: false, reason: 'no-cache-manager' };
 
-    // 1. Load persisted pointer
+    // 1. Load persisted pointer (untrusted boundary)
     const rawPointer = await store.load();
     // 2. Validate pointer is a non-empty string
-    if (typeof rawPointer !== 'string' || rawPointer.length === 0) return false;
+    if (typeof rawPointer !== 'string' || rawPointer.length === 0) {
+      return { success: false, reason: 'invalid-pointer' };
+    }
 
     // 3. Convert via branded revision factory
     const revision = createCatalogRevision(rawPointer);
@@ -438,33 +480,67 @@ export class CatalogRuntimeService {
     const manifestEnvelope = await cm.getCached<CatalogManifest>(
       buildManifestCacheKey(revision),
     );
-    if (!manifestEnvelope) return false;
+    if (!manifestEnvelope) {
+      return { success: false, reason: 'manifest-missing' };
+    }
 
-    // Validate manifest structural integrity
-    if (!isCatalogManifest(manifestEnvelope.value)) return false;
+    // Validate manifest envelope structure
+    if (!isCacheEnvelope(manifestEnvelope)) {
+      return { success: false, reason: 'manifest-envelope-invalid' };
+    }
+
+    // Validate manifest structural integrity (need value before inputHash check)
+    if (!isCatalogManifest(manifestEnvelope.value)) {
+      return { success: false, reason: 'manifest-malformed' };
+    }
     const manifest = manifestEnvelope.value;
+
+    // Validate manifest envelope metadata (including inputHash)
+    if (!isCacheValid(manifestEnvelope, revision, manifest.sourceRevision)) {
+      return { success: false, reason: 'manifest-envelope-invalid' };
+    }
 
     // 5. Validate manifest compatibility
     const schemaError = validateSchemaVersion(manifest);
-    if (schemaError !== null) return false;
+    if (schemaError !== null) {
+      return { success: false, reason: 'schema-incompatible' };
+    }
 
     const kindsError = validateRequiredEntityKinds(manifest);
-    if (kindsError !== null) return false;
+    if (kindsError !== null) {
+      return { success: false, reason: 'missing-entity-kinds' };
+    }
 
     // 6. Require manifest revision equals persisted revision
-    if (manifest.catalogRevision !== revision) return false;
+    if (manifest.catalogRevision !== revision) {
+      return { success: false, reason: 'manifest-revision-mismatch' };
+    }
 
     // 7. Load cached sources
     const sourcesEnvelope = await cm.getCached<Record<string, CatalogSource>>(
       buildSourcesCacheKey(revision),
     );
-    if (!sourcesEnvelope) return false;
+    if (!sourcesEnvelope) {
+      return { success: false, reason: 'sources-missing' };
+    }
+
+    // Validate sources envelope metadata (including inputHash)
+    if (!isCacheEnvelope(sourcesEnvelope)) {
+      return { success: false, reason: 'sources-envelope-invalid' };
+    }
+    if (!isCacheValid(sourcesEnvelope, revision, manifest.sourceRevision)) {
+      return { success: false, reason: 'sources-envelope-invalid' };
+    }
 
     // Validate sources structural integrity
-    if (typeof sourcesEnvelope.value !== 'object' || sourcesEnvelope.value === null) return false;
+    if (typeof sourcesEnvelope.value !== 'object' || sourcesEnvelope.value === null) {
+      return { success: false, reason: 'sources-malformed' };
+    }
     const sources = sourcesEnvelope.value as Record<string, CatalogSource>;
     for (const source of Object.values(sources)) {
-      if (!isCatalogSource(source)) return false;
+      if (!isCatalogSource(source)) {
+        return { success: false, reason: 'sources-malformed' };
+      }
     }
 
     // 8. Load cached per-kind indexes
@@ -473,11 +549,26 @@ export class CatalogRuntimeService {
       const indexEnvelope = await cm.getCached<CatalogEntitySummary[]>(
         buildIndexCacheKey(revision, kind),
       );
-      if (!indexEnvelope) return false;
+      if (!indexEnvelope) {
+        return { success: false, reason: 'index-missing' };
+      }
 
-      if (!Array.isArray(indexEnvelope.value)) return false;
+      // Validate index envelope metadata (including inputHash)
+      if (!isCacheEnvelope(indexEnvelope)) {
+        return { success: false, reason: 'index-envelope-invalid' };
+      }
+      const expectedIndexHash = `${manifest.sourceRevision}:${kind}`;
+      if (!isCacheValid(indexEnvelope, revision, expectedIndexHash)) {
+        return { success: false, reason: 'index-envelope-invalid' };
+      }
+
+      if (!Array.isArray(indexEnvelope.value)) {
+        return { success: false, reason: 'index-malformed' };
+      }
       for (const entry of indexEnvelope.value) {
-        if (!isCatalogEntitySummary(entry)) return false;
+        if (!isCatalogEntitySummary(entry)) {
+          return { success: false, reason: 'index-malformed' };
+        }
       }
       index[kind] = indexEnvelope.value;
     }
@@ -494,7 +585,7 @@ export class CatalogRuntimeService {
     try {
       this.validateCandidate(candidate);
     } catch {
-      return false;
+      return { success: false, reason: 'index-invariants-violated' };
     }
 
     // 10. Restore snapshot into active state
@@ -503,7 +594,7 @@ export class CatalogRuntimeService {
     // 11. Set activationState to 'active'
     this.activationState = 'active';
 
-    return true;
+    return { success: true, revision };
   }
 
   // ------------------------------------------------------------------
