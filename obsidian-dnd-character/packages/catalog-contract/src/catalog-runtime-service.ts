@@ -1,3 +1,4 @@
+import type { ActiveRevisionPersistence } from './active-revision-persistence';
 import type { CatalogRevision, EntityId, RuleEntityKind } from '@obsidian-dnd/domain';
 import { createCatalogRevision, isEntityId, isRuleEntityKind } from '@obsidian-dnd/domain';
 import type { CatalogManifest } from './catalog-manifest';
@@ -119,15 +120,18 @@ export class CatalogRuntimeService {
 
   private readonly fetcher: Fetcher;
   private readonly cacheManager: CatalogCacheManager | undefined;
+  private readonly activeRevisionPersistence: ActiveRevisionPersistence | undefined;
 
   public constructor(options: {
     baseUrl: string;
     fetcher: Fetcher;
     cacheManager?: CatalogCacheManager;
+    activeRevisionPersistence?: ActiveRevisionPersistence;
   }) {
     this.baseUrl = options.baseUrl;
     this.fetcher = options.fetcher;
     this.cacheManager = options.cacheManager;
+    this.activeRevisionPersistence = options.activeRevisionPersistence;
   }
 
   // ------------------------------------------------------------------
@@ -157,6 +161,7 @@ export class CatalogRuntimeService {
       this.validateCandidate(candidate);
       await this.validateRequiredEntities(candidate, options?.requiredReferences);
       await this.stageCandidateToCache(candidate);
+      await this.persistActiveRevision(candidate.revision);
       this.commitCandidate(candidate);
       this.activationState = 'active';
     } catch (error) {
@@ -781,6 +786,33 @@ export class CatalogRuntimeService {
         expiration,
         value: entity,
       }));
+    }
+  }
+
+  /**
+   * Persist the active revision pointer to the injected persistence
+   * store before swapping the in-memory active snapshot.
+   *
+   * If no persistence store is configured, this is a no-op.
+   * On failure, throws and aborts activation, preserving the former
+   * active state. The diagnostic identifies the operation as
+   * 'active-revision-persistence'.
+   */
+  private async persistActiveRevision(revision: CatalogRevision): Promise<void> {
+    const store = this.activeRevisionPersistence;
+    if (!store) return;
+
+    try {
+      await store.save(revision);
+    } catch (error) {
+      throw new CatalogRuntimeError({
+        endpoint: 'active-revision-persistence',
+        revision,
+        message: error instanceof Error
+          ? `Failed to persist active revision pointer: ${error.message}`
+          : 'Failed to persist active revision pointer',
+        recoverable: true,
+      });
     }
   }
 

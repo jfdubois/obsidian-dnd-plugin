@@ -596,3 +596,8 @@ export {
   /* Canonical artifact path composition */
   buildCatalogArtifactUrl,
 } from "./catalog-artifact-path";
+
+export {
+  /* Active revision persistence interface */
+  type ActiveRevisionPersistence,
+} from "./active-revision-persistence";
