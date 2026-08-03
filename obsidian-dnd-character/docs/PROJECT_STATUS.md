@@ -24,10 +24,10 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-P7-T008 (typecheck, lint, 2927/2929 tests across 106 files, 2 skipped).
-- `npm --prefix obsidian-dnd-character run build`: passing post-P7-T008.
+- `npm --prefix obsidian-dnd-character run check`: passing post-PB8-003-R2-D2-R1 (typecheck, lint, 3215/3217 tests across 125 files, 2 skipped).
+- `npm --prefix obsidian-dnd-character run build`: passing post-PB8-003-R2-D2-R1.
 - `npm --workspace @obsidian-dnd/obsidian-plugin run bundle`: passing (CJS, obsidian external, no prohibited deps).
-- Tests: 2927 passing.
+- Tests: 3215 passing.
 
 ## Catalog baseline
 
@@ -62,6 +62,12 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-03 — PB8-003-R2-D2-R1 — Repair cache restoration blocking findings — complete
+Summary: Fixed 5 blocking gaps in cache restoration: (1) ActiveRevisionPersistence.load() now returns Promise<unknown> for untrusted boundary; (2) full envelope metadata validation with inputHash via isCacheValid(); (3) CatalogRestoreResult discriminated union with 21 specific failure reasons; (4) positive test for cached entity detail readability after restoration; (5) plugin wiring with ObsidianActiveRevisionPersistence adapter, createObsidianFetcher(), and CatalogRuntimeService construction with restoreFromCache() call during startup.
+Validation: `npm --prefix obsidian-dnd-character run check` passes (3215/3217 tests). `npm --prefix obsidian-dnd-character run build` passes.
+Compatibility notes: Pure contract and plugin logic. No new Obsidian API. No `any`, mobile-compatible.
+Commit: see Git history for PB8-003-R2-D2-R1.
 
 2026-08-01 — P7-T008 — Lazy-load entity details — complete
 Summary: Added EntityDetailResponse discriminated union (all 12 rule types) and isEntityDetailResponse guard to catalog-contract. Updated EntityDetailResult.data from unknown to EntityDetailResponse. Implemented response validation in fetchEntity. 14 new tests for entity detail validation.
