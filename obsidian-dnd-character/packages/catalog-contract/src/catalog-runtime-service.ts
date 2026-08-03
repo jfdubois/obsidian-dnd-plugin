@@ -396,6 +396,117 @@ export class CatalogRuntimeService {
   }
 
   // ------------------------------------------------------------------
+  // Cache restoration (offline startup)
+  // ------------------------------------------------------------------
+
+  /**
+   * Attempts to restore the active catalog from the persistent cache
+   * without making any network calls.
+   *
+   * Restoration flow:
+   * 1. Load persisted active-revision pointer.
+   * 2. Validate the pointer is a non-empty string.
+   * 3. Convert via branded revision factory.
+   * 4. Load cached manifest for that revision.
+   * 5. Validate manifest compatibility (schema version, entity kinds).
+   * 6. Require manifest revision equals persisted revision.
+   * 7. Load cached sources for that revision.
+   * 8. Load cached per-kind indexes for that revision.
+   * 9. Reapply index invariants via candidate validation.
+   * 10. Restore snapshot into active state.
+   * 11. Set activationState to 'active'.
+   * 12. Zero network calls made.
+   * 13. On failure, preserve unrelated cache entries.
+   *
+   * @returns true if restoration succeeded, false otherwise.
+   */
+  public async restoreFromCache(): Promise<boolean> {
+    // Require both persistence store and cache manager
+    const store = this.activeRevisionPersistence;
+    const cm = this.cacheManager;
+    if (!store || !cm) return false;
+
+    // 1. Load persisted pointer
+    const rawPointer = await store.load();
+    // 2. Validate pointer is a non-empty string
+    if (typeof rawPointer !== 'string' || rawPointer.length === 0) return false;
+
+    // 3. Convert via branded revision factory
+    const revision = createCatalogRevision(rawPointer);
+
+    // 4. Load cached manifest
+    const manifestEnvelope = await cm.getCached<CatalogManifest>(
+      buildManifestCacheKey(revision),
+    );
+    if (!manifestEnvelope) return false;
+
+    // Validate manifest structural integrity
+    if (!isCatalogManifest(manifestEnvelope.value)) return false;
+    const manifest = manifestEnvelope.value;
+
+    // 5. Validate manifest compatibility
+    const schemaError = validateSchemaVersion(manifest);
+    if (schemaError !== null) return false;
+
+    const kindsError = validateRequiredEntityKinds(manifest);
+    if (kindsError !== null) return false;
+
+    // 6. Require manifest revision equals persisted revision
+    if (manifest.catalogRevision !== revision) return false;
+
+    // 7. Load cached sources
+    const sourcesEnvelope = await cm.getCached<Record<string, CatalogSource>>(
+      buildSourcesCacheKey(revision),
+    );
+    if (!sourcesEnvelope) return false;
+
+    // Validate sources structural integrity
+    if (typeof sourcesEnvelope.value !== 'object' || sourcesEnvelope.value === null) return false;
+    const sources = sourcesEnvelope.value as Record<string, CatalogSource>;
+    for (const source of Object.values(sources)) {
+      if (!isCatalogSource(source)) return false;
+    }
+
+    // 8. Load cached per-kind indexes
+    const index: Record<string, CatalogEntitySummary[]> = {};
+    for (const kind of manifest.entityKinds) {
+      const indexEnvelope = await cm.getCached<CatalogEntitySummary[]>(
+        buildIndexCacheKey(revision, kind),
+      );
+      if (!indexEnvelope) return false;
+
+      if (!Array.isArray(indexEnvelope.value)) return false;
+      for (const entry of indexEnvelope.value) {
+        if (!isCatalogEntitySummary(entry)) return false;
+      }
+      index[kind] = indexEnvelope.value;
+    }
+
+    // 9. Reapply index invariants via candidate validation
+    const candidate: CandidateState = {
+      revision,
+      manifest,
+      sources,
+      index,
+      requiredEntities: new Map(),
+    };
+
+    try {
+      this.validateCandidate(candidate);
+    } catch {
+      return false;
+    }
+
+    // 10. Restore snapshot into active state
+    this.commitCandidate(candidate);
+
+    // 11. Set activationState to 'active'
+    this.activationState = 'active';
+
+    return true;
+  }
+
+  // ------------------------------------------------------------------
   // Diagnostics
   // ------------------------------------------------------------------
 
