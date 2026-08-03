@@ -773,7 +773,7 @@ export class CatalogRuntimeService {
     for (const [entityId, entity] of requiredEntities) {
       const summary = this.findSummaryInIndex(index, entityId, entity.kind);
       if (!summary) continue;
-      await cm.set(buildEntityCacheKey(revision, summary.detailPath), createCacheEnvelope({
+      await cm.set(buildEntityCacheKey(revision, entityId), createCacheEnvelope({
         cacheSchemaVersion: CACHE_SCHEMA_VERSION,
         catalogRevision: revision,
         inputHash: `${inputHash}:${entityId}`,

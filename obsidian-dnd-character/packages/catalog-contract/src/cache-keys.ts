@@ -9,7 +9,7 @@
  *   catalog-manifest/<revision>
  *   catalog-sources/<revision>
  *   catalog-index/<revision>/<kind>
- *   entity/<revision>/<detail-path>
+ *   entity/<revision>/<entity-id>
  */
 
 import type { CatalogRevision, RuleEntityKind } from "@obsidian-dnd/domain";
@@ -61,13 +61,17 @@ export function buildIndexCacheKey(
 /**
  * Build a cache key for an individual entity detail entry.
  *
- * Produces: `entity/<revision>/<detail-path>`
+ * Produces: `entity/<revision>/<entity-id>`
+ *
+ * The cache key identity is the canonical entity ID, not the
+ * catalog detail path. The detail path is retrieval metadata
+ * and must not appear in the cache key.
  */
 export function buildEntityCacheKey(
   catalogRevision: CatalogRevision,
-  detailPath: string,
+  entityId: string,
 ): string {
-  return `${NS_ENTITY}/${catalogRevisionStr(catalogRevision)}/${detailPath}`;
+  return `${NS_ENTITY}/${catalogRevisionStr(catalogRevision)}/${entityId}`;
 }
 
 /* ── Key parsing (for invalidation and diagnostics) ────────────── */
@@ -96,7 +100,8 @@ export function parseCacheKey(
 
     case NS_ENTITY:
       if (parts.length < 3) return null;
-      return { namespace, revision, entityId: parts[2] };
+      // Join all remaining parts to support entity IDs that may contain slashes
+      return { namespace, revision, entityId: parts.slice(2).join("/") };
 
     default:
       return null;

@@ -144,13 +144,18 @@ export class CatalogService {
 
   /**
    * Fetch a single entity detail with caching.
+   *
+   * @param revision - The catalog revision to fetch from.
+   * @param entityId - Canonical entity ID used as cache key identity.
+   * @param detailPath - Catalog retrieval path used for the network fetch.
    */
   async fetchEntity(
     revision: CatalogRevision,
+    entityId: string,
     detailPath: string,
   ): Promise<EntityDetailResult> {
-    const key = buildEntityCacheKey(revision, detailPath);
-    const inputHash = `entity:${revision}:${detailPath}`;
+    const key = buildEntityCacheKey(revision, entityId);
+    const inputHash = `entity:${revision}:${entityId}`;
     const envelope = await this.manager.fetch(
       key,
       () => this.client.fetchEntity(revision, detailPath),
