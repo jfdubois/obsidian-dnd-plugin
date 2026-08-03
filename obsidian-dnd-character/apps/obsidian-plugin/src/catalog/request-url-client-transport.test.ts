@@ -116,7 +116,7 @@ describe("RequestUrlCatalogClient transport", () => {
 
       expect(mockRequestUrl).toHaveBeenCalledWith(
         expect.objectContaining({
-          url: `${baseUrl}/rev-001/manifest.json`,
+          url: `${baseUrl}/revisions/rev-001/manifest.json`,
         }),
       );
     });
@@ -129,7 +129,7 @@ describe("RequestUrlCatalogClient transport", () => {
 
       expect(mockRequestUrl).toHaveBeenCalledWith(
         expect.objectContaining({
-          url: `${baseUrl}/rev-001/sources.json`,
+          url: `${baseUrl}/revisions/rev-001/sources.json`,
         }),
       );
     });
@@ -142,7 +142,7 @@ describe("RequestUrlCatalogClient transport", () => {
 
       expect(mockRequestUrl).toHaveBeenCalledWith(
         expect.objectContaining({
-          url: `${baseUrl}/rev-001/indexes/spells.json`,
+          url: `${baseUrl}/revisions/rev-001/indexes/spells.json`,
         }),
       );
     });
@@ -155,7 +155,7 @@ describe("RequestUrlCatalogClient transport", () => {
 
       expect(mockRequestUrl).toHaveBeenCalledWith(
         expect.objectContaining({
-          url: `${baseUrl}/rev-001/species/human.json`,
+          url: `${baseUrl}/revisions/rev-001/species/human.json`,
         }),
       );
     });
@@ -197,7 +197,7 @@ describe("RequestUrlCatalogClient transport", () => {
 
       expect(mockRequestUrl).toHaveBeenCalledWith(
         expect.objectContaining({
-          url: `${baseUrl}/rev-001/manifest.json`,
+          url: `${baseUrl}/revisions/rev-001/manifest.json`,
         }),
       );
     });

@@ -1,5 +1,5 @@
-import type { CatalogRevision, RuleEntityKind } from '@obsidian-dnd/domain';
-import { catalogRevisionStr, createCatalogRevision } from '@obsidian-dnd/domain';
+import type { CatalogRevision } from '@obsidian-dnd/domain';
+import { createCatalogRevision } from '@obsidian-dnd/domain';
 import type { CatalogManifest } from './catalog-manifest';
 import type { CatalogSource } from './source-metadata';
 import type { CatalogEntitySummary } from './entity-summary';
@@ -11,6 +11,9 @@ import { isCatalogEntitySummary } from './entity-summary';
 import { isEntityDetailResponse } from './entity-detail';
 import { isCurrentRevision } from './current-revision';
 import { CatalogRuntimeError } from './catalog-runtime-error';
+import { KIND_INDEX_FILENAME } from './kind-index-mapping';
+import { validateArtifactPath } from './artifact-path-utils';
+import { buildCatalogArtifactUrl } from './catalog-artifact-path';
 
 /**
  * Activation state machine for the catalog runtime service.
@@ -35,25 +38,6 @@ export interface CatalogRuntimeDiagnostics {
 export type Fetcher = (input: string, init?: RequestInit) => Promise<Response>;
 
 /**
- * Maps each RuleEntityKind to the exact index filename
- * the publisher writes under the `indexes/` directory.
- */
-const KIND_INDEX_FILENAME: Readonly<Record<RuleEntityKind, string>> = Object.freeze({
-  'species': 'species.json',
-  'background': 'backgrounds.json',
-  'class': 'classes.json',
-  'subclass': 'subclasses.json',
-  'class-feature': 'class-features.json',
-  'subclass-feature': 'subclass-features.json',
-  'feat': 'feats.json',
-  'spell': 'spells.json',
-  'item': 'items.json',
-  'optional-feature': 'optional-features.json',
-  'skill': 'skills.json',
-  'language': 'languages.json',
-});
-
-/**
  * Internal candidate state for two-stage activation.
  */
 type CandidateState = {
@@ -64,45 +48,9 @@ type CandidateState = {
 };
 
 /**
- * Validates that the artifact path is safe for URL construction.
- */
-function validateArtifactPath(path: string): void {
-  if (typeof path !== 'string' || path.length === 0) {
-    throw new Error('Artifact path must be a non-empty string');
-  }
-  if (path.includes('..')) {
-    throw new Error('Artifact path must not contain \'..\' path segments');
-  }
-  if (path.startsWith('/') || /^[a-zA-Z]:/.test(path)) {
-    throw new Error('Artifact path must not be absolute');
-  }
-  const lower = path.toLowerCase();
-  if (
-    lower.startsWith('http://') ||
-    lower.startsWith('https://') ||
-    lower.startsWith('javascript:') ||
-    lower.startsWith('data:')
-  ) {
-    throw new Error('Artifact path must not contain URL schemes');
-  }
-  if (path.includes('\0')) {
-    throw new Error('Artifact path must not contain null bytes');
-  }
-  for (let i = 0; i < path.length; i++) {
-    const code = path.charCodeAt(i);
-    if (code < 0x20 && code !== 0x09) {
-      throw new Error('Artifact path must not contain control characters');
-    }
-  }
-  if (!path.endsWith('.json')) {
-    throw new Error('Artifact path must end with \'.json\'');
-  }
-}
-
-/**
  * Two-phase, transactional catalog revision activation service.
  *
- * Uses static artifact paths: `{baseUrl}/{revision}/{artifact}`
+ * Uses static artifact paths: `{baseUrl}/revisions/{revision}/{artifact}`
  *
  * Phase 1 — prepare: fetches current.json, manifest, sources, and
  *           per-kind indexes into a candidate without mutating active state.
@@ -291,7 +239,7 @@ export class CatalogRuntimeService {
       });
     }
 
-    return raw.currentRevision as unknown as CatalogRevision;
+    return createCatalogRevision(raw.currentRevision);
   }
 
   private async fetchManifestForRevision(revision: CatalogRevision): Promise<CatalogManifest> {
@@ -466,21 +414,17 @@ export class CatalogRuntimeService {
   // ------------------------------------------------------------------
 
   /**
-   * Construct a catalog artifact URL from the base URL, optional revision,
-   * and artifact path.
-   *
-   * With revision: `{baseUrl}/{revision}/{artifact}`
-   * Without revision: `{baseUrl}/{artifact}` (for current.json)
-   */
+    * Construct a catalog artifact URL from the base URL, optional revision,
+    * and artifact path.
+    *
+    * With revision: `{baseUrl}/revisions/{revision}/{artifact}`
+    * Without revision: `{baseUrl}/{artifact}` (for current.json)
+    */
   private buildUrl(
     revision: CatalogRevision | undefined,
     artifact: string,
   ): string {
-    if (revision !== undefined) {
-      const revisionStr = catalogRevisionStr(revision);
-      return `${this.baseUrl}/${revisionStr}/${artifact}`;
-    }
-    return `${this.baseUrl}/${artifact}`;
+    return buildCatalogArtifactUrl(this.baseUrl, revision, artifact);
   }
 
   private async fetchWithStatus(endpoint: string): Promise<Response> {

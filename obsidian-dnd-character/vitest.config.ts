@@ -1,6 +1,16 @@
+import path from "path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@obsidian-dnd/domain": path.resolve(__dirname, "packages/domain/src"),
+      "@obsidian-dnd/catalog-contract": path.resolve(__dirname, "packages/catalog-contract/src"),
+      "@obsidian-dnd/character-contract": path.resolve(__dirname, "packages/character-contract/src"),
+      "@obsidian-dnd/rules-engine": path.resolve(__dirname, "packages/rules-engine/src"),
+      "@obsidian-dnd/testing": path.resolve(__dirname, "packages/testing/src"),
+    },
+  },
   test: {
     include: ["apps/**/*.test.ts", "packages/**/*.test.ts", "test/**/*.test.ts"],
     exclude: [

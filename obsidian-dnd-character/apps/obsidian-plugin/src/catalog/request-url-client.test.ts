@@ -486,7 +486,7 @@ describe("RequestUrlCatalogClient", () => {
     await client.fetchManifest(revision);
     expect(mockRequestUrl).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: `${baseUrl}/rev-001/manifest.json`,
+        url: `${baseUrl}/revisions/rev-001/manifest.json`,
       }),
     );
   });
@@ -496,7 +496,7 @@ describe("RequestUrlCatalogClient", () => {
     await client.fetchSources(revision);
     expect(mockRequestUrl).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: `${baseUrl}/rev-001/sources.json`,
+        url: `${baseUrl}/revisions/rev-001/sources.json`,
       }),
     );
   });
@@ -506,7 +506,7 @@ describe("RequestUrlCatalogClient", () => {
     await client.fetchIndex(revision, "species");
     expect(mockRequestUrl).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: `${baseUrl}/rev-001/indexes/species.json`,
+        url: `${baseUrl}/revisions/rev-001/indexes/species.json`,
       }),
     );
   });
@@ -516,7 +516,7 @@ describe("RequestUrlCatalogClient", () => {
     await client.fetchIndex(revision, "class");
     expect(mockRequestUrl).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: `${baseUrl}/rev-001/indexes/classes.json`,
+        url: `${baseUrl}/revisions/rev-001/indexes/classes.json`,
       }),
     );
   });
@@ -526,7 +526,7 @@ describe("RequestUrlCatalogClient", () => {
     await client.fetchEntity(revision, "species/human.json");
     expect(mockRequestUrl).toHaveBeenCalledWith(
       expect.objectContaining({
-        url: `${baseUrl}/rev-001/species/human.json`,
+        url: `${baseUrl}/revisions/rev-001/species/human.json`,
       }),
     );
   });
@@ -591,5 +591,29 @@ describe("RequestUrlCatalogClient", () => {
     mockResponse(createMockEntityDetail());
     await client.fetchEntity(revision, "entities/species/human.json");
     expect(mockRequestUrl).toHaveBeenCalledTimes(1);
+  });
+
+  it("fetchEntity rejects path with backslashes", async () => {
+    const error = await client.fetchEntity(revision, "species\\human.json").catch((e) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("backslashes");
+  });
+
+  it("fetchEntity rejects path with dot segments", async () => {
+    const error = await client.fetchEntity(revision, "./species/human.json").catch((e) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("'.");
+  });
+
+  it("fetchEntity rejects path with query string", async () => {
+    const error = await client.fetchEntity(revision, "species/human.json?foo=bar").catch((e) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("query");
+  });
+
+  it("fetchEntity rejects path with fragment", async () => {
+    const error = await client.fetchEntity(revision, "species/human.json#section").catch((e) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect((error as Error).message).toContain("fragment");
   });
 });

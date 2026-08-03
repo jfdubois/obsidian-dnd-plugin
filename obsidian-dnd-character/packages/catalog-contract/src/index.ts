@@ -566,3 +566,18 @@ export {
   /* Fetcher type */
   type Fetcher,
 } from "./catalog-runtime-service";
+
+export {
+  /* Kind-to-index-filename mapping */
+  KIND_INDEX_FILENAME,
+} from "./kind-index-mapping";
+
+export {
+  /* Artifact path validation */
+  validateArtifactPath,
+} from "./artifact-path-utils";
+
+export {
+  /* Canonical artifact path composition */
+  buildCatalogArtifactUrl,
+} from "./catalog-artifact-path";

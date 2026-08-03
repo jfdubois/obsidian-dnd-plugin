@@ -1,26 +1,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { CatalogManifest, CatalogEntitySummary, CatalogSource } from "@obsidian-dnd/catalog-contract";
+import { KIND_INDEX_FILENAME } from "@obsidian-dnd/catalog-contract";
 import type { RuleEntityKind } from "@obsidian-dnd/domain";
 import type { ValidationReport } from "./validation-report";
 import type { InventoryReport } from "./inventory-report";
-
-/* ── Kind-to-index-filename mapping ────────────────────────────── */
-
-const KIND_INDEX_FILENAME: Readonly<Record<RuleEntityKind, string>> = Object.freeze({
-  "species": "species.json",
-  "background": "backgrounds.json",
-  "class": "classes.json",
-  "subclass": "subclasses.json",
-  "class-feature": "class-features.json",
-  "subclass-feature": "subclass-features.json",
-  "feat": "feats.json",
-  "spell": "spells.json",
-  "item": "items.json",
-  "optional-feature": "optional-features.json",
-  "skill": "skills.json",
-  "language": "languages.json",
-});
 
 /* ── Input type ────────────────────────────────────────────────── */
 

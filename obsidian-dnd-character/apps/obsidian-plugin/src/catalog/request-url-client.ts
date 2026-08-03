@@ -5,7 +5,7 @@
  * catalog server. All responses are validated against the catalog
  * contract types before being returned to callers.
  *
- * URL pattern: {baseUrl}/{revision}/{artifact}
+ * URL pattern: {baseUrl}/revisions/{revision}/{artifact}
  *
  * Artifacts (static file layout):
  * - /current.json       → fetchCurrentRevision
@@ -20,10 +20,7 @@ import type {
   CatalogRevision,
   RuleEntityKind,
 } from "@obsidian-dnd/domain";
-import {
-  catalogRevisionStr,
-  createCatalogRevision,
-} from "@obsidian-dnd/domain";
+import { createCatalogRevision } from "@obsidian-dnd/domain";
 import type {
   CatalogManifest,
   CatalogSource,
@@ -36,6 +33,9 @@ import {
   isCurrentRevision,
   isEntityDetailResponse,
   CATALOG_SCHEMA_VERSION,
+  KIND_INDEX_FILENAME,
+  validateArtifactPath,
+  buildCatalogArtifactUrl,
 } from "@obsidian-dnd/catalog-contract";
 import type {
   CatalogClient,
@@ -49,78 +49,6 @@ import { validateConnection } from "./connection-test";
 /* ── Constants ─────────────────────────────────────────────────── */
 
 const DEFAULT_TIMEOUT_MS = 30_000;
-
-/**
- * Maps each RuleEntityKind to the exact index filename
- * the publisher writes under the `indexes/` directory.
- */
-const KIND_INDEX_FILENAME: Record<RuleEntityKind, string> = {
-  species: "species.json",
-  background: "backgrounds.json",
-  class: "classes.json",
-  subclass: "subclasses.json",
-  "class-feature": "class-features.json",
-  "subclass-feature": "subclass-features.json",
-  feat: "feats.json",
-  spell: "spells.json",
-  item: "items.json",
-  "optional-feature": "optional-features.json",
-  skill: "skills.json",
-  language: "languages.json",
-} as const;
-
-/**
- * Validates that the artifact path is safe for URL construction.
- *
- * Rules:
- * 1. Must be a non-empty string
- * 2. Must not contain ".." path segments
- * 3. Must not be absolute (no leading "/" or drive letter)
- * 4. Must not contain URL schemes (http://, https://, javascript:, data:)
- * 5. Must not contain null bytes
- * 6. Must not contain control characters
- * 7. Must end with ".json"
- *
- * @throws Error if the path is unsafe
- */
-export function validateArtifactPath(path: string): void {
-  if (typeof path !== "string" || path.length === 0) {
-    throw new Error("Artifact path must be a non-empty string");
-  }
-
-  if (path.includes("..")) {
-    throw new Error("Artifact path must not contain '..' path segments");
-  }
-
-  if (path.startsWith("/") || /^[a-zA-Z]:/.test(path)) {
-    throw new Error("Artifact path must not be absolute");
-  }
-
-  const lower = path.toLowerCase();
-  if (
-    lower.startsWith("http://") ||
-    lower.startsWith("https://") ||
-    lower.startsWith("javascript:") ||
-    lower.startsWith("data:")
-  ) {
-    throw new Error("Artifact path must not contain URL schemes");
-  }
-
-  if (path.includes("\0")) {
-    throw new Error("Artifact path must not contain null bytes");
-  }
-
-  for (let i = 0; i < path.length; i++) {
-    const code = path.charCodeAt(i);
-    if (code < 0x20 && code !== 0x09) {
-      throw new Error("Artifact path must not contain control characters");
-    }
-  }
-
-  if (!path.endsWith(".json")) {
-    throw new Error("Artifact path must end with '.json'");
-  }
-}
 
 /* ── Implementation ────────────────────────────────────────────── */
 
@@ -278,17 +206,16 @@ export class RequestUrlCatalogClient implements CatalogClient {
   /* ── Private helpers ─────────────────────────────────────────── */
 
   /**
-   * Construct a catalog endpoint URL from the base URL, revision,
-   * and endpoint path.
-   *
-   * Produces: {baseUrl}/{revision}/{endpoint}
-   */
+    * Construct a catalog endpoint URL from the base URL, revision,
+    * and endpoint path.
+    *
+    * Produces: {baseUrl}/revisions/{revision}/{endpoint}
+    */
   private buildUrl(
     catalogRevision: CatalogRevision,
     endpoint: string,
   ): string {
-    const revision = catalogRevisionStr(catalogRevision);
-    return `${this.baseUrl}/${revision}/${endpoint}`;
+    return buildCatalogArtifactUrl(this.baseUrl, catalogRevision, endpoint);
   }
 
   /**
