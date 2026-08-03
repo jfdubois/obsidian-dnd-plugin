@@ -505,11 +505,12 @@ export class CatalogRuntimeService {
       manifestEnvelope,
       revision,
       manifestHash,
+      'manifest',
     );
-    if (manifestCompat === 'version-mismatch') {
+    if (manifestCompat === 'manifest-envelope-version-mismatch') {
       return { success: false, reason: 'manifest-envelope-version-mismatch' };
     }
-    if (manifestCompat === 'revision-mismatch') {
+    if (manifestCompat === 'manifest-envelope-revision-mismatch') {
       return { success: false, reason: 'manifest-envelope-revision-mismatch' };
     }
     if (manifestCompat !== null) {
@@ -549,11 +550,12 @@ export class CatalogRuntimeService {
       sourcesEnvelope,
       revision,
       sourcesHash,
+      'sources',
     );
-    if (sourcesCompat === 'version-mismatch') {
+    if (sourcesCompat === 'sources-envelope-version-mismatch') {
       return { success: false, reason: 'sources-envelope-version-mismatch' };
     }
-    if (sourcesCompat === 'revision-mismatch') {
+    if (sourcesCompat === 'sources-envelope-revision-mismatch') {
       return { success: false, reason: 'sources-envelope-revision-mismatch' };
     }
     if (sourcesCompat !== null) {
@@ -590,11 +592,12 @@ export class CatalogRuntimeService {
         indexEnvelope,
         revision,
         expectedIndexHash,
+        'index',
       );
-      if (indexCompat === 'version-mismatch') {
+      if (indexCompat === 'index-envelope-version-mismatch') {
         return { success: false, reason: 'index-envelope-version-mismatch' };
       }
-      if (indexCompat === 'revision-mismatch') {
+      if (indexCompat === 'index-envelope-revision-mismatch') {
         return { success: false, reason: 'index-envelope-revision-mismatch' };
       }
       if (indexCompat !== null) {

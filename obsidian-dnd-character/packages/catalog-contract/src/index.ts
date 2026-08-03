@@ -531,6 +531,7 @@ export {
   isCacheEnvelopeVersionCompatible,
   validateCacheEnvelopeCompatibility,
   type CacheEnvelopeCompatibilityReason,
+  type ArtifactFamily,
 } from "./cache-envelope";
 
 export {

@@ -239,16 +239,45 @@ export function isCacheEnvelopeVersionCompatible(
 }
 
 /**
+ * Artifact families that can be cached.
+ *
+ * Used to produce artifact-family-specific compatibility reasons
+ * for actionable diagnostics during cache restoration.
+ */
+export type ArtifactFamily =
+  | 'manifest'
+  | 'sources'
+  | 'index'
+  | 'entity';
+
+/**
  * Specific failure reasons for cache envelope compatibility checks.
  *
- * Used by restoreFromCache to provide actionable diagnostics
- * instead of a bare boolean.
+ * When an artifact family is provided, reasons are prefixed with
+ * `{family}-envelope-` for actionable diagnostics. When no family
+ * is provided, generic reasons are returned (backward compatible).
  */
 export type CacheEnvelopeCompatibilityReason =
   | 'version-mismatch'
   | 'revision-mismatch'
   | 'input-hash-mismatch'
-  | 'expired';
+  | 'expired'
+  | 'manifest-envelope-version-mismatch'
+  | 'manifest-envelope-hash-mismatch'
+  | 'manifest-envelope-revision-mismatch'
+  | 'manifest-envelope-expired'
+  | 'sources-envelope-version-mismatch'
+  | 'sources-envelope-hash-mismatch'
+  | 'sources-envelope-revision-mismatch'
+  | 'sources-envelope-expired'
+  | 'index-envelope-version-mismatch'
+  | 'index-envelope-hash-mismatch'
+  | 'index-envelope-revision-mismatch'
+  | 'index-envelope-expired'
+  | 'entity-envelope-version-mismatch'
+  | 'entity-envelope-hash-mismatch'
+  | 'entity-envelope-revision-mismatch'
+  | 'entity-envelope-expired';
 
 /**
  * Validate a cache envelope against expected metadata with exact
@@ -258,9 +287,14 @@ export type CacheEnvelopeCompatibilityReason =
  * failure reason if it is not. Checks are performed in priority
  * order: schema version, revision, input hash, expiration.
  *
+ * When an artifact family is provided, reasons are prefixed with
+ * `{family}-envelope-` for actionable diagnostics. When no family
+ * is provided, generic reasons are returned (backward compatible).
+ *
  * @param envelope - The cache envelope to validate.
  * @param expectedCatalogRevision - The expected catalog revision.
  * @param expectedInputHash - The expected input hash.
+ * @param artifactFamily - Optional artifact family for prefixed reasons.
  * @param now - Current date for expiration checks (default: now).
  * @returns null if compatible, or a failure reason string.
  */
@@ -268,19 +302,28 @@ export function validateCacheEnvelopeCompatibility(
   envelope: CacheEnvelope<unknown>,
   expectedCatalogRevision: CatalogRevision,
   expectedInputHash: string,
+  artifactFamily: ArtifactFamily | null = null,
   now: Date = new Date(),
 ): CacheEnvelopeCompatibilityReason | null {
   if (!isCacheEnvelopeVersionCompatible(envelope)) {
-    return 'version-mismatch';
+    return artifactFamily
+      ? `${artifactFamily}-envelope-version-mismatch`
+      : 'version-mismatch';
   }
   if (envelope.catalogRevision !== expectedCatalogRevision) {
-    return 'revision-mismatch';
+    return artifactFamily
+      ? `${artifactFamily}-envelope-revision-mismatch`
+      : 'revision-mismatch';
   }
   if (envelope.inputHash !== expectedInputHash) {
-    return 'input-hash-mismatch';
+    return artifactFamily
+      ? `${artifactFamily}-envelope-hash-mismatch`
+      : 'input-hash-mismatch';
   }
   if (isCacheExpired(envelope, now)) {
-    return 'expired';
+    return artifactFamily
+      ? `${artifactFamily}-envelope-expired`
+      : 'expired';
   }
   return null;
 }

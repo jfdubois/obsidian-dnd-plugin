@@ -6,11 +6,11 @@ PB8-003-R2 — Catalog activation corrections (post-Phase-7 readiness)
 
 ## Current corrective task
 
-PB8-003-R2-D2-R2 — Enforce cache schema compatibility and prove production offline entity loading
+PB8-003-R2-E1 — (next)
 
 ## Last completed corrective task
 
-PB8-003-R2-D2-R1 — Repair cache restoration blocking findings
+PB8-003-R2-D2-R3 — Validate production cache reads with runtime value validators
 
 ## Branch baseline
 
@@ -24,10 +24,10 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-PB8-003-R2-D2-R2 (typecheck, lint, 3257/3259 tests across 131 files, 2 skipped).
-- `npm --prefix obsidian-dnd-character run build`: passing post-PB8-003-R2-D2-R2.
+- `npm --prefix obsidian-dnd-character run check`: passing post-PB8-003-R2-D2-R3 (typecheck, lint, 3283/3285 tests across 137 files, 2 skipped).
+- `npm --prefix obsidian-dnd-character run build`: passing post-PB8-003-R2-D2-R3.
 - `npm --workspace @obsidian-dnd/obsidian-plugin run bundle`: passing (CJS, obsidian external, no prohibited deps).
-- Tests: 3257 passing.
+- Tests: 3283 passing.
 
 ## Catalog baseline
 
@@ -56,8 +56,8 @@ None recorded.
 - Completed Phase 7 task commits: P7-T001 — see Git history for P7-T001; P7-T002 — see Git history for P7-T002; P7-T003 — see Git history for P7-T003; P7-T004 — 92c9fac; P7-T005 — no changes needed; P7-T006 — a407fd0; P7-T007 — 65b8c2e; P7-T008 — 0ceaabc
 - Phase 7 gate: complete
 - Corrective campaign PB8-003-R2 active (post-Phase-7 readiness work)
-- Current corrective task: PB8-003-R2-D2-R2
-- Last completed corrective task: PB8-003-R2-D2-R1
+- Current corrective task: PB8-003-R2-E1
+- Last completed corrective task: PB8-003-R2-D2-R3
 - Next corrective task: PB8-003-R2-E1
 - Gate status: Phase 4 gate complete. Phase 5 gate complete. Phase 6 gate complete. Phase 7 gate complete.
 - Blocking issue: none
@@ -65,6 +65,12 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-03 — PB8-003-R2-D2-R3 — Validate production cache reads with runtime value validators — complete
+Summary: Fixed 5 defects from R2 review: (1) runtime value validation in CatalogCacheManager.fetch() via optional valueValidator parameter; (2) canonical input-hash builders used in CatalogService for all cache reads; (3) artifact-family-specific restoration reasons (manifest-envelope-version-mismatch, sources-envelope-revision-mismatch, index-envelope-invalid, etc.); (4) production offline entity loading test exercising full CatalogService path with disabled network; (5) production cache validation tests for manifest, sources, index, and entity caches. Added 3 new test files (all under 300 lines).
+Validation: `npm --prefix obsidian-dnd-character run check` passes (3283/3285 tests). `npm --prefix obsidian-dnd-character run build` passes.
+Compatibility notes: Pure contract and plugin logic. No new Obsidian API. No `any`, mobile-compatible.
+Commit: see Git history for PB8-003-R2-D2-R3.
 
 2026-08-03 — PB8-003-R2-D2-R2 — Enforce cache schema compatibility and prove production offline entity loading — complete
 Summary: Fixed 4 defects: (1) exact cache schema version enforcement via isCacheEnvelopeVersionCompatible() and validateCacheEnvelopeCompatibility() with specific failure reasons; (2) canonical input-hash builders (buildManifestInputHash, buildSourcesInputHash, buildIndexInputHash, buildEntityInputHash) in cache-keys.ts; (3) unified entity hash between staging and production entity loading; (4) structured restoration diagnostics with distinct version-mismatch and hash-mismatch reasons. Updated CatalogService.fetchEntity() to use buildEntityInputHash(). Added 6 new test files (all under 300 lines).

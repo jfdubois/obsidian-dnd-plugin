@@ -15,7 +15,7 @@ import type { CatalogRevision } from "@obsidian-dnd/domain";
 import {
   CACHE_SCHEMA_VERSION,
   createCacheEnvelope,
-  isCacheValid,
+  validateCacheEnvelopeCompatibility,
 } from "./cache-envelope";
 
 /* ── Stats ───────────────────────────────────────────────────────── */
@@ -60,18 +60,33 @@ export class CatalogCacheManager {
    * On cache hit, returns the stored envelope.
    * On cache miss, calls `fetchFn`, wraps the result in a
    * new envelope, stores it, and returns it.
+   *
+   * When a `valueValidator` is provided, the cached envelope's
+   * value must pass the validator before being returned as a
+   * cache hit. A failed validator means cache miss (re-fetch).
    */
   async fetch<T>(
     key: string,
     fetchFn: () => Promise<T>,
     revision: CatalogRevision,
     inputHash: string,
+    valueValidator?: (value: unknown) => value is T,
   ): Promise<CacheEnvelope<T>> {
     const existing = await this.store.get<T>(key);
 
-    if (existing !== null && isCacheValid(existing, revision, inputHash)) {
-      this.hits += 1;
-      return existing;
+    if (existing !== null &&
+        validateCacheEnvelopeCompatibility(existing, revision, inputHash) === null) {
+      // Runtime value validation (if provided)
+      if (valueValidator !== undefined) {
+        if (valueValidator(existing.value)) {
+          this.hits += 1;
+          return existing;
+        }
+        // Validator failed — treat as cache miss
+      } else {
+        this.hits += 1;
+        return existing;
+      }
     }
 
     this.misses += 1;
@@ -153,6 +168,7 @@ export class CatalogCacheManager {
     fetchFn: () => Promise<T>,
     revision: CatalogRevision,
     inputHash: string,
+    valueValidator?: (value: unknown) => value is T,
   ): Promise<{
     envelope: CacheEnvelope<T>;
     fromCache: boolean;
@@ -165,13 +181,14 @@ export class CatalogCacheManager {
         fetchFn,
         revision,
         inputHash,
+        valueValidator,
       );
       const fromCache = this.hits > hitsBefore;
       return { envelope, fromCache, stale: false };
     } catch (error) {
       const cached = await this.getCached<T>(key);
       if (cached !== null) {
-        const isStale = !isCacheValid(cached, revision, inputHash);
+        const isStale = validateCacheEnvelopeCompatibility(cached, revision, inputHash) !== null;
         return { envelope: cached, fromCache: true, stale: isStale };
       }
       throw error;

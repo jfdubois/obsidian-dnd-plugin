@@ -25,12 +25,19 @@ import type {
 import {
   CatalogCacheManager as CatalogCacheManagerClass,
   CatalogRuntimeService as RuntimeServiceClass,
+  isCatalogManifest,
+  isCatalogSource,
+  isCatalogEntitySummary,
+  isEntityDetailResponse,
 } from "@obsidian-dnd/catalog-contract";
 import {
   buildManifestCacheKey,
   buildSourcesCacheKey,
   buildIndexCacheKey,
   buildEntityCacheKey,
+  buildManifestInputHash,
+  buildSourcesInputHash,
+  buildIndexInputHash,
   buildEntityInputHash,
 } from "@obsidian-dnd/catalog-contract";
 import type {
@@ -58,6 +65,32 @@ const DEFAULT_EXPIRATION: CacheExpirationPolicy = {
   kind: "ttl",
   ttlMs: 24 * 60 * 60 * 1000, // 24 hours
 };
+
+/* ── Runtime validators for cached values ───────────────────────── */
+
+function isCatalogSourceArray(value: unknown): value is CatalogSource[] {
+  return (
+    Array.isArray(value) &&
+    value.every((item) => isCatalogSource(item))
+  );
+}
+
+function isCatalogEntitySummaryArray(value: unknown): value is CatalogEntitySummary[] {
+  return (
+    Array.isArray(value) &&
+    value.every((item) => isCatalogEntitySummary(item))
+  );
+}
+
+function isEntityDetailResult(value: unknown): value is EntityDetailResult {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "data" in value &&
+    "catalogRevision" in value &&
+    isEntityDetailResponse((value as EntityDetailResult).data)
+  );
+}
 
 /* ── Service ────────────────────────────────────────────────────── */
 
@@ -127,52 +160,68 @@ export class CatalogService {
 
   /**
    * Fetch the catalog manifest with caching.
+   *
+   * @param revision - The catalog revision to fetch from.
+   * @param sourceRevision - The source revision used for the canonical input hash.
    */
   async fetchManifest(
     revision: CatalogRevision,
+    sourceRevision: string,
   ): Promise<CatalogManifest> {
     const key = buildManifestCacheKey(revision);
-    const inputHash = `manifest:${revision}`;
+    const inputHash = buildManifestInputHash(sourceRevision);
     const envelope = await this.manager.fetch(
       key,
       () => this.client.fetchManifest(revision),
       revision,
       inputHash,
+      isCatalogManifest,
     );
     return envelope.value;
   }
 
   /**
    * Fetch the source list with caching.
+   *
+   * @param revision - The catalog revision to fetch from.
+   * @param sourceRevision - The source revision used for the canonical input hash.
    */
   async fetchSources(
     revision: CatalogRevision,
+    sourceRevision: string,
   ): Promise<CatalogSource[]> {
     const key = buildSourcesCacheKey(revision);
-    const inputHash = `sources:${revision}`;
+    const inputHash = buildSourcesInputHash(sourceRevision);
     const envelope = await this.manager.fetch(
       key,
       () => this.client.fetchSources(revision),
       revision,
       inputHash,
+      isCatalogSourceArray,
     );
     return envelope.value;
   }
 
   /**
    * Fetch an entity index with caching.
+   *
+   * @param revision - The catalog revision to fetch from.
+   * @param sourceRevision - The source revision used for the canonical input hash.
+   * @param entityKind - The entity kind to fetch the index for.
    */
   async fetchIndex(
     revision: CatalogRevision,
+    sourceRevision: string,
     entityKind: RuleEntityKind,
   ): Promise<CatalogEntitySummary[]> {
     const key = buildIndexCacheKey(revision, entityKind);
-    const inputHash = `index:${revision}:${entityKind}`;
+    const inputHash = buildIndexInputHash(sourceRevision, entityKind);
     const envelope = await this.manager.fetch(
       key,
       () => this.client.fetchIndex(revision, entityKind),
       revision,
       inputHash,
+      isCatalogEntitySummaryArray,
     );
     return envelope.value;
   }
@@ -198,6 +247,7 @@ export class CatalogService {
       () => this.client.fetchEntity(revision, detailPath),
       revision,
       inputHash,
+      isEntityDetailResult,
     );
     return envelope.value;
   }

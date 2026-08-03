@@ -427,3 +427,223 @@ describe("CatalogCacheManager fetchWithOfflineFallback", () => {
     expect(result.envelope.value).toBe("stale-data");
   });
 });
+
+/* ── Schema version enforcement ─────────────────────────────────── */
+
+describe("CatalogCacheManager fetch schema version enforcement", () => {
+  it("returns cache hit for schema-compatible envelope", async () => {
+    const manager = createManager();
+    const revision = createCatalogRevision("rev-001");
+
+    // Pre-populate with current schema version
+    await manager.fetch(
+      "key:1",
+      () => Promise.resolve("data"),
+      revision,
+      "h",
+    );
+
+    // Second call should be a cache hit
+    const fetchFn = vi.fn().mockResolvedValue("should-not-call");
+    await manager.fetch("key:1", fetchFn, revision, "h");
+    expect(fetchFn).not.toHaveBeenCalled();
+    expect(manager.stats().hits).toBe(1);
+  });
+
+  it("treats schema-mismatched envelope as cache miss", async () => {
+    const store = createStore();
+    const manager = new CatalogCacheManager(
+      store,
+      createNoExpiryExpiration(),
+    );
+
+    // Pre-populate store with an envelope that has a different schema version
+    const { createCacheEnvelope } = await import("./cache-envelope");
+    const oldEnvelope = createCacheEnvelope({
+      cacheSchemaVersion: 99, // intentionally wrong
+      catalogRevision: createCatalogRevision("rev-001"),
+      inputHash: "h",
+      createdAt: new Date().toISOString(),
+      expiration: createNoExpiryExpiration(),
+      value: "stale-schema",
+    });
+    await store.set("key:1", oldEnvelope);
+
+    // Fetch should see schema mismatch and call fetchFn
+    const fetchFn = vi.fn().mockResolvedValue("fresh");
+    const result = await manager.fetch(
+      "key:1",
+      fetchFn,
+      createCatalogRevision("rev-001"),
+      "h",
+    );
+
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(result.value).toBe("fresh");
+    expect(result.cacheSchemaVersion).toBe(1); // new envelope has current version
+    expect(manager.stats().misses).toBe(1);
+  });
+
+  it("offline fallback marks schema-mismatched envelope as stale", async () => {
+    const store = createStore();
+    const manager = new CatalogCacheManager(
+      store,
+      createNoExpiryExpiration(),
+    );
+
+    // Pre-populate with old schema version
+    const { createCacheEnvelope } = await import("./cache-envelope");
+    const oldEnvelope = createCacheEnvelope({
+      cacheSchemaVersion: 99,
+      catalogRevision: createCatalogRevision("rev-001"),
+      inputHash: "h",
+      createdAt: new Date().toISOString(),
+      expiration: createNoExpiryExpiration(),
+      value: "old-schema-data",
+    });
+    await store.set("key:1", oldEnvelope);
+
+    // Network error triggers fallback to stale schema-mismatched data
+    const networkErr = new Error("network error");
+    const result = await manager.fetchWithOfflineFallback(
+      "key:1",
+      () => Promise.reject(networkErr),
+      createCatalogRevision("rev-001"),
+      "h",
+    );
+
+    expect(result.fromCache).toBe(true);
+    expect(result.stale).toBe(true); // schema mismatch = stale
+    expect(result.envelope.value).toBe("old-schema-data");
+  });
+});
+
+/* ── Runtime value validation ───────────────────────────────────── */
+
+describe("CatalogCacheManager fetch with valueValidator", () => {
+  it("returns cache hit when validator passes", async () => {
+    const store = createStore();
+    const manager = new CatalogCacheManager(
+      store,
+      createNoExpiryExpiration(),
+    );
+    const revision = createCatalogRevision("rev-001");
+
+    // Pre-populate cache
+    await manager.fetch(
+      "key:1",
+      () => Promise.resolve({ valid: true }),
+      revision,
+      "h",
+    );
+
+    // Second call with validator that passes
+    const fetchFn = vi.fn().mockResolvedValue({ valid: false });
+    const validator = (v: unknown): v is { valid: boolean } =>
+      typeof v === "object" && v !== null && (v as { valid: boolean }).valid === true;
+
+    const result = await manager.fetch(
+      "key:1",
+      fetchFn,
+      revision,
+      "h",
+      validator,
+    );
+
+    expect(fetchFn).not.toHaveBeenCalled();
+    expect(result.value).toEqual({ valid: true });
+    expect(manager.stats().hits).toBe(1);
+  });
+
+  it("treats validator failure as cache miss", async () => {
+    const store = createStore();
+    const manager = new CatalogCacheManager(
+      store,
+      createNoExpiryExpiration(),
+    );
+    const revision = createCatalogRevision("rev-001");
+
+    // Pre-populate cache with data that will fail validator
+    await manager.fetch(
+      "key:1",
+      () => Promise.resolve({ valid: false }),
+      revision,
+      "h",
+    );
+    const missesBefore = manager.stats().misses;
+
+    // Fetch with validator that rejects cached value
+    const fetchFn = vi.fn().mockResolvedValue({ valid: true });
+    const validator = (v: unknown): v is { valid: boolean } =>
+      typeof v === "object" && v !== null && (v as { valid: boolean }).valid === true;
+
+    const result = await manager.fetch(
+      "key:1",
+      fetchFn,
+      revision,
+      "h",
+      validator,
+    );
+
+    // Validator failed, so fetchFn was called
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(result.value).toEqual({ valid: true });
+    expect(manager.stats().misses).toBe(missesBefore + 1);
+  });
+
+  it("skips validator when not provided", async () => {
+    const manager = createManager();
+    const revision = createCatalogRevision("rev-001");
+
+    // Pre-populate cache
+    await manager.fetch(
+      "key:1",
+      () => Promise.resolve("data"),
+      revision,
+      "h",
+    );
+
+    // Second call without validator should be cache hit
+    const fetchFn = vi.fn().mockResolvedValue("should-not-call");
+    await manager.fetch("key:1", fetchFn, revision, "h");
+
+    expect(fetchFn).not.toHaveBeenCalled();
+    expect(manager.stats().hits).toBe(1);
+  });
+
+  it("offline fallback with validator re-fetches on failure", async () => {
+    const store = createStore();
+    const manager = new CatalogCacheManager(
+      store,
+      createNoExpiryExpiration(),
+    );
+    const revision = createCatalogRevision("rev-001");
+
+    // Pre-populate cache with data that will fail validator
+    await manager.fetch(
+      "key:1",
+      () => Promise.resolve({ valid: false }),
+      revision,
+      "h",
+    );
+
+    // Fetch with offline fallback and validator that rejects
+    const fetchFn = vi.fn().mockResolvedValue({ valid: true });
+    const validator = (v: unknown): v is { valid: boolean } =>
+      typeof v === "object" && v !== null && (v as { valid: boolean }).valid === true;
+
+    const result = await manager.fetchWithOfflineFallback(
+      "key:1",
+      fetchFn,
+      revision,
+      "h",
+      validator,
+    );
+
+    // Validator failed, so fetchFn was called
+    expect(fetchFn).toHaveBeenCalledTimes(1);
+    expect(result.fromCache).toBe(false);
+    expect(result.stale).toBe(false);
+    expect(result.envelope.value).toEqual({ valid: true });
+  });
+});
