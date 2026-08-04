@@ -53,6 +53,8 @@ export interface CatalogClientError {
   status?: number;
   /** Underlying cause. */
   cause?: unknown;
+  /** True only when request transport completed without an HTTP response. */
+  transport?: true;
 }
 
 /* ── Entity detail result ──────────────────────────────────────── */

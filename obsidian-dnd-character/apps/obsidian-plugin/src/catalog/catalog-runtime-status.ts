@@ -33,6 +33,8 @@ export interface CatalogRuntimeStatusInput {
   cacheFreshness: "none" | "current" | "offline" | "stale";
   restoreOutcome: "idle" | "pending" | "restored-offline" | "stale-accepted" | "failed";
   refreshOutcome: "idle" | "pending" | "succeeded" | "failed";
+  /** A non-mutating online discovery is in progress. */
+  onlineCheckPending?: boolean;
   lastDiagnostic?: CatalogStatusDiagnosticInput;
   unresolvedEntityCount: number;
   lastRefreshAt?: string;
@@ -93,18 +95,18 @@ export function projectCatalogStatusDiagnostic(
 export function deriveCatalogRuntimeStatus(input: CatalogRuntimeStatusInput): CatalogRuntimeStatusSnapshot {
   const configuredUrl = present(input.configuredUrl);
   const usable = input.activationState === "active" && input.activeRevision !== undefined;
-  const busy = input.restoreOutcome === "pending" || input.refreshOutcome === "pending" || input.activationState === "fetching";
+  const busy = input.restoreOutcome === "pending" || input.refreshOutcome === "pending" || input.onlineCheckPending === true || input.activationState === "fetching";
   let state: CatalogRuntimeStatusState;
   if (configuredUrl === undefined) state = "not-configured";
   else if (input.restoreOutcome === "pending") state = "restoring";
-  else if (input.refreshOutcome === "pending" || input.activationState === "fetching") state = "refreshing";
+  else if (input.refreshOutcome === "pending" || input.onlineCheckPending === true || input.activationState === "fetching") state = "refreshing";
   else if (input.schemaCompatibility === "incompatible") state = "incompatible";
+  else if (input.restoreOutcome === "failed" || input.refreshOutcome === "failed") state = "error";
   else if (!usable && input.connectivity === "offline") state = "unavailable";
   else if (usable && (input.restoreOutcome === "restored-offline" || input.cacheFreshness === "offline")) state = "cached-offline";
   else if (usable && (input.restoreOutcome === "stale-accepted" || input.cacheFreshness === "stale")) state = "stale-offline";
   else if (usable && input.connectivity === "online" && input.advertisedRevision !== undefined && input.advertisedRevision !== input.activeRevision) state = "update-available";
   else if (usable && input.connectivity === "online" && input.advertisedRevision === input.activeRevision) state = "current";
-  else if (input.restoreOutcome === "failed" || input.refreshOutcome === "failed") state = "error";
   else if (usable) state = input.cacheFreshness === "offline" ? "cached-offline" : input.cacheFreshness === "stale" ? "stale-offline" : "current";
   else state = "inactive";
   return Object.freeze({

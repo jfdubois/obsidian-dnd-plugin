@@ -253,7 +253,7 @@ export class RequestUrlCatalogClient implements CatalogClient {
   private async withTimeout<T>(promise: Promise<T>): Promise<T> {
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
-        reject(this.createError(`Request timed out after ${this.timeoutMs}ms`));
+        reject(this.createError(`Request timed out after ${this.timeoutMs}ms`, undefined, undefined, true));
       }, this.timeoutMs);
 
       promise
@@ -263,7 +263,7 @@ export class RequestUrlCatalogClient implements CatalogClient {
         })
         .catch((error) => {
           clearTimeout(timer);
-          reject(this.createError("Network request failed", undefined, error));
+          reject(this.createError("Network request failed", undefined, error, true));
         });
     });
   }
@@ -276,6 +276,7 @@ export class RequestUrlCatalogClient implements CatalogClient {
     message: string,
     status?: number,
     cause?: unknown,
+    transport?: true,
   ): CatalogClientError {
     const error: CatalogClientError = { message };
     if (status !== undefined) {
@@ -283,6 +284,9 @@ export class RequestUrlCatalogClient implements CatalogClient {
     }
     if (cause !== undefined) {
       error.cause = cause;
+    }
+    if (transport !== undefined) {
+      error.transport = transport;
     }
     return error;
   }

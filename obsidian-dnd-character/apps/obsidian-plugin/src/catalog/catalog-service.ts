@@ -21,6 +21,7 @@ import type {
   CatalogSource,
   CatalogEntitySummary,
   CatalogRestoreResult,
+  ActivateOptions,
   EntityDetailResponse,
   CacheEnvelopeCompatibilityReason,
 } from "@obsidian-dnd/catalog-contract";
@@ -64,6 +65,15 @@ import {
   statusDiagnosticFromRestore,
   statusDiagnosticFromRuntimeError,
 } from "./catalog-status-diagnostics";
+import {
+  activateCatalogRuntime,
+  connectivityFromDiscoveryFailure,
+  discoverAdvertisedCatalog,
+  type CatalogRefreshResult,
+  type CatalogUpdateCheckResult,
+} from "./catalog-refresh";
+
+export type { CatalogRefreshResult, CatalogUpdateCheckResult } from "./catalog-refresh";
 
 /* ── Configuration ──────────────────────────────────────────────── */
 
@@ -80,6 +90,8 @@ export interface CatalogServiceConfig {
   cacheManager?: CatalogCacheManager;
   /** Runtime service injection for restart tests. */
   runtimeService?: RuntimeServiceClass;
+  /** Injectable clock for deterministic refresh completion timestamps. */
+  now?: () => Date;
 }
 
 const DEFAULT_EXPIRATION: CacheExpirationPolicy = {
@@ -141,6 +153,8 @@ export class CatalogService {
   private runtimeStatus: CatalogRuntimeStatusSnapshot;
   private readonly statusListeners = new Set<(status: CatalogRuntimeStatusSnapshot) => void>();
   private readonly unresolvedEntityIds = new Set<string>();
+  private refreshInFlight: Promise<CatalogRefreshResult> | undefined;
+  private updateCheckInFlight: Promise<CatalogUpdateCheckResult> | undefined;
 
   constructor(
     plugin: Plugin,
@@ -234,6 +248,31 @@ export class CatalogService {
       subscribed = false;
       this.statusListeners.delete(listener);
     };
+  }
+
+  /** Discover the advertised catalog revision without changing the active runtime. */
+  checkForCatalogUpdate(): Promise<CatalogUpdateCheckResult> {
+    if (this.refreshInFlight !== undefined) {
+      return this.refreshInFlight.then(() => this.updateCheckFromStatus());
+    }
+    if (this.updateCheckInFlight !== undefined) return this.updateCheckInFlight;
+    const operation = this.performUpdateCheck();
+    this.updateCheckInFlight = operation;
+    void operation.finally(() => {
+      if (this.updateCheckInFlight === operation) this.updateCheckInFlight = undefined;
+    });
+    return operation;
+  }
+
+  /** Discover and, when necessary, activate the advertised catalog transactionally. */
+  refreshCatalog(options?: ActivateOptions): Promise<CatalogRefreshResult> {
+    if (this.refreshInFlight !== undefined) return this.refreshInFlight;
+    const operation = this.performRefresh(options);
+    this.refreshInFlight = operation;
+    void operation.finally(() => {
+      if (this.refreshInFlight === operation) this.refreshInFlight = undefined;
+    });
+    return operation;
   }
 
   /**
@@ -422,6 +461,142 @@ export class CatalogService {
    */
   getClient(): CatalogClient {
     return this.client;
+  }
+
+  private async performUpdateCheck(keepRefreshPending = false): Promise<CatalogUpdateCheckResult> {
+    if (this.runtimeService === null || this.statusFacts.configuredUrl === undefined) {
+      this.completeOperationStatus({ refreshOutcome: keepRefreshPending ? "failed" : "idle", lastDiagnostic: this.safeDiagnostic("Catalog URL is not configured.", "not-configured") });
+      return { success: false, reason: "not-configured", diagnostic: this.runtimeStatus.lastDiagnostic };
+    }
+    if (!keepRefreshPending) this.updateStatus({ onlineCheckPending: true, lastDiagnostic: undefined });
+    const discovery = await discoverAdvertisedCatalog(this.client);
+    if (discovery.kind === "manifest-revision-mismatch") {
+        const diagnostic = this.safeDiagnostic("The advertised catalog manifest revision does not match.", "manifest-revision-mismatch", discovery.advertisedRevision);
+        this.finishDiscovery(keepRefreshPending, { ...this.runtimeSnapshotFacts(), advertisedRevision: discovery.advertisedRevision, connectivity: "online", schemaCompatibility: "unknown", refreshOutcome: keepRefreshPending ? "failed" : "idle", lastDiagnostic: diagnostic });
+        return { success: false, reason: "invalid-response", diagnostic: this.runtimeStatus.lastDiagnostic };
+    }
+    if (discovery.kind === "incompatible") {
+        const diagnostic = this.safeDiagnostic(discovery.reason ?? "The catalog schema is incompatible.", "schema-incompatible", discovery.advertisedRevision);
+        const runtime = this.runtimeService;
+        const active = runtime.activationState === "active" ? runtime.revision : undefined;
+        this.finishDiscovery(keepRefreshPending, { activationState: active === undefined ? "inactive" : "active", ...(active === undefined ? { activeRevision: undefined, sourceRevision: undefined } : { activeRevision: active, sourceRevision: runtime.manifest?.sourceRevision }), advertisedRevision: discovery.advertisedRevision, connectivity: "online", schemaCompatibility: "incompatible", refreshOutcome: keepRefreshPending ? "failed" : "idle", lastDiagnostic: diagnostic });
+        return { success: false, reason: "incompatible", diagnostic: this.runtimeStatus.lastDiagnostic };
+    }
+    if (discovery.kind === "compatible") {
+      const runtime = this.runtimeService;
+      const active = runtime.activationState === "active" ? runtime.revision : undefined;
+      this.finishDiscovery(keepRefreshPending, {
+        activationState: active === undefined ? "inactive" : "active",
+        ...(active === undefined ? { activeRevision: undefined, sourceRevision: undefined } : { activeRevision: active, sourceRevision: runtime.manifest?.sourceRevision }),
+        advertisedRevision: discovery.advertisedRevision, connectivity: "online", schemaCompatibility: "compatible",
+        cacheFreshness: active === undefined ? this.statusFacts.cacheFreshness : "current",
+        ...(keepRefreshPending ? {} : { refreshOutcome: "idle" }), lastDiagnostic: undefined,
+      });
+      return { success: true, advertisedRevision: discovery.advertisedRevision, compatible: true, updateAvailable: active !== discovery.advertisedRevision };
+    }
+    {
+      const connectivity = connectivityFromDiscoveryFailure(discovery.cause);
+      const diagnostic = this.safeDiagnostic("Catalog update discovery did not complete.", "discovery-failed", discovery.advertisedRevision);
+      this.finishDiscovery(keepRefreshPending, {
+        ...this.runtimeSnapshotFacts(),
+        ...(discovery.advertisedRevision === undefined ? {} : { advertisedRevision: discovery.advertisedRevision }), connectivity,
+        refreshOutcome: keepRefreshPending ? "failed" : "idle", lastDiagnostic: diagnostic,
+      });
+      return { success: false, reason: connectivity === "offline" ? "unavailable" : "invalid-response", diagnostic: this.runtimeStatus.lastDiagnostic };
+    }
+  }
+
+  private async performRefresh(options?: ActivateOptions): Promise<CatalogRefreshResult> {
+    this.updateStatus({ ...this.runtimeSnapshotFacts(), activationState: "fetching", refreshOutcome: "pending", onlineCheckPending: false, lastDiagnostic: undefined });
+    const discovered = await this.performUpdateCheck(true);
+    if (!discovered.success) {
+      return { success: false, reason: discovered.reason === "not-configured" ? "not-configured" : discovered.reason === "incompatible" ? "incompatible" : "activation-failed", status: this.runtimeStatus };
+    }
+    const runtime = this.runtimeService;
+    if (runtime === null) return { success: false, reason: "not-configured", status: this.runtimeStatus };
+    if (runtime.activationState === "active" && runtime.revision === discovered.advertisedRevision) {
+      this.completeOperationStatus({ activationState: "active", activeRevision: runtime.revision, sourceRevision: runtime.manifest?.sourceRevision, advertisedRevision: runtime.revision, connectivity: "online", schemaCompatibility: "compatible", cacheFreshness: "current", restoreOutcome: "idle", refreshOutcome: "succeeded", lastDiagnostic: undefined });
+      return { success: true, activeRevision: runtime.revision, changed: false };
+    }
+    const activation = await activateCatalogRuntime(runtime, options);
+    if (!activation.success && activation.kind === "activation-failed") {
+      this.synchronizeFailedRuntime(discovered.advertisedRevision, activation.cause);
+      return { success: false, reason: "activation-failed", status: this.runtimeStatus };
+    }
+    if (!activation.success) {
+      this.synchronizeInconsistentRuntime(discovered.advertisedRevision);
+      return { success: false, reason: "runtime-inconsistent", status: this.runtimeStatus };
+    }
+    this.synchronizeSuccessfulRuntime();
+    return { success: true, activeRevision: activation.revision, changed: true };
+  }
+
+  private synchronizeSuccessfulRuntime(): boolean {
+    const runtime = this.runtimeService;
+    if (runtime === null || runtime.activationState !== "active" || runtime.revision === undefined || runtime.manifest === undefined || runtime.manifest.catalogRevision !== runtime.revision) return false;
+    this.completeOperationStatus({ activationState: "active", activeRevision: runtime.revision, advertisedRevision: runtime.revision, sourceRevision: runtime.manifest.sourceRevision, schemaCompatibility: "compatible", connectivity: "online", cacheFreshness: "current", restoreOutcome: "idle", refreshOutcome: "succeeded", lastDiagnostic: undefined });
+    return true;
+  }
+
+  private synchronizeFailedRuntime(candidateRevision: CatalogRevision, error: unknown): void {
+    const runtime = this.runtimeService;
+    const active = runtime?.activationState === "active" && runtime.revision !== undefined && runtime.manifest?.catalogRevision === runtime.revision;
+    const diagnostic = error instanceof CatalogRuntimeError
+      ? statusDiagnosticFromRuntimeError(error)
+      : this.safeDiagnostic("Catalog activation failed.", "activation-failed", candidateRevision);
+    this.completeOperationStatus({
+      activationState: active ? "active" : "inactive",
+      activeRevision: active ? runtime!.revision : undefined,
+      sourceRevision: active ? runtime!.manifest!.sourceRevision : undefined,
+      advertisedRevision: candidateRevision, refreshOutcome: "failed", lastDiagnostic: diagnostic,
+    });
+  }
+
+  private updateCheckFromStatus(): CatalogUpdateCheckResult {
+    const status = this.runtimeStatus;
+    if (status.schemaCompatibility === "incompatible") return { success: false, reason: "incompatible", diagnostic: status.lastDiagnostic };
+    if (status.advertisedRevision !== undefined && status.schemaCompatibility === "compatible") return { success: true, advertisedRevision: status.advertisedRevision, compatible: true, updateAvailable: status.activeRevision !== status.advertisedRevision };
+    return { success: false, reason: status.configuredUrl === undefined ? "not-configured" : "unavailable", diagnostic: status.lastDiagnostic };
+  }
+
+  private finishDiscovery(fromRefresh: boolean, update: Partial<CatalogRuntimeStatusInput>): void {
+    if (fromRefresh && update.refreshOutcome !== "failed") {
+      // Discovery is internal to the refresh transaction.  Publishing its
+      // facts here would emit a second pending snapshot; the committed
+      // runtime supplies the authoritative final facts after activate().
+      return;
+    }
+    this.completeOperationStatus(update);
+  }
+
+  private completeOperationStatus(update: Partial<CatalogRuntimeStatusInput>): void {
+    this.updateStatus({ ...update, onlineCheckPending: false, lastRefreshAt: (this.config.now ?? (() => new Date()))().toISOString() });
+  }
+
+  private synchronizeInconsistentRuntime(candidateRevision: CatalogRevision): void {
+    const runtime = this.runtimeService;
+    const active = runtime?.activationState === "active" && runtime.revision !== undefined && runtime.manifest?.catalogRevision === runtime.revision;
+    this.completeOperationStatus({
+      activationState: active ? "active" : "inactive",
+      activeRevision: active ? runtime!.revision : undefined,
+      sourceRevision: active ? runtime!.manifest!.sourceRevision : undefined,
+      advertisedRevision: candidateRevision,
+      refreshOutcome: "failed",
+      lastDiagnostic: this.safeDiagnostic("Catalog activation completed without a consistent runtime.", "runtime-inconsistent", candidateRevision),
+    });
+  }
+
+  /** Read the committed runtime only; this never activates or mutates it. */
+  private runtimeSnapshotFacts(): Pick<CatalogRuntimeStatusInput, "activationState" | "activeRevision" | "sourceRevision"> {
+    const runtime = this.runtimeService;
+    const active = runtime?.activationState === "active" && runtime.revision !== undefined && runtime.manifest?.catalogRevision === runtime.revision;
+    return active
+      ? { activationState: "active", activeRevision: runtime!.revision, sourceRevision: runtime!.manifest!.sourceRevision }
+      : { activationState: "inactive", activeRevision: undefined, sourceRevision: undefined };
+  }
+
+  private safeDiagnostic(message: string, reason: string, candidateRevision?: CatalogRevision): CatalogRuntimeStatusInput["lastDiagnostic"] {
+    return { message, reason, ...(candidateRevision === undefined ? {} : { candidateRevision }), recoverable: true };
   }
 
   private applyRestoreResult(result: CatalogRestoreResult): void {
