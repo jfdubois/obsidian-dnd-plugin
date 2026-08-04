@@ -22,12 +22,12 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-P8-T004 — Implement configurable character folder creation
+P8-T005 — Implement character create
 
 ## Branch baseline
 
 - Branch: `dev`
-- Last synchronized commit: see Git history
+- Last synchronized commit: `9c25ea9a` (P8-T004)
 - Working tree expected: clean
 
 ## Blockers
@@ -36,10 +36,10 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-P8-T003 (typecheck, lint, 3523 tests passing, 2 skipped; 16 pre-existing console warnings).
-- `npm --prefix obsidian-dnd-character run build`: passing post-PB8-004-GATE automated validation.
+- `npm --prefix obsidian-dnd-character run check`: passing post-P8-T004 (typecheck, lint, 3533 tests passing, 2 skipped; 16 pre-existing console warnings).
+- `npm --prefix obsidian-dnd-character run build`: passing post-P8-T004.
 - `npm --workspace @obsidian-dnd/obsidian-plugin run bundle`: passing post-PB8-004-GATE automated validation (CJS, obsidian external, no prohibited deps).
-- Tests: 3523 passing, 2 skipped.
+- Tests: 3533 passing, 2 skipped.
 
 ## Catalog baseline
 
