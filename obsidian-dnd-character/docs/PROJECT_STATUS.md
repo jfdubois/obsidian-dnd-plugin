@@ -2,15 +2,15 @@
 
 ## Current work
 
-PB8-003-R2 — Catalog activation corrections (gate complete; corrective work, not Phase 8 roadmap work)
+PB8-004 — Settings and runtime status integration (corrective readiness work, not Phase 8 roadmap work)
 
 ## Last completed corrective task
 
-PB8-003-R2-GATE
+PB8-004-A1
 
 ## Next corrective task
 
-PB8-004 — Settings and runtime status integration
+PB8-004-A2 — Integrate status and transactional refresh into CatalogService
 
 ## Branch baseline
 
@@ -24,10 +24,10 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-PB8-003-R2-E1 (typecheck, lint, 3316/3318 tests across 143 passing files, 2 skipped).
-- `npm --prefix obsidian-dnd-character run build`: passing post-PB8-003-R2-E1.
-- `npm --workspace @obsidian-dnd/obsidian-plugin run bundle`: passing post-PB8-003-R2-E1 (CJS, obsidian external, no prohibited deps).
-- Tests: 3316 passing, 2 skipped.
+- `npm --prefix obsidian-dnd-character run check`: passing post-PB8-004-A1 (typecheck, lint, 3335 tests passing, 2 skipped; 7 pre-existing `main.ts` console warnings).
+- `npm --prefix obsidian-dnd-character run build`: passing post-PB8-004-A1.
+- `npm --workspace @obsidian-dnd/obsidian-plugin run bundle`: passing post-PB8-004-A1 (CJS, obsidian external, no prohibited deps).
+- Tests: 3335 passing, 2 skipped.
 
 ## Catalog baseline
 
@@ -55,16 +55,22 @@ None recorded.
 - Phase 7 starting commit: 0dab1ff
 - Completed Phase 7 task commits: P7-T001 — see Git history for P7-T001; P7-T002 — see Git history for P7-T002; P7-T003 — see Git history for P7-T003; P7-T004 — 92c9fac; P7-T005 — no changes needed; P7-T006 — a407fd0; P7-T007 — 65b8c2e; P7-T008 — 0ceaabc
 - Phase 7 gate: complete
-- Corrective campaign PB8-003-R2 active (post-Phase-7 readiness work)
-- Current corrective campaign: PB8-003-R2 — Catalog activation corrections
-- Last completed corrective task: PB8-003-R2-GATE
-- Next corrective task: PB8-004 — Settings and runtime status integration
+- Corrective campaign PB8-004 active (post-Phase-7 readiness work)
+- Current corrective campaign: PB8-004 — Settings and runtime status integration
+- Last completed corrective task: PB8-004-A1
+- Next corrective task: PB8-004-A2 — Integrate status and transactional refresh into CatalogService
 - Gate status: Phase 4 gate complete. Phase 5 gate complete. Phase 6 gate complete. Phase 7 gate complete. PB8-003-R2 gate passed (G1–G14 and E1 scenarios A–G). Phase 8 roadmap work has not started; PB8-004 is corrective readiness work, not a Phase 8 roadmap task.
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-03 — PB8-004-A1 — Define catalog runtime status contract and presentation — complete
+Summary: Added a pure, immutable catalog runtime status snapshot, deterministic derivation precedence, display-safe diagnostic projection, and DOM-independent settings presentation formatter. No service, persistence, refresh, activation, or settings UI integration was added.
+Validation: Focused status tests pass (19 tests). `npm --prefix obsidian-dnd-character run check` passes (3335 tests, 2 skipped; 7 pre-existing `main.ts` console warnings). `npm --prefix obsidian-dnd-character run build` and `npm --workspace @obsidian-dnd/obsidian-plugin run bundle` pass. Phase 7 roadmap and gate remain complete; Phase 8 roadmap work remains unstarted; PB8-004 is corrective readiness work, not a Phase 8 roadmap task.
+Compatibility notes: Pure plugin status contract only; no Obsidian API, runtime lifecycle, cache, persistence, or UI changes.
+Commit: see Git history for PB8-004-A1.
 
 2026-08-03 — PB8-003-R2-GATE — Catalog activation corrective gate — complete
 Summary: Restored a deterministic full-validation baseline by replacing matcher-heavy per-record assertions in the raw-boundary real-source test with an equivalent single diagnostic assertion over every accepted record. The PB8-003-R2 corrective gate passed: G1–G14 and E1 scenarios A–G.
