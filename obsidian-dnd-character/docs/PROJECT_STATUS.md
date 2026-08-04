@@ -6,11 +6,11 @@ PB8-004 — Settings and runtime status integration
 
 ## Last completed corrective task
 
-PB8-004-B1-S1
+PB8-004-B1-S2
 
 ## Next corrective task
 
-PB8-004-B1-S2 — Bind settings UI to service status and refresh
+PB8-004-GATE — Independent settings and runtime-status review
 
 ## Branch baseline
 
@@ -57,14 +57,20 @@ None recorded.
 - Phase 7 gate: complete
 - Corrective campaign PB8-004 active (post-Phase-7 readiness work)
 - Current corrective campaign: PB8-004 — Settings and runtime status integration
-- Last completed corrective task: PB8-004-B1-S1
-- Next corrective task: PB8-004-B1-S2 — Bind settings UI to service status and refresh
+- Last completed corrective task: PB8-004-B1-S2
+- Next corrective task: PB8-004-GATE — Independent settings and runtime-status review
 - Gate status: Phase 4 gate complete. Phase 5 gate complete. Phase 6 gate complete. Phase 7 gate complete. PB8-003-R2 gate passed (G1–G14 and E1 scenarios A–G). Phase 8 roadmap work has not started; PB8-004 is corrective readiness work, not a Phase 8 roadmap task.
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-04 — PB8-004-B1-S2 — Bind settings UI to plugin-owned catalog status and refresh — complete
+Summary: The settings tab now uses the plugin lifecycle boundary and retained CatalogService runtime-status subscription. Catalog URL input is draft-only until Apply; checking and refreshing delegate to the current service; the editable catalog-revision row was removed. No catalog runtime, activation, cache, persistence, or lifecycle semantics changed.
+Validation: Focused settings controller tests pass (5 tests). `npm --prefix obsidian-dnd-character run check` passes (3386 tests, 2 skipped; 7 pre-existing `main.ts` console warnings). `npm --prefix obsidian-dnd-character run build` and `npm --workspace @obsidian-dnd/obsidian-plugin run bundle` pass. Phase 7 roadmap and gate remain complete; Phase 8 roadmap implementation remains unstarted; PB8-004 is corrective readiness work.
+Compatibility notes: Status presentation is formatter-driven and does not rely on newer settings-tab lifecycle APIs. New API-register entries are verified against the pinned Obsidian declarations.
+Commit: see Git history for PB8-004-B1-S2.
 
 2026-08-04 — PB8-004-B1-S1 — Make the plugin lifecycle own a reconfigurable CatalogService — complete
 Summary: The plugin now owns a serialized, single-flight CatalogService lifecycle with authoritative URL normalization, settings-owned reconfiguration, exactly-once disposal, retained not-configured state, and unload-safe publication. No settings UI, automatic online refresh, cache/pointer semantics, or Phase 8 roadmap implementation changed.

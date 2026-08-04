@@ -1,138 +1,122 @@
 /** Plugin settings tab UI for the D&D Character Manager. */
 
-import type { App, ButtonComponent, Plugin } from 'obsidian';
+import type { App, ButtonComponent, Plugin, TextComponent } from 'obsidian';
 import { PluginSettingTab, Setting } from 'obsidian';
 
-import type { DndCharacterPluginSettings } from './settings';
-import { RequestUrlCatalogClient } from './catalog/request-url-client';
-
-interface PluginInstance {
-	settings: DndCharacterPluginSettings;
-	saveData: (data: DndCharacterPluginSettings) => Promise<void>;
-}
+import { formatCatalogRuntimeStatus } from './catalog/catalog-runtime-status';
+import { SettingsCatalogController } from './settings-catalog-controller';
+import type { CatalogSettingsPlugin } from './settings-catalog-controller';
 
 export class DndCharacterPluginSettingTab extends PluginSettingTab {
-	plugin: PluginInstance;
-	catalogStatus: string;
-	private statusSetting: Setting | null;
-	private testButton: ButtonComponent | null;
+	private readonly settingsPlugin: CatalogSettingsPlugin;
+	private readonly catalogController: SettingsCatalogController;
+	private statusSetting: Setting | undefined;
+	private actionErrorSetting: Setting | undefined;
+	private urlInput: TextComponent | undefined;
+	private applyButton: ButtonComponent | undefined;
+	private checkButton: ButtonComponent | undefined;
+	private refreshButton: ButtonComponent | undefined;
 
-	constructor(app: App, plugin: PluginInstance) {
+	constructor(app: App, plugin: CatalogSettingsPlugin) {
 		super(app, plugin as unknown as Plugin);
-		this.plugin = plugin;
-		this.catalogStatus = 'Not configured';
-		this.statusSetting = null;
-		this.testButton = null;
+		this.settingsPlugin = plugin;
+		this.catalogController = new SettingsCatalogController(plugin, {
+			loading: () => this.renderLoading(),
+			status: (snapshot, applying) => this.renderStatus(snapshot, applying),
+			operationPending: (applying) => this.renderOperationPending(applying),
+			actionError: (message) => this.renderActionError(message),
+			urlApplied: (value) => { this.urlInput?.setValue(value); },
+		});
 	}
 
 	display(): void {
+		this.catalogController.display();
 		const { containerEl } = this;
 		containerEl.empty();
 
-		/* ---------- Catalog section ---------- */
-
-		new Setting(containerEl)
-			.setName('Catalog')
-			.setHeading();
-
+		new Setting(containerEl).setName('Catalog').setHeading();
 		new Setting(containerEl)
 			.setName('Catalog server URL')
 			.setDesc('URL of the catalog server (leave empty to disable).')
-			.addText((text) =>
-				text
+			.addText((text) => {
+				this.urlInput = text
 					.setPlaceholder('https://example.com/catalog')
-					.setValue(this.plugin.settings.catalogServerUrl)
-					.onChange(async (value) => {
-						this.plugin.settings.catalogServerUrl = value;
-						await this.plugin.saveData(this.plugin.settings);
-						if (value === '') {
-							this.updateStatus('Not configured');
-						}
-					}),
-			);
-
-		new Setting(containerEl)
-			.setName('Catalog revision')
-			.setDesc('Active catalog revision ID (leave empty to use latest).')
-			.addText((text) =>
-				text
-					.setPlaceholder('e.g. rev-2024-01')
-					.setValue(this.plugin.settings.catalogRevision)
-					.onChange(async (value) => {
-						this.plugin.settings.catalogRevision = value;
-						await this.plugin.saveData(this.plugin.settings);
-					}),
-			);
-
-		/* ---------- Catalog status ---------- */
+					.setValue(this.settingsPlugin.settings.catalogServerUrl)
+					.onChange(() => undefined);
+			});
+		new Setting(containerEl).addButton((button) => {
+			this.applyButton = button.setButtonText('Apply catalog URL').onClick(() => {
+				void this.catalogController.applyUrl(this.urlInput?.getValue() ?? '');
+			});
+		});
 
 		this.statusSetting = new Setting(containerEl)
 			.setName('Catalog status')
-			.setDesc(this.catalogStatus)
+			.setDesc('Loading catalog status...')
 			.setDisabled(true);
-
-		new Setting(containerEl)
-			.addButton((button) => {
-				this.testButton = button;
-				button
-					.setButtonText('Test connection')
-					.onClick(async () => {
-						const url = this.plugin.settings.catalogServerUrl;
-						if (url === '') {
-							this.updateStatus('Not configured');
-							return;
-						}
-						this.updateStatus('Testing...');
-						button.setDisabled(true);
-						try {
-							const client = new RequestUrlCatalogClient({ baseUrl: url });
-							const connected = await client.testConnection();
-							this.updateStatus(connected ? 'Connected' : 'Disconnected');
-						} catch {
-							this.updateStatus('Disconnected');
-						} finally {
-							button.setDisabled(false);
-						}
-					});
+		this.actionErrorSetting = new Setting(containerEl)
+			.setName('Catalog action')
+			.setDesc('')
+			.setDisabled(true);
+		new Setting(containerEl).addButton((button) => {
+			this.checkButton = button.setButtonText('Check for updates').setDisabled(true).onClick(() => {
+				void this.catalogController.checkForUpdates();
 			});
+		});
+		new Setting(containerEl).addButton((button) => {
+			this.refreshButton = button.setButtonText('Refresh catalog').setDisabled(true).onClick(() => {
+				void this.catalogController.refresh();
+			});
+		});
 
-		/* ---------- Characters section ---------- */
-
-		new Setting(containerEl)
-			.setName('Characters')
-			.setHeading();
-
+		new Setting(containerEl).setName('Characters').setHeading();
 		new Setting(containerEl)
 			.setName('Characters vault path')
-			.setDesc(
-				'Vault-relative folder path where character files are stored.',
-			)
-			.addText((text) =>
-				text
-					.setPlaceholder('dnd-characters')
-					.setValue(this.plugin.settings.charactersVaultPath)
-					.onChange(async (value) => {
-						this.plugin.settings.charactersVaultPath = value;
-						await this.plugin.saveData(this.plugin.settings);
-					}),
-			);
+			.setDesc('Vault-relative folder path where character files are stored.')
+			.addText((text) => text
+				.setPlaceholder('dnd-characters')
+				.setValue(this.settingsPlugin.settings.charactersVaultPath)
+				.onChange(async (value) => {
+					this.settingsPlugin.settings.charactersVaultPath = value;
+					await this.settingsPlugin.saveSettings();
+				}));
 
-		/* ---------- About section ---------- */
-
-		new Setting(containerEl)
-			.setName('About')
-			.setHeading();
-
+		new Setting(containerEl).setName('About').setHeading();
 		new Setting(containerEl)
 			.setName('Settings schema version')
-			.setDesc(`Current settings schema version: ${this.plugin.settings.schemaVersion}.`)
+			.setDesc(`Current settings schema version: ${this.settingsPlugin.settings.schemaVersion}.`)
 			.setDisabled(true);
 	}
 
-	private updateStatus(status: string): void {
-		this.catalogStatus = status;
-		if (this.statusSetting) {
-			this.statusSetting.setDesc(status);
-		}
+	private renderLoading(): void {
+		this.statusSetting?.setName('Catalog status').setDesc('Loading catalog status...');
+		this.setActionButtons(true);
+	}
+
+	private renderStatus(
+		snapshot: Parameters<typeof formatCatalogRuntimeStatus>[0],
+		applying: boolean,
+	): void {
+		const presentation = formatCatalogRuntimeStatus(snapshot);
+		this.statusSetting
+			?.setName(presentation.title)
+			.setDesc([presentation.summary, ...presentation.details].join(' — '))
+			.setClass(`dnd-catalog-status--${presentation.severity}`);
+		this.setActionButtons(applying || !presentation.refreshEnabled);
+		this.applyButton?.setDisabled(applying);
+	}
+
+	private renderActionError(message: string): void {
+		this.actionErrorSetting?.setDesc(message);
+	}
+
+	private renderOperationPending(applying: boolean): void {
+		this.applyButton?.setDisabled(applying);
+		if (applying) this.setActionButtons(true);
+	}
+
+	private setActionButtons(disabled: boolean): void {
+		this.checkButton?.setDisabled(disabled);
+		this.refreshButton?.setDisabled(disabled);
 	}
 }

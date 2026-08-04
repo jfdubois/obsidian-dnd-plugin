@@ -22,6 +22,7 @@ Every Obsidian API member used in this project must have an entry before it appe
 | `Setting.setName` | `setName(name: string): this` | 0.9.7 | `settings-tab.ts` | label for setting row | label text visible |
 | `Setting.setDesc` | `setDesc(desc: string \| DocumentFragment): this` | 0.9.7 | `settings-tab.ts` | description for setting row | description text visible |
 | `Setting.addText` | `addText(cb: (component: TextComponent) => any): this` | 0.9.7 | `settings-tab.ts` | editable text input for setting | input renders and persists on change |
+| `Setting.addButton` | `addButton(cb: (component: ButtonComponent) => any): this` | 0.9.7 | `settings-tab.ts` | catalog URL, update-check, and refresh actions | buttons delegate only to the plugin-owned catalog service |
 | `TextComponent` | `class TextComponent extends AbstractTextComponent<HTMLInputElement>` | 0.9.7 | `settings-tab.ts` | text input component | input value editable |
 | `Setting.setHeading` | `setHeading(): this` | 0.9.16 | `settings-tab.ts` | section heading | heading renders as section divider |
 | `Component.onunload` | `onunload(): void` | 0.9.7 | `main.ts` | cleanup on unload | console.log verification |
@@ -44,6 +45,11 @@ Every Obsidian API member used in this project must have an entry before it appe
 | `TextComponent.setPlaceholder` | `setPlaceholder(placeholder: string): this` | 0.9.7 | `settings-tab.ts` | set placeholder text for text input | placeholder visible |
 | `TextComponent.setValue` | `setValue(value: string): this` | 0.9.7 | `settings-tab.ts` | set initial value for text input | value pre-filled |
 | `TextComponent.onChange` | `onChange(callback: (value: string) => any): this` | 0.9.7 | `settings-tab.ts` | react to text input changes | value persists on change |
+| `TextComponent.getValue` | `getValue(): string` | 0.9.7 | `settings-tab.ts` | read the unpersisted catalog URL draft on Apply | typing does not persist; Apply receives the exact draft |
+| `ButtonComponent.setButtonText` | `setButtonText(name: string): this` | 0.9.7 | `settings-tab.ts` | label catalog actions | Apply, Check for updates, and Refresh catalog labels appear |
+| `ButtonComponent.onClick` | `onClick(callback: (evt: MouseEvent) => unknown \| Promise<unknown>): this` | 0.12.16 | `settings-tab.ts` | delegate catalog actions safely | actions render service-owned pending and final status |
+| `BaseComponent.setDisabled` (inherited by `ButtonComponent`) | `setDisabled(disabled: boolean): this` | 1.2.3 | `settings-tab.ts` | disable pending, unavailable, and unsafe catalog actions | actions disable while applying, busy, or not configured |
+| `Setting.setClass` | `setClass(cls: string): this` | 0.9.7 | `settings-tab.ts` | expose catalog status severity as a class | status row class changes with formatter severity |
 | `Setting.setDisabled` | `setDisabled(disabled: boolean): this` | 1.2.3 | `settings-tab.ts` | disable setting row (read-only display) | row appears disabled |
 | `SettingTab.containerEl` | `containerEl: HTMLElement` | — | `settings-tab.ts` | container element for setting tab content | container cleared and populated |
 | `ItemView.contentEl` | `contentEl: HTMLElement` | — | `views/character-sheet-view.ts` | DOM container for character sheet content | content rendered in element |
@@ -54,6 +60,7 @@ Every Obsidian API member used in this project must have an entry before it appe
 
 ## Notes
 
+- Catalog settings manual checks (not executed): open with no URL; type a URL without network activity; Apply and confirm retained status; use Check for updates and Refresh catalog to observe pending/final service status; reopen settings and confirm retained status; clear and Apply to disable actions; confirm the active revision has no editable field.
 - `requestUrl` has no `@since` annotation in the pinned file. It is the current recommended API. The older `request` function is tagged `@since 0.12.11`.
 - `WorkspaceLeaf.setViewState` and `Plugin.addCommand` have no `@since` annotation in the pinned file. Both are widely used in the official sample plugin.
 - `Vault.process` requires Obsidian `1.1.0+`. Minimum app version must be selected in Phase 1 to confirm compatibility.
