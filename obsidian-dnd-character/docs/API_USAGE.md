@@ -12,7 +12,8 @@ Every Obsidian API member used in this project must have an entry before it appe
 | `Plugin.onload` | `onload(): Promise<void> \| void` | 0.9.7 | `main.ts` | plugin initialization lifecycle | console.log verification |
 | `Plugin.loadData` | `loadData(): Promise<any>` | 0.9.7 | `main.ts`, `catalog/persistent-cache-store.ts` | load persisted plugin settings and catalog cache | settings normalized on load; cache envelopes loaded from `catalogCache` key |
 | `Plugin.saveData` | `saveData(data: any): Promise<void>` | 0.9.7 | `main.ts`, `catalog/persistent-cache-store.ts` | persist plugin settings and catalog cache on unload | settings saved on unload; cache flushed on service dispose |
-| `Vault.cachedRead` | `cachedRead(file: TFile): Promise<string>` | 0.9.7 | pending | read display data | pending |
+| `Vault.cachedRead` | `cachedRead(file: TFile): Promise<string>` | 0.9.7 | `character-read.ts` | read character JSON from vault file | mocked in character-read tests |
+| `Vault.read` | `read(file: TFile): Promise<string>` | 0.9.7 | pending | read character JSON from disk (fallback) | pending |
 | `Vault.process` | `process(file: TFile, fn: (data: string) => string, options?: DataWriteOptions): Promise<string>` | 1.1.0 | pending | atomic character update | pending |
 | `Plugin.addCommand` | `addCommand(command: Command): Command` | 0.9.7 | `main.ts` | register command to open character sheet in right sidebar | command appears in command palette |
 | `Plugin.addSettingTab` | `addSettingTab(settingTab: PluginSettingTab): void` | 0.9.7 | `main.ts` | register settings tab | settings tab appears in Obsidian settings |
