@@ -70,3 +70,11 @@ export {
   isCharacter,
   createCharacter,
 } from "./character";
+
+/* Serialization */
+export {
+  serializeCharacter,
+  deserializeCharacter,
+  CharacterSerializationError,
+  type CharacterSerializationErrorReason,
+} from "./character-serializer";
