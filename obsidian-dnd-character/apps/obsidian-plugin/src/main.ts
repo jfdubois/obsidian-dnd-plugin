@@ -11,11 +11,12 @@ import {
 import type { CatalogClient } from './catalog/client';
 import { RequestUrlCatalogClient } from './catalog/request-url-client';
 import { CatalogService } from './catalog/catalog-service';
-import { ensureCharacterFolder } from './character-folder';
-import { setupCharacterVaultEventListeners } from './character-vault-events';
+import { CharacterRepository } from './character-repository';
 
 export default class DndCharacterPlugin extends Plugin {
 	settings: DndCharacterPluginSettings = DEFAULT_SETTINGS;
+	/** Character persistence repository, initialized during onload. */
+	characterRepository: CharacterRepository | null = null;
 	/** Catalog runtime service, lazily initialized on first access. */
 	catalogService: CatalogService | null = null;
 	private catalogInitialization: Promise<CatalogService> | null = null;
@@ -29,8 +30,14 @@ export default class DndCharacterPlugin extends Plugin {
 
 		await this.loadSettings();
 
+		// Initialize character repository (P8-T011)
+		this.characterRepository = new CharacterRepository(
+			this.app,
+			this.settings.charactersVaultPath,
+		);
+
 		// Ensure the character folder exists (P8-T004)
-		await ensureCharacterFolder(this.app, this.settings.charactersVaultPath);
+		await this.characterRepository.ensureFolder();
 
 		// Register character sheet view (P6-T007)
 		this.registerView(DND_CHARACTER_SHEET_VIEW_TYPE, (leaf) =>
@@ -54,30 +61,26 @@ export default class DndCharacterPlugin extends Plugin {
 		});
 
 		// Register character vault event listeners (P8-T009)
-		const characterVaultEvents = setupCharacterVaultEventListeners(
-			this.app,
-			this.settings.charactersVaultPath,
-			{
-				onModified: (event) => {
-					console.log(
-						`[D&D Character] Character file modified: ${event.filePath}`,
-					);
-				},
-				onCreated: (event) => {
-					console.log(
-						`[D&D Character] Character file created: ${event.filePath}`,
-					);
-				},
-				onDeleted: (event) => {
-					console.log(
-						`[D&D Character] Character file deleted: ${event.filePath}`,
-					);
-				},
+		const eventRefs = this.characterRepository.setupEventListeners({
+			onModified: (event) => {
+				console.log(
+					`[D&D Character] Character file modified: ${event.filePath}`,
+				);
 			},
-		);
-		this.registerEvent(characterVaultEvents.createRef);
-		this.registerEvent(characterVaultEvents.modifyRef);
-		this.registerEvent(characterVaultEvents.deleteRef);
+			onCreated: (event) => {
+				console.log(
+					`[D&D Character] Character file created: ${event.filePath}`,
+				);
+			},
+			onDeleted: (event) => {
+				console.log(
+					`[D&D Character] Character file deleted: ${event.filePath}`,
+				);
+			},
+		});
+		this.registerEvent(eventRefs.createRef);
+		this.registerEvent(eventRefs.modifyRef);
+		this.registerEvent(eventRefs.deleteRef);
 
 		// Register rename event for diagnostics (P6-T009)
 		this.registerEvent(
