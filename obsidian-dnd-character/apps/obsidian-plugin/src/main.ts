@@ -11,6 +11,7 @@ import {
 import type { CatalogClient } from './catalog/client';
 import { RequestUrlCatalogClient } from './catalog/request-url-client';
 import { CatalogService } from './catalog/catalog-service';
+import { ensureCharacterFolder } from './character-folder';
 
 export default class DndCharacterPlugin extends Plugin {
 	settings: DndCharacterPluginSettings = DEFAULT_SETTINGS;
@@ -26,6 +27,9 @@ export default class DndCharacterPlugin extends Plugin {
 		console.log('Loading D&D Character Manager plugin');
 
 		await this.loadSettings();
+
+		// Ensure the character folder exists (P8-T004)
+		await ensureCharacterFolder(this.app, this.settings.charactersVaultPath);
 
 		// Register character sheet view (P6-T007)
 		this.registerView(DND_CHARACTER_SHEET_VIEW_TYPE, (leaf) =>

@@ -35,7 +35,8 @@ Every Obsidian API member used in this project must have an entry before it appe
 | `ItemView` | `abstract class ItemView extends View { contentEl: HTMLElement; constructor(leaf: WorkspaceLeaf); }` | 0.9.7 | `views/character-sheet-view.ts` | character sheet view base | view renders placeholder |
 | `ViewCreator` | `type ViewCreator = (leaf: WorkspaceLeaf) => View` | — | `main.ts` | view factory for registerView | view created on leaf |
 | `Vault.create` | `create(path: string, data: string, options?: DataWriteOptions): Promise<TFile>` | 0.9.7 | pending | create character file in vault | pending |
-| `Vault.createFolder` | `createFolder(path: string): Promise<TFolder>` | 0.9.7 | pending | create character folder | pending |
+| `Vault.createFolder` | `createFolder(path: string): Promise<TFolder>` | 1.4.0 | `character-folder.ts` | create character folder if missing | folder created during plugin onload |
+| `Vault.getFolderByPath` | `getFolderByPath(path: string): TFolder \| null` | 1.5.7 | `character-folder.ts` | check if character folder already exists | returns null if folder missing |
 | `Plugin` | `abstract class Plugin extends Component { app: App; manifest: PluginManifest; constructor(app: App, manifest: PluginManifest); }` | 0.9.7 | `main.ts` | plugin base class for DndCharacterPlugin | plugin extends Plugin |
 | `TAbstractFile` | `abstract class TAbstractFile { vault: Vault; path: string; name: string; }` | 0.9.7 | `main.ts` | type for vault event callback file parameter | typed in event handlers |
 | `App` | `class App { workspace: Workspace; vault: Vault; metadataCache: MetadataCache; }` | 0.9.7 | `settings-tab.ts` | app instance type for setting tab constructor | app passed to setting tab |
@@ -64,3 +65,4 @@ Every Obsidian API member used in this project must have an entry before it appe
 - `requestUrl` has no `@since` annotation in the pinned file. It is the current recommended API. The older `request` function is tagged `@since 0.12.11`.
 - `WorkspaceLeaf.setViewState` and `Plugin.addCommand` have no `@since` annotation in the pinned file. Both are widely used in the official sample plugin.
 - `Vault.process` requires Obsidian `1.1.0+`. Minimum app version must be selected in Phase 1 to confirm compatibility.
+- `Vault.createFolder` requires Obsidian `1.4.0+` and `Vault.getFolderByPath` requires `1.5.7+`. Current minAppVersion `1.7.2` covers both.
