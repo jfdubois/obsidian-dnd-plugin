@@ -2,7 +2,7 @@
 
 ## Current work
 
-Phase 9 — Deterministic rules engine
+Phase 8 — Corrective: In-memory character index and external-file synchronization
 
 ## PB8-004 automated gate
 
@@ -36,10 +36,10 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-Phase-8 (typecheck, lint, 3622 tests passing, 2 skipped; 17 pre-existing console warnings).
+- `npm --prefix obsidian-dnd-character run check`: passing post-Phase-8 (typecheck, lint, 3650 tests passing, 2 skipped; 15 pre-existing console warnings).
 - `npm --prefix obsidian-dnd-character run build`: passing post-Phase-8.
 - `npm --workspace @obsidian-dnd/obsidian-plugin run bundle`: passing post-PB8-004-GATE automated validation (CJS, obsidian external, no prohibited deps).
-- Tests: 3622 passing, 2 skipped.
+- Tests: 3650 passing, 2 skipped.
 
 ## Catalog baseline
 
@@ -76,12 +76,17 @@ None recorded.
 - Re-entry: mobile smoke is mandatory when remote installation/download becomes available, a test build can install without manual local file access, the first mobile-facing release candidate or Phase 10 desktop/mobile manual-scenario task is reached, a mobile-specific production dependency or Obsidian API is introduced, or the operator requests it; it must complete no later than the first public or mobile release gate.
 - Gate status: Phase 4 gate complete. Phase 5 gate complete. Phase 6 gate complete. Phase 7 gate complete. PB8-003-R2 gate passed (G1–G14 and E1 scenarios A–G). PB8-004 automated and desktop gates passed; the operator-approved mobile deferral is a tracked non-blocking risk. Phase 8 gate complete. Phase 9 is next.
 - Phase 8 starting commit: b22d983
-- Completed Phase 8 task commits: P8-T001 — 40176af; P8-T002 — 5d2c9b4; P8-T003 — ab4a165; P8-T004 — 9c25ea9; P8-T005 — 5557c9b; P8-T006 — 0e96cb7; P8-T007 — 7a8c20f; P8-T008 — 6d89e51; P8-T009 — 5b07780; P8-T010 — fc005a1; P8-T011 — 63b1f33; P8-T012 — a4d352a
+- Completed Phase 8 task commits: P8-T001 — 40176af; P8-T002 — 5d2c9b4; P8-T003 — ab4a165; P8-T004 — 9c25ea9; P8-T005 — 5557c9b; P8-T006 — 0e96cb7; P8-T007 — 7a8c20f; P8-T008 — 6d89e51; P8-T009 — 5b07780; P8-T010 — fc005a1; P8-T011 — 63b1f33; P8-T012 — a4d352a; P8-CORRECTIVE-001 — see Git history for P8-CORRECTIVE-001
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-04 — P8-CORRECTIVE-001 — In-memory character index and external-file synchronization — complete
+Summary: Added in-memory character index (CharacterIndex class) with O(1) lookup by character ID, vault-relative path resolution, and diagnostic tracking for stale entries. Integrated index into CharacterRepository via initializeIndex() and setupEventListeners(refreshBoundary). Vault event service extended with rename event handling (into folder, within folder, out of folder). Plugin lifecycle wires refresh boundary through repository so external file changes trigger PER-006 view refresh. 7 resulting-state behavioral tests prove index mutations after create/modify/delete/rename events. Index size and diagnostics accessible via repository.index property.
+Validation: 3650 tests passing (28 new, 2 skipped), typecheck and lint pass, build passes, bundle passes.
+Compatibility notes: Uses Vault.on('rename') (0.9.7+), Workspace.getLeavesOfType (1.7.2+). All APIs mobile-compatible. No Node/Electron dependencies.
 
 2026-08-04 — Phase 8 gate — Character contract, migration, and repository — complete
 Summary: Phase 8 completed all 12 tasks. Character persistence layer is fully implemented: runtime schema (P8-T001), serializer (P8-T002), migration framework (P8-T003), folder creation (P8-T004), CRUD operations (P8-T005 to P8-T008), vault event listeners (P8-T009), repository facade (P8-T010), plugin lifecycle integration (P8-T011), and persistence tests (P8-T012). All gate criteria met: characters survive restart, invalid data cannot silently enter domain state, atomic update test passes.

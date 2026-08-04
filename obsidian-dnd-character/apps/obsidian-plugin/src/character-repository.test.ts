@@ -58,6 +58,7 @@ vi.mock('./character-delete', () => ({
 
 vi.mock('./character-vault-events', () => ({
 	setupCharacterVaultEventListeners: vi.fn(),
+	isCharacterFile: vi.fn(),
 }));
 
 vi.mock('@obsidian-dnd/domain', () => ({
@@ -74,6 +75,133 @@ import * as characterUpdate from './character-update';
 import * as characterDelete from './character-delete';
 import * as characterVaultEvents from './character-vault-events';
 import * as domain from '@obsidian-dnd/domain';
+
+/* ── Resulting-state tests (Gap 5) ─────────────────────────────── */
+
+/**
+ * Helper: get the callbacks object passed to setupCharacterVaultEventListeners
+ * during the most recent call.
+ */
+function getCallbacks() {
+	const call = vi.mocked(characterVaultEvents.setupCharacterVaultEventListeners).mock.calls[0];
+	if (!call) throw new Error('setupEventListeners was not called');
+	return call[2];
+}
+
+describe('CharacterRepository index resulting state', () => {
+	let mockApp: App;
+	let repo: CharacterRepository;
+	const vaultPath = 'dnd-characters';
+	const refreshBoundary = { refreshCharacter: vi.fn() };
+	const char1 = { id: 'char-1' } as unknown as Character;
+
+	const mockRefs = { createRef: {} as EventRef, modifyRef: {} as EventRef, deleteRef: {} as EventRef, renameRef: {} as EventRef };
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.mocked(characterVaultEvents.setupCharacterVaultEventListeners).mockReturnValue(mockRefs);
+		vi.mocked(characterVaultEvents.isCharacterFile).mockReturnValue(true);
+		mockApp = {
+			vault: {
+				getFileByPath: vi.fn(),
+				getFolderByPath: vi.fn(),
+				create: vi.fn(),
+				createFolder: vi.fn(),
+				cachedRead: vi.fn(),
+				process: vi.fn(),
+				delete: vi.fn(),
+				on: vi.fn().mockReturnValue({} as EventRef),
+			},
+		} as unknown as App;
+		repo = new CharacterRepository(mockApp, vaultPath);
+		repo.setupEventListeners(refreshBoundary);
+	});
+
+	it('create event adds character to index', async () => {
+		vi.mocked(characterRead.readCharacterFromVault).mockResolvedValue({
+			status: 'read' as const, character: char1, filePath: 'dnd-characters/char-1.json',
+		});
+		const callbacks = getCallbacks();
+		callbacks.onCreated!({ type: 'created', filePath: 'dnd-characters/char-1.json' });
+		await vi.waitFor(() => {});
+		expect(repo.index.size).toBe(1);
+		expect(repo.index.get('char-1' as CharacterId)).not.toBeNull();
+	});
+
+	it('modify event updates character in index', async () => {
+		repo.index.handleCreate(char1, 'dnd-characters/char-1.json');
+		expect(repo.index.size).toBe(1);
+		// Modified character must have the same ID to update in-place
+		const modifiedChar = { id: 'char-1', name: 'Updated' } as unknown as Character;
+		vi.mocked(characterRead.readCharacterFromVault).mockResolvedValue({
+			status: 'read' as const, character: modifiedChar, filePath: 'dnd-characters/char-1.json',
+		});
+		const callbacks = getCallbacks();
+		callbacks.onModified!({ type: 'modified', filePath: 'dnd-characters/char-1.json', character: null });
+		await vi.waitFor(() => {});
+		expect(repo.index.size).toBe(1);
+		const entry = repo.index.get('char-1' as CharacterId);
+		expect(entry).not.toBeNull();
+	});
+
+	it('delete event removes character from index', () => {
+		repo.index.handleCreate(char1, 'dnd-characters/char-1.json');
+		expect(repo.index.size).toBe(1);
+		const callbacks = getCallbacks();
+		callbacks.onDeleted!({ type: 'deleted', filePath: 'dnd-characters/char-1.json' });
+		expect(repo.index.size).toBe(0);
+		expect(repo.index.get('char-1' as CharacterId)).toBeNull();
+	});
+
+	it('rename within folder updates path in index', () => {
+		vi.mocked(characterVaultEvents.isCharacterFile).mockReturnValue(true);
+		repo.index.handleCreate(char1, 'dnd-characters/char-1.json');
+		const callbacks = getCallbacks();
+		callbacks.onRenamed!({ type: 'renamed', oldPath: 'dnd-characters/char-1.json', filePath: 'dnd-characters/renamed.json' });
+		expect(repo.index.size).toBe(1);
+		expect(repo.index.resolvePath('char-1' as CharacterId)).toBe('dnd-characters/renamed.json');
+	});
+
+	it('rename out of folder removes character from index', () => {
+		vi.mocked(characterVaultEvents.isCharacterFile)
+			.mockImplementation((path) => path.startsWith('dnd-characters/'));
+		repo.index.handleCreate(char1, 'dnd-characters/char-1.json');
+		const callbacks = getCallbacks();
+		callbacks.onRenamed!({ type: 'renamed', oldPath: 'dnd-characters/char-1.json', filePath: 'other/char-1.json' });
+		expect(repo.index.size).toBe(0);
+		expect(repo.index.get('char-1' as CharacterId)).toBeNull();
+	});
+
+	it('rename into folder adds character to index', async () => {
+		vi.mocked(characterVaultEvents.isCharacterFile)
+			.mockImplementation((path) => path.startsWith('dnd-characters/'));
+		vi.mocked(characterRead.readCharacterFromVault).mockResolvedValue({
+			status: 'read' as const, character: char1, filePath: 'dnd-characters/char-1.json',
+		});
+		expect(repo.index.size).toBe(0);
+		const callbacks = getCallbacks();
+		callbacks.onRenamed!({ type: 'renamed', oldPath: 'other/char-1.json', filePath: 'dnd-characters/char-1.json' });
+		await vi.waitFor(() => {});
+		expect(repo.index.size).toBe(1);
+		expect(repo.index.get('char-1' as CharacterId)).not.toBeNull();
+	});
+
+	it('invalid modify preserves existing index state', async () => {
+		repo.index.handleCreate(char1, 'dnd-characters/char-1.json');
+		expect(repo.index.size).toBe(1);
+		// Simulate invalid file content on modify
+		vi.mocked(characterRead.readCharacterFromVault).mockResolvedValue({
+			status: 'error' as const, reason: 'invalid-data' as const, characterId: 'char-1', cause: new Error('bad data'),
+		});
+		const callbacks = getCallbacks();
+		callbacks.onModified!({ type: 'modified', filePath: 'dnd-characters/char-1.json', character: null });
+		await vi.waitFor(() => {});
+		// Existing entry preserved; diagnostic recorded
+		expect(repo.index.size).toBe(1);
+		expect(repo.index.get('char-1' as CharacterId)).not.toBeNull();
+		expect(repo.index.getDiagnostics()).toHaveLength(1);
+	});
+});
 
 /* ── Tests ─────────────────────────────────────────────────────── */
 
@@ -170,12 +298,21 @@ describe('CharacterRepository', () => {
 	});
 
 	it('setupEventListeners delegates and stores refs', () => {
-		const callbacks = { onModified: vi.fn(), onCreated: vi.fn(), onDeleted: vi.fn() };
-		const mockRefs = { createRef: {} as EventRef, modifyRef: {} as EventRef, deleteRef: {} as EventRef };
+		const refreshBoundary = { refreshCharacter: vi.fn() };
+		const mockRefs = { createRef: {} as EventRef, modifyRef: {} as EventRef, deleteRef: {} as EventRef, renameRef: {} as EventRef };
 		vi.mocked(characterVaultEvents.setupCharacterVaultEventListeners).mockReturnValue(mockRefs);
-		const res = repo.setupEventListeners(callbacks);
+		const res = repo.setupEventListeners(refreshBoundary);
 		expect(res).toBe(mockRefs);
-		expect(characterVaultEvents.setupCharacterVaultEventListeners).toHaveBeenCalledWith(mockApp, vaultPath, callbacks);
+		expect(characterVaultEvents.setupCharacterVaultEventListeners).toHaveBeenCalledWith(
+			mockApp,
+			vaultPath,
+			expect.objectContaining({
+				onModified: expect.any(Function),
+				onCreated: expect.any(Function),
+				onDeleted: expect.any(Function),
+				onRenamed: expect.any(Function),
+			}),
+		);
 		expect(repo.eventRefs).toBe(mockRefs);
 	});
 

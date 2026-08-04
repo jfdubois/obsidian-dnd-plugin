@@ -44,6 +44,7 @@ vi.mock('./character-update', () => ({ updateCharacterInVault: vi.fn() }));
 vi.mock('./character-delete', () => ({ deleteCharacterFromVault: vi.fn() }));
 vi.mock('./character-vault-events', () => ({
 	setupCharacterVaultEventListeners: vi.fn(),
+	isCharacterFile: vi.fn(),
 }));
 vi.mock('@obsidian-dnd/domain', () => ({ characterIdStr: vi.fn((id: string) => id) }));
 
@@ -230,17 +231,24 @@ describe('Character persistence lifecycle', () => {
 
 	describe('Vault event listeners', () => {
 		it('setupEventListeners registers callbacks and stores refs', () => {
-			const callbacks = { onModified: vi.fn(), onCreated: vi.fn(), onDeleted: vi.fn() };
+			const refreshBoundary = { refreshCharacter: vi.fn() };
 			const mockRefs = {
-				createRef: {} as EventRef, modifyRef: {} as EventRef, deleteRef: {} as EventRef,
+				createRef: {} as EventRef, modifyRef: {} as EventRef, deleteRef: {} as EventRef, renameRef: {} as EventRef,
 			};
 			vi.mocked(characterVaultEvents.setupCharacterVaultEventListeners).mockReturnValue(mockRefs);
 
-			const result = repo.setupEventListeners(callbacks);
+			const result = repo.setupEventListeners(refreshBoundary);
 			expect(result).toBe(mockRefs);
 			expect(repo.eventRefs).toBe(mockRefs);
 			expect(characterVaultEvents.setupCharacterVaultEventListeners).toHaveBeenCalledWith(
-				mockApp, vaultPath, callbacks,
+				mockApp,
+				vaultPath,
+				expect.objectContaining({
+					onModified: expect.any(Function),
+					onCreated: expect.any(Function),
+					onDeleted: expect.any(Function),
+					onRenamed: expect.any(Function),
+				}),
 			);
 		});
 	});

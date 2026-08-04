@@ -35,6 +35,13 @@ export interface CharacterFileDeletedEvent {
   filePath: string;
 }
 
+/** A character file was renamed (moved or renamed). */
+export interface CharacterFileRenamedEvent {
+  type: 'renamed';
+  oldPath: string;
+  filePath: string;
+}
+
 /**
  * Discriminated union of all character vault events.
  * Each variant carries the event type and the affected file path.
@@ -42,7 +49,8 @@ export interface CharacterFileDeletedEvent {
 export type CharacterVaultEvent =
   | CharacterFileModifiedEvent
   | CharacterFileCreatedEvent
-  | CharacterFileDeletedEvent;
+  | CharacterFileDeletedEvent
+  | CharacterFileRenamedEvent;
 
 /* ── Callback interface ────────────────────────────────────────── */
 
@@ -60,6 +68,8 @@ export interface CharacterVaultEventCallbacks {
   onCreated?: (event: CharacterFileCreatedEvent) => void;
   /** Called when a character file is deleted. */
   onDeleted?: (event: CharacterFileDeletedEvent) => void;
+  /** Called when a character file is renamed. */
+  onRenamed?: (event: CharacterFileRenamedEvent) => void;
 }
 
 /* ── Registration result ───────────────────────────────────────── */
@@ -77,6 +87,8 @@ export interface CharacterVaultEventRegistration {
   modifyRef: EventRef;
   /** EventRef for the 'delete' listener. */
   deleteRef: EventRef;
+  /** EventRef for the 'rename' listener. */
+  renameRef: EventRef;
 }
 
 /* ── Character file detection ──────────────────────────────────── */
@@ -182,13 +194,39 @@ function handleCharacterFileDeleted(
   });
 }
 
+/**
+ * Handle a character file rename event.
+ *
+ * Invokes the onRenamed callback when a character file is renamed.
+ * The callback receives both the old path and the new path so the
+ * caller can decide how to handle moves into, within, or out of
+ * the configured character folder.
+ *
+ * @param file - The TAbstractFile with the new path.
+ * @param oldPath - The previous vault-relative file path.
+ * @param callbacks - The callback interface for character events.
+ */
+function handleCharacterFileRenamed(
+  file: TAbstractFile,
+  oldPath: string,
+  callbacks: CharacterVaultEventCallbacks,
+): void {
+  if (callbacks.onRenamed === undefined) return;
+
+  callbacks.onRenamed({
+    type: 'renamed',
+    oldPath,
+    filePath: file.path,
+  });
+}
+
 /* ── Public setup function ─────────────────────────────────────── */
 
 /**
  * Set up vault event listeners for character files.
  *
- * Registers three Vault event listeners (create, modify, delete) that
- * filter events to only character JSON files in the configured
+ * Registers four Vault event listeners (create, modify, delete, rename)
+ * that filter events to only character JSON files in the configured
  * characters folder. When a character file event occurs, the
  * corresponding callback is invoked with a typed event object.
  *
@@ -223,5 +261,12 @@ export function setupCharacterVaultEventListeners(
     handleCharacterFileDeleted(file, callbacks);
   });
 
-  return { createRef, modifyRef, deleteRef };
+  const renameRef = vault.on('rename', (file: TAbstractFile, oldPath: string) => {
+    const oldIsCharacter = isCharacterFile(oldPath, charactersVaultPath);
+    const newIsCharacter = isCharacterFile(file.path, charactersVaultPath);
+    if (!oldIsCharacter && !newIsCharacter) return;
+    handleCharacterFileRenamed(file, oldPath, callbacks);
+  });
+
+  return { createRef, modifyRef, deleteRef, renameRef };
 }

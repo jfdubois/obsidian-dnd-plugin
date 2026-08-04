@@ -27,4 +27,14 @@ export class CharacterSheetView extends ItemView {
 	protected async onClose(): Promise<void> {
 		this.contentEl.empty();
 	}
+
+	/**
+	 * Refresh the view contents (PER-006 refresh boundary).
+	 * Currently a no-op placeholder until character sheet rendering
+	 * is implemented.
+	 */
+	public refresh(): void {
+		// No-op placeholder for PER-006 external change notification.
+		// Will be implemented when character sheet rendering is added.
+	}
 }

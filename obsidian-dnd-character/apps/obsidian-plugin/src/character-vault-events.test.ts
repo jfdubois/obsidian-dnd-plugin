@@ -313,18 +313,20 @@ describe('setupCharacterVaultEventListeners', () => {
     expect(mockVault.cachedRead).not.toHaveBeenCalled();
   });
 
-  it('registers exactly three vault event listeners', () => {
+  it('registers exactly four vault event listeners', () => {
     const callbacks = {
       onCreated: vi.fn(),
       onModified: vi.fn(),
       onDeleted: vi.fn(),
+      onRenamed: vi.fn(),
     };
 
     setupCharacterVaultEventListeners(mockApp, vaultPath, callbacks);
 
-    expect(mockVault.on).toHaveBeenCalledTimes(3);
+    expect(mockVault.on).toHaveBeenCalledTimes(4);
     expect(mockVault.on).toHaveBeenNthCalledWith(1, 'create', expect.any(Function));
     expect(mockVault.on).toHaveBeenNthCalledWith(2, 'modify', expect.any(Function));
     expect(mockVault.on).toHaveBeenNthCalledWith(3, 'delete', expect.any(Function));
+    expect(mockVault.on).toHaveBeenNthCalledWith(4, 'rename', expect.any(Function));
   });
 });

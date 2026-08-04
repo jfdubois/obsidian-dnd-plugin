@@ -1,5 +1,5 @@
 import { Plugin } from 'obsidian';
-import type { TAbstractFile } from 'obsidian';
+import type { CharacterId } from '@obsidian-dnd/domain';
 
 import type { DndCharacterPluginSettings } from './settings';
 import { DEFAULT_SETTINGS, normalizeSettings } from './settings';
@@ -12,6 +12,7 @@ import type { CatalogClient } from './catalog/client';
 import { RequestUrlCatalogClient } from './catalog/request-url-client';
 import { CatalogService } from './catalog/catalog-service';
 import { CharacterRepository } from './character-repository';
+import type { CharacterViewRefreshBoundary } from './character-index';
 
 export default class DndCharacterPlugin extends Plugin {
 	settings: DndCharacterPluginSettings = DEFAULT_SETTINGS;
@@ -24,6 +25,35 @@ export default class DndCharacterPlugin extends Plugin {
 	private lifecycleOperation: Promise<void> = Promise.resolve();
 	private readonly disposedCatalogServices = new WeakSet<CatalogService>();
 	private unloading = false;
+
+	/**
+	 * View refresh boundary that the character index notifies on
+	 * external file changes (PER-006).
+	 */
+	private readonly refreshBoundary: CharacterViewRefreshBoundary = {
+		refreshCharacter: (characterId: CharacterId) => {
+			console.log(
+				`[D&D Character] Refreshing character view for: ${characterId}`,
+			);
+			this.refreshCharacterViews(characterId);
+		},
+	};
+
+	/**
+	 * Refresh active character sheet views when the index changes
+	 * due to external file modifications (PER-006).
+	 */
+	private refreshCharacterViews(_characterId: CharacterId): void {
+		const leaves = this.app.workspace.getLeavesOfType(
+			DND_CHARACTER_SHEET_VIEW_TYPE,
+		);
+		for (const leaf of leaves) {
+			const view = leaf.view;
+			if (view instanceof CharacterSheetView) {
+				view.refresh();
+			}
+		}
+	}
 
 	async onload() {
 		console.log('Loading D&D Character Manager plugin');
@@ -38,6 +68,12 @@ export default class DndCharacterPlugin extends Plugin {
 
 		// Ensure the character folder exists (P8-T004)
 		await this.characterRepository.ensureFolder();
+
+		// Initialize the in-memory character index (P8-T012)
+		await this.characterRepository.initializeIndex();
+		console.log(
+			`[D&D Character] Index initialized with ${this.characterRepository.index.size} characters`,
+		);
 
 		// Register character sheet view (P6-T007)
 		this.registerView(DND_CHARACTER_SHEET_VIEW_TYPE, (leaf) =>
@@ -60,36 +96,14 @@ export default class DndCharacterPlugin extends Plugin {
 			},
 		});
 
-		// Register character vault event listeners (P8-T009)
-		const eventRefs = this.characterRepository.setupEventListeners({
-			onModified: (event) => {
-				console.log(
-					`[D&D Character] Character file modified: ${event.filePath}`,
-				);
-			},
-			onCreated: (event) => {
-				console.log(
-					`[D&D Character] Character file created: ${event.filePath}`,
-				);
-			},
-			onDeleted: (event) => {
-				console.log(
-					`[D&D Character] Character file deleted: ${event.filePath}`,
-				);
-			},
-		});
+		// Register character vault event listeners with index synchronization (P8-T009)
+		const eventRefs = this.characterRepository.setupEventListeners(
+			this.refreshBoundary,
+		);
 		this.registerEvent(eventRefs.createRef);
 		this.registerEvent(eventRefs.modifyRef);
 		this.registerEvent(eventRefs.deleteRef);
-
-		// Register rename event for diagnostics (P6-T009)
-		this.registerEvent(
-			this.app.vault.on('rename', (file: TAbstractFile, oldPath: string) => {
-				console.log(
-					`[D&D Character] Vault file renamed: ${oldPath} -> ${file.path}`,
-				);
-			}),
-		);
+		this.registerEvent(eventRefs.renameRef);
 
 		// Register settings tab (P6-T006)
 		this.addSettingTab(new DndCharacterPluginSettingTab(this.app, this));

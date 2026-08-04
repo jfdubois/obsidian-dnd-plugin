@@ -42,6 +42,7 @@ vi.mock('./character-update', () => ({ updateCharacterInVault: vi.fn() }));
 vi.mock('./character-delete', () => ({ deleteCharacterFromVault: vi.fn() }));
 vi.mock('./character-vault-events', () => ({
 	setupCharacterVaultEventListeners: vi.fn(),
+	isCharacterFile: vi.fn(),
 }));
 vi.mock('@obsidian-dnd/domain', () => ({ characterIdStr: vi.fn((id: string) => id) }));
 
