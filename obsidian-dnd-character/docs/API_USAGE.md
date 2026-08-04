@@ -36,6 +36,7 @@ Every Obsidian API member used in this project must have an entry before it appe
 | `ItemView` | `abstract class ItemView extends View { contentEl: HTMLElement; constructor(leaf: WorkspaceLeaf); }` | 0.9.7 | `views/character-sheet-view.ts` | character sheet view base | view renders placeholder |
 | `ViewCreator` | `type ViewCreator = (leaf: WorkspaceLeaf) => View` | — | `main.ts` | view factory for registerView | view created on leaf |
 | `Vault.create` | `create(path: string, data: string, options?: DataWriteOptions): Promise<TFile>` | 0.9.7 | `character-create.ts` | create character file in vault | mocked in character-create tests |
+| `Vault.delete` | `delete(file: TAbstractFile, force?: boolean): Promise<void>` | 0.9.7 | `character-delete.ts` | delete character file from vault | mocked in character-delete tests |
 | `Vault.createFolder` | `createFolder(path: string): Promise<TFolder>` | 1.4.0 | `character-folder.ts` | create character folder if missing | folder created during plugin onload |
 | `Vault.getFolderByPath` | `getFolderByPath(path: string): TFolder \| null` | 1.5.7 | `character-folder.ts` | check if character folder already exists | returns null if folder missing |
 | `Vault.getFileByPath` | `getFileByPath(path: string): TFile \| null` | 0.9.7 | `character-create.ts` | check if character file already exists (duplicate prevention) | returns null if file missing |
