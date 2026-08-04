@@ -34,9 +34,10 @@ Every Obsidian API member used in this project must have an entry before it appe
 | `Vault.on` (rename) | `on(name: 'rename', callback: (file: TAbstractFile, oldPath: string) => any, ctx?: any): EventRef` | 0.9.7 | `main.ts` | listen for vault file rename | console.log on file rename |
 | `ItemView` | `abstract class ItemView extends View { contentEl: HTMLElement; constructor(leaf: WorkspaceLeaf); }` | 0.9.7 | `views/character-sheet-view.ts` | character sheet view base | view renders placeholder |
 | `ViewCreator` | `type ViewCreator = (leaf: WorkspaceLeaf) => View` | — | `main.ts` | view factory for registerView | view created on leaf |
-| `Vault.create` | `create(path: string, data: string, options?: DataWriteOptions): Promise<TFile>` | 0.9.7 | pending | create character file in vault | pending |
+| `Vault.create` | `create(path: string, data: string, options?: DataWriteOptions): Promise<TFile>` | 0.9.7 | `character-create.ts` | create character file in vault | mocked in character-create tests |
 | `Vault.createFolder` | `createFolder(path: string): Promise<TFolder>` | 1.4.0 | `character-folder.ts` | create character folder if missing | folder created during plugin onload |
 | `Vault.getFolderByPath` | `getFolderByPath(path: string): TFolder \| null` | 1.5.7 | `character-folder.ts` | check if character folder already exists | returns null if folder missing |
+| `Vault.getFileByPath` | `getFileByPath(path: string): TFile \| null` | 0.9.7 | `character-create.ts` | check if character file already exists (duplicate prevention) | returns null if file missing |
 | `Plugin` | `abstract class Plugin extends Component { app: App; manifest: PluginManifest; constructor(app: App, manifest: PluginManifest); }` | 0.9.7 | `main.ts` | plugin base class for DndCharacterPlugin | plugin extends Plugin |
 | `TAbstractFile` | `abstract class TAbstractFile { vault: Vault; path: string; name: string; }` | 0.9.7 | `main.ts` | type for vault event callback file parameter | typed in event handlers |
 | `App` | `class App { workspace: Workspace; vault: Vault; metadataCache: MetadataCache; }` | 0.9.7 | `settings-tab.ts` | app instance type for setting tab constructor | app passed to setting tab |

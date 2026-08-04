@@ -179,6 +179,8 @@ describe("manifest minAppVersion covers all used APIs with @since", () => {
     { name: "ItemView.onClose", since: "0.9.7" },
     { name: "Vault.createFolder", since: "1.4.0" },
     { name: "Vault.getFolderByPath", since: "1.5.7" },
+    { name: "Vault.create", since: "0.9.7" },
+    { name: "Vault.getFileByPath", since: "0.9.7" },
   ];
 
   it.each(usedApisWithSince)(
