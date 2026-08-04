@@ -1,4 +1,5 @@
 import { createCatalogRevision } from "@obsidian-dnd/domain";
+import * as path from "node:path";
 import { publishCatalogRelease } from "./catalog-publisher.js";
 import { createSmokeCatalogInput, SMOKE_SOURCE_REVISION } from "./smoke-catalog.js";
 
@@ -15,7 +16,8 @@ if (outputRoot === undefined) {
 } else {
   try {
     createCatalogRevision(revision);
-    const input = createSmokeCatalogInput(outputRoot, revision);
+    const resolvedOutputRoot = path.resolve(process.env.INIT_CWD ?? process.cwd(), outputRoot);
+    const input = createSmokeCatalogInput(resolvedOutputRoot, revision);
     const result = publishCatalogRelease(input);
     if (!result.success) throw new Error(result.errors.join("\n"));
     console.log(`Catalog revision: ${revision}`);
