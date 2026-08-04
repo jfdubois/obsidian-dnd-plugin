@@ -12,6 +12,7 @@ import type { CatalogClient } from './catalog/client';
 import { RequestUrlCatalogClient } from './catalog/request-url-client';
 import { CatalogService } from './catalog/catalog-service';
 import { ensureCharacterFolder } from './character-folder';
+import { setupCharacterVaultEventListeners } from './character-vault-events';
 
 export default class DndCharacterPlugin extends Plugin {
 	settings: DndCharacterPluginSettings = DEFAULT_SETTINGS;
@@ -52,22 +53,33 @@ export default class DndCharacterPlugin extends Plugin {
 			},
 		});
 
-		// Register cleanup-safe vault events (P6-T009)
-		this.registerEvent(
-			this.app.vault.on('create', (file: TAbstractFile) => {
-				console.log(`[D&D Character] Vault file created: ${file.path}`);
-			}),
+		// Register character vault event listeners (P8-T009)
+		const characterVaultEvents = setupCharacterVaultEventListeners(
+			this.app,
+			this.settings.charactersVaultPath,
+			{
+				onModified: (event) => {
+					console.log(
+						`[D&D Character] Character file modified: ${event.filePath}`,
+					);
+				},
+				onCreated: (event) => {
+					console.log(
+						`[D&D Character] Character file created: ${event.filePath}`,
+					);
+				},
+				onDeleted: (event) => {
+					console.log(
+						`[D&D Character] Character file deleted: ${event.filePath}`,
+					);
+				},
+			},
 		);
-		this.registerEvent(
-			this.app.vault.on('modify', (file: TAbstractFile) => {
-				console.log(`[D&D Character] Vault file modified: ${file.path}`);
-			}),
-		);
-		this.registerEvent(
-			this.app.vault.on('delete', (file: TAbstractFile) => {
-				console.log(`[D&D Character] Vault file deleted: ${file.path}`);
-			}),
-		);
+		this.registerEvent(characterVaultEvents.createRef);
+		this.registerEvent(characterVaultEvents.modifyRef);
+		this.registerEvent(characterVaultEvents.deleteRef);
+
+		// Register rename event for diagnostics (P6-T009)
 		this.registerEvent(
 			this.app.vault.on('rename', (file: TAbstractFile, oldPath: string) => {
 				console.log(
