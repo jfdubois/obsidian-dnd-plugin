@@ -398,24 +398,24 @@ Connect the plugin to compatible catalog revisions and support offline cached us
 
 Persist authoritative character state safely in the vault.
 
-- [ ] **P8-T001 — Implement character runtime schema**
-- [ ] **P8-T002 — Implement character serializer**
+- [x] **P8-T001 — Implement character runtime schema**
+- [x] **P8-T002 — Implement character serializer**
 - [x] **P8-T003 — Implement schema migration framework**
 - [x] **P8-T004 — Implement configurable character folder creation**
 - [x] **P8-T005 — Implement character create**
 - [x] **P8-T006 — Implement character read/list**
-- [ ] **P8-T007 — Implement atomic character mutation using `Vault.process`**
-- [ ] **P8-T008 — Implement trash/delete policy**
-- [ ] **P8-T009 — Implement in-memory character index**
-- [ ] **P8-T010 — Register vault create/modify/delete/rename events**
-- [ ] **P8-T011 — Implement corrupt-file diagnostics**
-- [ ] **P8-T012 — Add persistence and migration tests**
+- [x] **P8-T007 — Implement atomic character mutation using `Vault.process`**
+- [x] **P8-T008 — Implement trash/delete policy**
+- [x] **P8-T009 — Implement in-memory character index**
+- [x] **P8-T010 — Register vault create/modify/delete/rename events**
+- [x] **P8-T011 — Implement corrupt-file diagnostics**
+- [x] **P8-T012 — Add persistence and migration tests**
 
 ### Phase 8 gate
 
-- [ ] Characters survive restart and external file edits.
-- [ ] Invalid data cannot silently enter domain state.
-- [ ] Atomic update test passes.
+- [x] Characters survive restart and external file edits.
+- [x] Invalid data cannot silently enter domain state.
+- [x] Atomic update test passes.
 
 ---
 
