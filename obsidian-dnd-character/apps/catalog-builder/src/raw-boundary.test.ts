@@ -175,18 +175,26 @@ describe("validateRawBoundary — real 5eTools data", () => {
   });
 
   it("each record has name and source", () => {
-    for (const [, envelope] of Object.entries(result.validatedFiles)) {
+    const invalidRecords: string[] = [];
+
+    for (const [fileName, envelope] of Object.entries(result.validatedFiles)) {
       for (const collection of envelope.collections) {
-        for (const record of collection.records) {
-          expect(record.name).toBeDefined();
-          expect(typeof record.name).toBe("string");
-          expect(record.name.length).toBeGreaterThan(0);
-          expect(record.source).toBeDefined();
-          expect(typeof record.source).toBe("string");
-          expect(record.source.length).toBeGreaterThan(0);
+        for (const [recordIndex, record] of collection.records.entries()) {
+          const hasValidName =
+            typeof record.name === "string" && record.name.length > 0;
+          const hasValidSource =
+            typeof record.source === "string" && record.source.length > 0;
+
+          if (!hasValidName || !hasValidSource) {
+            invalidRecords.push(
+              `${fileName}:${collection.entityKind}[${recordIndex}]`,
+            );
+          }
         }
       }
     }
+
+    expect(invalidRecords).toEqual([]);
   });
 
   it("field inventory has envelope fields", () => {
@@ -1263,4 +1271,3 @@ describe("validateRawBoundary — diagnostic logical collection identity", () =>
     expect(subraceCol!.recordCount).toBe(0);
   });
 });
-

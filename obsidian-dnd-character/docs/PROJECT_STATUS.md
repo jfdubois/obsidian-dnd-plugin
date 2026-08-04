@@ -2,15 +2,15 @@
 
 ## Current work
 
-PB8-003-R2 — Catalog activation corrections (post-Phase-7 readiness; corrective work, not Phase 8 roadmap work)
+PB8-003-R2 — Catalog activation corrections (gate complete; corrective work, not Phase 8 roadmap work)
 
 ## Last completed corrective task
 
-PB8-003-R2-E1
+PB8-003-R2-GATE
 
 ## Next corrective task
 
-PB8-003-R2-GATE
+PB8-004 — Settings and runtime status integration
 
 ## Branch baseline
 
@@ -57,14 +57,20 @@ None recorded.
 - Phase 7 gate: complete
 - Corrective campaign PB8-003-R2 active (post-Phase-7 readiness work)
 - Current corrective campaign: PB8-003-R2 — Catalog activation corrections
-- Last completed corrective task: PB8-003-R2-E1
-- Next corrective task: PB8-003-R2-GATE
-- Gate status: Phase 4 gate complete. Phase 5 gate complete. Phase 6 gate complete. Phase 7 gate complete. Phase 8 roadmap work has not started; PB8 identifiers are corrective work, not Phase 8 roadmap tasks.
+- Last completed corrective task: PB8-003-R2-GATE
+- Next corrective task: PB8-004 — Settings and runtime status integration
+- Gate status: Phase 4 gate complete. Phase 5 gate complete. Phase 6 gate complete. Phase 7 gate complete. PB8-003-R2 gate passed (G1–G14 and E1 scenarios A–G). Phase 8 roadmap work has not started; PB8-004 is corrective readiness work, not a Phase 8 roadmap task.
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-03 — PB8-003-R2-GATE — Catalog activation corrective gate — complete
+Summary: Restored a deterministic full-validation baseline by replacing matcher-heavy per-record assertions in the raw-boundary real-source test with an equivalent single diagnostic assertion over every accepted record. The PB8-003-R2 corrective gate passed: G1–G14 and E1 scenarios A–G.
+Validation: Focused campaign tests pass (192/192). Two complete `npm --prefix obsidian-dnd-character run check` runs pass (3316/3318 tests, 2 skipped). `npm --prefix obsidian-dnd-character run build` and `npm --workspace @obsidian-dnd/obsidian-plugin run bundle` pass. Working tree and remote synchronization passed before commit. Phase 7 roadmap and gate remain complete; Phase 8 roadmap implementation remains unstarted; PB8-004 is corrective readiness work, not a Phase 8 roadmap task. The pre-existing `main.ts` console warnings remain non-blocking warnings.
+Compatibility notes: Test-only assertion performance repair; no catalog activation production behavior changed.
+Commit: see Git history for PB8-003-R2-GATE.
 
 2026-08-03 — PB8-003-R2-E1 — Prove transactional catalog activation — complete
 Summary: Added focused integration evidence for transactional catalog activation without production changes. Initial online activation and A-to-B replacement prove exact artifact URLs, complete revision-scoped cache staging, pointer persistence, and delayed in-memory activation. Compatibility, candidate cache-write, and pointer-save failures retain the prior active revision and diagnostic causes. Persistent offline reconstruction serves a required entity through production CatalogService with zero network calls; missing and malformed offline entities return structured `ENTITY_UNRESOLVED` context while active metadata remains usable.
@@ -72,7 +78,7 @@ Validation: Scenarios A–G pass independently. `npm --prefix obsidian-dnd-chara
 Compatibility notes: Test-only integration evidence. No production source, API, cache, persistence, or lifecycle changes.
 Commit: see Git history for PB8-003-R2-E1.
 
-2026-08-04 — PB8-003-R2-D2-R4 — Enforce safe offline fallback and prove persistent restart loading — complete
+2026-08-03 — PB8-003-R2-D2-R4 — Enforce safe offline fallback and prove persistent restart loading — complete
 Summary: Corrected offline fallback to require the same cache schema, catalog revision, input hash, expiration policy, and runtime value validation as normal cache reads. Refactored `CatalogService` production cache hashes to derive source revision from the active manifest, split the oversized offline entity test into focused restart and invalid-cache modules, and proved restart-safe production `fetchEntity()` loading from persisted cache with zero network calls. Invalid persistent entity cache entries are rejected without clearing active catalog state or unrelated cache entries.
 Validation: `npm --prefix obsidian-dnd-character run test -- packages/catalog-contract/src/cache-manager.test.ts packages/catalog-contract/src/cache-manager.offline-fallback.test.ts apps/obsidian-plugin/src/catalog/catalog-service.production-cache.test.ts apps/obsidian-plugin/src/catalog/catalog-service.source-revision.test.ts apps/obsidian-plugin/src/catalog/catalog-service.offline-restart.test.ts apps/obsidian-plugin/src/catalog/catalog-service.offline-invalid-cache.test.ts` passes (54 tests). `npm --prefix obsidian-dnd-character run check` passes (3298/3300 tests). `npm --prefix obsidian-dnd-character run build` passes. `npm --workspace @obsidian-dnd/obsidian-plugin run bundle` passes from the npm workspace root.
 Compatibility notes: Pure contract and plugin logic. No new Obsidian API. No Node/Electron dependency. Mobile-compatible.
