@@ -22,12 +22,12 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-P8-T006 — Implement character read/list
+P8-T007 — Implement atomic character mutation using `Vault.process`
 
 ## Branch baseline
 
 - Branch: `dev`
-- Last synchronized commit: `5557c9b` (P8-T005)
+- Last synchronized commit: `0e96cb7` (P8-T006)
 - Working tree expected: clean
 
 ## Blockers
@@ -36,10 +36,10 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-P8-T005 (typecheck, lint, 3544 tests passing, 2 skipped; 16 pre-existing console warnings).
-- `npm --prefix obsidian-dnd-character run build`: passing post-P8-T005.
+- `npm --prefix obsidian-dnd-character run check`: passing post-P8-T006 (typecheck, lint, 3558 tests passing, 2 skipped; 16 pre-existing console warnings).
+- `npm --prefix obsidian-dnd-character run build`: passing post-P8-T006.
 - `npm --workspace @obsidian-dnd/obsidian-plugin run bundle`: passing post-PB8-004-GATE automated validation (CJS, obsidian external, no prohibited deps).
-- Tests: 3544 passing, 2 skipped.
+- Tests: 3558 passing, 2 skipped.
 
 ## Catalog baseline
 

@@ -403,7 +403,7 @@ Persist authoritative character state safely in the vault.
 - [x] **P8-T003 — Implement schema migration framework**
 - [x] **P8-T004 — Implement configurable character folder creation**
 - [x] **P8-T005 — Implement character create**
-- [ ] **P8-T006 — Implement character read/list**
+- [x] **P8-T006 — Implement character read/list**
 - [ ] **P8-T007 — Implement atomic character mutation using `Vault.process`**
 - [ ] **P8-T008 — Implement trash/delete policy**
 - [ ] **P8-T009 — Implement in-memory character index**
