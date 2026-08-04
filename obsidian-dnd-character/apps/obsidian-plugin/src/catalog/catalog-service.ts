@@ -22,6 +22,7 @@ import type {
   CatalogEntitySummary,
   CatalogRestoreResult,
   EntityDetailResponse,
+  CacheEnvelopeCompatibilityReason,
 } from "@obsidian-dnd/catalog-contract";
 import {
   CatalogCacheManager as CatalogCacheManagerClass,
@@ -30,6 +31,8 @@ import {
   isCatalogSource,
   isCatalogEntitySummary,
   isEntityDetailResponse,
+  CatalogRuntimeError,
+  validateCacheEnvelopeCompatibility,
 } from "@obsidian-dnd/catalog-contract";
 import {
   buildManifestCacheKey,
@@ -259,26 +262,48 @@ export class CatalogService {
     const sourceRevision = this.requireActiveSourceRevision(revision);
     const key = buildEntityCacheKey(revision, entityId);
     const inputHash = buildEntityInputHash(sourceRevision, entityId);
-    const result = await this.manager.fetchWithOfflineFallback(
-      key,
-      () => this.client.fetchEntity(revision, detailPath),
-      revision,
-      inputHash,
-      isEntityCacheValue,
-      { allowStale: this.config.allowStaleOfflineFallback === true },
-    );
-    const value = result.envelope.value;
-    if ("data" in value) {
+    try {
+      const result = await this.manager.fetchWithOfflineFallback(
+        key,
+        () => this.client.fetchEntity(revision, detailPath),
+        revision,
+        inputHash,
+        isEntityCacheValue,
+        { allowStale: this.config.allowStaleOfflineFallback === true },
+      );
+      const value = result.envelope.value;
+      if ("data" in value) {
+        return {
+          ...value,
+          cacheStatus: result.stale ? "stale-offline" : "fresh",
+        };
+      }
       return {
-        ...value,
+        catalogRevision: revision,
+        data: value,
         cacheStatus: result.stale ? "stale-offline" : "fresh",
       };
+    } catch (cause) {
+      throw new CatalogRuntimeError({
+        code: "ENTITY_UNRESOLVED",
+        endpoint: detailPath,
+        revision,
+        message: `Entity ${entityId} could not be resolved from cache or network`,
+        cause,
+        operation: "entity-resolution",
+        failedEntityId: entityId,
+        failedEntityKind: entityId.split(":", 1)[0],
+        resultingActivationState: this.runtimeService?.activationState === "active"
+          ? "active"
+          : "inactive",
+        cacheOperation: "cache-read",
+        cacheKey: key,
+        cacheFailureReason: await this.entityCacheFailureReason(key, revision, inputHash),
+        networkOperation: "entity-fetch",
+        networkEndpoint: detailPath,
+        offlineOrUnavailable: true,
+      });
     }
-    return {
-      catalogRevision: revision,
-      data: value,
-      cacheStatus: result.stale ? "stale-offline" : "fresh",
-    };
   }
 
   /**
@@ -347,5 +372,35 @@ export class CatalogService {
       throw new Error("catalog unavailable: requested revision is not active");
     }
     return runtime.manifest.sourceRevision;
+  }
+
+  private async entityCacheFailureReason(
+    key: string,
+    revision: CatalogRevision,
+    inputHash: string,
+  ): Promise<string> {
+    const cached = await this.manager.getCached<unknown>(key);
+    if (cached === null) {
+      const loadDiagnostic = this.store.diagnostics().find((diagnostic) => diagnostic.key === key);
+      return loadDiagnostic === undefined ? "missing" : "schema-incompatible";
+    }
+    const compatibility = validateCacheEnvelopeCompatibility(
+      cached,
+      revision,
+      inputHash,
+      "entity",
+    );
+    return compatibility === null
+      ? "malformed"
+      : this.normalizedCacheFailureReason(compatibility);
+  }
+
+  private normalizedCacheFailureReason(
+    reason: CacheEnvelopeCompatibilityReason,
+  ): string {
+    if (reason.includes("version")) return "schema-incompatible";
+    if (reason.includes("revision")) return "revision-mismatch";
+    if (reason.includes("hash")) return "input-hash-mismatch";
+    return "expired";
   }
 }
