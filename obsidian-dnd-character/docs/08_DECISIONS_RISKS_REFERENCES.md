@@ -154,6 +154,7 @@ Narrative mechanics without a reviewed mapping shall remain visible as safe rend
 | R-009 | Character source removal or level reduction orphans state | Data loss | Transactional dependency analysis and preview |
 | R-010 | Cache treated as source of truth | Stale/incorrect choices | Cache envelopes, input hashes, deletion tests |
 | R-011 | Reviewed semantic mappings become incomplete or stale | Incorrect or missing character effects | Key mappings by canonical identity and ruleset, pin source revisions, require provenance and regression tests, and report unmapped narrative mechanics |
+| R-012 | Mobile settings, `requestUrl` transport, cache restoration, and catalog activation remain manually unverified on an actual Obsidian Mobile device | Mobile compatibility uncertainty | Keep `isDesktopOnly: false`; automated platform-boundary checks and desktop runtime smoke pass; mobile smoke remains mandatory before the first mobile/public release or when remote installation becomes available |
 
 ## Reference notes
 

@@ -2,23 +2,27 @@
 
 ## Current work
 
-PB8-004 — Settings and runtime status integration
+Phase 8 — Character contract, migration, and repository
 
-## Automated gate
-
-Passed
-
-## Desktop manual gate
+## PB8-004 automated gate
 
 Passed
 
-## Mobile manual gate
+## PB8-004 desktop manual gate
 
-Pending
+Passed
 
-## Next corrective task
+## PB8-004 mobile manual gate
 
-PB8-004-MANUAL-MOBILE
+Deferred by operator; not executed. Remote mobile plugin installation or download is not yet practically available. This is not a pass or evidence of mobile runtime behavior; the deferred test remains tracked.
+
+## PB8-004 disposition
+
+Accepted for Phase 8 development with tracked deferred mobile validation.
+
+## Next roadmap task
+
+P8-T001 — Implement character runtime schema
 
 ## Branch baseline
 
@@ -64,17 +68,24 @@ None recorded.
 - Completed Phase 7 task commits: P7-T001 — see Git history for P7-T001; P7-T002 — see Git history for P7-T002; P7-T003 — see Git history for P7-T003; P7-T004 — 92c9fac; P7-T005 — no changes needed; P7-T006 — a407fd0; P7-T007 — 65b8c2e; P7-T008 — 0ceaabc; P7-T009 — see Git history for P7-T009; P7-T010 — see Git history for P7-T010; P7-T011 — see Git history for P7-T011; P7-T012 — see Git history for P7-T012; P7-T013 — see Git history for P7-T013; P7-T014 — see Git history for P7-T014
 - Phase 7 gate: complete
 - Corrective campaign PB8-004 active (post-Phase-7 readiness work)
-- Current corrective campaign: PB8-004 — Settings and runtime status integration
+- Current corrective campaign: PB8-004 — Settings and runtime status integration; accepted for Phase 8 development with tracked deferred mobile validation.
+- Original gate policy required desktop and mobile smoke. Desktop smoke passed. Mobile smoke was explicitly deferred on 2026-08-04.
 - Automated gate: PB8-004-GATE passed (G1–G14).
-- Desktop manual gate: passed against the project `catalog-server`; Apply catalog URL, Check for updates, and Refresh catalog passed, the UI left its busy state, and no raw exception was reported.
-- Mobile manual gate: pending.
-- Next corrective task: PB8-004-MANUAL-MOBILE
-- Gate status: Phase 4 gate complete. Phase 5 gate complete. Phase 6 gate complete. Phase 7 gate complete. PB8-003-R2 gate passed (G1–G14 and E1 scenarios A–G). PB8-004 is not fully closed until the mobile smoke test passes. Phase 8 roadmap work has not started; PB8-004 is corrective readiness work, not a Phase 8 roadmap task.
+- Desktop manual gate: passed against the project `catalog-server`; Apply catalog URL, Check for updates, and Refresh catalog passed. Final desktop state: `Catalog current`; active revision: `manual-smoke-001`.
+- Mobile manual gate: deferred by explicit operator decision and not executed because no practical remote mobile plugin installation or download workflow is available. This is not a mobile-test pass or evidence of mobile runtime behavior.
+- Re-entry: mobile smoke is mandatory when remote installation/download becomes available, a test build can install without manual local file access, the first mobile-facing release candidate or Phase 10 desktop/mobile manual-scenario task is reached, a mobile-specific production dependency or Obsidian API is introduced, or the operator requests it; it must complete no later than the first public or mobile release gate.
+- Gate status: Phase 4 gate complete. Phase 5 gate complete. Phase 6 gate complete. Phase 7 gate complete. PB8-003-R2 gate passed (G1–G14 and E1 scenarios A–G). PB8-004 automated and desktop gates passed; the operator-approved mobile deferral is a tracked non-blocking risk. Phase 8 is ready to start, but P8-T001 has not started in this task.
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-04 — PB8-004-MANUAL-MOBILE-DEFER — Record operator-approved mobile-test deferral — complete
+Summary: Mobile catalog smoke validation is deferred by explicit operator decision because no practical remote plugin installation or download workflow is available for the mobile test device. Automated and desktop validation provide sufficient evidence to begin Phase 8 development while mobile compatibility remains an open tracked validation item. This is not a mobile-test pass. P8-T001 did not start in this task.
+Validation: PB8-004 automated gate passed. Desktop manual gate passed against the project `catalog-server`: Apply catalog URL, Check for updates, and Refresh catalog passed; final desktop state was `Catalog current` with active revision `manual-smoke-001`. Mobile manual gate was not executed and remains mandatory under the recorded re-entry triggers, no later than the first public or mobile release gate.
+Compatibility notes: No production code or tests changed. Mobile settings, `requestUrl` transport, cache restoration, and catalog activation remain manually unverified on an actual Obsidian Mobile device.
+Commit: see Git history for PB8-004-MANUAL-MOBILE-DEFER.
 
 2026-08-04 — PB8-004-MANUAL-R4 — Record successful desktop catalog smoke test — complete
 Summary: Desktop Obsidian smoke testing passed against the project `catalog-server`, not the 5eTools website. Apply catalog URL, Check for updates, and Refresh catalog all passed; the UI left its busy state; no raw exception was reported. The final status was `Catalog current` with active revision `manual-smoke-001`. Production plugin code did not change during the smoke test. The 5eTools website remained separate on port 7775.
