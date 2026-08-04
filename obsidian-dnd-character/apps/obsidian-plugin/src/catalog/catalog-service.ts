@@ -55,6 +55,15 @@ import type {
 import { PersistentCatalogCacheStore } from "./persistent-cache-store";
 import { ObsidianActiveRevisionPersistence } from "./obsidian-active-revision-persistence";
 import { createObsidianFetcher } from "./obsidian-fetcher-adapter";
+import {
+  deriveCatalogRuntimeStatus,
+  type CatalogRuntimeStatusInput,
+  type CatalogRuntimeStatusSnapshot,
+} from "./catalog-runtime-status";
+import {
+  statusDiagnosticFromRestore,
+  statusDiagnosticFromRuntimeError,
+} from "./catalog-status-diagnostics";
 
 /* ── Configuration ──────────────────────────────────────────────── */
 
@@ -77,6 +86,11 @@ const DEFAULT_EXPIRATION: CacheExpirationPolicy = {
   kind: "ttl",
   ttlMs: 24 * 60 * 60 * 1000, // 24 hours
 };
+
+function normalizedBaseUrl(baseUrl: string | undefined): string | undefined {
+  const normalized = baseUrl?.trim();
+  return normalized === undefined || normalized.length === 0 ? undefined : normalized;
+}
 
 /* ── Runtime validators for cached values ───────────────────────── */
 
@@ -123,6 +137,10 @@ export class CatalogService {
   private client: CatalogClient;
   private config: CatalogServiceConfig;
   private runtimeService: RuntimeServiceClass | null;
+  private statusFacts: CatalogRuntimeStatusInput;
+  private runtimeStatus: CatalogRuntimeStatusSnapshot;
+  private readonly statusListeners = new Set<(status: CatalogRuntimeStatusSnapshot) => void>();
+  private readonly unresolvedEntityIds = new Set<string>();
 
   constructor(
     plugin: Plugin,
@@ -138,16 +156,28 @@ export class CatalogService {
       config.defaultExpiration ?? DEFAULT_EXPIRATION,
     );
     this.runtimeService = config.runtimeService ?? null;
-    if (this.runtimeService === null && config.baseUrl) {
+    const baseUrl = normalizedBaseUrl(config.baseUrl);
+    if (this.runtimeService === null && baseUrl !== undefined) {
       const persistence = new ObsidianActiveRevisionPersistence(plugin);
       const fetcher = createObsidianFetcher();
       this.runtimeService = new RuntimeServiceClass({
-        baseUrl: config.baseUrl,
+        baseUrl,
         fetcher,
         cacheManager: this.manager,
         activeRevisionPersistence: persistence,
       });
     }
+    this.statusFacts = {
+      ...(baseUrl === undefined ? {} : { configuredUrl: baseUrl }),
+      activationState: "inactive",
+      schemaCompatibility: "unknown",
+      connectivity: "unknown",
+      cacheFreshness: "none",
+      restoreOutcome: "idle",
+      refreshOutcome: "idle",
+      unresolvedEntityCount: 0,
+    };
+    this.runtimeStatus = deriveCatalogRuntimeStatus(this.statusFacts);
   }
 
   /* ── Lifecycle ──────────────────────────────────────────────── */
@@ -163,22 +193,48 @@ export class CatalogService {
   async initialize(): Promise<CatalogRestoreResult> {
     await this.store.initialize();
     if (this.runtimeService === null) {
-      return {
+      const result: CatalogRestoreResult = {
         success: false,
         reason: "no-persistence",
       };
+      this.applyRestoreResult(result);
+      return result;
     }
-    return this.runtimeService.restoreFromCache();
+    this.updateStatus({ restoreOutcome: "pending" });
+    const result = await this.runtimeService.restoreFromCache();
+    this.applyRestoreResult(result);
+    return result;
   }
 
   /**
    * Persist cache data to disk. Call during plugin onunload.
    */
   async dispose(): Promise<void> {
-    await this.store.flush();
+    try {
+      await this.store.flush();
+    } finally {
+      this.statusListeners.clear();
+    }
   }
 
   /* ── Public API ─────────────────────────────────────────────── */
+
+  getRuntimeStatus(): CatalogRuntimeStatusSnapshot {
+    return this.runtimeStatus;
+  }
+
+  subscribeRuntimeStatus(
+    listener: (status: CatalogRuntimeStatusSnapshot) => void,
+  ): () => void {
+    this.statusListeners.add(listener);
+    this.notifyStatusListener(listener);
+    let subscribed = true;
+    return () => {
+      if (!subscribed) return;
+      subscribed = false;
+      this.statusListeners.delete(listener);
+    };
+  }
 
   /**
    * Fetch the catalog manifest with caching.
@@ -273,18 +329,22 @@ export class CatalogService {
       );
       const value = result.envelope.value;
       if ("data" in value) {
-        return {
+        const response: EntityDetailResult = {
           ...value,
           cacheStatus: result.stale ? "stale-offline" : "fresh",
         };
+        this.clearResolvedEntity(entityId);
+        return response;
       }
-      return {
+      const response: EntityDetailResult = {
         catalogRevision: revision,
         data: value,
         cacheStatus: result.stale ? "stale-offline" : "fresh",
       };
+      this.clearResolvedEntity(entityId);
+      return response;
     } catch (cause) {
-      throw new CatalogRuntimeError({
+      const error = new CatalogRuntimeError({
         code: "ENTITY_UNRESOLVED",
         endpoint: detailPath,
         revision,
@@ -303,6 +363,12 @@ export class CatalogService {
         networkEndpoint: detailPath,
         offlineOrUnavailable: true,
       });
+      this.unresolvedEntityIds.add(entityId);
+      this.updateStatus({
+        unresolvedEntityCount: this.unresolvedEntityIds.size,
+        lastDiagnostic: statusDiagnosticFromRuntimeError(error),
+      });
+      throw error;
     }
   }
 
@@ -356,6 +422,70 @@ export class CatalogService {
    */
   getClient(): CatalogClient {
     return this.client;
+  }
+
+  private applyRestoreResult(result: CatalogRestoreResult): void {
+    if (result.success) {
+      const runtime = this.runtimeService;
+      if (
+        runtime === null || runtime.activationState !== "active" ||
+        runtime.revision === undefined || runtime.manifest === undefined
+      ) {
+        this.updateStatus({
+          activationState: "inactive", activeRevision: undefined, sourceRevision: undefined,
+          schemaCompatibility: "unknown", cacheFreshness: "none", restoreOutcome: "failed",
+          lastDiagnostic: { message: "Catalog restoration reported success without an active runtime.", reason: "runtime-inconsistent", recoverable: false },
+        });
+        return;
+      }
+      this.updateStatus({
+        activationState: runtime.activationState,
+        activeRevision: runtime.revision,
+        sourceRevision: runtime.manifest.sourceRevision,
+        schemaCompatibility: "compatible",
+        connectivity: "unknown",
+        cacheFreshness: "offline",
+        restoreOutcome: "restored-offline",
+        lastDiagnostic: undefined,
+      });
+      return;
+    }
+    if (result.reason === "invalid-pointer") {
+      this.updateStatus({
+        activationState: "inactive", activeRevision: undefined, sourceRevision: undefined,
+        schemaCompatibility: "unknown", connectivity: "unknown", cacheFreshness: "none",
+        restoreOutcome: "idle", lastDiagnostic: undefined,
+      });
+      return;
+    }
+    this.updateStatus({
+      activationState: "inactive", activeRevision: undefined, sourceRevision: undefined,
+      schemaCompatibility: result.reason === "schema-incompatible" ? "incompatible" : "unknown",
+      connectivity: "unknown", cacheFreshness: "none", restoreOutcome: "failed",
+      lastDiagnostic: statusDiagnosticFromRestore(result),
+    });
+  }
+
+  private clearResolvedEntity(entityId: string): void {
+    if (this.unresolvedEntityIds.delete(entityId)) {
+      this.updateStatus({ unresolvedEntityCount: this.unresolvedEntityIds.size });
+    }
+  }
+
+  private updateStatus(update: Partial<CatalogRuntimeStatusInput>): void {
+    this.statusFacts = { ...this.statusFacts, ...update };
+    const next = deriveCatalogRuntimeStatus(this.statusFacts);
+    if (JSON.stringify(next) === JSON.stringify(this.runtimeStatus)) return;
+    this.runtimeStatus = next;
+    for (const listener of this.statusListeners) this.notifyStatusListener(listener);
+  }
+
+  private notifyStatusListener(listener: (status: CatalogRuntimeStatusSnapshot) => void): void {
+    try {
+      listener(this.runtimeStatus);
+    } catch {
+      // Status observers must not interfere with service behavior or peers.
+    }
   }
 
   private requireActiveSourceRevision(revision: CatalogRevision): string {

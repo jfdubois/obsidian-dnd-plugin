@@ -6,11 +6,11 @@ PB8-004 — Settings and runtime status integration (corrective readiness work, 
 
 ## Last completed corrective task
 
-PB8-004-A1
+PB8-004-A2-S1
 
 ## Next corrective task
 
-PB8-004-A2 — Integrate status and transactional refresh into CatalogService
+PB8-004-A2-S2 — Add transactional catalog refresh
 
 ## Branch baseline
 
@@ -24,10 +24,10 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-PB8-004-A1 (typecheck, lint, 3335 tests passing, 2 skipped; 7 pre-existing `main.ts` console warnings).
-- `npm --prefix obsidian-dnd-character run build`: passing post-PB8-004-A1.
-- `npm --workspace @obsidian-dnd/obsidian-plugin run bundle`: passing post-PB8-004-A1 (CJS, obsidian external, no prohibited deps).
-- Tests: 3335 passing, 2 skipped.
+- `npm --prefix obsidian-dnd-character run check`: passing post-PB8-004-A2-S1 (typecheck, lint, 3350 tests passing, 2 skipped; 7 pre-existing `main.ts` console warnings).
+- `npm --prefix obsidian-dnd-character run build`: passing post-PB8-004-A2-S1.
+- `npm --workspace @obsidian-dnd/obsidian-plugin run bundle`: passing post-PB8-004-A2-S1 (CJS, obsidian external, no prohibited deps).
+- Tests: 3350 passing, 2 skipped.
 
 ## Catalog baseline
 
@@ -57,14 +57,20 @@ None recorded.
 - Phase 7 gate: complete
 - Corrective campaign PB8-004 active (post-Phase-7 readiness work)
 - Current corrective campaign: PB8-004 — Settings and runtime status integration
-- Last completed corrective task: PB8-004-A1
-- Next corrective task: PB8-004-A2 — Integrate status and transactional refresh into CatalogService
+- Last completed corrective task: PB8-004-A2-S1
+- Next corrective task: PB8-004-A2-S2 — Add transactional catalog refresh
 - Gate status: Phase 4 gate complete. Phase 5 gate complete. Phase 6 gate complete. Phase 7 gate complete. PB8-003-R2 gate passed (G1–G14 and E1 scenarios A–G). Phase 8 roadmap work has not started; PB8-004 is corrective readiness work, not a Phase 8 roadmap task.
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-03 — PB8-004-A2-S1 — Make CatalogService own runtime status — complete
+Summary: CatalogService now retains and publishes its A1-derived immutable runtime status, including offline cache restoration outcomes, safe diagnostics, subscriptions, and distinct unresolved entity tracking. No online refresh, settings UI, or Obsidian API changes were added.
+Validation: Focused service status tests pass (15 tests). `npm --prefix obsidian-dnd-character run check` passes (3350 tests, 2 skipped; 7 pre-existing `main.ts` console warnings). `npm --prefix obsidian-dnd-character run build` and `npm --workspace @obsidian-dnd/obsidian-plugin run bundle` pass. Phase 7 roadmap and gate remain complete; Phase 8 roadmap implementation remains unstarted; PB8-004 is corrective readiness work.
+Compatibility notes: Service-only runtime status ownership; restoration remains offline-only and does not change catalog activation semantics.
+Commit: see Git history for PB8-004-A2-S1.
 
 2026-08-03 — PB8-004-A1 — Define catalog runtime status contract and presentation — complete
 Summary: Added a pure, immutable catalog runtime status snapshot, deterministic derivation precedence, display-safe diagnostic projection, and DOM-independent settings presentation formatter. No service, persistence, refresh, activation, or settings UI integration was added.
