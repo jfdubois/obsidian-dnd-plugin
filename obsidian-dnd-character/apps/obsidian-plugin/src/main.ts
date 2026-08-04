@@ -16,6 +16,11 @@ export default class DndCharacterPlugin extends Plugin {
 	settings: DndCharacterPluginSettings = DEFAULT_SETTINGS;
 	/** Catalog runtime service, lazily initialized on first access. */
 	catalogService: CatalogService | null = null;
+	private catalogInitialization: Promise<CatalogService> | null = null;
+	private readonly pendingCatalogReconfigurations = new Map<string, Promise<CatalogService>>();
+	private lifecycleOperation: Promise<void> = Promise.resolve();
+	private readonly disposedCatalogServices = new WeakSet<CatalogService>();
+	private unloading = false;
 
 	async onload() {
 		console.log('Loading D&D Character Manager plugin');
@@ -76,6 +81,11 @@ export default class DndCharacterPlugin extends Plugin {
 	async loadSettings() {
 		const raw = await this.loadData();
 		this.settings = normalizeSettings(raw);
+		this.settings.catalogServerUrl = normalizeCatalogServerUrl(this.settings.catalogServerUrl);
+	}
+
+	async saveSettings(): Promise<void> {
+		await this.saveData(this.settings);
 	}
 
 	/**
@@ -86,24 +96,148 @@ export default class DndCharacterPlugin extends Plugin {
 		if (this.catalogService !== null) {
 			return this.catalogService;
 		}
+		if (this.catalogInitialization !== null) {
+			return this.catalogInitialization;
+		}
 
-		// Build catalog client from settings.
+		const initialization = this.enqueueLifecycle(() => this.createAndPublishService(
+			normalizeCatalogServerUrl(this.settings.catalogServerUrl),
+		));
+		this.catalogInitialization = initialization;
+		void initialization.then(
+			() => this.clearCatalogInitialization(initialization),
+			() => this.clearCatalogInitialization(initialization),
+		);
+		return initialization;
+	}
+
+	/**
+	 * Update the catalog URL and replace the owned service when necessary.
+	 * Lifecycle work is serialized. When no stable service exists, getters join
+	 * the newest queued service operation instead of initializing an older URL.
+	 */
+	setCatalogServerUrl(value: string): Promise<CatalogService> {
+		const normalizedUrl = normalizeCatalogServerUrl(value);
+		const pending = this.pendingCatalogReconfigurations.get(normalizedUrl);
+		if (pending !== undefined) return pending;
+
+		const replacement = this.enqueueLifecycle(async () => {
+			this.throwIfUnloading();
+			const currentUrl = normalizeCatalogServerUrl(this.settings.catalogServerUrl);
+			if (currentUrl === normalizedUrl) {
+				return this.catalogService ?? this.createAndPublishService(normalizedUrl);
+			}
+
+			const previousSettings = this.settings;
+			const previousService = this.catalogService;
+			let candidate: CatalogService | null = null;
+			try {
+				// Initialize before persisting or discarding the published service, so a
+				// failed candidate cannot leave settings and runtime ownership divergent.
+				candidate = await this.createCatalogService(normalizedUrl);
+				this.throwIfUnloading();
+				this.settings = { ...previousSettings, catalogServerUrl: normalizedUrl };
+				await this.saveSettings();
+				this.throwIfUnloading();
+				if (previousService !== null) {
+					await this.disposeCatalogService(previousService);
+				}
+				this.catalogService = candidate;
+				return candidate;
+			} catch (error) {
+				if (this.settings !== previousSettings) {
+					this.settings = previousSettings;
+					try {
+						await this.saveSettings();
+					} catch {
+						// Preserve the original failure; a failed rollback is not hidden.
+					}
+				}
+				if (candidate !== null && candidate !== this.catalogService) {
+					await this.disposeCatalogService(candidate);
+				}
+				throw error;
+			}
+		});
+		this.pendingCatalogReconfigurations.set(normalizedUrl, replacement);
+		this.catalogInitialization = replacement;
+		void replacement.then(
+			() => this.clearPendingCatalogReconfiguration(normalizedUrl, replacement),
+			() => this.clearPendingCatalogReconfiguration(normalizedUrl, replacement),
+		);
+		return replacement;
+	}
+
+	private enqueueLifecycle<T>(operation: () => Promise<T>): Promise<T> {
+		const queued = this.lifecycleOperation.then(operation, operation);
+		this.lifecycleOperation = queued.then(() => undefined, () => undefined);
+		return queued;
+	}
+
+	private clearCatalogInitialization(initialization: Promise<CatalogService>): void {
+		if (this.catalogInitialization === initialization) {
+			this.catalogInitialization = null;
+		}
+	}
+
+	private clearPendingCatalogReconfiguration(
+		baseUrl: string,
+		replacement: Promise<CatalogService>,
+	): void {
+		if (this.pendingCatalogReconfigurations.get(baseUrl) === replacement) {
+			this.pendingCatalogReconfigurations.delete(baseUrl);
+		}
+		this.clearCatalogInitialization(replacement);
+	}
+
+	private async createAndPublishService(baseUrl: string): Promise<CatalogService> {
+		this.throwIfUnloading();
+		const service = await this.createCatalogService(baseUrl);
+		if (this.unloading) {
+			await this.disposeCatalogService(service);
+			throw new Error('Catalog service is unavailable while the plugin unloads.');
+		}
+		this.catalogService = service;
+		return service;
+	}
+
+	private async createCatalogService(baseUrl: string): Promise<CatalogService> {
 		const client: CatalogClient = new RequestUrlCatalogClient({
-			baseUrl: this.settings.catalogServerUrl,
+			baseUrl,
 			timeoutMs: 5000,
 		});
+		const service = new CatalogService(this, client, { baseUrl });
+		try {
+			await service.initialize();
+			return service;
+		} catch (error) {
+			await this.disposeCatalogService(service);
+			throw error;
+		}
+	}
 
-		this.catalogService = new CatalogService(this, client, {
-			baseUrl: this.settings.catalogServerUrl,
-		});
-		await this.catalogService.initialize();
-		return this.catalogService;
+	private async disposeCatalogService(service: CatalogService): Promise<void> {
+		if (this.disposedCatalogServices.has(service)) return;
+		this.disposedCatalogServices.add(service);
+		await service.dispose();
+	}
+
+	private throwIfUnloading(): void {
+		if (this.unloading) {
+			throw new Error('Catalog service is unavailable while the plugin unloads.');
+		}
 	}
 
 	onunload() {
+		this.unloading = true;
+		const service = this.catalogService;
+		this.catalogService = null;
+		this.catalogInitialization = null;
+		this.pendingCatalogReconfigurations.clear();
+		this.lifecycleOperation = Promise.resolve();
 		// Persist catalog cache before unloading.
-		if (this.catalogService !== null) {
-			void this.catalogService.dispose();
+		if (service !== null) {
+			void this.disposeCatalogService(service);
 		}
 
 		void this.saveData(this.settings);
@@ -118,4 +252,8 @@ export default class DndCharacterPlugin extends Plugin {
 
 		console.log('Unloading D&D Character Manager plugin');
 	}
+}
+
+export function normalizeCatalogServerUrl(value: string): string {
+	return value.trim();
 }
