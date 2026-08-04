@@ -22,12 +22,12 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-P8-T005 — Implement character create
+P8-T006 — Implement character read/list
 
 ## Branch baseline
 
 - Branch: `dev`
-- Last synchronized commit: `9c25ea9a` (P8-T004)
+- Last synchronized commit: `5557c9b` (P8-T005)
 - Working tree expected: clean
 
 ## Blockers
@@ -36,10 +36,10 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-P8-T004 (typecheck, lint, 3533 tests passing, 2 skipped; 16 pre-existing console warnings).
-- `npm --prefix obsidian-dnd-character run build`: passing post-P8-T004.
+- `npm --prefix obsidian-dnd-character run check`: passing post-P8-T005 (typecheck, lint, 3544 tests passing, 2 skipped; 16 pre-existing console warnings).
+- `npm --prefix obsidian-dnd-character run build`: passing post-P8-T005.
 - `npm --workspace @obsidian-dnd/obsidian-plugin run bundle`: passing post-PB8-004-GATE automated validation (CJS, obsidian external, no prohibited deps).
-- Tests: 3533 passing, 2 skipped.
+- Tests: 3544 passing, 2 skipped.
 
 ## Catalog baseline
 
