@@ -68,6 +68,8 @@ export interface EntityDetailResult {
   data: EntityDetailResponse;
   /** The catalog revision this detail came from. */
   catalogRevision: CatalogRevision;
+  /** Cache freshness for production service reads. */
+  cacheStatus?: "fresh" | "stale-offline";
 }
 
 /* ── Schema negotiation result ─────────────────────────────────── */

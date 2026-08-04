@@ -4,13 +4,13 @@
 
 PB8-003-R2 — Catalog activation corrections (post-Phase-7 readiness)
 
-## Current corrective task
-
-PB8-003-R2-E1 — (next)
-
 ## Last completed corrective task
 
-PB8-003-R2-D2-R3 — Validate production cache reads with runtime value validators
+PB8-003-R2-D2-R4
+
+## Next corrective task
+
+PB8-003-R2-E1
 
 ## Branch baseline
 
@@ -24,10 +24,10 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-PB8-003-R2-D2-R3 (typecheck, lint, 3283/3285 tests across 137 files, 2 skipped).
-- `npm --prefix obsidian-dnd-character run build`: passing post-PB8-003-R2-D2-R3.
+- `npm --prefix obsidian-dnd-character run check`: passing post-PB8-003-R2-D2-R4 (typecheck, lint, 3298/3300 tests across 140 files, 2 skipped).
+- `npm --prefix obsidian-dnd-character run build`: passing post-PB8-003-R2-D2-R4.
 - `npm --workspace @obsidian-dnd/obsidian-plugin run bundle`: passing (CJS, obsidian external, no prohibited deps).
-- Tests: 3283 passing.
+- Tests: 3298 passing.
 
 ## Catalog baseline
 
@@ -57,7 +57,7 @@ None recorded.
 - Phase 7 gate: complete
 - Corrective campaign PB8-003-R2 active (post-Phase-7 readiness work)
 - Current corrective task: PB8-003-R2-E1
-- Last completed corrective task: PB8-003-R2-D2-R3
+- Last completed corrective task: PB8-003-R2-D2-R4
 - Next corrective task: PB8-003-R2-E1
 - Gate status: Phase 4 gate complete. Phase 5 gate complete. Phase 6 gate complete. Phase 7 gate complete.
 - Blocking issue: none
@@ -66,7 +66,13 @@ None recorded.
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
 
-2026-08-03 — PB8-003-R2-D2-R3 — Validate production cache reads with runtime value validators — complete
+2026-08-04 — PB8-003-R2-D2-R4 — Enforce safe offline fallback and prove persistent restart loading — complete
+Summary: Corrected offline fallback to require the same cache schema, catalog revision, input hash, expiration policy, and runtime value validation as normal cache reads. Refactored `CatalogService` production cache hashes to derive source revision from the active manifest, split the oversized offline entity test into focused restart and invalid-cache modules, and proved restart-safe production `fetchEntity()` loading from persisted cache with zero network calls. Invalid persistent entity cache entries are rejected without clearing active catalog state or unrelated cache entries.
+Validation: `npm --prefix obsidian-dnd-character run test -- packages/catalog-contract/src/cache-manager.test.ts packages/catalog-contract/src/cache-manager.offline-fallback.test.ts apps/obsidian-plugin/src/catalog/catalog-service.production-cache.test.ts apps/obsidian-plugin/src/catalog/catalog-service.source-revision.test.ts apps/obsidian-plugin/src/catalog/catalog-service.offline-restart.test.ts apps/obsidian-plugin/src/catalog/catalog-service.offline-invalid-cache.test.ts` passes (54 tests). `npm --prefix obsidian-dnd-character run check` passes (3298/3300 tests). `npm --prefix obsidian-dnd-character run build` passes. `npm --workspace @obsidian-dnd/obsidian-plugin run bundle` passes from the npm workspace root.
+Compatibility notes: Pure contract and plugin logic. No new Obsidian API. No Node/Electron dependency. Mobile-compatible.
+Commit: see Git history for PB8-003-R2-D2-R4.
+
+2026-08-03 — PB8-003-R2-D2-R3 — Validate production cache reads with runtime value validators — corrected by PB8-003-R2-D2-R4
 Summary: Fixed 5 defects from R2 review: (1) runtime value validation in CatalogCacheManager.fetch() via optional valueValidator parameter; (2) canonical input-hash builders used in CatalogService for all cache reads; (3) artifact-family-specific restoration reasons (manifest-envelope-version-mismatch, sources-envelope-revision-mismatch, index-envelope-invalid, etc.); (4) production offline entity loading test exercising full CatalogService path with disabled network; (5) production cache validation tests for manifest, sources, index, and entity caches. Added 3 new test files (all under 300 lines).
 Validation: `npm --prefix obsidian-dnd-character run check` passes (3283/3285 tests). `npm --prefix obsidian-dnd-character run build` passes.
 Compatibility notes: Pure contract and plugin logic. No new Obsidian API. No `any`, mobile-compatible.

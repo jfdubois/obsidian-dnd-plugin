@@ -15,6 +15,7 @@ import type { CatalogRevision } from "@obsidian-dnd/domain";
 import {
   CACHE_SCHEMA_VERSION,
   createCacheEnvelope,
+  isCacheExpired,
   validateCacheEnvelopeCompatibility,
 } from "./cache-envelope";
 
@@ -30,6 +31,10 @@ export interface CacheStats {
   hitRate: number;
   /** Total number of entries currently in the store. */
   size: number;
+}
+
+export interface OfflineFallbackOptions {
+  allowStale?: boolean;
 }
 
 /* ── Cache manager ───────────────────────────────────────────────── */
@@ -72,21 +77,17 @@ export class CatalogCacheManager {
     inputHash: string,
     valueValidator?: (value: unknown) => value is T,
   ): Promise<CacheEnvelope<T>> {
-    const existing = await this.store.get<T>(key);
+    const existing = await this.readCompatibleCached(
+      key,
+      revision,
+      inputHash,
+      valueValidator,
+      false,
+    );
 
-    if (existing !== null &&
-        validateCacheEnvelopeCompatibility(existing, revision, inputHash) === null) {
-      // Runtime value validation (if provided)
-      if (valueValidator !== undefined) {
-        if (valueValidator(existing.value)) {
-          this.hits += 1;
-          return existing;
-        }
-        // Validator failed — treat as cache miss
-      } else {
-        this.hits += 1;
-        return existing;
-      }
+    if (existing !== null) {
+      this.hits += 1;
+      return existing.envelope;
     }
 
     this.misses += 1;
@@ -169,6 +170,7 @@ export class CatalogCacheManager {
     revision: CatalogRevision,
     inputHash: string,
     valueValidator?: (value: unknown) => value is T,
+    options: OfflineFallbackOptions = {},
   ): Promise<{
     envelope: CacheEnvelope<T>;
     fromCache: boolean;
@@ -186,12 +188,51 @@ export class CatalogCacheManager {
       const fromCache = this.hits > hitsBefore;
       return { envelope, fromCache, stale: false };
     } catch (error) {
-      const cached = await this.getCached<T>(key);
+      const cached = await this.readCompatibleCached(
+        key,
+        revision,
+        inputHash,
+        valueValidator,
+        options.allowStale === true,
+      );
       if (cached !== null) {
-        const isStale = validateCacheEnvelopeCompatibility(cached, revision, inputHash) !== null;
-        return { envelope: cached, fromCache: true, stale: isStale };
+        return {
+          envelope: cached.envelope,
+          fromCache: true,
+          stale: cached.stale,
+        };
       }
       throw error;
     }
+  }
+
+  private async readCompatibleCached<T>(
+    key: string,
+    revision: CatalogRevision,
+    inputHash: string,
+    valueValidator: ((value: unknown) => value is T) | undefined,
+    allowExpired: boolean,
+  ): Promise<{ envelope: CacheEnvelope<T>; stale: boolean } | null> {
+    const existing = await this.store.get<T>(key);
+    if (existing === null) return null;
+
+    const compatibility = validateCacheEnvelopeCompatibility(
+      existing,
+      revision,
+      inputHash,
+    );
+    if (compatibility !== null && compatibility !== "expired") {
+      return null;
+    }
+    if (compatibility === "expired" && !allowExpired) {
+      return null;
+    }
+    if (valueValidator !== undefined && !valueValidator(existing.value)) {
+      return null;
+    }
+    return {
+      envelope: existing,
+      stale: isCacheExpired(existing),
+    };
   }
 }

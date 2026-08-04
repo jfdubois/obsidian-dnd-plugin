@@ -544,6 +544,7 @@ export {
 export {
   /* Cache stats type */
   type CacheStats,
+  type OfflineFallbackOptions,
   /* Cache manager class (also usable as type) */
   CatalogCacheManager,
 } from "./cache-manager";

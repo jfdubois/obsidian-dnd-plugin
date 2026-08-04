@@ -19,6 +19,7 @@ import {
   buildSourcesInputHash,
   createCatalogManifest,
   createCatalogSource,
+  CatalogRuntimeService,
 } from "@obsidian-dnd/catalog-contract";
 import {
   createCatalogRevision,
@@ -117,6 +118,26 @@ function createMockClient(): CatalogClient & { rejectNext: boolean } {
   return client;
 }
 
+function createActiveRuntime() {
+  const runtime = new CatalogRuntimeService({
+    baseUrl: "https://catalog.test/catalog/v1",
+    fetcher: vi.fn(),
+  });
+  runtime.revision = rev;
+  runtime.manifest = createCatalogManifest({
+    schemaVersion: 1,
+    catalogRevision: rev,
+    sourceRevision: srcRevision,
+    builderVersion: "0.1.0",
+    generatedAt: "2026-07-22T00:00:00Z",
+    rulesets: ["2024"],
+    entityKinds: ["species"],
+    checksums: { "manifest.json": "sha256-abc" },
+  });
+  runtime.activationState = "active";
+  return runtime;
+}
+
 /* ── Helpers ────────────────────────────────────────────────────── */
 
 const rev = createCatalogRevision("rev-001");
@@ -137,6 +158,7 @@ describe("CatalogService production cache validation", () => {
     client = createMockClient();
     service = new CatalogService(plugin, client, {
       defaultExpiration: createNoExpiryExpiration(),
+      runtimeService: createActiveRuntime(),
     });
   });
 
@@ -164,7 +186,7 @@ describe("CatalogService production cache validation", () => {
     await service.getStore().set(cacheKey, envelope);
 
     // Fetch should hit cache (validator passes)
-    const result = await service.fetchManifest(rev, srcRevision);
+    const result = await service.fetchManifest(rev);
     expect(result.catalogRevision).toBe("rev-001");
     expect(client.fetchManifest).not.toHaveBeenCalled();
   });
@@ -183,7 +205,7 @@ describe("CatalogService production cache validation", () => {
     await service.getStore().set(cacheKey, envelope);
 
     // Fetch should miss cache and call network
-    const result = await service.fetchManifest(rev, srcRevision);
+    const result = await service.fetchManifest(rev);
     expect(client.fetchManifest).toHaveBeenCalledTimes(1);
     expect(result.catalogRevision).toBe("rev-001");
   });
@@ -211,7 +233,7 @@ describe("CatalogService production cache validation", () => {
     await service.getStore().set(cacheKey, envelope);
 
     // Fetch should hit cache (validator passes)
-    const result = await service.fetchSources(rev, srcRevision);
+    const result = await service.fetchSources(rev);
     expect(result.length).toBe(1);
     expect(result[0]?.id).toBe("xphb");
     expect(client.fetchSources).not.toHaveBeenCalled();
@@ -231,7 +253,7 @@ describe("CatalogService production cache validation", () => {
     await service.getStore().set(cacheKey, envelope);
 
     // Fetch should miss cache and call network
-    const result = await service.fetchSources(rev, srcRevision);
+    const result = await service.fetchSources(rev);
     expect(client.fetchSources).toHaveBeenCalledTimes(1);
     expect(result.length).toBe(1);
   });
@@ -250,7 +272,7 @@ describe("CatalogService production cache validation", () => {
     await service.getStore().set(cacheKey, envelope);
 
     // Fetch should miss cache and call network
-    const result = await service.fetchSources(rev, srcRevision);
+    const result = await service.fetchSources(rev);
     expect(client.fetchSources).toHaveBeenCalledTimes(1);
     expect(result.length).toBe(1);
   });

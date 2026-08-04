@@ -420,6 +420,8 @@ describe("CatalogCacheManager fetchWithOfflineFallback", () => {
       () => Promise.reject(networkErr),
       createCatalogRevision("rev-001"),
       "h",
+      undefined,
+      { allowStale: true },
     );
 
     expect(result.fromCache).toBe(true);
@@ -484,7 +486,7 @@ describe("CatalogCacheManager fetch schema version enforcement", () => {
     expect(manager.stats().misses).toBe(1);
   });
 
-  it("offline fallback marks schema-mismatched envelope as stale", async () => {
+  it("offline fallback rejects schema-mismatched envelope", async () => {
     const store = createStore();
     const manager = new CatalogCacheManager(
       store,
@@ -503,18 +505,15 @@ describe("CatalogCacheManager fetch schema version enforcement", () => {
     });
     await store.set("key:1", oldEnvelope);
 
-    // Network error triggers fallback to stale schema-mismatched data
     const networkErr = new Error("network error");
-    const result = await manager.fetchWithOfflineFallback(
-      "key:1",
-      () => Promise.reject(networkErr),
-      createCatalogRevision("rev-001"),
-      "h",
-    );
-
-    expect(result.fromCache).toBe(true);
-    expect(result.stale).toBe(true); // schema mismatch = stale
-    expect(result.envelope.value).toBe("old-schema-data");
+    await expect(
+      manager.fetchWithOfflineFallback(
+        "key:1",
+        () => Promise.reject(networkErr),
+        createCatalogRevision("rev-001"),
+        "h",
+      ),
+    ).rejects.toThrow("network error");
   });
 });
 

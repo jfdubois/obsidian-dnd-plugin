@@ -21,6 +21,7 @@ import type {
   CatalogSource,
   CatalogEntitySummary,
   CatalogRestoreResult,
+  EntityDetailResponse,
 } from "@obsidian-dnd/catalog-contract";
 import {
   CatalogCacheManager as CatalogCacheManagerClass,
@@ -59,6 +60,14 @@ export interface CatalogServiceConfig {
   defaultExpiration?: CacheExpirationPolicy;
   /** Base URL of the catalog server (required for runtime service). */
   baseUrl?: string;
+  /** Permit expired compatible entries as offline fallback. */
+  allowStaleOfflineFallback?: boolean;
+  /** Production-compatible cache store injection for tests. */
+  cacheStore?: PersistentCatalogCacheStore;
+  /** Production-compatible cache manager injection for tests. */
+  cacheManager?: CatalogCacheManager;
+  /** Runtime service injection for restart tests. */
+  runtimeService?: RuntimeServiceClass;
 }
 
 const DEFAULT_EXPIRATION: CacheExpirationPolicy = {
@@ -68,11 +77,16 @@ const DEFAULT_EXPIRATION: CacheExpirationPolicy = {
 
 /* ── Runtime validators for cached values ───────────────────────── */
 
-function isCatalogSourceArray(value: unknown): value is CatalogSource[] {
-  return (
-    Array.isArray(value) &&
-    value.every((item) => isCatalogSource(item))
-  );
+type SourceCacheValue = CatalogSource[] | Record<string, CatalogSource>;
+
+function isCatalogSourceCacheValue(value: unknown): value is SourceCacheValue {
+  if (Array.isArray(value)) {
+    return value.every((item) => isCatalogSource(item));
+  }
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  return Object.values(value).every((item) => isCatalogSource(item));
 }
 
 function isCatalogEntitySummaryArray(value: unknown): value is CatalogEntitySummary[] {
@@ -82,7 +96,12 @@ function isCatalogEntitySummaryArray(value: unknown): value is CatalogEntitySumm
   );
 }
 
-function isEntityDetailResult(value: unknown): value is EntityDetailResult {
+type EntityCacheValue = EntityDetailResult | EntityDetailResponse;
+
+function isEntityCacheValue(value: unknown): value is EntityCacheValue {
+  if (isEntityDetailResponse(value)) {
+    return true;
+  }
   return (
     typeof value === "object" &&
     value !== null &&
@@ -110,13 +129,13 @@ export class CatalogService {
     this.plugin = plugin;
     this.config = config;
     this.client = client;
-    this.store = new PersistentCatalogCacheStore(plugin);
-    this.manager = new CatalogCacheManagerClass(
+    this.store = config.cacheStore ?? new PersistentCatalogCacheStore(plugin);
+    this.manager = config.cacheManager ?? new CatalogCacheManagerClass(
       this.store,
       config.defaultExpiration ?? DEFAULT_EXPIRATION,
     );
-    this.runtimeService = null;
-    if (config.baseUrl) {
+    this.runtimeService = config.runtimeService ?? null;
+    if (this.runtimeService === null && config.baseUrl) {
       const persistence = new ObsidianActiveRevisionPersistence(plugin);
       const fetcher = createObsidianFetcher();
       this.runtimeService = new RuntimeServiceClass({
@@ -162,12 +181,11 @@ export class CatalogService {
    * Fetch the catalog manifest with caching.
    *
    * @param revision - The catalog revision to fetch from.
-   * @param sourceRevision - The source revision used for the canonical input hash.
    */
   async fetchManifest(
     revision: CatalogRevision,
-    sourceRevision: string,
   ): Promise<CatalogManifest> {
+    const sourceRevision = this.requireActiveSourceRevision(revision);
     const key = buildManifestCacheKey(revision);
     const inputHash = buildManifestInputHash(sourceRevision);
     const envelope = await this.manager.fetch(
@@ -184,36 +202,36 @@ export class CatalogService {
    * Fetch the source list with caching.
    *
    * @param revision - The catalog revision to fetch from.
-   * @param sourceRevision - The source revision used for the canonical input hash.
    */
   async fetchSources(
     revision: CatalogRevision,
-    sourceRevision: string,
   ): Promise<CatalogSource[]> {
+    const sourceRevision = this.requireActiveSourceRevision(revision);
     const key = buildSourcesCacheKey(revision);
     const inputHash = buildSourcesInputHash(sourceRevision);
-    const envelope = await this.manager.fetch(
+    const envelope = await this.manager.fetch<SourceCacheValue>(
       key,
       () => this.client.fetchSources(revision),
       revision,
       inputHash,
-      isCatalogSourceArray,
+      isCatalogSourceCacheValue,
     );
-    return envelope.value;
+    return Array.isArray(envelope.value)
+      ? envelope.value
+      : Object.values(envelope.value);
   }
 
   /**
    * Fetch an entity index with caching.
    *
    * @param revision - The catalog revision to fetch from.
-   * @param sourceRevision - The source revision used for the canonical input hash.
    * @param entityKind - The entity kind to fetch the index for.
    */
   async fetchIndex(
     revision: CatalogRevision,
-    sourceRevision: string,
     entityKind: RuleEntityKind,
   ): Promise<CatalogEntitySummary[]> {
+    const sourceRevision = this.requireActiveSourceRevision(revision);
     const key = buildIndexCacheKey(revision, entityKind);
     const inputHash = buildIndexInputHash(sourceRevision, entityKind);
     const envelope = await this.manager.fetch(
@@ -230,26 +248,37 @@ export class CatalogService {
    * Fetch a single entity detail with caching.
    *
    * @param revision - The catalog revision to fetch from.
-   * @param sourceRevision - The source revision used for the canonical input hash.
    * @param entityId - Canonical entity ID used as cache key identity.
    * @param detailPath - Catalog retrieval path used for the network fetch.
    */
   async fetchEntity(
     revision: CatalogRevision,
-    sourceRevision: string,
     entityId: string,
     detailPath: string,
   ): Promise<EntityDetailResult> {
+    const sourceRevision = this.requireActiveSourceRevision(revision);
     const key = buildEntityCacheKey(revision, entityId);
     const inputHash = buildEntityInputHash(sourceRevision, entityId);
-    const envelope = await this.manager.fetch(
+    const result = await this.manager.fetchWithOfflineFallback(
       key,
       () => this.client.fetchEntity(revision, detailPath),
       revision,
       inputHash,
-      isEntityDetailResult,
+      isEntityCacheValue,
+      { allowStale: this.config.allowStaleOfflineFallback === true },
     );
-    return envelope.value;
+    const value = result.envelope.value;
+    if ("data" in value) {
+      return {
+        ...value,
+        cacheStatus: result.stale ? "stale-offline" : "fresh",
+      };
+    }
+    return {
+      catalogRevision: revision,
+      data: value,
+      cacheStatus: result.stale ? "stale-offline" : "fresh",
+    };
   }
 
   /**
@@ -302,5 +331,21 @@ export class CatalogService {
    */
   getClient(): CatalogClient {
     return this.client;
+  }
+
+  private requireActiveSourceRevision(revision: CatalogRevision): string {
+    const runtime = this.runtimeService;
+    if (
+      runtime === null ||
+      runtime.activationState !== "active" ||
+      runtime.revision === undefined ||
+      runtime.manifest === undefined
+    ) {
+      throw new Error("catalog unavailable: no active manifest");
+    }
+    if (runtime.revision !== revision || runtime.manifest.catalogRevision !== revision) {
+      throw new Error("catalog unavailable: requested revision is not active");
+    }
+    return runtime.manifest.sourceRevision;
   }
 }
