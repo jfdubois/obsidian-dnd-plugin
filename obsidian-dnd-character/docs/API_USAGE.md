@@ -14,7 +14,7 @@ Every Obsidian API member used in this project must have an entry before it appe
 | `Plugin.saveData` | `saveData(data: any): Promise<void>` | 0.9.7 | `main.ts`, `catalog/persistent-cache-store.ts` | persist plugin settings and catalog cache on unload | settings saved on unload; cache flushed on service dispose |
 | `Vault.cachedRead` | `cachedRead(file: TFile): Promise<string>` | 0.9.7 | `character-read.ts` | read character JSON from vault file | mocked in character-read tests |
 | `Vault.read` | `read(file: TFile): Promise<string>` | 0.9.7 | pending | read character JSON from disk (fallback) | pending |
-| `Vault.process` | `process(file: TFile, fn: (data: string) => string, options?: DataWriteOptions): Promise<string>` | 1.1.0 | pending | atomic character update | pending |
+| `Vault.process` | `process(file: TFile, fn: (data: string) => string, options?: DataWriteOptions): Promise<string>` | 1.1.0 | `character-update.ts` | atomic character update | mocked in character-update tests |
 | `Plugin.addCommand` | `addCommand(command: Command): Command` | 0.9.7 | `main.ts` | register command to open character sheet in right sidebar | command appears in command palette |
 | `Plugin.addSettingTab` | `addSettingTab(settingTab: PluginSettingTab): void` | 0.9.7 | `main.ts` | register settings tab | settings tab appears in Obsidian settings |
 | `PluginSettingTab` | `abstract class PluginSettingTab extends SettingTab { constructor(app: App, plugin: Plugin); display(): void; }` | 0.9.7 | `settings-tab.ts` | custom settings tab base class | tab renders with all settings |

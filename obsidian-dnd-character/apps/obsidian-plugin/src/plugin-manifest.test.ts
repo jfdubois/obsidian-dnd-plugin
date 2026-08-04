@@ -182,6 +182,7 @@ describe("manifest minAppVersion covers all used APIs with @since", () => {
     { name: "Vault.create", since: "0.9.7" },
     { name: "Vault.getFileByPath", since: "0.9.7" },
     { name: "Vault.cachedRead", since: "0.9.7" },
+    { name: "Vault.process", since: "1.1.0" },
   ];
 
   it.each(usedApisWithSince)(
