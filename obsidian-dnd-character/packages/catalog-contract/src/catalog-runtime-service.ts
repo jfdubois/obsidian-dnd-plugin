@@ -12,6 +12,7 @@ import { isCatalogEntitySummary } from './entity-summary';
 import { isEntityDetailResponse } from './entity-detail';
 import { isCurrentRevision } from './current-revision';
 import { CatalogRuntimeError } from './catalog-runtime-error';
+import type { CatalogRuntimeErrorArtifact } from './catalog-runtime-error';
 import { KIND_INDEX_FILENAME } from './kind-index-mapping';
 import { validateArtifactPath } from './artifact-path-utils';
 import { buildCatalogArtifactUrl } from './catalog-artifact-path';
@@ -91,6 +92,10 @@ export interface CatalogRuntimeDiagnostics {
  * Minimal fetch-compatible signature for dependency injection and testing.
  */
 export type Fetcher = (input: string, init?: RequestInit) => Promise<Response>;
+
+function describeFailureCause(cause: unknown): string {
+  return cause instanceof Error ? cause.message : String(cause);
+}
 
 /**
  * Result of a cache restoration attempt.
@@ -224,6 +229,13 @@ export class CatalogRuntimeService {
           failedEntityId: error.failedEntityId,
           failedEntityKind: error.failedEntityKind,
           previousActiveRevision: previousRevision,
+          cause: error.cause,
+          operation: error.operation,
+          artifact: error.artifact,
+          artifactKey: error.artifactKey,
+          candidateRevision: error.candidateRevision,
+          stage: error.stage,
+          resultingActivationState: previousState === 'active' ? 'active' : 'inactive',
         });
       }
       throw new CatalogRuntimeError({
@@ -983,53 +995,82 @@ export class CatalogRuntimeService {
     const expiration = createNoExpiryExpiration();
     const createdAt = new Date().toISOString();
     const sourceRevision = manifest.sourceRevision;
+    let artifact: CatalogRuntimeErrorArtifact = 'manifest';
+    let artifactKey = buildManifestCacheKey(revision);
+    let failedEntityId: string | undefined;
+    let failedEntityKind: string | undefined;
 
-    // Stage manifest with canonical input hash
-    await cm.set(buildManifestCacheKey(revision), createCacheEnvelope({
-      cacheSchemaVersion: CACHE_SCHEMA_VERSION,
-      catalogRevision: revision,
-      inputHash: buildManifestInputHash(sourceRevision),
-      createdAt,
-      expiration,
-      value: manifest,
-    }));
-
-    // Stage sources with canonical input hash
-    await cm.set(buildSourcesCacheKey(revision), createCacheEnvelope({
-      cacheSchemaVersion: CACHE_SCHEMA_VERSION,
-      catalogRevision: revision,
-      inputHash: buildSourcesInputHash(sourceRevision),
-      createdAt,
-      expiration,
-      value: sources,
-    }));
-
-    // Stage per-kind indexes with canonical input hash
-    for (const kind of manifest.entityKinds) {
-      const entries = index[kind];
-      if (!entries) continue;
-      await cm.set(buildIndexCacheKey(revision, kind), createCacheEnvelope({
+    try {
+      // Stage manifest with canonical input hash
+      await cm.set(artifactKey, createCacheEnvelope({
         cacheSchemaVersion: CACHE_SCHEMA_VERSION,
         catalogRevision: revision,
-        inputHash: buildIndexInputHash(sourceRevision, kind),
+        inputHash: buildManifestInputHash(sourceRevision),
         createdAt,
         expiration,
-        value: entries,
+        value: manifest,
       }));
-    }
 
-    // Stage required entities with canonical input hash
-    for (const [entityId, entity] of requiredEntities) {
-      const summary = this.findSummaryInIndex(index, entityId, entity.kind);
-      if (!summary) continue;
-      await cm.set(buildEntityCacheKey(revision, entityId), createCacheEnvelope({
+      // Stage sources with canonical input hash
+      artifact = 'sources';
+      artifactKey = buildSourcesCacheKey(revision);
+      await cm.set(artifactKey, createCacheEnvelope({
         cacheSchemaVersion: CACHE_SCHEMA_VERSION,
         catalogRevision: revision,
-        inputHash: buildEntityInputHash(sourceRevision, entityId),
+        inputHash: buildSourcesInputHash(sourceRevision),
         createdAt,
         expiration,
-        value: entity,
+        value: sources,
       }));
+
+      // Stage per-kind indexes with canonical input hash
+      for (const kind of manifest.entityKinds) {
+        const entries = index[kind];
+        if (!entries) continue;
+        artifact = 'index';
+        artifactKey = buildIndexCacheKey(revision, kind);
+        await cm.set(artifactKey, createCacheEnvelope({
+          cacheSchemaVersion: CACHE_SCHEMA_VERSION,
+          catalogRevision: revision,
+          inputHash: buildIndexInputHash(sourceRevision, kind),
+          createdAt,
+          expiration,
+          value: entries,
+        }));
+      }
+
+      // Stage required entities with canonical input hash
+      for (const [entityId, entity] of requiredEntities) {
+        const summary = this.findSummaryInIndex(index, entityId, entity.kind);
+        if (!summary) continue;
+        artifact = 'entity';
+        artifactKey = buildEntityCacheKey(revision, entityId);
+        failedEntityId = entityId;
+        failedEntityKind = entity.kind;
+        await cm.set(artifactKey, createCacheEnvelope({
+          cacheSchemaVersion: CACHE_SCHEMA_VERSION,
+          catalogRevision: revision,
+          inputHash: buildEntityInputHash(sourceRevision, entityId),
+          createdAt,
+          expiration,
+          value: entity,
+        }));
+      }
+    } catch (error) {
+      throw new CatalogRuntimeError({
+        endpoint: 'cache-staging',
+        revision,
+        message: `Failed to stage candidate cache: ${describeFailureCause(error)}`,
+        recoverable: true,
+        cause: error,
+        operation: 'cache-write',
+        artifact,
+        artifactKey,
+        candidateRevision: revision,
+        failedEntityId,
+        failedEntityKind,
+        stage: 'cache-staging',
+      });
     }
   }
 
@@ -1052,10 +1093,14 @@ export class CatalogRuntimeService {
       throw new CatalogRuntimeError({
         endpoint: 'active-revision-persistence',
         revision,
-        message: error instanceof Error
-          ? `Failed to persist active revision pointer: ${error.message}`
-          : 'Failed to persist active revision pointer',
+        message: `Failed to persist active revision pointer: ${describeFailureCause(error)}`,
         recoverable: true,
+        cause: error,
+        operation: 'active-revision-save',
+        artifact: 'active-pointer',
+        artifactKey: 'active-revision',
+        candidateRevision: revision,
+        stage: 'active-revision-save',
       });
     }
   }

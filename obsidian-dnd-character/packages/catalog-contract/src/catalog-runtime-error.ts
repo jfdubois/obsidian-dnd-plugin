@@ -1,5 +1,22 @@
 import type { CatalogRevision } from '@obsidian-dnd/domain';
 
+export type CatalogRuntimeErrorOperation =
+  | 'cache-write'
+  | 'active-revision-save';
+
+export type CatalogRuntimeErrorArtifact =
+  | 'manifest'
+  | 'sources'
+  | 'index'
+  | 'entity'
+  | 'active-pointer';
+
+export type CatalogRuntimeErrorStage =
+  | 'cache-staging'
+  | 'active-revision-save';
+
+export type CatalogRuntimeErrorResultingState = 'inactive' | 'active';
+
 /**
  * Error thrown during catalog API operations.
  *
@@ -16,6 +33,13 @@ export class CatalogRuntimeError extends Error {
   public readonly failedEntityId: string | undefined;
   public readonly failedEntityKind: string | undefined;
   public readonly previousActiveRevision: CatalogRevision | undefined;
+  public readonly cause: unknown;
+  public readonly operation: CatalogRuntimeErrorOperation | undefined;
+  public readonly artifact: CatalogRuntimeErrorArtifact | undefined;
+  public readonly artifactKey: string | undefined;
+  public readonly candidateRevision: CatalogRevision | undefined;
+  public readonly stage: CatalogRuntimeErrorStage | undefined;
+  public readonly resultingActivationState: CatalogRuntimeErrorResultingState | undefined;
 
   public constructor(options: {
     endpoint: string;
@@ -26,6 +50,13 @@ export class CatalogRuntimeError extends Error {
     failedEntityId?: string;
     failedEntityKind?: string;
     previousActiveRevision?: CatalogRevision;
+    cause?: unknown;
+    operation?: CatalogRuntimeErrorOperation;
+    artifact?: CatalogRuntimeErrorArtifact;
+    artifactKey?: string;
+    candidateRevision?: CatalogRevision;
+    stage?: CatalogRuntimeErrorStage;
+    resultingActivationState?: CatalogRuntimeErrorResultingState;
   }) {
     super(options.message);
     this.name = 'CatalogRuntimeError';
@@ -36,5 +67,12 @@ export class CatalogRuntimeError extends Error {
     this.failedEntityId = options.failedEntityId;
     this.failedEntityKind = options.failedEntityKind;
     this.previousActiveRevision = options.previousActiveRevision;
+    this.cause = options.cause;
+    this.operation = options.operation;
+    this.artifact = options.artifact;
+    this.artifactKey = options.artifactKey;
+    this.candidateRevision = options.candidateRevision ?? options.revision;
+    this.stage = options.stage;
+    this.resultingActivationState = options.resultingActivationState;
   }
 }
