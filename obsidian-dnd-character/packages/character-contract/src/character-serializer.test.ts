@@ -25,6 +25,10 @@ import {
   deserializeCharacter,
   CharacterSerializationError,
 } from "./character-serializer";
+import {
+  MIGRATION_REGISTRY,
+  type CharacterSchemaMigration,
+} from "./character-migration";
 
 function makeMinimalCharacter(): Character {
   const catalog = createCharacterCatalogReference({
@@ -226,6 +230,49 @@ describe("Character serializer", () => {
         }
         expect(thrown).toBeInstanceOf(CharacterSerializationError);
       }
+    });
+
+    it("migrates older schema version during deserialization", () => {
+      // Temporarily add a migration from version 0 -> 1
+      const arr = MIGRATION_REGISTRY as unknown as Array<CharacterSchemaMigration>;
+      arr.push({
+        fromVersion: 0,
+        toVersion: 1,
+        migrate: (data: unknown) => {
+          const obj = data as Record<string, unknown>;
+          return { ...obj, schemaVersion: 1 };
+        },
+      });
+      try {
+        // Create a version 0 character (structurally identical to v1)
+        const char = makeMinimalCharacter();
+        const json = serializeCharacter(char);
+        const parsed = JSON.parse(json);
+        parsed.schemaVersion = 0;
+
+        const restored = deserializeCharacter(JSON.stringify(parsed));
+        expect(restored.schemaVersion).toBe(1);
+        expect(restored.id).toBe(char.id);
+        expect(restored.identity.name).toBe(char.identity.name);
+      } finally {
+        arr.pop();
+      }
+    });
+
+    it("rejects future schema version during deserialization", () => {
+      const char = makeMinimalCharacter();
+      const json = serializeCharacter(char);
+      const parsed = JSON.parse(json);
+      parsed.schemaVersion = 99;
+
+      let thrown: CharacterSerializationError | undefined;
+      try {
+        deserializeCharacter(JSON.stringify(parsed));
+      } catch (err) {
+        thrown = err as CharacterSerializationError;
+      }
+      expect(thrown).toBeInstanceOf(CharacterSerializationError);
+      expect(thrown?.reason).toBe("schema-version-mismatch");
     });
   });
 });

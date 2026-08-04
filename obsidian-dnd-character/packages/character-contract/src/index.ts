@@ -78,3 +78,12 @@ export {
   CharacterSerializationError,
   type CharacterSerializationErrorReason,
 } from "./character-serializer";
+
+/* Schema migrations */
+export {
+  type CharacterSchemaMigration,
+  MIGRATION_REGISTRY,
+  CharacterMigrationError,
+  type CharacterMigrationErrorReason,
+  migrateCharacter,
+} from "./character-migration";

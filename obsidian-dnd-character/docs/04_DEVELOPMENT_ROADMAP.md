@@ -400,7 +400,7 @@ Persist authoritative character state safely in the vault.
 
 - [ ] **P8-T001 — Implement character runtime schema**
 - [ ] **P8-T002 — Implement character serializer**
-- [ ] **P8-T003 — Implement schema migration framework**
+- [x] **P8-T003 — Implement schema migration framework**
 - [ ] **P8-T004 — Implement configurable character folder creation**
 - [ ] **P8-T005 — Implement character create**
 - [ ] **P8-T006 — Implement character read/list**

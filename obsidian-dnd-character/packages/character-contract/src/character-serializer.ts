@@ -13,6 +13,10 @@
 import type { Character } from "./character";
 import { isCharacter } from "./character";
 import { CHARACTER_SCHEMA_VERSION } from "./schema-version";
+import {
+  migrateCharacter,
+  CharacterMigrationError,
+} from "./character-migration";
 
 /* ── Serialization error ───────────────────────────────────────── */
 
@@ -20,7 +24,8 @@ import { CHARACTER_SCHEMA_VERSION } from "./schema-version";
 export type CharacterSerializationErrorReason =
   | 'invalid-json'
   | 'schema-version-mismatch'
-  | 'invalid-character-structure';
+  | 'invalid-character-structure'
+  | 'migration-failed';
 
 /**
  * Error thrown when character serialization or deserialization fails.
@@ -86,15 +91,23 @@ export function deserializeCharacter(json: string): Character {
     });
   }
 
-  /* Validate schema version first for a clear error message. */
-  if (typeof parsed === "object" && parsed !== null) {
-    const obj = parsed as Record<string, unknown>;
-    if (typeof obj.schemaVersion === "number" && obj.schemaVersion !== CHARACTER_SCHEMA_VERSION) {
+  /* Run migration pipeline: no-op for current version,
+     migrates older versions, rejects future versions.       */
+  try {
+    parsed = migrateCharacter(parsed, CHARACTER_SCHEMA_VERSION);
+  } catch (err) {
+    if (err instanceof CharacterMigrationError) {
+      const reason: CharacterSerializationErrorReason =
+        err.reason === "unsupported-future-version"
+          ? "schema-version-mismatch"
+          : "migration-failed";
       throw new CharacterSerializationError({
-        reason: "schema-version-mismatch",
-        message: `Unsupported character schema version: ${obj.schemaVersion} (expected ${CHARACTER_SCHEMA_VERSION})`,
+        reason,
+        message: err.message,
+        cause: err,
       });
     }
+    throw err;
   }
 
   /* Full structural validation. */
