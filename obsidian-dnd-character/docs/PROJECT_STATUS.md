@@ -4,13 +4,17 @@
 
 PB8-004 — Settings and runtime status integration
 
-## Last completed corrective task
+## Automated gate
 
-PB8-004-B1-S2
+Passed
+
+## Manual gate
+
+Pending
 
 ## Next corrective task
 
-PB8-004-GATE — Independent settings and runtime-status review
+PB8-004-MANUAL
 
 ## Branch baseline
 
@@ -24,10 +28,10 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-PB8-004-B1-S1 (typecheck, lint, 3381 tests passing, 2 skipped; 7 pre-existing `main.ts` console warnings).
-- `npm --prefix obsidian-dnd-character run build`: passing post-PB8-004-B1-S1.
-- `npm --workspace @obsidian-dnd/obsidian-plugin run bundle`: passing post-PB8-004-B1-S1 (CJS, obsidian external, no prohibited deps).
-- Tests: 3381 passing, 2 skipped.
+- `npm --prefix obsidian-dnd-character run check`: passing post-PB8-004-GATE automated validation (typecheck, lint, 3386 tests passing, 2 skipped; 7 pre-existing `main.ts` console warnings).
+- `npm --prefix obsidian-dnd-character run build`: passing post-PB8-004-GATE automated validation.
+- `npm --workspace @obsidian-dnd/obsidian-plugin run bundle`: passing post-PB8-004-GATE automated validation (CJS, obsidian external, no prohibited deps).
+- Tests: 3386 passing, 2 skipped.
 
 ## Catalog baseline
 
@@ -53,18 +57,24 @@ None recorded.
 - Completed Phase 5 task commits: P5-T001 — 4e44b20; P5-T002 — ef11547; P5-T003 — defb572; P5-T004 — 98697ed; P5-T005 — b4a561e; P5-T006 — 518fb19; P5-T007 — f8b5f3a; P5-T008 — 5a63cc7
 - Completed Phase 6 task commits: P6-T001 — see Git history for P6-T001; P6-T002 — see Git history for P6-T002; P6-T003 — no changes needed; P6-T004 — see Git history for P6-T004; P6-T005 — see Git history for P6-T005; P6-T006 — see Git history for P6-T006; P6-T007 — see Git history for P6-T007; P6-T008 — see Git history for P6-T008; P6-T009 — see Git history for P6-T009; P6-T010 — see Git history for P6-T010; P6-T011 — see Git history for P6-T011; P6-T012 — see Git history for P6-T012
 - Phase 7 starting commit: 0dab1ff
-- Completed Phase 7 task commits: P7-T001 — see Git history for P7-T001; P7-T002 — see Git history for P7-T002; P7-T003 — see Git history for P7-T003; P7-T004 — 92c9fac; P7-T005 — no changes needed; P7-T006 — a407fd0; P7-T007 — 65b8c2e; P7-T008 — 0ceaabc
+- Completed Phase 7 task commits: P7-T001 — see Git history for P7-T001; P7-T002 — see Git history for P7-T002; P7-T003 — see Git history for P7-T003; P7-T004 — 92c9fac; P7-T005 — no changes needed; P7-T006 — a407fd0; P7-T007 — 65b8c2e; P7-T008 — 0ceaabc; P7-T009 — see Git history for P7-T009; P7-T010 — see Git history for P7-T010; P7-T011 — see Git history for P7-T011; P7-T012 — see Git history for P7-T012; P7-T013 — see Git history for P7-T013; P7-T014 — see Git history for P7-T014
 - Phase 7 gate: complete
 - Corrective campaign PB8-004 active (post-Phase-7 readiness work)
 - Current corrective campaign: PB8-004 — Settings and runtime status integration
-- Last completed corrective task: PB8-004-B1-S2
-- Next corrective task: PB8-004-GATE — Independent settings and runtime-status review
+- Automated gate: PB8-004-GATE passed (G1–G14); manual smoke remains pending.
+- Next corrective task: PB8-004-MANUAL
 - Gate status: Phase 4 gate complete. Phase 5 gate complete. Phase 6 gate complete. Phase 7 gate complete. PB8-003-R2 gate passed (G1–G14 and E1 scenarios A–G). Phase 8 roadmap work has not started; PB8-004 is corrective readiness work, not a Phase 8 roadmap task.
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-04 — PB8-004-GATE — Independent settings and runtime-status review — automated-pass-manual-pending
+Summary: The cumulative corrective campaign passed G1 through G14; the gate made no production changes. PB8-004 remains corrective readiness work; Phase 8 has not started.
+Validation: Focused status, refresh, lifecycle, and settings suites pass (80 tests). Two complete `npm --prefix obsidian-dnd-character run check` runs pass (3386 tests, 2 skipped; 7 pre-existing `main.ts` console warnings). `npm --prefix obsidian-dnd-character run build` and `npm --workspace @obsidian-dnd/obsidian-plugin run bundle` pass. Manual Obsidian desktop and mobile smoke validation is pending.
+Compatibility notes: No newer-only lifecycle API, Node/Electron dependency, automatic refresh, or Phase 8 implementation was introduced.
+Commit: see Git history for PB8-004-GATE.
 
 2026-08-04 — PB8-004-B1-S2 — Bind settings UI to plugin-owned catalog status and refresh — complete
 Summary: The settings tab now uses the plugin lifecycle boundary and retained CatalogService runtime-status subscription. Catalog URL input is draft-only until Apply; checking and refreshing delegate to the current service; the editable catalog-revision row was removed. No catalog runtime, activation, cache, persistence, or lifecycle semantics changed.
