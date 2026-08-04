@@ -8,13 +8,17 @@ PB8-004 — Settings and runtime status integration
 
 Passed
 
-## Manual gate
+## Desktop manual gate
+
+Passed
+
+## Mobile manual gate
 
 Pending
 
 ## Next corrective task
 
-PB8-004-MANUAL
+PB8-004-MANUAL-MOBILE
 
 ## Branch baseline
 
@@ -61,14 +65,23 @@ None recorded.
 - Phase 7 gate: complete
 - Corrective campaign PB8-004 active (post-Phase-7 readiness work)
 - Current corrective campaign: PB8-004 — Settings and runtime status integration
-- Automated gate: PB8-004-GATE passed (G1–G14); manual smoke remains pending.
-- Next corrective task: PB8-004-MANUAL
-- Gate status: Phase 4 gate complete. Phase 5 gate complete. Phase 6 gate complete. Phase 7 gate complete. PB8-003-R2 gate passed (G1–G14 and E1 scenarios A–G). Phase 8 roadmap work has not started; PB8-004 is corrective readiness work, not a Phase 8 roadmap task.
+- Automated gate: PB8-004-GATE passed (G1–G14).
+- Desktop manual gate: passed against the project `catalog-server`; Apply catalog URL, Check for updates, and Refresh catalog passed, the UI left its busy state, and no raw exception was reported.
+- Mobile manual gate: pending.
+- Next corrective task: PB8-004-MANUAL-MOBILE
+- Gate status: Phase 4 gate complete. Phase 5 gate complete. Phase 6 gate complete. Phase 7 gate complete. PB8-003-R2 gate passed (G1–G14 and E1 scenarios A–G). PB8-004 is not fully closed until the mobile smoke test passes. Phase 8 roadmap work has not started; PB8-004 is corrective readiness work, not a Phase 8 roadmap task.
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-04 — PB8-004-MANUAL-R4 — Record successful desktop catalog smoke test — complete
+Summary: Desktop Obsidian smoke testing passed against the project `catalog-server`, not the 5eTools website. Apply catalog URL, Check for updates, and Refresh catalog all passed; the UI left its busy state; no raw exception was reported. The final status was `Catalog current` with active revision `manual-smoke-001`. Production plugin code did not change during the smoke test. The 5eTools website remained separate on port 7775.
+Desktop test environment: Catalog API root: `http://127.0.0.1:8080/catalog/v1`; catalog revision: `manual-smoke-001`; source revision: `manual-smoke-source-001`; result: `Catalog current`; active revision: `manual-smoke-001`; production plugin code changed during smoke test: no; 5eTools website remained separate on port 7775.
+Validation: Runtime evidence at recording time: `catalog-server` was healthy on `127.0.0.1:8080` and `/catalog/v1/current.json` advertised `manual-smoke-001`; the separate `5etools` container was running on port 7775. Automated gate remains passed. Desktop manual gate is passed; mobile manual gate remains pending. PB8-004 is not fully closed until mobile smoke passes, and Phase 8 has not started.
+Compatibility notes: Documentation-only record; no production source or test changes.
+Commit: see Git history for PB8-004-MANUAL-R4.
 
 2026-08-04 — PB8-004-GATE — Independent settings and runtime-status review — automated-pass-manual-pending
 Summary: The cumulative corrective campaign passed G1 through G14; the gate made no production changes. PB8-004 remains corrective readiness work; Phase 8 has not started.
