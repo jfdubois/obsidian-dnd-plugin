@@ -43,7 +43,7 @@ import {
   createRenderParagraph,
   createCatalogEntitySummary,
 } from "@obsidian-dnd/catalog-contract";
-import type { CatalogableEntity } from "./compact-index-tag-generator";
+import type { CatalogableEntity } from "./compact-index-tag-generator.js";
 
 /* ── Effect metadata factory ───────────────────────────────────── */
 

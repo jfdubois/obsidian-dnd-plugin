@@ -477,6 +477,12 @@ export {
   /* Catalog publisher types */
   type CatalogPublisherInput,
   type PublishResult,
+  type PublishCurrentResult,
+  type PublishCatalogReleaseResult,
   /* Catalog publisher function */
   publishCatalog,
+  publishCurrentCatalogRevision,
+  publishCatalogRelease,
 } from "./catalog-publisher";
+
+export { createSmokeCatalogInput, SMOKE_SOURCE_REVISION } from "./smoke-catalog";

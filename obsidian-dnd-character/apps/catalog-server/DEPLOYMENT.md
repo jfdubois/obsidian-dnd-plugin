@@ -19,6 +19,37 @@ curl http://localhost:8080/health
 docker compose down
 ```
 
+## Local normalized smoke catalog
+
+This project-owned smoke catalog is deterministic integration data, not the
+full pinned 5eTools-to-production-catalog build. In this development
+environment, port 7775 belongs to the 5eTools website and must not be used as
+the Obsidian plugin's normalized catalog endpoint.
+
+From the monorepo Git root, publish the local smoke revision:
+
+```bash
+npm --prefix obsidian-dnd-character run publish:catalog-smoke -- \
+  --output-root apps/catalog-server \
+  --revision manual-smoke-001
+```
+
+The immutable revision is retained on repeated runs; an already complete
+revision may be reactivated, while an incomplete existing revision fails rather
+than being overwritten. To serve it, run this from `obsidian-dnd-character/`:
+
+```bash
+CATALOG_BIND_ADDRESS=127.0.0.1 \
+CATALOG_PORT=8080 \
+CATALOG_DATA_PATH="$(pwd)/apps/catalog-server/catalog" \
+docker compose -f apps/catalog-server/docker-compose.yml up -d --build catalog-server
+```
+
+Catalog API root: `http://127.0.0.1:8080/catalog/v1`
+Current pointer: `http://127.0.0.1:8080/catalog/v1/current.json`
+
+The full 5eTools-to-production-catalog operational CLI remains separate.
+
 The server listens on port **8080** by default on all interfaces (`0.0.0.0`). Override with `CATALOG_PORT` and `CATALOG_BIND_ADDRESS`:
 
 ```bash

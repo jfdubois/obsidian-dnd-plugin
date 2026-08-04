@@ -7,7 +7,8 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build": "tsc"
+    "build": "tsc",
+    "publish:catalog-smoke": "npm run build && node --experimental-loader ./catalog-node-loader.config.mjs dist/catalog-smoke-publish.js"
   },
   "dependencies": {
     "@obsidian-dnd/domain": "0.0.0",

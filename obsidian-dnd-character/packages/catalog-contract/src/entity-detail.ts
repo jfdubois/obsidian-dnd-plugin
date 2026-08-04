@@ -107,7 +107,8 @@ function hasCommonEntityRuleFields(
   if (!isSourceId(obj.sourceId)) return false;
   if (!isRuleset(obj.ruleset)) return false;
   if (!isContentAccess(obj.access)) return false;
-  if (typeof obj.legacy !== "boolean") return false;
+  // Skills and languages intentionally do not carry the legacy field.
+  if (obj.kind !== "skill" && obj.kind !== "language" && typeof obj.legacy !== "boolean") return false;
 
   return true;
 }

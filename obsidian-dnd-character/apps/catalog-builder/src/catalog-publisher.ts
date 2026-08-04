@@ -1,10 +1,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { CatalogManifest, CatalogEntitySummary, CatalogSource } from "@obsidian-dnd/catalog-contract";
-import { KIND_INDEX_FILENAME } from "@obsidian-dnd/catalog-contract";
-import type { RuleEntityKind } from "@obsidian-dnd/domain";
-import type { ValidationReport } from "./validation-report";
-import type { InventoryReport } from "./inventory-report";
+import { isCatalogEntitySummary, isCatalogManifest, isCatalogSource, isEntityDetailResponse, createCurrentRevision, isCurrentRevision, KIND_INDEX_FILENAME } from "@obsidian-dnd/catalog-contract";
+import { isCatalogRevision, type RuleEntityKind } from "@obsidian-dnd/domain";
+import type { ValidationReport } from "./validation-report.js";
+import type { InventoryReport } from "./inventory-report.js";
 
 /* ── Input type ────────────────────────────────────────────────── */
 
@@ -17,6 +17,8 @@ export interface CatalogPublisherInput {
   readonly inventoryReport: InventoryReport;
   /** Optional source metadata. When present, emitted as sources.json. */
   readonly sources?: CatalogSource[];
+  /** Test-only hook for exercising pointer-rename failures without patching Node globals. */
+  readonly pointerRename?: (from: string, to: string) => void;
 }
 
 /* ── Result type ───────────────────────────────────────────────── */
@@ -26,6 +28,17 @@ export interface PublishResult {
   readonly revisionPath: string;
   readonly errors: readonly string[];
   readonly fileCount: number;
+}
+
+export interface PublishCurrentResult {
+  readonly success: boolean;
+  readonly pointerPath: string;
+  readonly errors: readonly string[];
+}
+
+export interface PublishCatalogReleaseResult extends PublishResult {
+  readonly pointerPath: string;
+  readonly active: boolean;
 }
 
 /* ── Helpers ───────────────────────────────────────────────────── */
@@ -97,6 +110,37 @@ function verifyFiles(files: Map<string, string>, targetDir: string): string | nu
     if (actual !== expected) {
       return `Content mismatch for ${relPath}`;
     }
+  }
+  return null;
+}
+
+/** Return every regular file in a published revision, relative to that revision. */
+function readPublishedFileMap(targetDir: string): Map<string, string> {
+  const files = new Map<string, string>();
+  const visit = (directory: string): void => {
+    for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      const fullPath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        visit(fullPath);
+      } else if (entry.isFile()) {
+        files.set(path.relative(targetDir, fullPath), fs.readFileSync(fullPath, "utf8"));
+      }
+    }
+  };
+  visit(targetDir);
+  return files;
+}
+
+/** Existing immutable revisions may only be reactivated when all bytes match. */
+function comparePublishedRevision(input: CatalogPublisherInput, revisionPath: string): string | null {
+  const expected = buildFileMap(input);
+  const actual = readPublishedFileMap(revisionPath);
+  for (const [relativePath, content] of expected) {
+    if (!actual.has(relativePath)) return `Immutable revision conflict: missing ${relativePath}.`;
+    if (actual.get(relativePath) !== content) return `Immutable revision conflict: content differs for ${relativePath}.`;
+  }
+  for (const relativePath of actual.keys()) {
+    if (!expected.has(relativePath)) return `Immutable revision conflict: unexpected ${relativePath}.`;
   }
   return null;
 }
@@ -205,4 +249,111 @@ export function publishCatalog(input: CatalogPublisherInput): PublishResult {
       fileCount: 0,
     });
   }
+}
+
+function parseJsonFile(filePath: string): unknown {
+  return JSON.parse(fs.readFileSync(filePath, "utf8")) as unknown;
+}
+
+/** Validate the complete runtime artifact set before making it active. */
+export function validatePublishedRevision(outputDir: string, revision: string): readonly string[] {
+  const errors: string[] = [];
+  if (!isCatalogRevision(revision)) return ["Catalog revision is invalid."];
+  const revisionPath = path.join(outputDir, "catalog", "v1", "revisions", revision);
+  if (!fs.existsSync(revisionPath) || !fs.statSync(revisionPath).isDirectory()) {
+    return [`Revision directory does not exist: ${revisionPath}`];
+  }
+  if (path.basename(revisionPath).startsWith(".publish-temp")) {
+    return ["Temporary publication directories cannot be activated."];
+  }
+  let manifest: CatalogManifest;
+  try {
+    const value = parseJsonFile(path.join(revisionPath, "manifest.json"));
+    if (!isCatalogManifest(value)) throw new Error("manifest.json is not a valid runtime manifest.");
+    manifest = value;
+  } catch (error) {
+    return [`Unable to validate manifest.json: ${error instanceof Error ? error.message : String(error)}`];
+  }
+  if (manifest.catalogRevision !== revision) errors.push("Manifest catalogRevision does not match requested revision.");
+  let sources: CatalogSource[];
+  try {
+    const value = parseJsonFile(path.join(revisionPath, "sources.json"));
+    if (!Array.isArray(value) || !value.every(isCatalogSource)) throw new Error("sources.json is not a valid source list.");
+    sources = value;
+  } catch (error) {
+    return [...errors, `Unable to validate sources.json: ${error instanceof Error ? error.message : String(error)}`];
+  }
+  const sourceIds = new Set(sources.map((source) => source.id));
+  for (const kind of manifest.entityKinds) {
+    const indexPath = path.join(revisionPath, "indexes", KIND_INDEX_FILENAME[kind]);
+    try {
+      const index = parseJsonFile(indexPath);
+      if (!Array.isArray(index) || !index.every(isCatalogEntitySummary)) throw new Error("index is not a valid summary array.");
+      for (const summary of index) {
+        if (summary.kind !== kind) errors.push(`Index ${KIND_INDEX_FILENAME[kind]} contains a ${summary.kind} summary.`);
+        if (!sourceIds.has(summary.sourceId)) errors.push(`Summary ${summary.id} references an unknown source.`);
+        if (!summary.detailPath.startsWith(`entities/${kind}/`) || !summary.detailPath.endsWith(".json") || summary.detailPath.includes("..")) {
+          errors.push(`Summary ${summary.id} has an invalid detail path.`);
+        } else {
+          const detailPath = path.join(revisionPath, summary.detailPath);
+          if (!fs.existsSync(detailPath)) {
+            errors.push(`Summary ${summary.id} detail file is missing.`);
+          } else {
+            const detail = parseJsonFile(detailPath);
+            if (!isEntityDetailResponse(detail) || detail.id !== summary.id || detail.kind !== summary.kind || detail.sourceId !== summary.sourceId) {
+              errors.push(`Summary ${summary.id} does not resolve to a valid matching detail.`);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      errors.push(`Unable to validate ${KIND_INDEX_FILENAME[kind]}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  return Object.freeze(errors);
+}
+
+/** Atomically write the runtime's active-revision pointer after validating its target. */
+export function publishCurrentCatalogRevision(input: { readonly outputDir: string; readonly revision: string; readonly pointerRename?: (from: string, to: string) => void }): PublishCurrentResult {
+  const errors = [...validatePublishedRevision(input.outputDir, input.revision)];
+  if (errors.length > 0) return Object.freeze({ success: false, pointerPath: "", errors: Object.freeze(errors) });
+  const pointerDir = path.join(input.outputDir, "catalog", "v1");
+  const pointerPath = path.join(pointerDir, "current.json");
+  const tempPath = path.join(pointerDir, `.current-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}.tmp`);
+  try {
+    fs.mkdirSync(pointerDir, { recursive: true });
+    fs.writeFileSync(tempPath, JSON.stringify(createCurrentRevision(input.revision), null, 2), "utf8");
+    const pointer = parseJsonFile(tempPath);
+    if (!isCurrentRevision(pointer) || Object.keys(pointer).length !== 1 || pointer.currentRevision !== input.revision) {
+      throw new Error("Temporary current pointer failed runtime validation.");
+    }
+    (input.pointerRename ?? fs.renameSync)(tempPath, pointerPath);
+    return Object.freeze({ success: true, pointerPath, errors: Object.freeze([]) });
+  } catch (error) {
+    try { fs.rmSync(tempPath, { force: true }); } catch { /* best effort */ }
+    return Object.freeze({ success: false, pointerPath: "", errors: Object.freeze([error instanceof Error ? error.message : String(error)]) });
+  }
+}
+
+/** Publish an immutable revision, then atomically make it active. */
+export function publishCatalogRelease(input: CatalogPublisherInput): PublishCatalogReleaseResult {
+  const revision = input.manifest.catalogRevision;
+  const finalPath = path.join(input.outputDir, "catalog", "v1", "revisions", revision);
+  let publication: PublishResult;
+  if (fs.existsSync(finalPath)) {
+    const valid = validatePublishedRevision(input.outputDir, revision);
+    if (valid.length > 0) return Object.freeze({ success: false, revisionPath: "", pointerPath: "", active: false, errors: Object.freeze(["Immutable revision conflict: existing revision is incomplete or invalid.", ...valid]), fileCount: 0 });
+    try {
+      const conflict = comparePublishedRevision(input, finalPath);
+      if (conflict !== null) return Object.freeze({ success: false, revisionPath: finalPath, pointerPath: "", active: false, errors: Object.freeze([conflict]), fileCount: 0 });
+    } catch (error) {
+      return Object.freeze({ success: false, revisionPath: finalPath, pointerPath: "", active: false, errors: Object.freeze([`Unable to compare immutable revision: ${error instanceof Error ? error.message : String(error)}`]), fileCount: 0 });
+    }
+    publication = { success: true, revisionPath: finalPath, errors: [], fileCount: buildFileMap(input).size };
+  } else {
+    publication = publishCatalog(input);
+    if (!publication.success) return Object.freeze({ ...publication, pointerPath: "", active: false });
+  }
+  const pointer = publishCurrentCatalogRevision({ outputDir: input.outputDir, revision, pointerRename: input.pointerRename });
+  return Object.freeze({ success: pointer.success, revisionPath: publication.revisionPath, pointerPath: pointer.pointerPath, active: pointer.success, errors: pointer.errors, fileCount: publication.fileCount });
 }
