@@ -436,11 +436,11 @@ Calculate the initial character sheet with explanation and provenance traces.
 - [x] **P9-T009 — Implement armor class**
 - [x] **P9-T010 — Implement initiative**
 - [x] **P9-T011 — Implement attacks**
-- [ ] **P9-T012 — Implement defenses, immunities, and capabilities**
-- [ ] **P9-T013 — Implement spellcasting totals and slot maxima**
-- [ ] **P9-T014 — Implement feature resources**
-- [ ] **P9-T015 — Implement contribution and provenance traces**
-- [ ] **P9-T016 — Implement unsupported-mechanic diagnostics**
+- [x] **P9-T012 — Implement defenses, immunities, and capabilities**
+- [x] **P9-T013 — Implement spellcasting totals and slot maxima**
+- [x] **P9-T014 — Implement feature resources**
+- [x] **P9-T015 — Implement contribution and provenance traces**
+- [x] **P9-T016 — Implement unsupported-mechanic diagnostics**
 - [ ] **P9-T017 — Implement character-sheet projection index**
 - [ ] **P9-T018 — Add 2014 and 2024 golden-character tests**
 

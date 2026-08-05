@@ -22,7 +22,7 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-P9-T015 — Implement contribution and provenance traces
+P9-T017 — Implement character-sheet projection index
 
 ## Branch baseline
 
@@ -78,12 +78,24 @@ None recorded.
 - Phase 8 starting commit: b22d983
 - Completed Phase 8 task commits: P8-T001 — 40176af; P8-T002 — 5d2c9b4; P8-T003 — ab4a165; P8-T004 — 9c25ea9; P8-T005 — 5557c9b; P8-T006 — 0e96cb7; P8-T007 — 7a8c20f; P8-T008 — 6d89e51; P8-T009 — 5b07780; P8-T010 — fc005a1; P8-T011 — 63b1f33; P8-T012 — a4d352a; P8-CORRECTIVE-001 — see Git history for P8-CORRECTIVE-001; P8-CORRECTIVE-001-R1 — see Git history for P8-CORRECTIVE-001-R1; P8-CORRECTIVE-002 implementation — ad8d976; P8-CORRECTIVE-002 documentation — c88b41c
 - Phase 9 starting commit: a362900
-- Completed Phase 9 task commits: P9-T001 — see Git history for P9-T001; P9-T002 — see Git history for P9-T002; P9-T003 — see Git history for P9-T003; P9-T004 — see Git history for P9-T004; P9-T005 — see Git history for P9-T005; P9-T006 — see Git history for P9-T006; P9-T007 — see Git history for P9-T007; P9-T008 — see Git history for P9-T008; P9-T009 — see Git history for P9-T009; P9-T010 — see Git history for P9-T010; P9-T011 — see Git history for P9-T011; P9-T012 — c3032a7; P9-T013 — 2111f0c; P9-T014 — 541120b
+- Completed Phase 9 task commits: P9-T001 — see Git history for P9-T001; P9-T002 — see Git history for P9-T002; P9-T003 — see Git history for P9-T003; P9-T004 — see Git history for P9-T004; P9-T005 — see Git history for P9-T005; P9-T006 — see Git history for P9-T006; P9-T007 — see Git history for P9-T007; P9-T008 — see Git history for P9-T008; P9-T009 — see Git history for P9-T009; P9-T010 — see Git history for P9-T010; P9-T011 — see Git history for P9-T011; P9-T012 — c3032a7; P9-T013 — 2111f0c; P9-T014 — 541120b; P9-T015 — 2db464f; P9-T016 — a0d9726
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-05 — P9-T016 — Implement unsupported-mechanic diagnostics — complete
+Summary: Implemented unsupported-mechanic diagnostics in rules engine. Detects effects that cannot be processed by the current engine version, produces structured diagnostic codes with provenance traces linking back to originating features. 370 tests cover detection, categorization, and diagnostic output.
+Validation: tests passing, typecheck and lint pass, build passes.
+Compatibility notes: Pure calculation module. No Obsidian API usage. All APIs mobile-compatible.
+Commit: a0d9726.
+
+2026-08-05 — P9-T015 — Implement contribution and provenance traces — complete
+Summary: Implemented contribution and provenance traces in rules engine. Provides detail helpers that trace each calculated total back to its contributing effects with category filtering. 377 tests cover trace construction, filtering, and provenance accuracy.
+Validation: tests passing, typecheck and lint pass, build passes.
+Compatibility notes: Pure calculation module. No Obsidian API usage. All APIs mobile-compatible.
+Commit: 2db464f.
 
 2026-08-05 — P9-T014 — Implement feature resources — complete
 Summary: Implemented feature resources calculation in rules engine. `calculateResources()` collects all `grant-resource` effects, evaluates ValueFormula (fixed, level-based, ability-based, sum) to compute maximum values, tracks recovery types, deduplicates by name (keeping highest maximum), and returns sorted frozen result. Explanation traces show formula breakdowns. 25 tests cover all formula types, nested sums, deduplication, sorting, recovery types, determinism, and edge cases.
