@@ -22,7 +22,7 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-P9-T018 — Add 2014 and 2024 golden-character tests
+Phase 9 gate
 
 ## Branch baseline
 
@@ -78,12 +78,18 @@ None recorded.
 - Phase 8 starting commit: b22d983
 - Completed Phase 8 task commits: P8-T001 — 40176af; P8-T002 — 5d2c9b4; P8-T003 — ab4a165; P8-T004 — 9c25ea9; P8-T005 — 5557c9b; P8-T006 — 0e96cb7; P8-T007 — 7a8c20f; P8-T008 — 6d89e51; P8-T009 — 5b07780; P8-T010 — fc005a1; P8-T011 — 63b1f33; P8-T012 — a4d352a; P8-CORRECTIVE-001 — see Git history for P8-CORRECTIVE-001; P8-CORRECTIVE-001-R1 — see Git history for P8-CORRECTIVE-001-R1; P8-CORRECTIVE-002 implementation — ad8d976; P8-CORRECTIVE-002 documentation — c88b41c
 - Phase 9 starting commit: a362900
-- Completed Phase 9 task commits: P9-T001 — see Git history for P9-T001; P9-T002 — see Git history for P9-T002; P9-T003 — see Git history for P9-T003; P9-T004 — see Git history for P9-T004; P9-T005 — see Git history for P9-T005; P9-T006 — see Git history for P9-T006; P9-T007 — see Git history for P9-T007; P9-T008 — see Git history for P9-T008; P9-T009 — see Git history for P9-T009; P9-T010 — see Git history for P9-T010; P9-T011 — see Git history for P9-T011; P9-T012 — c3032a7; P9-T013 — 2111f0c; P9-T014 — 541120b; P9-T015 — 2db464f; P9-T016 — a0d9726; P9-T017 — see Git history for P9-T017
+- Completed Phase 9 task commits: P9-T001 — see Git history for P9-T001; P9-T002 — see Git history for P9-T002; P9-T003 — see Git history for P9-T003; P9-T004 — see Git history for P9-T004; P9-T005 — see Git history for P9-T005; P9-T006 — see Git history for P9-T006; P9-T007 — see Git history for P9-T007; P9-T008 — see Git history for P9-T008; P9-T009 — see Git history for P9-T009; P9-T010 — see Git history for P9-T010; P9-T011 — see Git history for P9-T011; P9-T012 — c3032a7; P9-T013 — 2111f0c; P9-T014 — 541120b; P9-T015 — 2db464f; P9-T016 — a0d9726; P9-T017 — see Git history for P9-T017; P9-T018 — see Git history for P9-T018
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-05 — P9-T018 — Add 2014 and 2024 golden-character tests — complete
+Summary: Added golden-character integration tests for both 2014 and 2024 SRD rulesets. 2014 test: Human Fighter 5 with full armor proficiencies, STR/CON saving throws, base AC formula, longsword attack. 2024 test: Elf Rogue 5 with light armor, DEX/INT saving throws, dex-plus AC formula, rapier with finesse, sneak attack resource, darkvision sense. Both test files verify all major projection sections (abilities, proficiencies, saving throws, skills, defenses, capabilities, attacks, spellcasting, resources, movement, senses, initiative, max HP), determinism (frozen identical snapshots), shared effect collection, and contribution traces. 6 tests total (3 per ruleset).
+Validation: 4046 tests passing (6 new), typecheck and lint pass, build passes.
+Compatibility notes: Pure calculation module. No Obsidian API usage. All APIs mobile-compatible.
+Commit: see Git history for P9-T018.
 
 2026-08-05 — P9-T017 — Implement character-sheet projection index — complete
 Summary: Implemented unified character-sheet projection in rules engine. `buildCharacterSheetProjection()` aggregates all Phase 9 sub-calculations into a single `CharacterSheetProjection` type. Effects collected once via `collectEffects()` and shared across all sub-calculations. Extended 11 existing calculation functions to accept optional `collectedEffects` parameter for reuse. Result frozen and deterministic. 10 tests cover all sections present, determinism, frozen output, single effect collection, defenses/capabilities distinct, correct level/bonus, ability scores, contribution traces, species effects, and no character mutation.
@@ -96,12 +102,6 @@ Summary: Implemented unsupported-mechanic diagnostics in rules engine. Detects e
 Validation: tests passing, typecheck and lint pass, build passes.
 Compatibility notes: Pure calculation module. No Obsidian API usage. All APIs mobile-compatible.
 Commit: a0d9726.
-
-2026-08-05 — P9-T015 — Implement contribution and provenance traces — complete
-Summary: Implemented contribution and provenance traces in rules engine. Provides detail helpers that trace each calculated total back to its contributing effects with category filtering. 377 tests cover trace construction, filtering, and provenance accuracy.
-Validation: tests passing, typecheck and lint pass, build passes.
-Compatibility notes: Pure calculation module. No Obsidian API usage. All APIs mobile-compatible.
-Commit: 2db464f.
 
 2026-08-04 — P8-CORRECTIVE-001-R1 — Path fidelity, event synchronization, rename notifications, and structured diagnostics — complete
 Summary: Repaired path preservation in character repository: (1) `handleRename()` now publishes index change event via `this.notify(event)` before returning; (2) `CharacterListEntry` interface added with `character` + `filePath`; `listCharactersInVault()` returns entries with actual vault-discovered paths; (3) `initializeIndex()` uses actual paths and records skipped diagnostics; (4) `readFromPath()` uses `getFileByPath`/`cachedRead`/`deserializeCharacter`; (5) `VaultEventDiagnostic` interface and `onDiagnostic` callback added to vault events service; replaced `console.error` with structured diagnostic callback. Added 16 integrated path-fidelity tests (T1-T16) in two focused test files covering startup indexing, external create/modify/delete events, rename within/into/out of folder, filename vs ID, folder filtering, duplicate IDs, and diagnostic lifecycle.
