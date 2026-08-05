@@ -79,3 +79,10 @@ export {
   type MaxHpResult,
   calculateMaxHp,
 } from "./max-hp";
+
+export {
+  /* Armor class */
+  type AcFormulaResult,
+  type ArmorClassResult,
+  calculateArmorClass,
+} from "./armor-class";

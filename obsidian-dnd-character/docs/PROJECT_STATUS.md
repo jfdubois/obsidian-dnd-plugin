@@ -22,7 +22,7 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-P9-T009 — Implement armor class
+P9-T010 — Implement initiative
 
 ## Branch baseline
 
