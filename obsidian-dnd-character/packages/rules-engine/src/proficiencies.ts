@@ -11,7 +11,7 @@ import type {
   RuleEffect,
 } from "@obsidian-dnd/catalog-contract";
 import type { EntityId } from "@obsidian-dnd/domain";
-import type { CatalogLookup } from "./effect-provenance";
+import type { CatalogLookup, CollectedEffect } from "./effect-provenance";
 import { collectEffects } from "./effect-collection";
 import { proficiencyBonusForLevel } from "./proficiency-bonus";
 import { calculateTotalLevel } from "./total-level";
@@ -170,11 +170,12 @@ function armorCategoryIndex(cat: "light" | "medium" | "heavy" | "shield"): numbe
 export function calculateProficiencies(
   character: Character,
   catalog: CatalogLookup,
+  collectedEffects?: ReadonlyArray<CollectedEffect>,
 ): ProficienciesResult {
   const totalLevel = calculateTotalLevel(character);
   const proficiencyBonus = proficiencyBonusForLevel(totalLevel);
 
-  const collected = collectEffects(character, catalog);
+  const collected = collectedEffects ?? collectEffects(character, catalog);
 
   // Collect expertise skill IDs
   const expertiseSkillIds = new Set<EntityId>();

@@ -441,7 +441,7 @@ Calculate the initial character sheet with explanation and provenance traces.
 - [x] **P9-T014 — Implement feature resources**
 - [x] **P9-T015 — Implement contribution and provenance traces**
 - [x] **P9-T016 — Implement unsupported-mechanic diagnostics**
-- [ ] **P9-T017 — Implement character-sheet projection index**
+- [x] **P9-T017 — Implement character-sheet projection index**
 - [ ] **P9-T018 — Add 2014 and 2024 golden-character tests**
 
 ### Phase 9 gate

@@ -6,7 +6,7 @@ import type {
   SetMovementEffect,
   MovementMode,
 } from "@obsidian-dnd/catalog-contract";
-import type { CatalogLookup } from "./effect-provenance";
+import type { CatalogLookup, CollectedEffect } from "./effect-provenance";
 import { collectEffects } from "./effect-collection";
 import { isSpeciesRule } from "@obsidian-dnd/catalog-contract";
 
@@ -154,6 +154,7 @@ function movementKindFromMode(mode: MovementMode): MovementKind | undefined {
 export function calculateMovementSenses(
   character: Character,
   catalog: CatalogLookup,
+  collectedEffects?: ReadonlyArray<CollectedEffect>,
 ): MovementSensesResult {
   // Movement speeds keyed by kind
   const movementSpeeds: Record<MovementKind, number> = {
@@ -202,7 +203,7 @@ export function calculateMovementSenses(
   }
 
   // 2. Collect and process all rule effects
-  const collected = collectEffects(character, catalog);
+  const collected = collectedEffects ?? collectEffects(character, catalog);
 
   for (const ce of collected) {
     const effect = ce.effect;

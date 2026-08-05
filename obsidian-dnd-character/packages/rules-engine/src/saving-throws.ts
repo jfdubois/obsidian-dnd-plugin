@@ -9,7 +9,7 @@ import type {
   RollMode,
   RuleEffect,
 } from "@obsidian-dnd/catalog-contract";
-import type { CatalogLookup } from "./effect-provenance";
+import type { CatalogLookup, CollectedEffect } from "./effect-provenance";
 import { collectEffects } from "./effect-collection";
 import { abilityModifier } from "./ability-scores";
 import { proficiencyBonusForLevel } from "./proficiency-bonus";
@@ -129,11 +129,12 @@ function predicateMatchesSavingThrow(
 export function calculateSavingThrows(
   character: Character,
   catalog: CatalogLookup,
+  collectedEffects?: ReadonlyArray<CollectedEffect>,
 ): SavingThrowsResult {
   const totalLevel = calculateTotalLevel(character);
   const proficiencyBonus = proficiencyBonusForLevel(totalLevel);
 
-  const collected = collectEffects(character, catalog);
+  const collected = collectedEffects ?? collectEffects(character, catalog);
 
   // Collect saving throw proficiency abilities
   const proficientAbilities = new Set<Ability>();

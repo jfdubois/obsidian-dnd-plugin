@@ -7,7 +7,7 @@ import type {
   ImmunityDefinition,
   CapabilityDefinition,
 } from "@obsidian-dnd/catalog-contract";
-import type { CatalogLookup } from "./effect-provenance";
+import type { CatalogLookup, CollectedEffect } from "./effect-provenance";
 import { collectEffects } from "./effect-collection";
 
 /* ── Result types ────────────────────────────────────────────────
@@ -126,8 +126,9 @@ function processCapabilityDefinition(capability: CapabilityDefinition) {
 export function calculateDefenses(
   character: Character,
   catalog: CatalogLookup,
+  collectedEffects?: ReadonlyArray<CollectedEffect>,
 ): DefensesResult {
-  const collected = collectEffects(character, catalog);
+  const collected = collectedEffects ?? collectEffects(character, catalog);
 
   const resistanceSet = new Set<string>();
   const damageImmunitySet = new Set<string>();
@@ -181,8 +182,9 @@ export function calculateDefenses(
 export function calculateCapabilities(
   character: Character,
   catalog: CatalogLookup,
+  collectedEffects?: ReadonlyArray<CollectedEffect>,
 ): CapabilitiesResult {
-  const collected = collectEffects(character, catalog);
+  const collected = collectedEffects ?? collectEffects(character, catalog);
 
   let noBreathingRequired = false;
   let noFoodRequired = false;

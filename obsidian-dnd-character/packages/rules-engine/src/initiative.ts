@@ -4,7 +4,7 @@ import type {
   AddInitiativeEffect,
   RuleEffect,
 } from "@obsidian-dnd/catalog-contract";
-import type { CatalogLookup } from "./effect-provenance";
+import type { CatalogLookup, CollectedEffect } from "./effect-provenance";
 import { collectEffects } from "./effect-collection";
 import { abilityModifier } from "./ability-scores";
 import { proficiencyBonusForLevel } from "./proficiency-bonus";
@@ -71,12 +71,13 @@ function isInitiativeProficiency(
 export function calculateInitiative(
   character: Character,
   catalog: CatalogLookup,
+  collectedEffects?: ReadonlyArray<CollectedEffect>,
 ): InitiativeResult {
   const totalLevel = calculateTotalLevel(character);
   const proficiencyBonus = proficiencyBonusForLevel(totalLevel);
   const dexModifier = abilityModifier(character.abilities.scores.DEX);
 
-  const collected = collectEffects(character, catalog);
+  const collected = collectedEffects ?? collectEffects(character, catalog);
 
   // Check for initiative proficiency
   let isProficient = false;

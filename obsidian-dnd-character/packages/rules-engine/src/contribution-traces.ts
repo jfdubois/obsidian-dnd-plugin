@@ -292,7 +292,7 @@ function traceSortKey(trace: ContributionTrace): string {
    frozen array of contribution traces.                           */
 
 export function buildContributionTraces(
-  collectedEffects: CollectedEffect[],
+  collectedEffects: ReadonlyArray<CollectedEffect>,
   categoryFilter?: string,
 ): ContributionTracesResult {
   const traces: ContributionTrace[] = [];

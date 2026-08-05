@@ -9,7 +9,7 @@ import type {
   AttackProperty,
   RuleEffect,
 } from "@obsidian-dnd/catalog-contract";
-import type { CatalogLookup } from "./effect-provenance";
+import type { CatalogLookup, CollectedEffect } from "./effect-provenance";
 import { collectEffects } from "./effect-collection";
 import { calculateAbilityScores, abilityModifier } from "./ability-scores";
 import { proficiencyBonusForLevel } from "./proficiency-bonus";
@@ -210,8 +210,9 @@ function calculateAttackBonus(
 export function calculateAttacks(
   character: Character,
   catalog: CatalogLookup,
+  collectedEffects?: ReadonlyArray<CollectedEffect>,
 ): AttacksResult {
-  const abilityScoresResult = calculateAbilityScores(character, catalog);
+  const abilityScoresResult = calculateAbilityScores(character, catalog, collectedEffects);
   const totalLevel = calculateTotalLevel(character);
   const proficiencyBonus = proficiencyBonusForLevel(totalLevel);
 
@@ -221,7 +222,7 @@ export function calculateAttacks(
     scoreMap.set(entry.ability, entry.finalScore);
   }
 
-  const collected = collectEffects(character, catalog);
+  const collected = collectedEffects ?? collectEffects(character, catalog);
 
   // Collect all grant-attack effects
   const attackEntries: AttackEntry[] = [];

@@ -5,7 +5,7 @@ import type {
   ArmorClassFormula,
   RuleEffect,
 } from "@obsidian-dnd/catalog-contract";
-import type { CatalogLookup } from "./effect-provenance";
+import type { CatalogLookup, CollectedEffect } from "./effect-provenance";
 import { collectEffects } from "./effect-collection";
 import { abilityModifier } from "./ability-scores";
 import { calculateTotalLevel } from "./total-level";
@@ -147,8 +147,9 @@ function evaluateFormula(
 export function calculateArmorClass(
   character: Character,
   catalog: CatalogLookup,
+  collectedEffects?: ReadonlyArray<CollectedEffect>,
 ): ArmorClassResult {
-  const collected = collectEffects(character, catalog);
+  const collected = collectedEffects ?? collectEffects(character, catalog);
   const totalLevel = calculateTotalLevel(character);
   const dexModifier = abilityModifier(character.abilities.scores.DEX);
 

@@ -144,7 +144,7 @@ function diagnosticSortKey(d: UnsupportedMechanicDiagnostic): string {
    Returns a sorted, frozen array of diagnostics.             */
 
 export function detectUnsupportedMechanics(
-  collectedEffects: CollectedEffect[],
+  collectedEffects: ReadonlyArray<CollectedEffect>,
 ): UnsupportedMechanicsResult {
   const diagnostics: UnsupportedMechanicDiagnostic[] = [];
 

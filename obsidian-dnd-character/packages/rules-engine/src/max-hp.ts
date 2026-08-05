@@ -1,6 +1,6 @@
 import type { Character } from "@obsidian-dnd/character-contract";
 import type { AddHitPointIncreaseEffect, RuleEffect } from "@obsidian-dnd/catalog-contract";
-import type { CatalogLookup } from "./effect-provenance";
+import type { CatalogLookup, CollectedEffect } from "./effect-provenance";
 import { collectEffects } from "./effect-collection";
 import { calculateAbilityScores } from "./ability-scores";
 
@@ -56,6 +56,7 @@ function isAddHitPointIncreaseEffect(
 export function calculateMaxHp(
   character: Character,
   catalog: CatalogLookup,
+  collectedEffects?: ReadonlyArray<CollectedEffect>,
 ): MaxHpResult {
   const abilityScores = calculateAbilityScores(character, catalog);
   const conEntry = abilityScores.abilities.find((a) => a.ability === "CON");
@@ -77,7 +78,7 @@ export function calculateMaxHp(
     });
   }
 
-  const collected = collectEffects(character, catalog);
+  const collected = collectedEffects ?? collectEffects(character, catalog);
   const hitPointIncreases: number[] = [];
 
   for (const ce of collected) {

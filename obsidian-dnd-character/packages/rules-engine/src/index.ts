@@ -151,3 +151,9 @@ export {
   type UnsupportedMechanicsResult,
   detectUnsupportedMechanics,
 } from "./unsupported-mechanics";
+
+export {
+  /* Character sheet projection */
+  type CharacterSheetProjection,
+  buildCharacterSheetProjection,
+} from "./character-sheet-projection";

@@ -2,7 +2,7 @@ import type { Ability } from "@obsidian-dnd/domain";
 import { ABILITIES } from "@obsidian-dnd/domain";
 import type { Character } from "@obsidian-dnd/character-contract";
 import type { AddAbilityEffect, RuleEffect } from "@obsidian-dnd/catalog-contract";
-import type { CatalogLookup } from "./effect-provenance";
+import type { CatalogLookup, CollectedEffect } from "./effect-provenance";
 import { collectEffects } from "./effect-collection";
 
 /* ── Ability score result types ────────────────────────────────────
@@ -81,8 +81,9 @@ function isAddAbilityEffectFor(
 export function calculateAbilityScores(
   character: Character,
   catalog: CatalogLookup,
+  collectedEffects?: ReadonlyArray<CollectedEffect>,
 ): AbilityScoresResult {
-  const collected = collectEffects(character, catalog);
+  const collected = collectedEffects ?? collectEffects(character, catalog);
 
   const abilities: AbilityScoreEntry[] = [];
 

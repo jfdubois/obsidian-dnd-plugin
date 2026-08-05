@@ -10,7 +10,7 @@ import type {
   RollMode,
   RuleEffect,
 } from "@obsidian-dnd/catalog-contract";
-import type { CatalogLookup } from "./effect-provenance";
+import type { CatalogLookup, CollectedEffect } from "./effect-provenance";
 import { collectEffects } from "./effect-collection";
 import { abilityModifier } from "./ability-scores";
 import { proficiencyBonusForLevel } from "./proficiency-bonus";
@@ -154,11 +154,12 @@ function predicateMatchesSkill(
 export function calculateSkills(
   character: Character,
   catalog: CatalogLookup,
+  collectedEffects?: ReadonlyArray<CollectedEffect>,
 ): SkillsResult {
   const totalLevel = calculateTotalLevel(character);
   const proficiencyBonus = proficiencyBonusForLevel(totalLevel);
 
-  const collected = collectEffects(character, catalog);
+  const collected = collectedEffects ?? collectEffects(character, catalog);
 
   // Collect proficient skill IDs
   const proficientSkillIds = new Set<EntityId>();
