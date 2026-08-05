@@ -22,12 +22,12 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-P8-CORRECTIVE-002 — (if any remaining corrective items) or P9-T001 — Implement effect collection order
+P9-T001 — Implement effect collection order
 
 ## Branch baseline
 
 - Branch: `dev`
-- Last synchronized commit: `a2176bc` (P8-CORRECTIVE-001-R1)
+- Last synchronized commit: `ad8d976` (P8-CORRECTIVE-002)
 - Working tree expected: clean
 
 ## Blockers
@@ -36,10 +36,10 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-P8-CORRECTIVE-001-R1 (typecheck, lint, 3666 tests passing, 2 skipped; 14 pre-existing console warnings).
-- `npm --prefix obsidian-dnd-character run build`: passing post-P8-CORRECTIVE-001-R1.
+- `npm --prefix obsidian-dnd-character run check`: passing post-P8-CORRECTIVE-002 (typecheck, lint, 3676 tests passing, 2 skipped; 14 pre-existing console warnings).
+- `npm --prefix obsidian-dnd-character run build`: passing post-P8-CORRECTIVE-002.
 - `npm --workspace @obsidian-dnd/obsidian-plugin run bundle`: script not defined in current workspace.
-- Tests: 3666 passing, 2 skipped.
+- Tests: 3676 passing, 2 skipped.
 
 ## Catalog baseline
 
@@ -76,12 +76,17 @@ None recorded.
 - Re-entry: mobile smoke is mandatory when remote installation/download becomes available, a test build can install without manual local file access, the first mobile-facing release candidate or Phase 10 desktop/mobile manual-scenario task is reached, a mobile-specific production dependency or Obsidian API is introduced, or the operator requests it; it must complete no later than the first public or mobile release gate.
 - Gate status: Phase 4 gate complete. Phase 5 gate complete. Phase 6 gate complete. Phase 7 gate complete. PB8-003-R2 gate passed (G1–G14 and E1 scenarios A–G). PB8-004 automated and desktop gates passed; the operator-approved mobile deferral is a tracked non-blocking risk. Phase 8 gate complete. Phase 9 is next.
 - Phase 8 starting commit: b22d983
-- Completed Phase 8 task commits: P8-T001 — 40176af; P8-T002 — 5d2c9b4; P8-T003 — ab4a165; P8-T004 — 9c25ea9; P8-T005 — 5557c9b; P8-T006 — 0e96cb7; P8-T007 — 7a8c20f; P8-T008 — 6d89e51; P8-T009 — 5b07780; P8-T010 — fc005a1; P8-T011 — 63b1f33; P8-T012 — a4d352a; P8-CORRECTIVE-001 — see Git history for P8-CORRECTIVE-001; P8-CORRECTIVE-001-R1 — see Git history for P8-CORRECTIVE-001-R1
+- Completed Phase 8 task commits: P8-T001 — 40176af; P8-T002 — 5d2c9b4; P8-T003 — ab4a165; P8-T004 — 9c25ea9; P8-T005 — 5557c9b; P8-T006 — 0e96cb7; P8-T007 — 7a8c20f; P8-T008 — 6d89e51; P8-T009 — 5b07780; P8-T010 — fc005a1; P8-T011 — 63b1f33; P8-T012 — a4d352a; P8-CORRECTIVE-001 — see Git history for P8-CORRECTIVE-001; P8-CORRECTIVE-001-R1 — see Git history for P8-CORRECTIVE-001-R1; P8-CORRECTIVE-002 — ad8d976
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-04 — P8-CORRECTIVE-002 — Concurrent atomic mutation (PER-005) and duplicate ID rejection — complete
+Summary: Proved concurrent atomic mutation via real `Vault.process` test double: overlapping deferred mutations both survive in final JSON, failure scenarios tested. Introduced `IndexOperationResult` discriminated return type for `handleCreate`/`handleModify`. Added `IndexDuplicateDiagnostic` for duplicate character ID rejection with first-seen (sorted by vault path) resolution policy. Replaced T15 last-seen test with 9 new duplicate-ID protection tests (T15-T15h) covering startup initialization, handleCreate/handleModify rejection, same-path updates, and diagnostic recording.
+Validation: 3676 tests passing (10 new, 2 skipped), typecheck and lint pass, build passes.
+Compatibility notes: Uses `Vault.process` (1.1.0+). All APIs mobile-compatible. No Node/Electron dependencies.
 
 2026-08-04 — P8-CORRECTIVE-001-R1 — Path fidelity, event synchronization, rename notifications, and structured diagnostics — complete
 Summary: Repaired path preservation in character repository: (1) `handleRename()` now publishes index change event via `this.notify(event)` before returning; (2) `CharacterListEntry` interface added with `character` + `filePath`; `listCharactersInVault()` returns entries with actual vault-discovered paths; (3) `initializeIndex()` uses actual paths and records skipped diagnostics; (4) `readFromPath()` uses `getFileByPath`/`cachedRead`/`deserializeCharacter`; (5) `VaultEventDiagnostic` interface and `onDiagnostic` callback added to vault events service; replaced `console.error` with structured diagnostic callback. Added 16 integrated path-fidelity tests (T1-T16) in two focused test files covering startup indexing, external create/modify/delete events, rename within/into/out of folder, filename vs ID, folder filtering, duplicate IDs, and diagnostic lifecycle.
