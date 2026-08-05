@@ -143,3 +143,11 @@ export {
   detailForHitPointEffect,
   detailForFeatureEffect,
 } from "./contribution-traces";
+
+export {
+  /* Unsupported mechanic diagnostics */
+  type UnsupportedMechanicCode,
+  type UnsupportedMechanicDiagnostic,
+  type UnsupportedMechanicsResult,
+  detectUnsupportedMechanics,
+} from "./unsupported-mechanics";
