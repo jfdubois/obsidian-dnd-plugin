@@ -117,3 +117,10 @@ export {
   type SlotRecord,
   calculateSpellcasting,
 } from "./spellcasting";
+
+export {
+  /* Feature resources (Rage, Ki points, Second Wind, etc.) */
+  type ResourceEntry,
+  type ResourcesResult,
+  calculateResources,
+} from "./resources";
