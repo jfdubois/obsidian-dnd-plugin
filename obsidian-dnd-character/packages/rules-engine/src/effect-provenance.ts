@@ -11,6 +11,7 @@ import type {
   SpellRule,
   ItemRule,
   OptionalFeatureRule,
+  SkillRule,
 } from "@obsidian-dnd/catalog-contract";
 
 /* ── Effect source kind ───────────────────────────────────────────
@@ -83,4 +84,5 @@ export interface CatalogLookup {
   getSpell(id: EntityId): SpellRule | undefined;
   getItem(id: EntityId): ItemRule | undefined;
   getOptionalFeature(id: EntityId): OptionalFeatureRule | undefined;
+  getSkill(id: EntityId): SkillRule | undefined;
 }

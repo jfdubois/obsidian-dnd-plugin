@@ -51,3 +51,12 @@ export {
   type SavingThrowsResult,
   calculateSavingThrows,
 } from "./saving-throws";
+
+export {
+  /* Skills, passive values, and conditional skill effects */
+  type SkillConditional,
+  type SkillEntry,
+  type PassiveValues,
+  type SkillsResult,
+  calculateSkills,
+} from "./skills";

@@ -22,7 +22,7 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-P9-T005 — Implement saving throws and conditional save effects
+P9-T006 — Implement skills, passive values, and conditional skill effects
 
 ## Branch baseline
 

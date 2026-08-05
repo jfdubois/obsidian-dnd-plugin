@@ -265,5 +265,6 @@ export function makeEmptyCatalog(): CatalogLookup {
     getSpell: () => undefined,
     getItem: () => undefined,
     getOptionalFeature: () => undefined,
+    getSkill: () => undefined,
   };
 }

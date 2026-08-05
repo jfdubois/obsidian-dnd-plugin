@@ -430,7 +430,7 @@ Calculate the initial character sheet with explanation and provenance traces.
 - [x] **P9-T003 — Implement ability scores/modifiers**
 - [x] **P9-T004 — Implement proficiencies and expertise**
 - [x] **P9-T005 — Implement saving throws and conditional save effects**
-- [ ] **P9-T006 — Implement skills, passive values, and conditional skill effects**
+- [x] **P9-T006 — Implement skills, passive values, and conditional skill effects**
 - [ ] **P9-T007 — Implement movement and senses**
 - [ ] **P9-T008 — Implement maximum HP**
 - [ ] **P9-T009 — Implement armor class**
