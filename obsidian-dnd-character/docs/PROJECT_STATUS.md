@@ -22,7 +22,7 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-P9-T013 — Implement spellcasting totals and slot maxima
+P9-T014 — Implement feature resources
 
 ## Branch baseline
 
@@ -78,12 +78,18 @@ None recorded.
 - Phase 8 starting commit: b22d983
 - Completed Phase 8 task commits: P8-T001 — 40176af; P8-T002 — 5d2c9b4; P8-T003 — ab4a165; P8-T004 — 9c25ea9; P8-T005 — 5557c9b; P8-T006 — 0e96cb7; P8-T007 — 7a8c20f; P8-T008 — 6d89e51; P8-T009 — 5b07780; P8-T010 — fc005a1; P8-T011 — 63b1f33; P8-T012 — a4d352a; P8-CORRECTIVE-001 — see Git history for P8-CORRECTIVE-001; P8-CORRECTIVE-001-R1 — see Git history for P8-CORRECTIVE-001-R1; P8-CORRECTIVE-002 implementation — ad8d976; P8-CORRECTIVE-002 documentation — c88b41c
 - Phase 9 starting commit: a362900
-- Completed Phase 9 task commits: P9-T001 — see Git history for P9-T001; P9-T002 — see Git history for P9-T002; P9-T003 — see Git history for P9-T003; P9-T004 — see Git history for P9-T004; P9-T005 — see Git history for P9-T005; P9-T006 — see Git history for P9-T006; P9-T007 — see Git history for P9-T007; P9-T008 — see Git history for P9-T008; P9-T009 — see Git history for P9-T009; P9-T010 — see Git history for P9-T010; P9-T011 — see Git history for P9-T011; P9-T012 — c3032a7
+- Completed Phase 9 task commits: P9-T001 — see Git history for P9-T001; P9-T002 — see Git history for P9-T002; P9-T003 — see Git history for P9-T003; P9-T004 — see Git history for P9-T004; P9-T005 — see Git history for P9-T005; P9-T006 — see Git history for P9-T006; P9-T007 — see Git history for P9-T007; P9-T008 — see Git history for P9-T008; P9-T009 — see Git history for P9-T009; P9-T010 — see Git history for P9-T010; P9-T011 — see Git history for P9-T011; P9-T012 — c3032a7; P9-T013 — 2111f0c
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-05 — P9-T013 — Implement spellcasting totals and slot maxima — complete
+Summary: Implemented spellcasting calculation in rules engine. `calculateSpellcasting()` collects all `grant-spell` effects, groups by grant type (known, prepared, always-prepared, cantrip), deduplicates by spell ID, and returns frozen sorted result. Known/prepared spells grouped by level, always-prepared and cantrips as flat arrays. Explanation traces for each grant. 19 tests across two files cover baseline, all grant types, deduplication, mixed grants, cross-category overlap, determinism, input-order independence, level 9, frozen output, and explanations.
+Validation: 3945 tests passing (19 new), typecheck and lint pass, build passes.
+Compatibility notes: Pure calculation module. No Obsidian API usage. All APIs mobile-compatible.
+Commit: 2111f0c.
 
 2026-08-05 — P9-T012 — Implement defenses, immunities, and capabilities — complete
 Summary: Implemented defenses and capabilities calculation in rules engine. `calculateDefenses()` computes AC (10 + CON modifier + armor/shield effects), saving throw breakdowns (ability modifier + proficiency when proficient), damage resistances, damage immunities, and condition immunities. `calculateCapabilities()` collects damage vulnerabilities, damage healing, condition vulnerabilities, and condition weaknesses. Both functions deduplicate entries and provide explanation traces. 33 focused tests across three test files cover baseline AC, resistances, damage immunities, condition immunities, disease/magical-sleep, deduplication, determinism, and all capability types.
@@ -96,12 +102,6 @@ Summary: Implemented attack calculation in rules engine. `calculateAttacks()` co
 Validation: 3893 tests passing (27 new), typecheck and lint pass, build passes.
 Compatibility notes: Pure calculation module. No Obsidian API usage. All APIs mobile-compatible.
 Commit: see Git history for P9-T011.
-
-2026-08-05 — P9-T010 — Implement initiative — complete
-Summary: Implemented initiative calculation in rules engine. `calculateInitiative()` computes DEX modifier as base, adds proficiency bonus when initiative-proficient (via `add-proficiency` with `kind: "initiative"`), and sums flat `add-initiative` bonuses. Returns structured `InitiativeResult` with `dexModifier`, `proficiencyBonus`, `isProficient`, `flatBonuses`, and `total`. Added `AddInitiativeEffect` and `ProficiencyInitiativeRef` to catalog contract with validators and factories. 20 focused tests cover base DEX modifier, proficiency, flat bonuses, combined effects, and edge cases.
-Validation: 3866 tests passing (20 new), typecheck and lint pass, build passes.
-Compatibility notes: Pure calculation module. No Obsidian API usage. All APIs mobile-compatible.
-Commit: see Git history for P9-T010.
 
 2026-08-04 — P8-CORRECTIVE-001-R1 — Path fidelity, event synchronization, rename notifications, and structured diagnostics — complete
 Summary: Repaired path preservation in character repository: (1) `handleRename()` now publishes index change event via `this.notify(event)` before returning; (2) `CharacterListEntry` interface added with `character` + `filePath`; `listCharactersInVault()` returns entries with actual vault-discovered paths; (3) `initializeIndex()` uses actual paths and records skipped diagnostics; (4) `readFromPath()` uses `getFileByPath`/`cachedRead`/`deserializeCharacter`; (5) `VaultEventDiagnostic` interface and `onDiagnostic` callback added to vault events service; replaced `console.error` with structured diagnostic callback. Added 16 integrated path-fidelity tests (T1-T16) in two focused test files covering startup indexing, external create/modify/delete events, rename within/into/out of folder, filename vs ID, folder filtering, duplicate IDs, and diagnostic lifecycle.
