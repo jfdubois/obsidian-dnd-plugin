@@ -231,6 +231,7 @@ export type RuleEffect = RuleEffectMetadata & (
   | GrantAttackEffect
   | GrantFeatureEffect
   | AddHitPointIncreaseEffect
+  | AddInitiativeEffect
 );
 
 /* ── Effect type constants and guard ───────────────────────────── */
@@ -254,7 +255,8 @@ export type RuleEffectType =
   | "grant-resource"
   | "grant-attack"
   | "grant-feature"
-  | "add-hit-point-increase";
+  | "add-hit-point-increase"
+  | "add-initiative";
 
 export const RULE_EFFECT_TYPES: ReadonlyArray<RuleEffectType> = [
   "add-ability",
@@ -276,6 +278,7 @@ export const RULE_EFFECT_TYPES: ReadonlyArray<RuleEffectType> = [
   "grant-attack",
   "grant-feature",
   "add-hit-point-increase",
+  "add-initiative",
 ];
 
 export function isRuleEffectType(value: unknown): value is RuleEffectType {
@@ -388,6 +391,12 @@ export interface AddHitPointIncreaseEffect {
   value: number;
 }
 
+export interface AddInitiativeEffect {
+  type: "add-initiative";
+  /** Flat initiative bonus (e.g., +5 from Alert feat). */
+  value: number;
+}
+
 /* ── Supporting types ──────────────────────────────────────────── */
 
 export type ProficiencyRef =
@@ -395,7 +404,8 @@ export type ProficiencyRef =
   | ProficiencyToolRef
   | ProficiencyArmorRef
   | ProficiencySavingThrowRef
-  | ProficiencyWeaponRef;
+  | ProficiencyWeaponRef
+  | ProficiencyInitiativeRef;
 
 export interface ProficiencySkillRef {
   kind: "skill";
@@ -420,6 +430,10 @@ export interface ProficiencySavingThrowRef {
 export interface ProficiencyWeaponRef {
   kind: "weapon";
   weaponId: EntityId;
+}
+
+export interface ProficiencyInitiativeRef {
+  kind: "initiative";
 }
 
 export type MovementMode = "walk" | "fly" | "swim" | "climb" | "burrow";
@@ -787,6 +801,10 @@ export function isRuleEffect(value: unknown): value is RuleEffect {
       if (typeof obj.value !== "number" || !Number.isFinite(obj.value)) return false;
       return true;
     }
+    case "add-initiative": {
+      if (typeof obj.value !== "number" || !Number.isFinite(obj.value)) return false;
+      return true;
+    }
     default: {
       return false;
     }
@@ -817,6 +835,9 @@ export function isProficiencyRef(value: unknown): value is ProficiencyRef {
     }
     case "weapon": {
       return isEntityId(obj.weaponId);
+    }
+    case "initiative": {
+      return true;
     }
     default: {
       return false;
@@ -1234,6 +1255,13 @@ export function createAddHitPointIncreaseEffect(
   return { ...metadata, type: "add-hit-point-increase", value };
 }
 
+export function createAddInitiativeEffect(
+  metadata: RuleEffectMetadata,
+  value: number,
+): RuleEffectMetadata & AddInitiativeEffect {
+  return { ...metadata, type: "add-initiative", value };
+}
+
 /* ── Supporting type factories ─────────────────────────────────── */
 
 export function createProficiencySkillRef(entityId: EntityId): ProficiencySkillRef {
@@ -1254,6 +1282,10 @@ export function createProficiencySavingThrowRef(ability: Ability): ProficiencySa
 
 export function createProficiencyWeaponRef(weaponId: EntityId): ProficiencyWeaponRef {
   return { kind: "weapon", weaponId };
+}
+
+export function createProficiencyInitiativeRef(): ProficiencyInitiativeRef {
+  return { kind: "initiative" };
 }
 
 export function createDarkvisionSense(range: number): DarkvisionSense {

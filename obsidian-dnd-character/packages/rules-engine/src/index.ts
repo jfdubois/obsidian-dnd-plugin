@@ -86,3 +86,9 @@ export {
   type ArmorClassResult,
   calculateArmorClass,
 } from "./armor-class";
+
+export {
+  /* Initiative calculation */
+  type InitiativeResult,
+  calculateInitiative,
+} from "./initiative";

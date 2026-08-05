@@ -161,6 +161,7 @@ export {
   type GrantAttackEffect,
   type GrantFeatureEffect,
   type AddHitPointIncreaseEffect,
+  type AddInitiativeEffect,
   /* Effect metadata types */
   type RuleEffectMetadata,
   type AutomationStatus,
@@ -182,6 +183,7 @@ export {
   type ProficiencyArmorRef,
   type ProficiencySavingThrowRef,
   type ProficiencyWeaponRef,
+  type ProficiencyInitiativeRef,
   type MovementMode,
   type SenseDefinition,
   type DarkvisionSense,
@@ -293,6 +295,7 @@ export {
   createGrantAttackEffect,
   createGrantFeatureEffect,
   createAddHitPointIncreaseEffect,
+  createAddInitiativeEffect,
   /* Immunity definition factories */
   createDamageImmunity,
   createConditionImmunity,
@@ -320,6 +323,7 @@ export {
   createProficiencyArmorRef,
   createProficiencySavingThrowRef,
   createProficiencyWeaponRef,
+  createProficiencyInitiativeRef,
   createDarkvisionSense,
   createBlindsenseSense,
   createTremorsenseSense,

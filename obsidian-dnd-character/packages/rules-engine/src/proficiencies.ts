@@ -95,6 +95,8 @@ function proficiencyKeyForProf(ref: ProficiencyRef): ProficiencyKey {
       return `skill:${ref.entityId}`;
     case "saving-throw":
       return `saving-throw:${ref.ability}`;
+    case "initiative":
+      return "initiative";
   }
 }
 

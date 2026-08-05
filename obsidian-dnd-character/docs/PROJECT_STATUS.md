@@ -22,7 +22,7 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-P9-T010 — Implement initiative
+P9-T011 — Implement attacks
 
 ## Branch baseline
 
@@ -77,11 +77,19 @@ None recorded.
 - Gate status: Phase 4 gate complete. Phase 5 gate complete. Phase 6 gate complete. Phase 7 gate complete. PB8-003-R2 gate passed (G1–G14 and E1 scenarios A–G). PB8-004 automated and desktop gates passed; the operator-approved mobile deferral is a tracked non-blocking risk. Phase 8 is revalidated only after P8-CORRECTIVE-002-R1 passes; that repair passed. Phase 9 is next.
 - Phase 8 starting commit: b22d983
 - Completed Phase 8 task commits: P8-T001 — 40176af; P8-T002 — 5d2c9b4; P8-T003 — ab4a165; P8-T004 — 9c25ea9; P8-T005 — 5557c9b; P8-T006 — 0e96cb7; P8-T007 — 7a8c20f; P8-T008 — 6d89e51; P8-T009 — 5b07780; P8-T010 — fc005a1; P8-T011 — 63b1f33; P8-T012 — a4d352a; P8-CORRECTIVE-001 — see Git history for P8-CORRECTIVE-001; P8-CORRECTIVE-001-R1 — see Git history for P8-CORRECTIVE-001-R1; P8-CORRECTIVE-002 implementation — ad8d976; P8-CORRECTIVE-002 documentation — c88b41c
+- Phase 9 starting commit: a362900
+- Completed Phase 9 task commits: P9-T001 — see Git history for P9-T001; P9-T002 — see Git history for P9-T002; P9-T003 — see Git history for P9-T003; P9-T004 — see Git history for P9-T004; P9-T005 — see Git history for P9-T005; P9-T006 — see Git history for P9-T006; P9-T007 — see Git history for P9-T007; P9-T008 — see Git history for P9-T008; P9-T009 — see Git history for P9-T009; P9-T010 — see Git history for P9-T010
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-05 — P9-T010 — Implement initiative — complete
+Summary: Implemented initiative calculation in rules engine. `calculateInitiative()` computes DEX modifier as base, adds proficiency bonus when initiative-proficient (via `add-proficiency` with `kind: "initiative"`), and sums flat `add-initiative` bonuses. Returns structured `InitiativeResult` with `dexModifier`, `proficiencyBonus`, `isProficient`, `flatBonuses`, and `total`. Added `AddInitiativeEffect` and `ProficiencyInitiativeRef` to catalog contract with validators and factories. 20 focused tests cover base DEX modifier, proficiency, flat bonuses, combined effects, and edge cases.
+Validation: 3866 tests passing (20 new), typecheck and lint pass, build passes.
+Compatibility notes: Pure calculation module. No Obsidian API usage. All APIs mobile-compatible.
+Commit: see Git history for P9-T010.
 
 2026-08-04 — P8-CORRECTIVE-002-R1 — Genuine concurrent character mutation evidence (PER-005) — complete
 Summary: Replaced the prior sequential T2 claim with `T2: queued overlapping mutations preserve both independent changes` and `T3: a failed queued second mutation preserves A and does not stop later mutation C`. Their deterministic per-file `Vault.process` queue holds A before its callback, records B as queued before A completes, provides B the JSON committed by A, keeps the last successful JSON after B fails, and continues to C. Duplicate-ID implementation remains accepted and unchanged. P8-CORRECTIVE-002 implementation commit: `ad8d976`; documentation commit: `c88b41c`.
