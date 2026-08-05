@@ -465,7 +465,7 @@ Create valid level-one characters through a dependency-aware modal.
 - [x] **P10-T002 — Implement step controller**
 - [x] **P10-T003 — Implement ruleset step**
 - [x] **P10-T004 — Implement source profile/source selection step**
-- [ ] **P10-T005 — Implement identity step**
+- [x] **P10-T005 — Implement identity step**
 - [ ] **P10-T006 — Implement species search and selection**
 - [ ] **P10-T007 — Implement species choices**
 - [ ] **P10-T008 — Implement background selection and choices**
