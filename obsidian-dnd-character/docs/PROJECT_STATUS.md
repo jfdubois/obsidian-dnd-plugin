@@ -22,7 +22,7 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-P9-T002 — Implement total level and proficiency bonus
+P9-T003 — Implement ability scores/modifiers
 
 ## Branch baseline
 

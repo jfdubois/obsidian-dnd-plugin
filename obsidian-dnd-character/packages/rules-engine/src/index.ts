@@ -13,3 +13,14 @@ export {
   type CollectEffectsOptions,
   collectEffects,
 } from "./effect-collection";
+
+export {
+  /* Total character level */
+  calculateTotalLevel,
+} from "./total-level";
+
+export {
+  /* Proficiency bonus */
+  PROFICIENCY_BONUS_TABLE,
+  proficiencyBonusForLevel,
+} from "./proficiency-bonus";
