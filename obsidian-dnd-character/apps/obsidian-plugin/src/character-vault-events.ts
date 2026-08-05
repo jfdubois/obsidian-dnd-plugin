@@ -54,6 +54,12 @@ export type CharacterVaultEvent =
 
 /* ── Callback interface ────────────────────────────────────────── */
 
+/** Diagnostic reported when a vault event cannot be processed. */
+export interface VaultEventDiagnostic {
+  filePath: string;
+  reason: string;
+}
+
 /**
  * Callback interface for handling character vault events.
  *
@@ -70,6 +76,8 @@ export interface CharacterVaultEventCallbacks {
   onDeleted?: (event: CharacterFileDeletedEvent) => void;
   /** Called when a character file is renamed. */
   onRenamed?: (event: CharacterFileRenamedEvent) => void;
+  /** Called when a vault event cannot be processed (invalid data, etc.). */
+  onDiagnostic?: (diagnostic: VaultEventDiagnostic) => void;
 }
 
 /* ── Registration result ───────────────────────────────────────── */
@@ -132,25 +140,30 @@ async function handleCharacterFileModified(
   file: TFile,
   callbacks: CharacterVaultEventCallbacks,
 ): Promise<void> {
-  if (callbacks.onModified === undefined) return;
+  if (callbacks.onModified === undefined && callbacks.onDiagnostic === undefined) return;
 
   try {
     const content = await app.vault.cachedRead(file);
     const character = deserializeCharacter(content);
-    callbacks.onModified({
-      type: 'modified',
-      filePath: file.path,
-      character,
-    });
+    if (callbacks.onModified !== undefined) {
+      callbacks.onModified({
+        type: 'modified',
+        filePath: file.path,
+        character,
+      });
+    }
   } catch (error) {
     const reason = error instanceof CharacterSerializationError
       ? error.reason
       : error instanceof Error
         ? error.message
         : 'unknown';
-    console.error(
-      `[D&D Character] Character file corrupted or invalid: ${file.path} (${reason})`,
-    );
+    if (callbacks.onDiagnostic !== undefined) {
+      callbacks.onDiagnostic({
+        filePath: file.path,
+        reason,
+      });
+    }
   }
 }
 

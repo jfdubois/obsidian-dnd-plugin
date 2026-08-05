@@ -277,11 +277,13 @@ export class CharacterIndex {
 		};
 		this.entries.set(entryKey, updated);
 
-		return {
+		const event: CharacterIndexChangeEvent = {
 			type: 'updated',
 			characterId: entry.characterId,
 			filePath: newPath,
 		};
+		this.notify(event);
+		return event;
 	}
 
 	/**

@@ -157,7 +157,7 @@ describe('PER-003: Corrupted file handling', () => {
 		const validChar = makeTestCharacter();
 		vi.mocked(characterRead.listCharactersInVault).mockResolvedValue({
 			status: 'read',
-			characters: [validChar],
+			characters: [{ character: validChar, filePath: 'dnd-characters/char-1.json' }],
 			skipped: [
 				{ filePath: 'dnd-characters/char-bad.json', reason: 'invalid-json' },
 			],
@@ -166,9 +166,9 @@ describe('PER-003: Corrupted file handling', () => {
 		const result = await repo.list();
 		expect(result.status).toBe('read');
 		expect(result.characters).toHaveLength(1);
-		const firstChar = result.characters[0];
-		if (firstChar) {
-			expect(firstChar.id).toBe('char-1');
+		const firstEntry = result.characters[0];
+		if (firstEntry) {
+			expect(firstEntry.character.id).toBe('char-1');
 		}
 		expect(result.skipped).toHaveLength(1);
 		const firstSkipped = result.skipped[0];

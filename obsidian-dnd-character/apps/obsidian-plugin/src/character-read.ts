@@ -58,10 +58,16 @@ export interface SkippedCharacter {
   cause?: unknown;
 }
 
+/** A character entry that includes the actual vault file path. */
+export interface CharacterListEntry {
+  character: Character;
+  filePath: string;
+}
+
 /** Result of listing all characters in the configured folder. */
 export interface ListCharactersResult {
   status: 'read';
-  characters: Character[];
+  characters: CharacterListEntry[];
   skipped: SkippedCharacter[];
 }
 
@@ -157,14 +163,14 @@ export async function listCharactersInVault(
   const jsonFiles = collectJsonFiles(folder);
 
   // 3. Read and deserialize each file.
-  const characters: Character[] = [];
+  const characters: CharacterListEntry[] = [];
   const skipped: SkippedCharacter[] = [];
 
   for (const file of jsonFiles) {
     try {
       const content = await app.vault.cachedRead(file);
       const character = deserializeCharacter(content);
-      characters.push(character);
+      characters.push({ character, filePath: file.path });
     } catch (cause) {
       const reason = getCauseReason(cause);
       skipped.push({

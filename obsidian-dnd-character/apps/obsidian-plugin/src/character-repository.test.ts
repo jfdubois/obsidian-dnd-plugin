@@ -74,6 +74,7 @@ import * as characterRead from './character-read';
 import * as characterUpdate from './character-update';
 import * as characterDelete from './character-delete';
 import * as characterVaultEvents from './character-vault-events';
+import * as characterContract from '@obsidian-dnd/character-contract';
 import * as domain from '@obsidian-dnd/domain';
 
 /* ── Resulting-state tests (Gap 5) ─────────────────────────────── */
@@ -118,13 +119,12 @@ describe('CharacterRepository index resulting state', () => {
 	});
 
 	it('create event adds character to index', async () => {
-		vi.mocked(characterRead.readCharacterFromVault).mockResolvedValue({
-			status: 'read' as const, character: char1, filePath: 'dnd-characters/char-1.json',
-		});
+		vi.mocked(mockApp.vault.getFileByPath).mockReturnValue({ path: 'dnd-characters/char-1.json' } as TFile);
+		vi.mocked(mockApp.vault.cachedRead).mockResolvedValue('{}');
+		vi.mocked(characterContract.deserializeCharacter).mockReturnValue(char1);
 		const callbacks = getCallbacks();
 		callbacks.onCreated!({ type: 'created', filePath: 'dnd-characters/char-1.json' });
-		await vi.waitFor(() => {});
-		expect(repo.index.size).toBe(1);
+		await vi.waitFor(() => expect(repo.index.size).toBe(1));
 		expect(repo.index.get('char-1' as CharacterId)).not.toBeNull();
 	});
 
@@ -132,14 +132,13 @@ describe('CharacterRepository index resulting state', () => {
 		repo.index.handleCreate(char1, 'dnd-characters/char-1.json');
 		expect(repo.index.size).toBe(1);
 		// Modified character must have the same ID to update in-place
-		const modifiedChar = { id: 'char-1', name: 'Updated' } as unknown as Character;
-		vi.mocked(characterRead.readCharacterFromVault).mockResolvedValue({
-			status: 'read' as const, character: modifiedChar, filePath: 'dnd-characters/char-1.json',
-		});
+		const modifiedChar = { id: 'char-1' } as unknown as Character;
+		vi.mocked(mockApp.vault.getFileByPath).mockReturnValue({ path: 'dnd-characters/char-1.json' } as TFile);
+		vi.mocked(mockApp.vault.cachedRead).mockResolvedValue('{}');
+		vi.mocked(characterContract.deserializeCharacter).mockReturnValue(modifiedChar);
 		const callbacks = getCallbacks();
 		callbacks.onModified!({ type: 'modified', filePath: 'dnd-characters/char-1.json', character: null });
-		await vi.waitFor(() => {});
-		expect(repo.index.size).toBe(1);
+		await vi.waitFor(() => expect(repo.index.size).toBe(1));
 		const entry = repo.index.get('char-1' as CharacterId);
 		expect(entry).not.toBeNull();
 	});
@@ -175,14 +174,13 @@ describe('CharacterRepository index resulting state', () => {
 	it('rename into folder adds character to index', async () => {
 		vi.mocked(characterVaultEvents.isCharacterFile)
 			.mockImplementation((path) => path.startsWith('dnd-characters/'));
-		vi.mocked(characterRead.readCharacterFromVault).mockResolvedValue({
-			status: 'read' as const, character: char1, filePath: 'dnd-characters/char-1.json',
-		});
+		vi.mocked(mockApp.vault.getFileByPath).mockReturnValue({ path: 'dnd-characters/char-1.json' } as TFile);
+		vi.mocked(mockApp.vault.cachedRead).mockResolvedValue('{}');
+		vi.mocked(characterContract.deserializeCharacter).mockReturnValue(char1);
 		expect(repo.index.size).toBe(0);
 		const callbacks = getCallbacks();
 		callbacks.onRenamed!({ type: 'renamed', oldPath: 'other/char-1.json', filePath: 'dnd-characters/char-1.json' });
-		await vi.waitFor(() => {});
-		expect(repo.index.size).toBe(1);
+		await vi.waitFor(() => expect(repo.index.size).toBe(1));
 		expect(repo.index.get('char-1' as CharacterId)).not.toBeNull();
 	});
 
@@ -190,12 +188,17 @@ describe('CharacterRepository index resulting state', () => {
 		repo.index.handleCreate(char1, 'dnd-characters/char-1.json');
 		expect(repo.index.size).toBe(1);
 		// Simulate invalid file content on modify
-		vi.mocked(characterRead.readCharacterFromVault).mockResolvedValue({
-			status: 'error' as const, reason: 'invalid-data' as const, characterId: 'char-1', cause: new Error('bad data'),
+		vi.mocked(mockApp.vault.getFileByPath).mockReturnValue({ path: 'dnd-characters/char-1.json' } as TFile);
+		vi.mocked(mockApp.vault.cachedRead).mockResolvedValue('{}');
+		vi.mocked(characterContract.deserializeCharacter).mockImplementation(() => {
+			throw new (characterContract.CharacterSerializationError)({
+				reason: 'invalid-json',
+				message: 'Invalid character data',
+			});
 		});
 		const callbacks = getCallbacks();
 		callbacks.onModified!({ type: 'modified', filePath: 'dnd-characters/char-1.json', character: null });
-		await vi.waitFor(() => {});
+		await vi.waitFor(() => expect(repo.index.getDiagnostics()).toHaveLength(1));
 		// Existing entry preserved; diagnostic recorded
 		expect(repo.index.size).toBe(1);
 		expect(repo.index.get('char-1' as CharacterId)).not.toBeNull();
@@ -269,7 +272,7 @@ describe('CharacterRepository', () => {
 	});
 
 	it('list returns characters from underlying function', async () => {
-		const characters = [{ id: 'char-1' }] as unknown as Character[];
+		const characters = [{ character: { id: 'char-1' } as unknown as Character, filePath: 'dnd-characters/char-1.json' }];
 		const result = { status: 'read' as const, characters, skipped: [] };
 		vi.mocked(characterRead.listCharactersInVault).mockResolvedValue(result);
 		const res = await repo.list();

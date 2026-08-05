@@ -9,6 +9,9 @@
 
 import type { App } from 'obsidian';
 import type { Character } from '@obsidian-dnd/character-contract';
+import {
+	deserializeCharacter,
+} from '@obsidian-dnd/character-contract';
 import type { CharacterId } from '@obsidian-dnd/domain';
 import { characterIdStr } from '@obsidian-dnd/domain';
 
@@ -36,6 +39,7 @@ import type {
 	CharacterInvalidDataError,
 	ListCharactersResult,
 	SkippedCharacter,
+	CharacterListEntry,
 } from './character-read';
 
 import { updateCharacterInVault } from './character-update';
@@ -68,6 +72,7 @@ import type {
 	CharacterFileCreatedEvent,
 	CharacterFileDeletedEvent,
 	CharacterFileRenamedEvent,
+	VaultEventDiagnostic,
 } from './character-vault-events';
 
 import {
@@ -100,6 +105,7 @@ export type {
 
 	ListCharactersResult,
 	SkippedCharacter,
+	CharacterListEntry,
 
 	UpdateCharacterResult,
 	CharacterUpdatedResult,
@@ -120,6 +126,7 @@ export type {
 	CharacterFileCreatedEvent,
 	CharacterFileDeletedEvent,
 	CharacterFileRenamedEvent,
+	VaultEventDiagnostic,
 
 	IndexedCharacter,
 	IndexDiagnostic,
@@ -233,17 +240,22 @@ export class CharacterRepository {
 	 * Initialize the in-memory index by scanning the vault for
 	 * existing character files. Call once during plugin startup
 	 * before setting up event listeners.
+	 *
+	 * Uses the actual vault-discovered file paths from the list
+	 * result rather than fabricating paths from character IDs.
+	 * Skipped files are recorded as index diagnostics.
 	 */
 	public async initializeIndex(): Promise<void> {
 		const listResult = await this.list();
-		const entries = listResult.characters.map((character) => {
-			const id = characterIdStr(character.id);
-			return {
-				character,
-				filePath: `${this.charactersVaultPath}/${id}.json`,
-			};
-		});
-		this.index.initializeFromVault(entries);
+		// Use actual discovered paths; do not fabricate <folder>/<id>.json
+		this.index.initializeFromVault(listResult.characters);
+		// Record startup diagnostics for files that could not be indexed
+		for (const skipped of listResult.skipped) {
+			this.index.recordDiagnostic({
+				filePath: skipped.filePath,
+				reason: skipped.reason,
+			});
+		}
 	}
 
 	/**
@@ -286,6 +298,13 @@ export class CharacterRepository {
 			onRenamed: (event) => {
 				this.handleRenameEvent(event.oldPath, event.filePath);
 			},
+			onDiagnostic: (diagnostic) => {
+				// Route vault event diagnostics into the index
+				this.index.recordDiagnostic({
+					filePath: diagnostic.filePath,
+					reason: diagnostic.reason,
+				});
+			},
 		};
 
 		this.eventRefs = setupCharacterVaultEventListeners(
@@ -299,21 +318,17 @@ export class CharacterRepository {
 	/**
 	 * Read a character from the vault and update the index.
 	 *
-	 * For modify events, if the file content is invalid, a diagnostic
-	 * is recorded but the existing valid entry in the index is preserved.
-	 * This ensures external corruption does not silently lose character data.
+	 * Uses the actual vault file path from the event rather than
+	 * deriving an ID from the filename. For modify events, if the
+	 * file content is invalid, a diagnostic is recorded but the
+	 * existing valid entry in the index is preserved. This ensures
+	 * external corruption does not silently lose character data.
 	 */
 	private async readAndIndex(
 		filePath: string,
 		eventType: 'create' | 'modify',
 	): Promise<void> {
-		const fileName = filePath.split('/').pop() ?? filePath;
-		const idStr = fileName.replace(/\.json$/, '');
-		const readResult = await readCharacterFromVault(
-			this.app,
-			idStr,
-			this.charactersVaultPath,
-		);
+		const readResult = await this.readFromPath(filePath);
 		if (readResult instanceof Object && 'character' in readResult) {
 			const character = readResult.character;
 			if (eventType === 'create') {
@@ -325,9 +340,12 @@ export class CharacterRepository {
 			// For modify: existing valid index entry is preserved; only
 			// a diagnostic is recorded so the operator can investigate.
 			// For create: the file simply does not enter the index.
+			const reason = readResult instanceof Object && 'reason' in readResult
+				? (readResult as { reason: string }).reason
+				: 'unknown';
 			this.index.recordDiagnostic({
 				filePath,
-				reason: 'Failed to read character from vault',
+				reason: `Failed to read character from vault (${reason})`,
 			});
 		}
 	}
@@ -357,17 +375,38 @@ export class CharacterRepository {
 	}
 
 	/**
-	 * Read a character by file path (used internally by event handlers).
+	 * Read a character from an exact vault-relative file path.
+	 *
+	 * Locates the file by its actual path, reads and deserializes it,
+	 * and returns the character along with the real file path.
 	 */
 	private async readFromPath(
 		filePath: string,
 	): Promise<ReadCharacterResult> {
-		const fileName = filePath.split('/').pop() ?? filePath;
-		const idStr = fileName.replace(/\.json$/, '');
-		return readCharacterFromVault(
-			this.app,
-			idStr,
-			this.charactersVaultPath,
-		);
+		const file = this.app.vault.getFileByPath(filePath);
+		if (file === null) {
+			return {
+				status: 'error',
+				reason: 'not-found',
+				characterId: filePath,
+			};
+		}
+
+		const content = await this.app.vault.cachedRead(file);
+		try {
+			const character = deserializeCharacter(content);
+			return {
+				status: 'read',
+				character,
+				filePath: file.path,
+			};
+		} catch (cause) {
+			return {
+				status: 'error',
+				reason: 'invalid-data',
+				characterId: filePath,
+				cause,
+			};
+		}
 	}
 }

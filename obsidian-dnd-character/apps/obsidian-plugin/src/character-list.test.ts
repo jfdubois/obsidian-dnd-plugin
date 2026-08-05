@@ -106,8 +106,8 @@ describe('listCharactersInVault', () => {
 
     expect(result.status).toBe('read');
     expect(result.characters).toHaveLength(2);
-    expect(result.characters[0]!.id).toBe('char-1');
-    expect(result.characters[1]!.id).toBe('char-2');
+    expect(result.characters[0]!.character.id).toBe('char-1');
+    expect(result.characters[1]!.character.id).toBe('char-2');
     expect(result.skipped).toEqual([]);
     expect(mockVault.cachedRead).toHaveBeenCalledTimes(2);
   });
@@ -142,7 +142,7 @@ describe('listCharactersInVault', () => {
 
     expect(result.status).toBe('read');
     expect(result.characters).toHaveLength(1);
-    expect(result.characters[0]!.id).toBe('valid-char');
+    expect(result.characters[0]!.character.id).toBe('valid-char');
     expect(result.skipped).toHaveLength(1);
     if (result.skipped.length > 0) {
       expect(result.skipped[0]!.filePath).toBe('dnd-characters/invalid.json');

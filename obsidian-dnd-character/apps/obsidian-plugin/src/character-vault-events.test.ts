@@ -213,7 +213,6 @@ describe('setupCharacterVaultEventListeners', () => {
   });
 
   it('handles invalid JSON gracefully without crashing', async () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const serializationError = new (characterContract.CharacterSerializationError)({
       reason: 'invalid-json',
       message: 'Failed to parse character JSON',
@@ -224,6 +223,7 @@ describe('setupCharacterVaultEventListeners', () => {
 
     const callbacks = {
       onModified: vi.fn(),
+      onDiagnostic: vi.fn(),
     };
 
     setupCharacterVaultEventListeners(mockApp, vaultPath, callbacks);
@@ -234,15 +234,13 @@ describe('setupCharacterVaultEventListeners', () => {
     await Promise.resolve();
 
     expect(callbacks.onModified).not.toHaveBeenCalled();
-    expect(consoleSpy).toHaveBeenCalledWith(
-      '[D&D Character] Character file corrupted or invalid: dnd-characters/char-1.json (invalid-json)',
-    );
-
-    consoleSpy.mockRestore();
+    expect(callbacks.onDiagnostic).toHaveBeenCalledWith({
+      filePath: 'dnd-characters/char-1.json',
+      reason: 'invalid-json',
+    });
   });
 
   it('handles invalid character structure gracefully', async () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     const serializationError = new (characterContract.CharacterSerializationError)({
       reason: 'invalid-character-structure',
       message: 'Parsed JSON does not match the Character schema',
@@ -253,6 +251,7 @@ describe('setupCharacterVaultEventListeners', () => {
 
     const callbacks = {
       onModified: vi.fn(),
+      onDiagnostic: vi.fn(),
     };
 
     setupCharacterVaultEventListeners(mockApp, vaultPath, callbacks);
@@ -263,19 +262,18 @@ describe('setupCharacterVaultEventListeners', () => {
     await Promise.resolve();
 
     expect(callbacks.onModified).not.toHaveBeenCalled();
-    expect(consoleSpy).toHaveBeenCalledWith(
-      '[D&D Character] Character file corrupted or invalid: dnd-characters/char-1.json (invalid-character-structure)',
-    );
-
-    consoleSpy.mockRestore();
+    expect(callbacks.onDiagnostic).toHaveBeenCalledWith({
+      filePath: 'dnd-characters/char-1.json',
+      reason: 'invalid-character-structure',
+    });
   });
 
   it('handles vault read errors gracefully', async () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.mocked(mockVault.cachedRead).mockRejectedValue(new Error('Disk read error'));
 
     const callbacks = {
       onModified: vi.fn(),
+      onDiagnostic: vi.fn(),
     };
 
     setupCharacterVaultEventListeners(mockApp, vaultPath, callbacks);
@@ -286,11 +284,10 @@ describe('setupCharacterVaultEventListeners', () => {
     await Promise.resolve();
 
     expect(callbacks.onModified).not.toHaveBeenCalled();
-    expect(consoleSpy).toHaveBeenCalledWith(
-      '[D&D Character] Character file corrupted or invalid: dnd-characters/char-1.json (Disk read error)',
-    );
-
-    consoleSpy.mockRestore();
+    expect(callbacks.onDiagnostic).toHaveBeenCalledWith({
+      filePath: 'dnd-characters/char-1.json',
+      reason: 'Disk read error',
+    });
   });
 
   it('does not fire callbacks when optional handlers are not provided', async () => {
