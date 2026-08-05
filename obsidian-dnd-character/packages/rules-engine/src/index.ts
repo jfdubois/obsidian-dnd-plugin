@@ -124,3 +124,22 @@ export {
   type ResourcesResult,
   calculateResources,
 } from "./resources";
+
+export {
+  /* Contribution and provenance traces */
+  type ContributionTrace,
+  type ContributionTracesResult,
+  buildContributionTraces,
+  detailForAbilityEffect,
+  detailForProficiencyEffect,
+  detailForACEffect,
+  detailForResistanceEffect,
+  detailForImmunityEffect,
+  detailForCapabilityEffect,
+  detailForInitiativeEffect,
+  detailForAttackEffect,
+  detailForSpellEffect,
+  detailForResourceEffect,
+  detailForHitPointEffect,
+  detailForFeatureEffect,
+} from "./contribution-traces";
