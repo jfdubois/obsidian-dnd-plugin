@@ -22,7 +22,7 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-Phase 9 gate
+Phase 10 (pending definition)
 
 ## Branch baseline
 
@@ -84,6 +84,12 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-05 — Phase 9 gate — Deterministic rules engine — complete
+Summary: Phase 9 gate passed. All 6 gate criteria verified: (1) Same inputs always produce identical snapshot — golden-character determinism tests; (2) Important totals explain their contributors — contribution-traces module with provenance; (3) Conditional effects identify predicates and originating feature — conditional-roll-mode effects tracked with provenance in unsupported-mechanics diagnostics; (4) Defenses and capabilities remain semantically distinct — separate projection sections with distinct types; (5) Multiple projections do not re-evaluate effects — single shared frozen effect collection; (6) No derived total or projection in persisted character JSON — character contract contains only base scores, selections, and mutable state.
+Validation: 4046 tests passing, typecheck and lint pass, build passes.
+Compatibility notes: Pure calculation module. No Obsidian API usage. All APIs mobile-compatible.
+Commit: see Git history for Phase 9 gate.
 
 2026-08-05 — P9-T018 — Add 2014 and 2024 golden-character tests — complete
 Summary: Added golden-character integration tests for both 2014 and 2024 SRD rulesets. 2014 test: Human Fighter 5 with full armor proficiencies, STR/CON saving throws, base AC formula, longsword attack. 2024 test: Elf Rogue 5 with light armor, DEX/INT saving throws, dex-plus AC formula, rapier with finesse, sneak attack resource, darkvision sense. Both test files verify all major projection sections (abilities, proficiencies, saving throws, skills, defenses, capabilities, attacks, spellcasting, resources, movement, senses, initiative, max HP), determinism (frozen identical snapshots), shared effect collection, and contribution traces. 6 tests total (3 per ruleset).

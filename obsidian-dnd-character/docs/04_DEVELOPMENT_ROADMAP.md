@@ -446,12 +446,12 @@ Calculate the initial character sheet with explanation and provenance traces.
 
 ### Phase 9 gate
 
-- [ ] Same inputs always produce identical snapshot.
-- [ ] Important totals explain their contributors.
-- [ ] Conditional effects identify their predicates and originating feature.
-- [ ] Defenses and capabilities remain semantically distinct.
-- [ ] Multiple projections do not cause an effect to be evaluated more than once.
-- [ ] No derived total or projection is required in persisted character JSON.
+- [x] Same inputs always produce identical snapshot.
+- [x] Important totals explain their contributors.
+- [x] Conditional effects identify their predicates and originating feature.
+- [x] Defenses and capabilities remain semantically distinct.
+- [x] Multiple projections do not cause an effect to be evaluated more than once.
+- [x] No derived total or projection is required in persisted character JSON.
 
 ---
 
