@@ -24,3 +24,11 @@ export {
   PROFICIENCY_BONUS_TABLE,
   proficiencyBonusForLevel,
 } from "./proficiency-bonus";
+
+export {
+  /* Ability scores and modifiers */
+  type AbilityScoreEntry,
+  type AbilityScoresResult,
+  abilityModifier,
+  calculateAbilityScores,
+} from "./ability-scores";
