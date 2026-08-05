@@ -2,7 +2,7 @@
 
 ## Current work
 
-Phase 9 — Deterministic rules engine
+Phase 10 — Character creator
 
 ## PB8-004 automated gate
 
@@ -22,7 +22,7 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-Phase 10 (pending definition)
+P10-T002 — Implement step controller
 
 ## Branch baseline
 
@@ -79,11 +79,19 @@ None recorded.
 - Completed Phase 8 task commits: P8-T001 — 40176af; P8-T002 — 5d2c9b4; P8-T003 — ab4a165; P8-T004 — 9c25ea9; P8-T005 — 5557c9b; P8-T006 — 0e96cb7; P8-T007 — 7a8c20f; P8-T008 — 6d89e51; P8-T009 — 5b07780; P8-T010 — fc005a1; P8-T011 — 63b1f33; P8-T012 — a4d352a; P8-CORRECTIVE-001 — see Git history for P8-CORRECTIVE-001; P8-CORRECTIVE-001-R1 — see Git history for P8-CORRECTIVE-001-R1; P8-CORRECTIVE-002 implementation — ad8d976; P8-CORRECTIVE-002 documentation — c88b41c
 - Phase 9 starting commit: a362900
 - Completed Phase 9 task commits: P9-T001 — see Git history for P9-T001; P9-T002 — see Git history for P9-T002; P9-T003 — see Git history for P9-T003; P9-T004 — see Git history for P9-T004; P9-T005 — see Git history for P9-T005; P9-T006 — see Git history for P9-T006; P9-T007 — see Git history for P9-T007; P9-T008 — see Git history for P9-T008; P9-T009 — see Git history for P9-T009; P9-T010 — see Git history for P9-T010; P9-T011 — see Git history for P9-T011; P9-T012 — c3032a7; P9-T013 — 2111f0c; P9-T014 — 541120b; P9-T015 — 2db464f; P9-T016 — a0d9726; P9-T017 — see Git history for P9-T017; P9-T018 — see Git history for P9-T018
+- Phase 10 starting commit: 77baeed
+- Completed Phase 10 task commits: P10-T001 — see Git history for P10-T001
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-05 — P10-T001 — Implement draft state model — complete
+Summary: Created the character draft state model with 8 new files. Top-level `CharacterDraft` interface holds 16 step data sections (ruleset, sources, identity, species, species choices, background, background choices, class, class grants, abilities, proficiencies, languages, equipment, spell eligibility, spells). Dependency graph tracks 16 steps with upstream/downstream relationships. Step status tracking (unvisited/resolved/invalidated) with transitive invalidation. Type guards and factory functions for every step data type. Positive tests for factory, validators, step operations, mutation. Negative tests for all type guards. Dependency invalidation and diagnostic tests.
+Validation: 4136 tests passing (100 new), typecheck and lint pass, build passes.
+Compatibility notes: Pure TypeScript model. No Obsidian API usage. All APIs mobile-compatible.
+Commit: see Git history for P10-T001.
 
 2026-08-05 — Phase 9 gate — Deterministic rules engine — complete
 Summary: Phase 9 gate passed. All 6 gate criteria verified: (1) Same inputs always produce identical snapshot — golden-character determinism tests; (2) Important totals explain their contributors — contribution-traces module with provenance; (3) Conditional effects identify predicates and originating feature — conditional-roll-mode effects tracked with provenance in unsupported-mechanics diagnostics; (4) Defenses and capabilities remain semantically distinct — separate projection sections with distinct types; (5) Multiple projections do not re-evaluate effects — single shared frozen effect collection; (6) No derived total or projection in persisted character JSON — character contract contains only base scores, selections, and mutable state.
