@@ -425,7 +425,7 @@ Persist authoritative character state safely in the vault.
 
 Calculate the initial character sheet with explanation and provenance traces.
 
-- [ ] **P9-T001 — Implement effect collection order**
+- [x] **P9-T001 — Implement effect collection order**
 - [ ] **P9-T002 — Implement total level and proficiency bonus**
 - [ ] **P9-T003 — Implement ability scores/modifiers**
 - [ ] **P9-T004 — Implement proficiencies and expertise**

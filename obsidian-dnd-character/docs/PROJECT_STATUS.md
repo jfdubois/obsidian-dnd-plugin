@@ -2,7 +2,7 @@
 
 ## Current work
 
-Phase 8 — Corrective revalidation: atomic character mutation evidence
+Phase 9 — Deterministic rules engine
 
 ## PB8-004 automated gate
 
@@ -22,7 +22,7 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-P9-T001 — Implement effect collection order
+P9-T002 — Implement total level and proficiency bonus
 
 ## Branch baseline
 
