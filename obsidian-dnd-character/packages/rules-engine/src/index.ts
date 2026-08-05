@@ -101,3 +101,11 @@ export {
   type AttacksResult,
   calculateAttacks,
 } from "./attacks";
+
+export {
+  /* Defenses, immunities, and capabilities */
+  type DefensesResult,
+  calculateDefenses,
+  type CapabilitiesResult,
+  calculateCapabilities,
+} from "./defenses";
