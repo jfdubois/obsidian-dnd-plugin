@@ -1,9 +1,8 @@
 /**
- * PER-005: Concurrent mutation via Vault.process.
+ * Atomic character persistence: single-operation and failure behavior.
  *
- * Deterministic in-memory Vault.process test double. Overlapping
- * mutations prove both independent changes survive in final JSON.
- * Failure scenarios verify file integrity.
+ * Genuine queued overlap behavior for PER-005 is covered by
+ * character-persistence-atomic-concurrent.test.ts.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -94,7 +93,7 @@ function makeTestCharacter(overrides: Partial<Character> = {}): Character {
 
 /* ── Tests ─────────────────────────────────────────────────────── */
 
-describe('PER-005: Concurrent mutation via Vault.process', () => {
+describe('Atomic character mutation via Vault.process', () => {
 	let mockVault: MockVault;
 	let mockApp: App;
 	const charactersPath = 'dnd-characters';
@@ -132,45 +131,6 @@ describe('PER-005: Concurrent mutation via Vault.process', () => {
 		expect(mockVault.processCalls).toHaveLength(1);
 		expect(mockVault.processCalls[0]?.originalContent).toBe(JSON.stringify(character));
 		expect(mockVault.fileStore[filePath]).toContain('"Updated"');
-	});
-
-	it('T2: Sequential mutations accumulate - both independent changes survive', async () => {
-		const character = makeTestCharacter({
-			identity: { name: 'Original' },
-			abilities: { scores: { STR: 10, DEX: 10, CON: 10, INT: 10, WIS: 10, CHA: 10 } },
-		});
-		setupVault(character);
-
-		// First mutation: change name
-		const r1 = await updateCharacterInVault(
-			mockApp,
-			character.id,
-			(c) => ({ ...c, identity: { ...c.identity, name: 'Mutated A' } }) as unknown as Character,
-			charactersPath,
-		);
-		expect(r1.status).toBe('updated');
-
-		// Second mutation: change STR (reads updated content from first mutation)
-		const r2 = await updateCharacterInVault(
-			mockApp,
-			character.id,
-			(c) => ({
-				...c,
-				abilities: { ...c.abilities, scores: { ...c.abilities.scores, STR: 20 } },
-			}) as unknown as Character,
-			charactersPath,
-		);
-		expect(r2.status).toBe('updated');
-
-		// Both changes survive in final persisted JSON
-		const finalContent = mockVault.fileStore[filePath];
-		expect(finalContent).toContain('"Mutated A"');
-		expect(finalContent).toContain('"STR":20');
-
-		// Two Vault.process calls, each reading the result of the previous
-		expect(mockVault.processCalls).toHaveLength(2);
-		expect(mockVault.processCalls[0]?.originalContent).toBe(JSON.stringify(character));
-		expect(mockVault.processCalls[1]?.originalContent).toContain('"Mutated A"');
 	});
 
 	it('T3: Mutation function throws - file content unchanged', async () => {
