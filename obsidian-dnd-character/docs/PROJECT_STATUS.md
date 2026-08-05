@@ -22,7 +22,7 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-P9-T006 — Implement skills, passive values, and conditional skill effects
+P9-T007 — Implement movement and senses
 
 ## Branch baseline
 

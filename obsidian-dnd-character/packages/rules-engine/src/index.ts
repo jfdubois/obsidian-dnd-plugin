@@ -60,3 +60,15 @@ export {
   type SkillsResult,
   calculateSkills,
 } from "./skills";
+
+export {
+  /* Movement speeds and sense ranges */
+  type MovementKind,
+  type SenseKind,
+  type MovementEntry,
+  type SenseEntry,
+  type MovementSensesResult,
+  MOVEMENT_KINDS,
+  SENSE_KINDS,
+  calculateMovementSenses,
+} from "./movement-senses";
