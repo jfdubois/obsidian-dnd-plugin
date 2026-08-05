@@ -109,3 +109,11 @@ export {
   type CapabilitiesResult,
   calculateCapabilities,
 } from "./defenses";
+
+export {
+  /* Spellcasting totals and slot maxima */
+  type SpellsByLevel,
+  type SpellcastingResult,
+  type SlotRecord,
+  calculateSpellcasting,
+} from "./spellcasting";
