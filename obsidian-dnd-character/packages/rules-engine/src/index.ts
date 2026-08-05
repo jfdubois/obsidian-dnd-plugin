@@ -43,3 +43,11 @@ export {
   type ProficienciesResult,
   calculateProficiencies,
 } from "./proficiencies";
+
+export {
+  /* Saving throws and conditional save effects */
+  type SavingThrowConditional,
+  type SavingThrowEntry,
+  type SavingThrowsResult,
+  calculateSavingThrows,
+} from "./saving-throws";
