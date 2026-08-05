@@ -176,22 +176,134 @@ describe('Folder filtering', () => {
 /* ── Test 15: Duplicate internal IDs ──────────────────────────── */
 
 describe('Duplicate internal IDs', () => {
-	it('T15: Duplicate internal IDs in separate files result in last-seen path winning', async () => {
+	it('T15: Duplicate internal IDs — first-seen (sorted by path) wins, duplicate rejected with diagnostic', async () => {
 		const mockApp = makeMockApp();
 		const repo = new CharacterRepository(mockApp, 'dnd-characters');
 		vi.mocked(characterRead.listCharactersInVault).mockResolvedValue({
 			status: 'read',
 			characters: [
-				{ character: makeChar({ id: 'same-id' }), filePath: 'dnd-characters/first.json' },
 				{ character: makeChar({ id: 'same-id' }), filePath: 'dnd-characters/second.json' },
+				{ character: makeChar({ id: 'same-id' }), filePath: 'dnd-characters/first.json' },
 			],
 			skipped: [],
 		});
 		await repo.initializeIndex();
+		// Only one entry in the index
 		expect(repo.index.size).toBe(1);
+		// First-seen (alphabetically sorted) path wins
 		const entry = repo.index.get('same-id' as CharacterId);
 		expect(entry).not.toBeNull();
-		expect(entry!.filePath).toBe('dnd-characters/second.json');
+		expect(entry!.filePath).toBe('dnd-characters/first.json');
+		// Duplicate diagnostic recorded
+		const diagnostics = repo.index.getDiagnostics();
+		expect(diagnostics.length).toBe(1);
+		expect(diagnostics[0]!.filePath).toBe('dnd-characters/second.json');
+		expect(diagnostics[0]!.reason).toContain('same-id');
+	});
+
+	it('T15b: handleCreate rejects duplicate ID and records diagnostic', async () => {
+		const mockApp = makeMockApp();
+		const repo = new CharacterRepository(mockApp, 'dnd-characters');
+		const c = makeChar({ id: 'dup-id' });
+		const r1 = repo.index.handleCreate(c, 'dnd-characters/a.json');
+		expect(r1.ok).toBe(true);
+		expect(r1.ok ? r1.entry.filePath : undefined).toBe('dnd-characters/a.json');
+		const r2 = repo.index.handleCreate(c, 'dnd-characters/b.json');
+		expect(r2.ok).toBe(false);
+		expect(r2.ok ? undefined : r2.diagnostic.existingPath).toBe('dnd-characters/a.json');
+		expect(repo.index.size).toBe(1);
+		expect(repo.index.getDiagnostics().length).toBe(1);
+	});
+
+	it('T15c: handleModify rejects duplicate ID at different path', async () => {
+		const mockApp = makeMockApp();
+		const repo = new CharacterRepository(mockApp, 'dnd-characters');
+		const c = makeChar({ id: 'dup-id' });
+		repo.index.handleCreate(c, 'dnd-characters/a.json');
+		const r = repo.index.handleModify(c, 'dnd-characters/b.json');
+		expect(r.ok).toBe(false);
+		expect(r.ok ? undefined : r.diagnostic.existingPath).toBe('dnd-characters/a.json');
+		expect(repo.index.size).toBe(1);
+	});
+
+	it('T15d: handleModify accepts same-path update', async () => {
+		const mockApp = makeMockApp();
+		const repo = new CharacterRepository(mockApp, 'dnd-characters');
+		const c1 = makeChar({ id: 'upd-id' });
+		repo.index.handleCreate(c1, 'dnd-characters/a.json');
+		const c2 = makeChar({ id: 'upd-id' });
+		const r = repo.index.handleModify(c2, 'dnd-characters/a.json');
+		expect(r.ok).toBe(true);
+		expect(repo.index.size).toBe(1);
+	});
+
+	it('T15e: initializeFromVault sorts by path — alphabetically first wins', async () => {
+		const mockApp = makeMockApp();
+		const repo = new CharacterRepository(mockApp, 'dnd-characters');
+		const results = repo.index.initializeFromVault([
+			{ character: makeChar({ id: 'z-id' }), filePath: 'dnd-characters/z.json' },
+			{ character: makeChar({ id: 'z-id' }), filePath: 'dnd-characters/a.json' },
+		]);
+		const successes = results.filter(r => r.ok);
+		const failures = results.filter(r => !r.ok);
+		expect(successes.length).toBe(1);
+		expect(successes[0]!.entry.filePath).toBe('dnd-characters/a.json');
+		expect(failures.length).toBe(1);
+		expect(failures[0]!.ok ? undefined : failures[0]!.diagnostic.filePath).toBe('dnd-characters/z.json');
+	});
+
+	it('T15f: No index event published for rejected duplicate', async () => {
+		const mockApp = makeMockApp();
+		const repo = new CharacterRepository(mockApp, 'dnd-characters');
+		const c = makeChar({ id: 'no-event' });
+		let eventCount = 0;
+		repo.index.subscribe(() => { eventCount++; });
+		repo.index.handleCreate(c, 'dnd-characters/a.json');
+		expect(eventCount).toBe(1);
+		repo.index.handleCreate(c, 'dnd-characters/b.json');
+		expect(eventCount).toBe(1); // no event for rejected duplicate
+	});
+
+	it('T15g: Modify-event collision preserves both entries', async () => {
+		const mockApp = makeMockApp();
+		const repo = new CharacterRepository(mockApp, 'dnd-characters');
+		const c = makeChar({ id: 'collide' });
+		repo.index.handleCreate(c, 'dnd-characters/a.json');
+		repo.index.handleModify(c, 'dnd-characters/b.json');
+		expect(repo.index.size).toBe(1);
+		expect(repo.index.get('collide' as CharacterId)!.filePath).toBe('dnd-characters/a.json');
+	});
+
+	it('T15h: Recovery — corrected file accepted with exactly one event', async () => {
+		const mockApp = makeMockApp();
+		const repo = new CharacterRepository(mockApp, 'dnd-characters');
+		const c = makeChar({ id: 'recover' });
+		const events: Array<{ type: string }> = [];
+		repo.index.subscribe((e) => { events.push(e); });
+		repo.index.handleCreate(c, 'dnd-characters/a.json');
+		expect(events.length).toBe(1);
+		repo.index.handleDelete('dnd-characters/a.json');
+		expect(events.length).toBe(2);
+		const r = repo.index.handleCreate(c, 'dnd-characters/a.json');
+		expect(r.ok).toBe(true);
+		expect(events.length).toBe(3);
+		expect(events[2]!.type).toBe('added');
+	});
+
+	it('T15i: Multiple duplicates — only first (sorted) survives, rest rejected', async () => {
+		const mockApp = makeMockApp();
+		const repo = new CharacterRepository(mockApp, 'dnd-characters');
+		const results = repo.index.initializeFromVault([
+			{ character: makeChar({ id: 'multi' }), filePath: 'dnd-characters/c.json' },
+			{ character: makeChar({ id: 'multi' }), filePath: 'dnd-characters/a.json' },
+			{ character: makeChar({ id: 'multi' }), filePath: 'dnd-characters/b.json' },
+		]);
+		const successes = results.filter(r => r.ok);
+		const failures = results.filter(r => !r.ok);
+		expect(successes.length).toBe(1);
+		expect(successes[0]!.entry.filePath).toBe('dnd-characters/a.json');
+		expect(failures.length).toBe(2);
+		expect(repo.index.size).toBe(1);
 	});
 });
 

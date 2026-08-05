@@ -36,6 +36,29 @@ export interface IndexDiagnostic {
 	cause?: unknown;
 }
 
+/** A duplicate character ID was rejected. */
+export interface IndexDuplicateDiagnostic extends IndexDiagnostic {
+	/** The character ID that conflicts with an existing entry. */
+	characterId: string;
+	/** The vault path of the existing entry that was accepted. */
+	existingPath: string;
+}
+
+/** Successful index operation result. */
+export interface IndexOperationSuccess {
+	ok: true;
+	entry: IndexedCharacter;
+}
+
+/** Failed index operation due to duplicate ID. */
+export interface IndexOperationDuplicate {
+	ok: false;
+	diagnostic: IndexDuplicateDiagnostic;
+}
+
+/** Result of an index mutation operation. */
+export type IndexOperationResult = IndexOperationSuccess | IndexOperationDuplicate;
+
 /* ── Change notification ───────────────────────────────────────── */
 
 /** The index added a new character. */
@@ -173,12 +196,21 @@ export class CharacterIndex {
 
 	/**
 	 * Add a character to the index (create event).
-	 * Publishes an 'added' change event on success.
+	 * Returns success if the ID is not already indexed; otherwise returns
+	 * a duplicate diagnostic and publishes no change event.
 	 */
-	public handleCreate(character: Character, filePath: string): void {
+	public handleCreate(character: Character, filePath: string): IndexOperationResult {
 		const id = characterIdStr(character.id);
-		if (this.entries.has(id)) {
-			return;
+		const existing = this.entries.get(id);
+		if (existing !== undefined) {
+			const diagnostic: IndexDuplicateDiagnostic = {
+				filePath,
+				reason: `Duplicate character ID '${character.id}' — existing entry at '${existing.filePath}'`,
+				characterId: character.id,
+				existingPath: existing.filePath,
+			};
+			this.recordDiagnostic(diagnostic);
+			return { ok: false, diagnostic };
 		}
 		const entry: IndexedCharacter = {
 			character,
@@ -187,16 +219,30 @@ export class CharacterIndex {
 		};
 		this.entries.set(id, entry);
 		this.notify({ type: 'added', characterId: character.id, filePath });
+		return { ok: true, entry };
 	}
 
 	/**
 	 * Replace a character in the index (modify event).
-	 * Publishes an 'updated' change event on success.
-	 * If the character is not currently indexed, adds it.
+	 * If the character ID already exists at a different file path, the
+	 * modification is rejected with a duplicate diagnostic.
+	 * If the ID exists at the same path, it is updated normally.
+	 * If the ID is not indexed, it is added.
 	 */
-	public handleModify(character: Character, filePath: string): void {
+	public handleModify(character: Character, filePath: string): IndexOperationResult {
 		const id = characterIdStr(character.id);
 		const existing = this.entries.get(id);
+
+		if (existing !== undefined && existing.filePath !== filePath) {
+			const diagnostic: IndexDuplicateDiagnostic = {
+				filePath,
+				reason: `Duplicate character ID '${character.id}' — existing entry at '${existing.filePath}'`,
+				characterId: character.id,
+				existingPath: existing.filePath,
+			};
+			this.recordDiagnostic(diagnostic);
+			return { ok: false, diagnostic };
+		}
 
 		const entry: IndexedCharacter = {
 			character,
@@ -210,6 +256,7 @@ export class CharacterIndex {
 		} else {
 			this.notify({ type: 'added', characterId: character.id, filePath });
 		}
+		return { ok: true, entry };
 	}
 
 	/**
@@ -307,20 +354,40 @@ export class CharacterIndex {
 	/**
 	 * Bulk initialize the index from a list of validated characters.
 	 * Used during startup/restart to reconstruct the index from vault files.
+	 * Processes entries in deterministic vault-path order. Duplicate IDs
+	 * are rejected with diagnostics (first-seen path wins).
 	 *
 	 * @param characters - Array of character entries to add.
+	 * @returns Array of operation results for each entry processed.
 	 */
-	public initializeFromVault(characters: Array<{ character: Character; filePath: string }>): void {
+	public initializeFromVault(characters: Array<{ character: Character; filePath: string }>): Array<IndexOperationResult> {
 		this.entries.clear();
 		this.diagnostics.length = 0;
-		for (const { character, filePath } of characters) {
+		const sorted = [...characters].sort((a, b) => a.filePath.localeCompare(b.filePath));
+		const results: Array<IndexOperationResult> = [];
+		for (const { character, filePath } of sorted) {
 			const id = characterIdStr(character.id);
-			this.entries.set(id, {
-				character,
-				filePath,
-				characterId: character.id,
-			});
+			const existing = this.entries.get(id);
+			if (existing !== undefined) {
+				const diagnostic: IndexDuplicateDiagnostic = {
+					filePath,
+					reason: `Duplicate character ID '${character.id}' — existing entry at '${existing.filePath}'`,
+					characterId: character.id,
+					existingPath: existing.filePath,
+				};
+				this.recordDiagnostic(diagnostic);
+				results.push({ ok: false, diagnostic });
+			} else {
+				const entry: IndexedCharacter = {
+					character,
+					filePath,
+					characterId: character.id,
+				};
+				this.entries.set(id, entry);
+				results.push({ ok: true, entry });
+			}
 		}
+		return results;
 	}
 
 	/**

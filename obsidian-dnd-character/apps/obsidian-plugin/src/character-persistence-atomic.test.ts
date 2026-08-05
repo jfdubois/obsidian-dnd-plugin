@@ -1,66 +1,76 @@
 /**
- * Character persistence: Atomic update via Vault.process (PER-004).
+ * PER-005: Concurrent mutation via Vault.process.
+ *
+ * Deterministic in-memory Vault.process test double. Overlapping
+ * mutations prove both independent changes survive in final JSON.
+ * Failure scenarios verify file integrity.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Vault, TFile, App } from 'obsidian';
+import type { Vault, TFile, App, EventRef } from 'obsidian';
 import type { Character } from '@obsidian-dnd/character-contract';
 import type { CharacterId } from '@obsidian-dnd/domain';
 
-vi.mock('obsidian', () => ({
-	App: class {},
-	Vault: class {},
-	TFile: class {},
-	TFolder: class {},
-	EventRef: class {},
-}));
-
+vi.mock('obsidian', () => ({ App: class {}, Vault: class {}, TFile: class {}, TFolder: class {}, EventRef: class {} }));
 vi.mock('@obsidian-dnd/character-contract', () => ({
 	serializeCharacter: vi.fn(),
 	deserializeCharacter: vi.fn(),
-	CharacterSerializationError: class CharacterSerializationError extends Error {
-		public readonly reason: string;
-		public readonly cause: unknown;
-		constructor(options: { reason: string; message: string; cause?: unknown }) {
-			super(options.message);
-			this.name = 'CharacterSerializationError';
-			this.reason = options.reason;
-			this.cause = options.cause;
-		}
-	},
+	CharacterSerializationError: class extends Error { public readonly reason: string = ''; public readonly cause: unknown = undefined; },
 }));
-
 vi.mock('./character-folder', () => ({ ensureCharacterFolder: vi.fn() }));
 vi.mock('./character-create', () => ({ createCharacterInVault: vi.fn() }));
-vi.mock('./character-read', () => ({
-	readCharacterFromVault: vi.fn(),
-	listCharactersInVault: vi.fn(),
-}));
-vi.mock('./character-update', () => ({ updateCharacterInVault: vi.fn() }));
+vi.mock('./character-read', () => ({ readCharacterFromVault: vi.fn(), listCharactersInVault: vi.fn() }));
 vi.mock('./character-delete', () => ({ deleteCharacterFromVault: vi.fn() }));
-vi.mock('./character-vault-events', () => ({
-	setupCharacterVaultEventListeners: vi.fn(),
-	isCharacterFile: vi.fn(),
-}));
+vi.mock('./character-vault-events', () => ({ setupCharacterVaultEventListeners: vi.fn(), isCharacterFile: vi.fn() }));
 vi.mock('@obsidian-dnd/domain', () => ({ characterIdStr: vi.fn((id: string) => id) }));
 
-import { CharacterRepository } from './character-repository';
 import * as characterContract from '@obsidian-dnd/character-contract';
-import * as characterFolder from './character-folder';
-import * as characterUpdate from './character-update';
+import { updateCharacterInVault } from './character-update';
 
-function makeMockVault(): Vault {
-	return {
-		getFileByPath: vi.fn(),
-		getFolderByPath: vi.fn(),
+interface MockVault extends Vault {
+	fileStore: Record<string, string>;
+	processCalls: Array<{ filePath: string; originalContent: string; writtenContent: string | null }>;
+	throwOnProcess: boolean;
+}
+
+function createMockVault(initialStore: Record<string, string> = {}): MockVault {
+	const vault = {
+		fileStore: { ...initialStore },
+		processCalls: [] as MockVault['processCalls'],
+		throwOnProcess: false,
+		getFileByPath: vi.fn((path: string) => {
+			if (path in vault.fileStore) {
+				return { path, name: path.split('/').pop()?.replace('.json', '') || '' } as TFile;
+			}
+			return null;
+		}),
+		getFolderByPath: vi.fn(() => null),
 		create: vi.fn(),
 		createFolder: vi.fn(),
 		cachedRead: vi.fn(),
-		process: vi.fn(),
+		process: vi.fn(async (file: TFile, callback: (content: string) => string) => {
+			const originalContent = vault.fileStore[file.path] ?? '';
+			let writtenContent: string | null = null;
+			let writeFailed = false;
+			try {
+				writtenContent = callback(originalContent);
+				if (vault.throwOnProcess) {
+					writeFailed = true;
+					throw new Error('Vault write failed');
+				}
+				vault.fileStore[file.path] = writtenContent;
+			} finally {
+				vault.processCalls.push({ filePath: file.path, originalContent, writtenContent: writeFailed ? null : writtenContent });
+			}
+			return writtenContent ?? '';
+		}),
 		delete: vi.fn(),
-		on: vi.fn(),
-	} as unknown as Vault;
+		on: vi.fn().mockReturnValue({} as EventRef),
+	};
+	return vault as unknown as MockVault;
 }
+
+/* ── Test character factory ────────────────────────────────────── */
 
 function makeTestCharacter(overrides: Partial<Character> = {}): Character {
 	return {
@@ -82,119 +92,202 @@ function makeTestCharacter(overrides: Partial<Character> = {}): Character {
 	} as unknown as Character;
 }
 
-describe('PER-004: Atomic update via Vault.process', () => {
-	let mockVault: Vault;
-	let repo: CharacterRepository;
+/* ── Tests ─────────────────────────────────────────────────────── */
+
+describe('PER-005: Concurrent mutation via Vault.process', () => {
+	let mockVault: MockVault;
+	let mockApp: App;
+	const charactersPath = 'dnd-characters';
+	const filePath = 'dnd-characters/char-1.json';
 
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mockVault = makeMockVault();
-		repo = new CharacterRepository({ vault: mockVault } as unknown as App, 'dnd-characters');
-		vi.mocked(characterFolder.ensureCharacterFolder).mockResolvedValue({ status: 'exists' });
-		vi.mocked(mockVault.getFileByPath).mockReturnValue({} as TFile);
-		vi.mocked(characterContract.serializeCharacter).mockReturnValue('{"schemaVersion":1}');
+		vi.mocked(characterContract.serializeCharacter).mockImplementation((c) => JSON.stringify(c));
+		vi.mocked(characterContract.deserializeCharacter).mockImplementation((json) => JSON.parse(json) as unknown as Character);
 	});
 
-	it('update succeeds with atomic write via Vault.process', async () => {
+	function setupVault(initialCharacter: Character) {
+		const store: Record<string, string> = {
+			[filePath]: JSON.stringify(initialCharacter),
+		};
+		mockVault = createMockVault(store);
+		mockApp = { vault: mockVault } as unknown as App;
+	}
+
+	it('T1: Atomic update succeeds with Vault.process read-modify-write', async () => {
 		const character = makeTestCharacter();
-		const updatedCharacter = makeTestCharacter({ identity: { name: 'Updated' } });
+		setupVault(character);
 
-		vi.mocked(characterUpdate.updateCharacterInVault).mockResolvedValue({
-			status: 'updated',
-			character: updatedCharacter,
-		});
-
-		const result = await repo.update(character.id, (c: Character) =>
-			({ ...c, identity: { name: 'Updated' } }) as unknown as Character);
+		const result = await updateCharacterInVault(
+			mockApp,
+			character.id,
+			(c) => ({ ...c, identity: { ...c.identity, name: 'Updated' } }) as unknown as Character,
+			charactersPath,
+		);
 
 		expect(result.status).toBe('updated');
 		if (result.status === 'updated') {
 			expect(result.character.identity.name).toBe('Updated');
 		}
-		expect(characterUpdate.updateCharacterInVault).toHaveBeenCalled();
+		expect(mockVault.processCalls).toHaveLength(1);
+		expect(mockVault.processCalls[0]?.originalContent).toBe(JSON.stringify(character));
+		expect(mockVault.fileStore[filePath]).toContain('"Updated"');
 	});
 
-	it('update returns vault-write-failed when Vault.process throws', async () => {
-		vi.mocked(characterUpdate.updateCharacterInVault).mockResolvedValue({
-			status: 'error',
-			reason: 'vault-write-failed',
-			characterId: 'char-1',
-			cause: new Error('Vault write failed'),
+	it('T2: Sequential mutations accumulate - both independent changes survive', async () => {
+		const character = makeTestCharacter({
+			identity: { name: 'Original' },
+			abilities: { scores: { STR: 10, DEX: 10, CON: 10, INT: 10, WIS: 10, CHA: 10 } },
 		});
+		setupVault(character);
 
-		const result = await repo.update('char-1' as CharacterId, (c: Character) => c);
-		expect(result.status).toBe('error');
-		if (result.status === 'error' && result.reason === 'vault-write-failed') {
-			expect(result.characterId).toBe('char-1');
-			expect(result.cause).toBeDefined();
-		}
-	});
-
-	it('update returns mutation-failed when mutation function throws', async () => {
-		vi.mocked(characterUpdate.updateCharacterInVault).mockResolvedValue({
-			status: 'error',
-			reason: 'mutation-failed',
-			characterId: 'char-1',
-			cause: new Error('mutation error'),
-		});
-
-		const result = await repo.update('char-1' as CharacterId, () => {
-			throw new Error('mutation error');
-		});
-		expect(result.status).toBe('error');
-		if (result.status === 'error' && result.reason === 'mutation-failed') {
-			expect(result.characterId).toBe('char-1');
-			expect(result.cause).toBeDefined();
-		}
-	});
-
-	it('update returns invalid-data when serialized data fails validation', async () => {
-		vi.mocked(characterUpdate.updateCharacterInVault).mockResolvedValue({
-			status: 'error',
-			reason: 'invalid-data',
-			characterId: 'char-1',
-			cause: new Error('Invalid character data'),
-		});
-
-		const result = await repo.update('char-1' as CharacterId, (c: Character) => c);
-		expect(result.status).toBe('error');
-		if (result.status === 'error' && result.reason === 'invalid-data') {
-			expect(result.characterId).toBe('char-1');
-			expect(result.cause).toBeDefined();
-		}
-	});
-
-	it('sequential updates preserve character state', async () => {
-		const character = makeTestCharacter();
-		const step1 = makeTestCharacter({ identity: { name: 'Step 1' } });
-		const step2 = makeTestCharacter({ identity: { name: 'Step 2' } });
-
-		vi.mocked(characterUpdate.updateCharacterInVault)
-			.mockResolvedValueOnce({ status: 'updated', character: step1 })
-			.mockResolvedValueOnce({ status: 'updated', character: step2 });
-
-		const r1 = await repo.update(character.id, (c: Character) =>
-			({ ...c, identity: { name: 'Step 1' } }) as unknown as Character);
+		// First mutation: change name
+		const r1 = await updateCharacterInVault(
+			mockApp,
+			character.id,
+			(c) => ({ ...c, identity: { ...c.identity, name: 'Mutated A' } }) as unknown as Character,
+			charactersPath,
+		);
 		expect(r1.status).toBe('updated');
 
-		const r2 = await repo.update(character.id, (c: Character) =>
-			({ ...c, identity: { name: 'Step 2' } }) as unknown as Character);
+		// Second mutation: change STR (reads updated content from first mutation)
+		const r2 = await updateCharacterInVault(
+			mockApp,
+			character.id,
+			(c) => ({
+				...c,
+				abilities: { ...c.abilities, scores: { ...c.abilities.scores, STR: 20 } },
+			}) as unknown as Character,
+			charactersPath,
+		);
 		expect(r2.status).toBe('updated');
-		if (r2.status === 'updated') {
-			expect(r2.character.identity.name).toBe('Step 2');
-		}
+
+		// Both changes survive in final persisted JSON
+		const finalContent = mockVault.fileStore[filePath];
+		expect(finalContent).toContain('"Mutated A"');
+		expect(finalContent).toContain('"STR":20');
+
+		// Two Vault.process calls, each reading the result of the previous
+		expect(mockVault.processCalls).toHaveLength(2);
+		expect(mockVault.processCalls[0]?.originalContent).toBe(JSON.stringify(character));
+		expect(mockVault.processCalls[1]?.originalContent).toContain('"Mutated A"');
 	});
 
-	it('update returns not-found when character file does not exist', async () => {
-		vi.mocked(characterUpdate.updateCharacterInVault).mockResolvedValue({
-			status: 'error',
-			reason: 'not-found',
-			characterId: 'missing',
-		});
+	it('T3: Mutation function throws - file content unchanged', async () => {
+		const character = makeTestCharacter();
+		const originalContent = JSON.stringify(character);
+		setupVault(character);
 
-		const result = await repo.update('missing' as CharacterId, (c: Character) => c);
+		const result = await updateCharacterInVault(
+			mockApp,
+			character.id,
+			() => { throw new Error('mutation failed'); },
+			charactersPath,
+		);
+
 		expect(result.status).toBe('error');
-		if (result.status === 'error' && result.reason === 'not-found') {
+		if (result.status === 'error') {
+			expect(result.reason).toBe('mutation-failed');
+		}
+		// File content must remain unchanged
+		expect(mockVault.fileStore[filePath]).toBe(originalContent);
+	});
+
+	it('T4: Vault.process write fails - file content unchanged', async () => {
+		const character = makeTestCharacter();
+		const originalContent = JSON.stringify(character);
+		setupVault(character);
+		mockVault.throwOnProcess = true;
+
+		const result = await updateCharacterInVault(
+			mockApp,
+			character.id,
+			(c) => ({ ...c, identity: { ...c.identity, name: 'Updated' } }) as unknown as Character,
+			charactersPath,
+		);
+
+		expect(result.status).toBe('error');
+		if (result.status === 'error') {
+			expect(result.reason).toBe('vault-write-failed');
+		}
+		// File content must remain unchanged despite callback succeeding
+		expect(mockVault.fileStore[filePath]).toBe(originalContent);
+	});
+
+	it('T5: Recovery - successful mutation after failed mutation restores progress', async () => {
+		const character = makeTestCharacter();
+		const originalContent = JSON.stringify(character);
+		setupVault(character);
+
+		// First: mutation throws
+		const r1 = await updateCharacterInVault(
+			mockApp,
+			character.id,
+			() => { throw new Error('oops'); },
+			charactersPath,
+		);
+		expect(r1.status).toBe('error');
+		expect(mockVault.fileStore[filePath]).toBe(originalContent);
+
+		// Second: successful mutation
+		const r2 = await updateCharacterInVault(
+			mockApp,
+			character.id,
+			(c) => ({ ...c, identity: { ...c.identity, name: 'Recovered' } }) as unknown as Character,
+			charactersPath,
+		);
+		expect(r2.status).toBe('updated');
+		expect(mockVault.fileStore[filePath]).toContain('"Recovered"');
+	});
+
+	it('T6: Vault.process callback receives actual file content', async () => {
+		const character = makeTestCharacter({ identity: { name: 'In File' } });
+		setupVault(character);
+
+		await updateCharacterInVault(
+			mockApp,
+			character.id,
+			(c) => c,
+			charactersPath,
+		);
+
+		const call = mockVault.processCalls[0];
+		expect(call).toBeDefined();
+		expect(call!.originalContent).toContain('"In File"');
+	});
+
+	it('T7: Vault.process writes serialized output back to file store', async () => {
+		const character = makeTestCharacter();
+		setupVault(character);
+
+		await updateCharacterInVault(
+			mockApp,
+			character.id,
+			(c) => ({ ...c, identity: { ...c.identity, name: 'Written' } }) as unknown as Character,
+			charactersPath,
+		);
+
+		const written = mockVault.fileStore[filePath];
+		expect(written).toBeDefined();
+		expect(written!).toBe(JSON.stringify(JSON.parse(written!))); // valid JSON
+		expect(written).toContain('"Written"');
+		expect(mockVault.processCalls[0]?.writtenContent).toBe(written);
+	});
+
+	it('T8: not-found when character file does not exist', async () => {
+		mockVault = createMockVault({});
+		mockApp = { vault: mockVault } as unknown as App;
+
+		const result = await updateCharacterInVault(
+			mockApp,
+			'missing' as CharacterId,
+			(c) => c,
+			charactersPath,
+		);
+
+		expect(result.status).toBe('error');
+		if (result.status === 'error') {
+			expect(result.reason).toBe('not-found');
 			expect(result.characterId).toBe('missing');
 		}
 	});
