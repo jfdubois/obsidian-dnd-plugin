@@ -160,6 +160,7 @@ export {
   type GrantResourceEffect,
   type GrantAttackEffect,
   type GrantFeatureEffect,
+  type AddHitPointIncreaseEffect,
   /* Effect metadata types */
   type RuleEffectMetadata,
   type AutomationStatus,
@@ -291,6 +292,7 @@ export {
   createGrantResourceEffect,
   createGrantAttackEffect,
   createGrantFeatureEffect,
+  createAddHitPointIncreaseEffect,
   /* Immunity definition factories */
   createDamageImmunity,
   createConditionImmunity,

@@ -230,6 +230,7 @@ export type RuleEffect = RuleEffectMetadata & (
   | GrantResourceEffect
   | GrantAttackEffect
   | GrantFeatureEffect
+  | AddHitPointIncreaseEffect
 );
 
 /* ── Effect type constants and guard ───────────────────────────── */
@@ -252,7 +253,8 @@ export type RuleEffectType =
   | "grant-spell"
   | "grant-resource"
   | "grant-attack"
-  | "grant-feature";
+  | "grant-feature"
+  | "add-hit-point-increase";
 
 export const RULE_EFFECT_TYPES: ReadonlyArray<RuleEffectType> = [
   "add-ability",
@@ -273,6 +275,7 @@ export const RULE_EFFECT_TYPES: ReadonlyArray<RuleEffectType> = [
   "grant-resource",
   "grant-attack",
   "grant-feature",
+  "add-hit-point-increase",
 ];
 
 export function isRuleEffectType(value: unknown): value is RuleEffectType {
@@ -377,6 +380,12 @@ export interface GrantAttackEffect {
 export interface GrantFeatureEffect {
   type: "grant-feature";
   featureId: EntityId;
+}
+
+export interface AddHitPointIncreaseEffect {
+  type: "add-hit-point-increase";
+  /** Flat HP increase (e.g., +2 per level for Tough feat). */
+  value: number;
 }
 
 /* ── Supporting types ──────────────────────────────────────────── */
@@ -772,6 +781,10 @@ export function isRuleEffect(value: unknown): value is RuleEffect {
     }
     case "grant-feature": {
       if (!isEntityId(obj.featureId)) return false;
+      return true;
+    }
+    case "add-hit-point-increase": {
+      if (typeof obj.value !== "number" || !Number.isFinite(obj.value)) return false;
       return true;
     }
     default: {
@@ -1212,6 +1225,13 @@ export function createGrantFeatureEffect(
   featureId: EntityId,
 ): RuleEffectMetadata & GrantFeatureEffect {
   return { ...metadata, type: "grant-feature", featureId };
+}
+
+export function createAddHitPointIncreaseEffect(
+  metadata: RuleEffectMetadata,
+  value: number,
+): RuleEffectMetadata & AddHitPointIncreaseEffect {
+  return { ...metadata, type: "add-hit-point-increase", value };
 }
 
 /* ── Supporting type factories ─────────────────────────────────── */

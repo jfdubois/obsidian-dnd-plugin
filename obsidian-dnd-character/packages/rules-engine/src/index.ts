@@ -72,3 +72,10 @@ export {
   SENSE_KINDS,
   calculateMovementSenses,
 } from "./movement-senses";
+
+export {
+  /* Maximum hit points */
+  type MaxHpClassBreakdown,
+  type MaxHpResult,
+  calculateMaxHp,
+} from "./max-hp";

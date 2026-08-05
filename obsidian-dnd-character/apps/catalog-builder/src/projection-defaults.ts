@@ -138,6 +138,11 @@ const DEFAULT_PROJECTIONS_DATA: readonly MechanicProjection[] = Object.freeze([
     primary: "features-and-traits",
     secondary: [] as readonly SheetProjection[],
   },
+  {
+    effectType: "add-hit-point-increase",
+    primary: "resources",
+    secondary: [] as readonly SheetProjection[],
+  },
 ]);
 
 export const DEFAULT_PROJECTIONS: ReadonlyMap<RuleEffectType, MechanicProjection> = Object.freeze(
