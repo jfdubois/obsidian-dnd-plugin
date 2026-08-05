@@ -32,3 +32,14 @@ export {
   abilityModifier,
   calculateAbilityScores,
 } from "./ability-scores";
+
+export {
+  /* Proficiencies and expertise */
+  type ArmorProficiencyEntry,
+  type WeaponProficiencyEntry,
+  type ToolProficiencyEntry,
+  type SkillProficiencyEntry,
+  type SavingThrowProficiencyEntry,
+  type ProficienciesResult,
+  calculateProficiencies,
+} from "./proficiencies";
