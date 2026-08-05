@@ -92,3 +92,12 @@ export {
   type InitiativeResult,
   calculateInitiative,
 } from "./initiative";
+
+export {
+  /* Attack calculation */
+  type AttackDamageInstance,
+  type AttackRangeInfo,
+  type AttackEntry,
+  type AttacksResult,
+  calculateAttacks,
+} from "./attacks";

@@ -435,7 +435,7 @@ Calculate the initial character sheet with explanation and provenance traces.
 - [x] **P9-T008 — Implement maximum HP**
 - [x] **P9-T009 — Implement armor class**
 - [x] **P9-T010 — Implement initiative**
-- [ ] **P9-T011 — Implement attacks**
+- [x] **P9-T011 — Implement attacks**
 - [ ] **P9-T012 — Implement defenses, immunities, and capabilities**
 - [ ] **P9-T013 — Implement spellcasting totals and slot maxima**
 - [ ] **P9-T014 — Implement feature resources**
