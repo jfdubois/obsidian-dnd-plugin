@@ -22,7 +22,7 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-P10-T003 — Implement ruleset step
+P10-T004 — Implement source profile/source selection step
 
 ## Branch baseline
 
@@ -80,12 +80,18 @@ None recorded.
 - Phase 9 starting commit: a362900
 - Completed Phase 9 task commits: P9-T001 — see Git history for P9-T001; P9-T002 — see Git history for P9-T002; P9-T003 — see Git history for P9-T003; P9-T004 — see Git history for P9-T004; P9-T005 — see Git history for P9-T005; P9-T006 — see Git history for P9-T006; P9-T007 — see Git history for P9-T007; P9-T008 — see Git history for P9-T008; P9-T009 — see Git history for P9-T009; P9-T010 — see Git history for P9-T010; P9-T011 — see Git history for P9-T011; P9-T012 — c3032a7; P9-T013 — 2111f0c; P9-T014 — 541120b; P9-T015 — 2db464f; P9-T016 — a0d9726; P9-T017 — see Git history for P9-T017; P9-T018 — see Git history for P9-T018
 - Phase 10 starting commit: 77baeed
-- Completed Phase 10 task commits: P10-T001 — see Git history for P10-T001; P10-T002 — see Git history for P10-T002
+- Completed Phase 10 task commits: P10-T001 — see Git history for P10-T001; P10-T002 — see Git history for P10-T002; P10-T003 — see Git history for P10-T003
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-05 — P10-T003 — Implement ruleset step — complete
+Summary: Created ruleset step with 3 new files. `selectRuleset` validates input against domain `isRuleset`, sets draft ruleset, marks step resolved, invalidates all downstream dependents. `RULESET_STEP_OPTIONS` exposes available rulesets from domain. Positive tests for selection, resolution, invalidation, overwrite. Negative tests for all invalid input types, non-mutation on rejection.
+Validation: 4236 tests passing (36 new), typecheck and lint pass, build passes.
+Compatibility notes: Pure TypeScript. No Obsidian API usage. All APIs mobile-compatible.
+Commit: see Git history for P10-T003.
 
 2026-08-05 — P10-T002 — Implement step controller — complete
 Summary: Created step controller with 4 new files. `StepController` class manages the 11 FR-004 modal steps with navigation (next/previous/jumpTo), step-to-draft-step mapping (16 draft sections), resolution tracking, dependency invalidation cascade, spell skip logic, save readiness gating, and review state aggregation. Pure TypeScript, no Obsidian UI.
