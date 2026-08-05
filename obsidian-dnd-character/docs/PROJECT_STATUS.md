@@ -22,7 +22,7 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-P10-T009 — Implement proficiencies and languages step
+P10-T010 — Implement ability-score methods
 
 ## Branch baseline
 
@@ -80,12 +80,18 @@ None recorded.
 - Phase 9 starting commit: a362900
 - Completed Phase 9 task commits: P9-T001 — see Git history for P9-T001; P9-T002 — see Git history for P9-T002; P9-T003 — see Git history for P9-T003; P9-T004 — see Git history for P9-T004; P9-T005 — see Git history for P9-T005; P9-T006 — see Git history for P9-T006; P9-T007 — see Git history for P9-T007; P9-T008 — see Git history for P9-T008; P9-T009 — see Git history for P9-T009; P9-T010 — see Git history for P9-T010; P9-T011 — see Git history for P9-T011; P9-T012 — c3032a7; P9-T013 — 2111f0c; P9-T014 — 541120b; P9-T015 — 2db464f; P9-T016 — a0d9726; P9-T017 — see Git history for P9-T017; P9-T018 — see Git history for P9-T018
 - Phase 10 starting commit: 77baeed
-- Completed Phase 10 task commits: P10-T001 — see Git history for P10-T001; P10-T002 — see Git history for P10-T002; P10-T003 — see Git history for P10-T003; P10-T004 — see Git history for P10-T004; P10-T005 — see Git history for P10-T005; P10-T006 — see Git history for P10-T006; P10-T007 — see Git history for P10-T007; P10-T008 — see Git history for P10-T008
+- Completed Phase 10 task commits: P10-T001 — see Git history for P10-T001; P10-T002 — see Git history for P10-T002; P10-T003 — see Git history for P10-T003; P10-T004 — see Git history for P10-T004; P10-T005 — see Git history for P10-T005; P10-T006 — see Git history for P10-T006; P10-T007 — see Git history for P10-T007; P10-T008 — see Git history for P10-T008; P10-T009 — 0b69134
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-05 — P10-T009 — Implement proficiencies and languages step — complete
+Summary: Created proficiencies and languages step with 5 new files (1 implementation, 4 test files split to stay under 300-line limit). `selectProficiencies` validates skillProficiencies and toolProficiencies arrays of EntityId, checks species/abilities/background/class upstream dependencies resolved, sets draft.proficiencies (shallow copy), marks proficiencies step resolved. `selectLanguages` validates languageIds array of EntityId, checks species/background/class upstream dependencies resolved, sets draft.languages (shallow copy), marks languages step resolved. Positive tests for both functions covering selection, resolution, empty input, both rulesets, overwrite, shallow copy, diagnostics. Negative tests for all invalid input types, unresolved upstream dependencies, non-mutation on rejection.
+Validation: 4489 tests passing (48 new), typecheck and lint pass, build passes.
+Compatibility notes: Pure TypeScript. No Obsidian API usage. All APIs mobile-compatible.
+Commit: 0b69134.
 
 2026-08-05 — P10-T008 — Implement ability scores step — complete
 Summary: Created ability scores step with 3 new files. `selectAbilityScores` validates a Record<Ability, number> with all 6 abilities present, scores between 1-30 (integer), checks ruleset and species upstream dependencies resolved, sets draft.abilities.scores (shallow copy), marks abilities step resolved, invalidates downstream dependents. Positive tests for selection, resolution, both rulesets, optional sources, overwrite, shallow copy. Negative tests for all invalid input types, unresolved upstream dependencies, non-mutation on rejection.
