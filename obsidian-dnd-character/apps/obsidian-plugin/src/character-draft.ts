@@ -173,10 +173,15 @@ export function markStepResolved(
   // all downstream dependent steps.
   // When invalidateDependents is false, dependents are left untouched
   // (e.g., first ruleset selection should not invalidate unvisited steps).
+  // Only invalidate dependents that are currently "resolved" or already
+  // "invalidated" — do NOT mark "unvisited" steps as invalidated.
   if (invalidateDependents) {
     const dependents = getTransitiveDependents(step);
     for (const dependent of dependents) {
-      draft.stepStatuses.set(dependent, "invalidated");
+      const currentState = draft.stepStatuses.get(dependent);
+      if (currentState !== "unvisited") {
+        draft.stepStatuses.set(dependent, "invalidated");
+      }
     }
   }
   draft.stepStatuses.set(step, "resolved");
@@ -185,10 +190,14 @@ export function markStepResolved(
 
 export function invalidateStep(draft: CharacterDraft, step: DraftStep): void {
   draft.stepStatuses.set(step, "invalidated");
-  // Also invalidate all transitive dependents
+  // Also invalidate all transitive dependents, but only those that are
+  // currently "resolved" or already "invalidated" — skip "unvisited" steps.
   const dependents = getTransitiveDependents(step);
   for (const dependent of dependents) {
-    draft.stepStatuses.set(dependent, "invalidated");
+    const currentState = draft.stepStatuses.get(dependent);
+    if (currentState !== "unvisited") {
+      draft.stepStatuses.set(dependent, "invalidated");
+    }
   }
   refreshDiagnostics(draft);
 }
@@ -199,7 +208,10 @@ export function invalidateDependentSteps(
 ): DraftStep[] {
   const dependents = getTransitiveDependents(changedStep);
   for (const dependent of dependents) {
-    draft.stepStatuses.set(dependent, "invalidated");
+    const currentState = draft.stepStatuses.get(dependent);
+    if (currentState !== "unvisited") {
+      draft.stepStatuses.set(dependent, "invalidated");
+    }
   }
   refreshDiagnostics(draft);
   return dependents;

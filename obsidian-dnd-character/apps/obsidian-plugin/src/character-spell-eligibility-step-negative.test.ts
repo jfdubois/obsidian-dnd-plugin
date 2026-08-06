@@ -133,11 +133,11 @@ describe("querySpellEligibility does not mutate draft on rejection", () => {
     const draft = createEmptyCharacterDraft();
     resolvePrerequisites(draft, "2024");
 
-    // spell-eligibility is "invalidated" by upstream resolution
-    expect(getStepState(draft, "spell-eligibility")).toBe("invalidated");
+    // spell-eligibility remains "unvisited" after upstream resolution (P10-T020 fix)
+    expect(getStepState(draft, "spell-eligibility")).toBe("unvisited");
 
     querySpellEligibility(draft, null);
-    expect(getStepState(draft, "spell-eligibility")).toBe("invalidated");
+    expect(getStepState(draft, "spell-eligibility")).toBe("unvisited");
   });
 
   it("does not resolve step when deps not resolved", () => {

@@ -183,9 +183,9 @@ describe("selectAbilityScores does not mutate draft on rejection", () => {
     selectSources(draft, []);
     selectSpecies(draft, createEntityId("human"));
 
-    expect(getStepState(draft, "abilities")).toBe("invalidated");
+    expect(getStepState(draft, "abilities")).toBe("unvisited");
     selectAbilityScores(draft, null);
-    expect(getStepState(draft, "abilities")).toBe("invalidated");
+    expect(getStepState(draft, "abilities")).toBe("unvisited");
   });
 
   it("does not resolve step when ruleset not resolved", () => {
@@ -203,7 +203,7 @@ describe("selectAbilityScores does not mutate draft on rejection", () => {
 
     const scores = { STR: 15, DEX: 14, CON: 13, INT: 10, WIS: 10, CHA: 8 };
     selectAbilityScores(draft, scores);
-    expect(getStepState(draft, "abilities")).toBe("invalidated");
+    expect(getStepState(draft, "abilities")).toBe("unvisited");
     expect(draft.abilities.scores).toBeUndefined();
   });
 
@@ -231,6 +231,6 @@ describe("selectAbilityScores does not mutate draft on rejection", () => {
     const scores = { STR: 15, DEX: 14, CON: 13, INT: 10, WIS: 10, CHA: 8 };
     selectAbilityScores(draft, scores);
     expect(draft.abilities.scores).toBeUndefined();
-    expect(getStepState(draft, "abilities")).toBe("invalidated");
+    expect(getStepState(draft, "abilities")).toBe("unvisited");
   });
 });

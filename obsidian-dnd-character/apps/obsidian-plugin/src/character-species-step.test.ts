@@ -63,8 +63,9 @@ describe("selectSpecies with valid input", () => {
     selectSpecies(draft, createEntityId("elf"));
 
     // Only the species draft step is resolved, not species-choices
+    // species-choices remains unvisited (not invalidated) because it was never visited
     expect(getStepState(draft, "species")).toBe("resolved");
-    expect(getStepState(draft, "species-choices")).toBe("invalidated");
+    expect(getStepState(draft, "species-choices")).toBe("unvisited");
   });
 
   it("invalidates dependent steps after selection", () => {

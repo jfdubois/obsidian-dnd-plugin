@@ -153,10 +153,10 @@ describe("selectSpells does not mutate draft on rejection", () => {
     const draft = createEmptyCharacterDraft();
     resolvePrerequisites(draft, "2024");
 
-    expect(getStepState(draft, "spells")).toBe("invalidated");
+    expect(getStepState(draft, "spells")).toBe("unvisited");
 
     selectSpells(draft, null);
-    expect(getStepState(draft, "spells")).toBe("invalidated");
+    expect(getStepState(draft, "spells")).toBe("unvisited");
   });
 
   it("does not resolve step when deps not resolved", () => {

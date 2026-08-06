@@ -10,6 +10,7 @@ import {
   isDraftComplete,
   hasErrors,
   markStepResolved,
+  getStepState,
 } from "./character-draft";
 import type { CreatorStep } from "./character-step-controller";
 import { StepController } from "./character-step-controller";
@@ -365,6 +366,82 @@ describe("CharacterCreatorModal", () => {
       expect(warnings).toHaveLength(1);
       expect(warnings[0]!.message.trim().length).toBeGreaterThan(0);
       expect(warnings[0]!.message).toContain("step");
+    });
+
+    // P10-T020: 2014 to 2024 ruleset change leaves all unvisited steps unvisited
+    it("2014 to 2024 ruleset change leaves all unvisited steps unvisited", () => {
+      const freshDraft = createEmptyCharacterDraft();
+      selectRuleset(freshDraft, "2014");
+      selectRuleset(freshDraft, "2024");
+
+      // All non-ruleset steps must remain unvisited, not invalidated
+      expect(getStepState(freshDraft, "sources")).toBe("unvisited");
+      expect(getStepState(freshDraft, "species")).toBe("unvisited");
+      expect(getStepState(freshDraft, "species-choices")).toBe("unvisited");
+      expect(getStepState(freshDraft, "background")).toBe("unvisited");
+      expect(getStepState(freshDraft, "background-choices")).toBe("unvisited");
+      expect(getStepState(freshDraft, "class")).toBe("unvisited");
+      expect(getStepState(freshDraft, "class-starting-grants")).toBe("unvisited");
+      expect(getStepState(freshDraft, "abilities")).toBe("unvisited");
+      expect(getStepState(freshDraft, "proficiencies")).toBe("unvisited");
+      expect(getStepState(freshDraft, "proficiency-choices")).toBe("unvisited");
+      expect(getStepState(freshDraft, "languages")).toBe("unvisited");
+      expect(getStepState(freshDraft, "language-choices")).toBe("unvisited");
+      expect(getStepState(freshDraft, "equipment")).toBe("unvisited");
+      expect(getStepState(freshDraft, "equipment-choices")).toBe("unvisited");
+      expect(getStepState(freshDraft, "spell-eligibility")).toBe("unvisited");
+      expect(getStepState(freshDraft, "spells")).toBe("unvisited");
+      expect(getStepState(freshDraft, "review")).toBe("unvisited");
+    });
+
+    // P10-T020: 2024 to 2014 ruleset change leaves all unvisited steps unvisited
+    it("2024 to 2014 ruleset change leaves all unvisited steps unvisited", () => {
+      const freshDraft = createEmptyCharacterDraft();
+      selectRuleset(freshDraft, "2024");
+      selectRuleset(freshDraft, "2014");
+
+      // All non-ruleset steps must remain unvisited, not invalidated
+      expect(getStepState(freshDraft, "sources")).toBe("unvisited");
+      expect(getStepState(freshDraft, "species")).toBe("unvisited");
+      expect(getStepState(freshDraft, "species-choices")).toBe("unvisited");
+      expect(getStepState(freshDraft, "background")).toBe("unvisited");
+      expect(getStepState(freshDraft, "background-choices")).toBe("unvisited");
+      expect(getStepState(freshDraft, "class")).toBe("unvisited");
+      expect(getStepState(freshDraft, "class-starting-grants")).toBe("unvisited");
+      expect(getStepState(freshDraft, "abilities")).toBe("unvisited");
+      expect(getStepState(freshDraft, "proficiencies")).toBe("unvisited");
+      expect(getStepState(freshDraft, "proficiency-choices")).toBe("unvisited");
+      expect(getStepState(freshDraft, "languages")).toBe("unvisited");
+      expect(getStepState(freshDraft, "language-choices")).toBe("unvisited");
+      expect(getStepState(freshDraft, "equipment")).toBe("unvisited");
+      expect(getStepState(freshDraft, "equipment-choices")).toBe("unvisited");
+      expect(getStepState(freshDraft, "spell-eligibility")).toBe("unvisited");
+      expect(getStepState(freshDraft, "spells")).toBe("unvisited");
+      expect(getStepState(freshDraft, "review")).toBe("unvisited");
+    });
+
+    // P10-T020: Modal rendering - invalidated steps show warning banner, unvisited do not
+    it("modal rendering: invalidated steps produce warnings, unvisited do not", () => {
+      const freshDraft = createEmptyCharacterDraft();
+      selectRuleset(freshDraft, "2014");
+      // Pre-resolve some downstream steps
+      markStepResolved(freshDraft, "species");
+      markStepResolved(freshDraft, "class");
+      // Now change ruleset - resolved steps become invalidated, unvisited stay unvisited
+      selectRuleset(freshDraft, "2024");
+
+      // Resolved steps should be invalidated
+      expect(getStepState(freshDraft, "species")).toBe("invalidated");
+      expect(getStepState(freshDraft, "class")).toBe("invalidated");
+      // Unvisited steps should remain unvisited
+      expect(getStepState(freshDraft, "abilities")).toBe("unvisited");
+      expect(getStepState(freshDraft, "equipment")).toBe("unvisited");
+
+      // Diagnostics should have exactly one consolidated warning
+      const warnings = freshDraft.diagnostics.filter(
+        (d) => d.severity === "warning",
+      );
+      expect(warnings).toHaveLength(1);
     });
   });
 });

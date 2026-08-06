@@ -288,10 +288,10 @@ describe("selectProficiencyChoices does not mutate draft on rejection", () => {
     const draft = createEmptyCharacterDraft();
     resolvePrerequisites(draft, "2024");
 
-    expect(getStepState(draft, "proficiency-choices")).toBe("invalidated");
+    expect(getStepState(draft, "proficiency-choices")).toBe("unvisited");
 
     selectProficiencyChoices(draft, null);
-    expect(getStepState(draft, "proficiency-choices")).toBe("invalidated");
+    expect(getStepState(draft, "proficiency-choices")).toBe("unvisited");
   });
 
   it("does not resolve step when deps not resolved", () => {
@@ -345,10 +345,10 @@ describe("selectLanguageChoices does not mutate draft on rejection", () => {
     const draft = createEmptyCharacterDraft();
     resolvePrerequisites(draft, "2024");
 
-    expect(getStepState(draft, "language-choices")).toBe("invalidated");
+    expect(getStepState(draft, "language-choices")).toBe("unvisited");
 
     selectLanguageChoices(draft, null);
-    expect(getStepState(draft, "language-choices")).toBe("invalidated");
+    expect(getStepState(draft, "language-choices")).toBe("unvisited");
   });
 
   it("does not resolve step when deps not resolved", () => {

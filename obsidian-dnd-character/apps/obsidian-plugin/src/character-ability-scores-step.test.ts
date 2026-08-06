@@ -85,8 +85,8 @@ describe("selectAbilityScores with valid input", () => {
 
     // Only the abilities draft step is resolved
     expect(getStepState(draft, "abilities")).toBe("resolved");
-    // Species-choices was invalidated by species resolution
-    expect(getStepState(draft, "species-choices")).toBe("invalidated");
+    // Species-choices remains unvisited (not invalidated) since it was never visited
+    expect(getStepState(draft, "species-choices")).toBe("unvisited");
   });
 
   it("works with 2014 ruleset", () => {

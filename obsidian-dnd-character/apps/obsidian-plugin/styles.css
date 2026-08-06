@@ -90,7 +90,7 @@
   background: var(--background-modifier-warning);
   border: 1px solid var(--interactive-accent-yellow);
   border-radius: 6px;
-  color: var(--text-warning);
+  color: var(--text-normal);
   font-size: 0.85em;
 }
 

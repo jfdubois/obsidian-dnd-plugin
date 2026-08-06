@@ -191,6 +191,8 @@ describe("Diagnostics", () => {
     markStepResolved(draft, "ruleset");
     markStepResolved(draft, "sources");
     markStepResolved(draft, "species");
+    // Pre-resolve a dependent step so it can be invalidated (P10-T020: unvisited stays unvisited)
+    draft.stepStatuses.set("species-choices", "resolved");
     invalidateDependentSteps(draft, "species");
 
     expect(draft.diagnostics.length).toBeGreaterThan(0);
@@ -204,6 +206,8 @@ describe("Diagnostics", () => {
     markStepResolved(draft, "ruleset");
     markStepResolved(draft, "sources");
     markStepResolved(draft, "species");
+    // Pre-resolve a dependent step so it can be invalidated (P10-T020: unvisited stays unvisited)
+    draft.stepStatuses.set("species-choices", "resolved");
     invalidateDependentSteps(draft, "species");
 
     expect(hasErrors(draft)).toBe(false);

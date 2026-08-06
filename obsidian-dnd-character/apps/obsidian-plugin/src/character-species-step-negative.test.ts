@@ -156,12 +156,12 @@ describe("selectSpecies does not mutate draft on rejection", () => {
     selectRuleset(draft, "2024");
     selectSources(draft, []);
 
-    // species is "invalidated" by upstream resolution
-    expect(getStepState(draft, "species")).toBe("invalidated");
+    // species remains "unvisited" after upstream resolution (P10-T020 fix)
+    expect(getStepState(draft, "species")).toBe("unvisited");
 
     selectSpecies(draft, null);
-    // Must remain invalidated, not become resolved
-    expect(getStepState(draft, "species")).toBe("invalidated");
+    // Must remain unvisited, not become resolved
+    expect(getStepState(draft, "species")).toBe("unvisited");
   });
 
   it("does not invalidate dependents for invalid input", () => {

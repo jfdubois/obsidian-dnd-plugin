@@ -218,12 +218,12 @@ describe("selectSpeciesChoices does not mutate draft on rejection", () => {
     selectSources(draft, []);
     selectSpecies(draft, createEntityId("human"));
 
-    // species-choices is "invalidated" by species resolution
-    expect(getStepState(draft, "species-choices")).toBe("invalidated");
+    // species-choices remains "unvisited" after species resolution (P10-T020 fix)
+    expect(getStepState(draft, "species-choices")).toBe("unvisited");
 
     selectSpeciesChoices(draft, null);
-    // Must remain invalidated, not become resolved
-    expect(getStepState(draft, "species-choices")).toBe("invalidated");
+    // Must remain unvisited, not become resolved
+    expect(getStepState(draft, "species-choices")).toBe("unvisited");
   });
 
   it("does not resolve step when species not resolved", () => {
