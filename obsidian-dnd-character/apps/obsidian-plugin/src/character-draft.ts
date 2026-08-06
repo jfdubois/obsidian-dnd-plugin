@@ -163,6 +163,14 @@ export function isCharacterDraft(value: unknown): value is CharacterDraft {
 /* ── Step status operations ────────────────────────────────────── */
 
 export function markStepResolved(draft: CharacterDraft, step: DraftStep): void {
+  // Invalidate all transitive dependents before marking this step resolved.
+  // This ensures that re-resolving an upstream step (e.g., changing species
+  // after species-choices are already resolved) cascades invalidation to
+  // all downstream dependent steps.
+  const dependents = getTransitiveDependents(step);
+  for (const dependent of dependents) {
+    draft.stepStatuses.set(dependent, "invalidated");
+  }
   draft.stepStatuses.set(step, "resolved");
   refreshDiagnostics(draft);
 }
