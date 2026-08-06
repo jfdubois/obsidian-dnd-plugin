@@ -34,6 +34,7 @@ export type DraftStep =
   | "proficiencies"
   | "language-choices"
   | "languages"
+  | "equipment-choices"
   | "equipment"
   | "spell-eligibility"
   | "spells"
@@ -54,6 +55,7 @@ export const ALL_DRAFT_STEPS: ReadonlyArray<DraftStep> = [
   "proficiencies",
   "language-choices",
   "languages",
+  "equipment-choices",
   "equipment",
   "spell-eligibility",
   "spells",

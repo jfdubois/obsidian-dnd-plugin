@@ -18,6 +18,7 @@ import type {
   DraftProficiencyChoiceData,
   DraftLanguageData,
   DraftLanguageChoiceData,
+  DraftEquipmentChoiceData,
   DraftEquipmentData,
   DraftSpellEligibilityData,
   DraftSpellData,
@@ -39,6 +40,7 @@ import {
   createEmptyDraftProficiencyChoiceData,
   createEmptyDraftLanguageData,
   createEmptyDraftLanguageChoiceData,
+  createEmptyDraftEquipmentChoiceData,
   createEmptyDraftEquipmentData,
   createEmptyDraftSpellEligibilityData,
   createEmptyDraftSpellData,
@@ -71,6 +73,7 @@ export interface CharacterDraft {
   proficiencies: DraftProficiencyData;
   languageChoices: DraftLanguageChoiceData;
   languages: DraftLanguageData;
+  equipmentChoices: DraftEquipmentChoiceData;
   equipment: DraftEquipmentData;
   spellEligibility: DraftSpellEligibilityData;
   spells: DraftSpellData;
@@ -105,6 +108,7 @@ export function createEmptyCharacterDraft(): CharacterDraft {
     proficiencies: createEmptyDraftProficiencyData(),
     languageChoices: createEmptyDraftLanguageChoiceData(),
     languages: createEmptyDraftLanguageData(),
+    equipmentChoices: createEmptyDraftEquipmentChoiceData(),
     equipment: createEmptyDraftEquipmentData(),
     spellEligibility: createEmptyDraftSpellEligibilityData(),
     spells: createEmptyDraftSpellData(),
@@ -135,6 +139,7 @@ export function isCharacterDraft(value: unknown): value is CharacterDraft {
     "proficiencies",
     "languageChoices",
     "languages",
+    "equipmentChoices",
     "equipment",
     "spellEligibility",
     "spells",

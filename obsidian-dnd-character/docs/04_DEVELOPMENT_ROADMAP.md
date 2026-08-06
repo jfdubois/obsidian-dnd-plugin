@@ -472,7 +472,7 @@ Create valid level-one characters through a dependency-aware modal.
 - [x] **P10-T009 — Implement proficiencies and languages step**
 - [x] **P10-T010 — Implement ability-score methods**
 - [x] **P10-T011 — Implement proficiency/language choices**
-- [ ] **P10-T012 — Implement starting equipment choices**
+- [x] **P10-T012 — Implement starting equipment choices**
 - [ ] **P10-T013 — Implement spell eligibility query**
 - [ ] **P10-T014 — Implement spell selection controls**
 - [ ] **P10-T015 — Implement dependency invalidation**

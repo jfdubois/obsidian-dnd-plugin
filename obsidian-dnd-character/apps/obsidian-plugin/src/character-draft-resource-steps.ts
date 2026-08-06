@@ -158,6 +158,30 @@ export function createEmptyDraftLanguageChoiceData(): DraftLanguageChoiceData {
   return { choices: {} };
 }
 
+/* ── Equipment choices step ────────────────────────────────────── */
+
+export interface DraftEquipmentChoiceData {
+  choices: Record<ChoiceInstanceId, CharacterChoice>;
+}
+
+export function isDraftEquipmentChoiceData(
+  value: unknown,
+): value is DraftEquipmentChoiceData {
+  if (typeof value !== "object" || value === null) return false;
+  const obj = value as Record<string, unknown>;
+  if (typeof obj.choices !== "object" || obj.choices === null || Array.isArray(obj.choices)) {
+    return false;
+  }
+  for (const [, val] of Object.entries(obj.choices)) {
+    if (!isCharacterChoice(val)) return false;
+  }
+  return true;
+}
+
+export function createEmptyDraftEquipmentChoiceData(): DraftEquipmentChoiceData {
+  return { choices: {} };
+}
+
 /* ── Equipment step ────────────────────────────────────────────── */
 
 export interface DraftEquipmentData {
