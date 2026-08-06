@@ -65,7 +65,7 @@ export const CREATOR_STEP_DRAFT_STEPS: ReadonlyMap<CreatorStep, ReadonlyArray<Dr
     ["background", ["background", "background-choices"]],
     ["class", ["class", "class-starting-grants"]],
     ["abilities", ["abilities"]],
-    ["proficienciesAndLanguages", ["proficiencies", "languages"]],
+    ["proficienciesAndLanguages", ["proficiency-choices", "proficiencies", "language-choices", "languages"]],
     ["equipment", ["equipment"]],
     ["spells", ["spell-eligibility", "spells"]],
     ["review", ["review"]],

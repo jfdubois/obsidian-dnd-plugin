@@ -15,7 +15,9 @@ import type {
   DraftClassGrantData,
   DraftAbilityData,
   DraftProficiencyData,
+  DraftProficiencyChoiceData,
   DraftLanguageData,
+  DraftLanguageChoiceData,
   DraftEquipmentData,
   DraftSpellEligibilityData,
   DraftSpellData,
@@ -34,7 +36,9 @@ import {
   createEmptyDraftClassGrantData,
   createEmptyDraftAbilityData,
   createEmptyDraftProficiencyData,
+  createEmptyDraftProficiencyChoiceData,
   createEmptyDraftLanguageData,
+  createEmptyDraftLanguageChoiceData,
   createEmptyDraftEquipmentData,
   createEmptyDraftSpellEligibilityData,
   createEmptyDraftSpellData,
@@ -63,7 +67,9 @@ export interface CharacterDraft {
   class: DraftClassData;
   classGrants: DraftClassGrantData;
   abilities: DraftAbilityData;
+  proficiencyChoices: DraftProficiencyChoiceData;
   proficiencies: DraftProficiencyData;
+  languageChoices: DraftLanguageChoiceData;
   languages: DraftLanguageData;
   equipment: DraftEquipmentData;
   spellEligibility: DraftSpellEligibilityData;
@@ -95,7 +101,9 @@ export function createEmptyCharacterDraft(): CharacterDraft {
     class: createEmptyDraftClassData(),
     classGrants: createEmptyDraftClassGrantData(),
     abilities: createEmptyDraftAbilityData(),
+    proficiencyChoices: createEmptyDraftProficiencyChoiceData(),
     proficiencies: createEmptyDraftProficiencyData(),
+    languageChoices: createEmptyDraftLanguageChoiceData(),
     languages: createEmptyDraftLanguageData(),
     equipment: createEmptyDraftEquipmentData(),
     spellEligibility: createEmptyDraftSpellEligibilityData(),
@@ -123,7 +131,9 @@ export function isCharacterDraft(value: unknown): value is CharacterDraft {
     "class",
     "classGrants",
     "abilities",
+    "proficiencyChoices",
     "proficiencies",
+    "languageChoices",
     "languages",
     "equipment",
     "spellEligibility",

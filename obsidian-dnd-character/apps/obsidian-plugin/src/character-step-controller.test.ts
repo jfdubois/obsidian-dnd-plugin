@@ -54,9 +54,11 @@ describe("CREATOR_STEP_DRAFT_STEPS mapping", () => {
     ]);
   });
 
-  it("maps proficienciesAndLanguages to proficiencies and languages", () => {
+  it("maps proficienciesAndLanguages to proficiency-choices, proficiencies, language-choices, and languages", () => {
     expect(getDraftStepsForCreatorStep("proficienciesAndLanguages")).toEqual([
+      "proficiency-choices",
       "proficiencies",
+      "language-choices",
       "languages",
     ]);
   });

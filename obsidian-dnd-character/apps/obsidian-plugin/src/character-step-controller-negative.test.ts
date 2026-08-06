@@ -131,9 +131,13 @@ describe("StepController invalid resolution state", () => {
     expect(ctrl.isStepResolved("class")).toBe(false);
   });
 
-  it("proficienciesAndLanguages requires both draft steps resolved", () => {
+  it("proficienciesAndLanguages requires all four draft steps resolved", () => {
     const ctrl = new StepController(createEmptyCharacterDraft());
+    ctrl.draft.stepStatuses.set("proficiency-choices", "resolved");
     ctrl.draft.stepStatuses.set("proficiencies", "resolved");
+    expect(ctrl.isStepResolved("proficienciesAndLanguages")).toBe(false);
+
+    ctrl.draft.stepStatuses.set("language-choices", "resolved");
     expect(ctrl.isStepResolved("proficienciesAndLanguages")).toBe(false);
 
     ctrl.draft.stepStatuses.set("languages", "resolved");
@@ -218,11 +222,11 @@ describe("getDraftStepsForCreatorStep", () => {
     }
   });
 
-  it("total draft steps across all creator steps equals 16", () => {
+  it("total draft steps across all creator steps equals 18", () => {
     let total = 0;
     for (const step of CREATOR_STEPS) {
       total += getDraftStepsForCreatorStep(step).length;
     }
-    expect(total).toBe(16);
+    expect(total).toBe(18);
   });
 });

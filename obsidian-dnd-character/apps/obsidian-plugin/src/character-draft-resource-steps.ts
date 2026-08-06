@@ -2,14 +2,18 @@
    Covers: abilities, proficiencies, languages, equipment,
    spell-eligibility, spells.                                    */
 
-import type { Ability, EntityId } from "@obsidian-dnd/domain";
+import type { Ability, EntityId, ChoiceInstanceId } from "@obsidian-dnd/domain";
 import { isAbility, isEntityId } from "@obsidian-dnd/domain";
 import type {
   InventoryItemInstance,
   CharacterSpellSelection,
   SpellAcquisition,
+  CharacterChoice,
 } from "@obsidian-dnd/character-contract";
-import { isInventoryItemInstance } from "@obsidian-dnd/character-contract";
+import {
+  isInventoryItemInstance,
+  isCharacterChoice,
+} from "@obsidian-dnd/character-contract";
 
 /* ── Ability score step ────────────────────────────────────────── */
 
@@ -88,6 +92,30 @@ export function createEmptyDraftProficiencyData(): DraftProficiencyData {
   return { skillProficiencies: [], toolProficiencies: [] };
 }
 
+/* ── Proficiency choices step ──────────────────────────────────── */
+
+export interface DraftProficiencyChoiceData {
+  choices: Record<ChoiceInstanceId, CharacterChoice>;
+}
+
+export function isDraftProficiencyChoiceData(
+  value: unknown,
+): value is DraftProficiencyChoiceData {
+  if (typeof value !== "object" || value === null) return false;
+  const obj = value as Record<string, unknown>;
+  if (typeof obj.choices !== "object" || obj.choices === null || Array.isArray(obj.choices)) {
+    return false;
+  }
+  for (const [, val] of Object.entries(obj.choices)) {
+    if (!isCharacterChoice(val)) return false;
+  }
+  return true;
+}
+
+export function createEmptyDraftProficiencyChoiceData(): DraftProficiencyChoiceData {
+  return { choices: {} };
+}
+
 /* ── Language step ─────────────────────────────────────────────── */
 
 export interface DraftLanguageData {
@@ -104,6 +132,30 @@ export function isDraftLanguageData(value: unknown): value is DraftLanguageData 
 
 export function createEmptyDraftLanguageData(): DraftLanguageData {
   return { languageIds: [] };
+}
+
+/* ── Language choices step ─────────────────────────────────────── */
+
+export interface DraftLanguageChoiceData {
+  choices: Record<ChoiceInstanceId, CharacterChoice>;
+}
+
+export function isDraftLanguageChoiceData(
+  value: unknown,
+): value is DraftLanguageChoiceData {
+  if (typeof value !== "object" || value === null) return false;
+  const obj = value as Record<string, unknown>;
+  if (typeof obj.choices !== "object" || obj.choices === null || Array.isArray(obj.choices)) {
+    return false;
+  }
+  for (const [, val] of Object.entries(obj.choices)) {
+    if (!isCharacterChoice(val)) return false;
+  }
+  return true;
+}
+
+export function createEmptyDraftLanguageChoiceData(): DraftLanguageChoiceData {
+  return { choices: {} };
 }
 
 /* ── Equipment step ────────────────────────────────────────────── */

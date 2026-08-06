@@ -105,8 +105,8 @@ describe("DraftStep", () => {
     }
   });
 
-  it("contains exactly 16 steps", () => {
-    expect(ALL_DRAFT_STEPS).toHaveLength(16);
+  it("contains exactly 18 steps", () => {
+    expect(ALL_DRAFT_STEPS).toHaveLength(18);
   });
 });
 
@@ -250,7 +250,7 @@ describe("Step status operations", () => {
   it("getStepStatuses returns all steps", () => {
     const draft = createEmptyCharacterDraft();
     const statuses = getStepStatuses(draft);
-    expect(statuses).toHaveLength(16);
+    expect(statuses).toHaveLength(18);
   });
 });
 
