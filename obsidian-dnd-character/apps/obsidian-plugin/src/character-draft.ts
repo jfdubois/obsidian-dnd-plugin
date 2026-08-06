@@ -211,9 +211,62 @@ export function getStepStatuses(draft: CharacterDraft): ReadonlyArray<DraftStepS
   }));
 }
 
+/* ── Unresolved-choice diagnostics ───────────────────────────────
+   Detects when an entity (species/background/class) has been
+   selected but the corresponding choice step remains incomplete.
+   These diagnostics are data-driven (check actual entity selections)
+   rather than state-driven (check step resolution flags), so they
+   catch cases where the user has data but hasn't resolved the step. */
+
+export function buildUnresolvedChoiceDiagnostics(
+  draft: CharacterDraft,
+): DraftDiagnostic[] {
+  const diagnostics: DraftDiagnostic[] = [];
+
+  // Check species choices: if species is selected, species-choices must be resolved
+  if (draft.species.speciesId !== null) {
+    const speciesChoicesState = draft.stepStatuses.get("species-choices");
+    if (speciesChoicesState !== "resolved") {
+      diagnostics.push({
+        step: "species-choices",
+        message: "Species choices not yet resolved",
+        severity: "error",
+      });
+    }
+  }
+
+  // Check background choices: if background is selected, background-choices must be resolved
+  if (draft.background.backgroundId !== null) {
+    const backgroundChoicesState = draft.stepStatuses.get("background-choices");
+    if (backgroundChoicesState !== "resolved") {
+      diagnostics.push({
+        step: "background-choices",
+        message: "Background choices not yet resolved",
+        severity: "error",
+      });
+    }
+  }
+
+  // Check class starting grants: if class is selected, class-starting-grants must be resolved
+  if (draft.class.classId !== null) {
+    const classGrantsState = draft.stepStatuses.get("class-starting-grants");
+    if (classGrantsState !== "resolved") {
+      diagnostics.push({
+        step: "class-starting-grants",
+        message: "Class starting grants not yet resolved",
+        severity: "error",
+      });
+    }
+  }
+
+  return diagnostics;
+}
+
 function refreshDiagnostics(draft: CharacterDraft): void {
   const statuses = getStepStatuses(draft);
-  draft.diagnostics = buildDraftDiagnostics(statuses);
+  const stepDiagnostics = buildDraftDiagnostics(statuses);
+  const choiceDiagnostics = buildUnresolvedChoiceDiagnostics(draft);
+  draft.diagnostics = [...stepDiagnostics, ...choiceDiagnostics];
 }
 
 /* ── Convenience: check if draft is complete ───────────────────── */

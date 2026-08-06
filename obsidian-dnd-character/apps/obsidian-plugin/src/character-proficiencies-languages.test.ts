@@ -146,11 +146,15 @@ describe("selectLanguages with valid input", () => {
     expect(draft.languages.languageIds.length).toBe(3);
   });
 
-  it("updates diagnostics after selection", () => {
+  it("updates diagnostics after selection (CRE-008: unresolved species choices)", () => {
     const draft = setupDraft();
     const langs = { languageIds: [createEntityId("common")] };
     selectLanguages(draft, langs);
 
-    expect(draft.diagnostics.some((d) => d.severity === "error")).toBe(false);
+    // CRE-008: species selected but species-choices not resolved → error
+    const hasUnresolvedChoiceError = draft.diagnostics.some(
+      (d) => d.severity === "error" && d.step === "species-choices",
+    );
+    expect(hasUnresolvedChoiceError).toBe(true);
   });
 });
