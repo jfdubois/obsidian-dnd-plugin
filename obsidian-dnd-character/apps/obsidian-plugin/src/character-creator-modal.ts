@@ -6,6 +6,7 @@
 import type { App } from "obsidian";
 import { Modal as ObsidianModal, ButtonComponent, Setting } from "obsidian";
 
+import type { Character } from "@obsidian-dnd/character-contract";
 import type { CharacterDraft } from "./character-draft";
 import { isDraftComplete, hasErrors } from "./character-draft";
 import type { CreatorStep } from "./character-step-controller";
@@ -13,6 +14,17 @@ import { StepController, CREATOR_STEPS } from "./character-step-controller";
 import type { ReviewSnapshot } from "./character-review-snapshot";
 import { buildReviewSnapshot } from "./character-review-snapshot";
 import { finalizeCharacter } from "./character-finalize";
+
+/* ── Persistence callback ─────────────────────────────────────── */
+
+/**
+ * Optional callback invoked by the modal after the draft is
+ * finalized into a Character. The runtime provides this callback
+ * to wire the modal's save action to vault persistence.
+ */
+export type CharacterPersistenceCallback = (
+  character: Character,
+) => Promise<void>;
 
 /* ── Modal factory ─────────────────────────────────────────────── */
 
@@ -53,6 +65,7 @@ function getStepLabel(step: CreatorStep): string {
 
 export class CharacterCreatorModal extends ObsidianModal {
   private readonly controller: StepController;
+  private readonly persist: CharacterPersistenceCallback | undefined;
   private saveButton: ButtonComponent | null = null;
   private nextButton: ButtonComponent | null = null;
   private backButton: ButtonComponent | null = null;
@@ -60,9 +73,14 @@ export class CharacterCreatorModal extends ObsidianModal {
   private progressBarEl: HTMLElement | null = null;
   private diagnosticsEl: HTMLElement | null = null;
 
-  constructor(app: App, draft: CharacterDraft) {
+  constructor(
+    app: App,
+    draft: CharacterDraft,
+    persist?: CharacterPersistenceCallback,
+  ) {
     super(app);
     this.controller = new StepController(draft);
+    this.persist = persist;
   }
 
   /* ── Lifecycle ─────────────────────────────────────────────── */
@@ -569,6 +587,11 @@ export class CharacterCreatorModal extends ObsidianModal {
     if (character === null) {
       // Finalize failed — draft incomplete or missing required fields
       return;
+    }
+
+    // Persist the character if a callback was provided
+    if (this.persist !== undefined) {
+      await this.persist(character);
     }
 
     // Success: close the modal

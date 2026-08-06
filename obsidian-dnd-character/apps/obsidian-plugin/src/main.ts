@@ -13,6 +13,7 @@ import { RequestUrlCatalogClient } from './catalog/request-url-client';
 import { CatalogService } from './catalog/catalog-service';
 import { CharacterRepository } from './character-repository';
 import type { CharacterViewRefreshBoundary } from './character-index';
+import { CharacterCreatorRuntime } from './character-creator-runtime';
 
 export default class DndCharacterPlugin extends Plugin {
 	settings: DndCharacterPluginSettings = DEFAULT_SETTINGS;
@@ -20,6 +21,8 @@ export default class DndCharacterPlugin extends Plugin {
 	characterRepository: CharacterRepository | null = null;
 	/** Catalog runtime service, lazily initialized on first access. */
 	catalogService: CatalogService | null = null;
+	/** Character creator runtime, initialized after repository is ready. */
+	private creatorRuntime: CharacterCreatorRuntime | null = null;
 	private catalogInitialization: Promise<CatalogService> | null = null;
 	private readonly pendingCatalogReconfigurations = new Map<string, Promise<CatalogService>>();
 	private lifecycleOperation: Promise<void> = Promise.resolve();
@@ -93,6 +96,22 @@ export default class DndCharacterPlugin extends Plugin {
 					});
 					await this.app.workspace.revealLeaf(leaf);
 				}
+			},
+		});
+
+		// Initialize character creator runtime (P10-T020)
+		this.creatorRuntime = new CharacterCreatorRuntime(
+			this.app,
+			this.characterRepository,
+			this.catalogService,
+		);
+
+		// Register command to create a new character (P10-T020)
+		this.addCommand({
+			id: 'create-character',
+			name: 'Create character',
+			callback: () => {
+				void this.creatorRuntime?.openCreator();
 			},
 		});
 
@@ -231,6 +250,7 @@ export default class DndCharacterPlugin extends Plugin {
 			throw new Error('Catalog service is unavailable while the plugin unloads.');
 		}
 		this.catalogService = service;
+		this.creatorRuntime?.setCatalogService(service);
 		return service;
 	}
 
@@ -265,6 +285,7 @@ export default class DndCharacterPlugin extends Plugin {
 		this.unloading = true;
 		const service = this.catalogService;
 		this.catalogService = null;
+		this.creatorRuntime?.setCatalogService(null);
 		this.catalogInitialization = null;
 		this.pendingCatalogReconfigurations.clear();
 		this.lifecycleOperation = Promise.resolve();

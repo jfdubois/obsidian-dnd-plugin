@@ -22,6 +22,19 @@ vi.mock("obsidian", () => ({
   PluginSettingTab: class { constructor(..._args: unknown[]) {} },
   Setting: class {},
   ItemView: class { contentEl = { empty: vi.fn(), createEl: vi.fn() }; constructor(..._args: unknown[]) {} },
+  Modal: class {
+    titleEl = { setText: vi.fn() };
+    contentEl = { empty: vi.fn(), createDiv: vi.fn() };
+    scope = { register: vi.fn() };
+    open = vi.fn();
+    close = vi.fn();
+  },
+  ButtonComponent: class {
+    setButtonText = vi.fn().mockReturnThis();
+    setCta = vi.fn().mockReturnThis();
+    setDisabled = vi.fn().mockReturnThis();
+    onClick = vi.fn().mockReturnThis();
+  },
 }));
 
 vi.mock("./catalog/request-url-client", () => ({
