@@ -144,8 +144,13 @@ export class CharacterCreatorRuntime {
     // 3. Build persistence callback
     const persist = this.buildPersistenceCallback();
 
-    // 4. Open modal with persistence wired in
-    const modal = new CharacterCreatorModal(this.app, draft, persist);
+    // 4. Open modal with persistence and catalog wired in
+    const modal = new CharacterCreatorModal(
+      this.app,
+      draft,
+      persist,
+      this.catalogService,
+    );
     modal.open();
 
     return modal;

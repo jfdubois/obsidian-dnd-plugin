@@ -255,6 +255,7 @@ describe("CharacterCreatorRuntime.openCreator", () => {
       app,
       expect.objectContaining({ version: 1, ruleset: "2024" }),
       expect.any(Function),
+      expect.anything(),
     );
   });
 

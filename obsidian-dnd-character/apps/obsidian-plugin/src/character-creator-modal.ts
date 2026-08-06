@@ -4,7 +4,12 @@
    review screen. Uses only approved Obsidian APIs.               */
 
 import type { App } from "obsidian";
-import { Modal as ObsidianModal, ButtonComponent, Setting } from "obsidian";
+import {
+  Modal as ObsidianModal,
+  ButtonComponent,
+  Setting,
+  type TextComponent,
+} from "obsidian";
 
 import type { Character } from "@obsidian-dnd/character-contract";
 import type { CharacterDraft } from "./character-draft";
@@ -14,7 +19,19 @@ import { StepController, CREATOR_STEPS } from "./character-step-controller";
 import type { ReviewSnapshot } from "./character-review-snapshot";
 import { buildReviewSnapshot } from "./character-review-snapshot";
 import { finalizeCharacter } from "./character-finalize";
+import type { Ability } from "@obsidian-dnd/domain";
+import { createEntityId } from "@obsidian-dnd/domain";
 import { selectRuleset } from "./character-ruleset-step";
+import type { CatalogService } from "./catalog/catalog-service";
+import { selectSources } from "./character-source-step";
+import { selectSpecies } from "./character-species-step";
+import { selectAbilityScores } from "./character-ability-scores-step";
+import {
+  selectProficiencies,
+  selectLanguages,
+} from "./character-proficiencies-step";
+import { querySpellEligibility } from "./character-spell-eligibility-step";
+import { selectSpells } from "./character-spell-selection-step";
 
 /* ── Persistence callback ─────────────────────────────────────── */
 
@@ -67,6 +84,7 @@ function getStepLabel(step: CreatorStep): string {
 export class CharacterCreatorModal extends ObsidianModal {
   private readonly controller: StepController;
   private readonly persist: CharacterPersistenceCallback | undefined;
+  private readonly catalogService: CatalogService | null;
   private saveButton: ButtonComponent | null = null;
   private nextButton: ButtonComponent | null = null;
   private backButton: ButtonComponent | null = null;
@@ -78,10 +96,12 @@ export class CharacterCreatorModal extends ObsidianModal {
     app: App,
     draft: CharacterDraft,
     persist?: CharacterPersistenceCallback,
+    catalogService: CatalogService | null = null,
   ) {
     super(app);
     this.controller = new StepController(draft);
     this.persist = persist;
+    this.catalogService = catalogService;
   }
 
   /* ── Lifecycle ─────────────────────────────────────────────── */
@@ -289,8 +309,32 @@ export class CharacterCreatorModal extends ObsidianModal {
       case "ruleset":
         this.renderRulesetStep(body);
         break;
+      case "sources":
+        void this.renderSourcesStep(body);
+        break;
       case "identity":
         this.renderIdentityStep(body);
+        break;
+      case "species":
+        void this.renderSpeciesStep(body);
+        break;
+      case "background":
+        void this.renderBackgroundStep(body);
+        break;
+      case "class":
+        void this.renderClassStep(body);
+        break;
+      case "abilities":
+        this.renderAbilitiesStep(body);
+        break;
+      case "proficienciesAndLanguages":
+        void this.renderProficienciesAndLanguagesStep(body);
+        break;
+      case "equipment":
+        this.renderEquipmentStep(body);
+        break;
+      case "spells":
+        void this.renderSpellsStep(body);
         break;
       default:
         this.renderPlaceholderStep(body, step);
@@ -377,6 +421,754 @@ export class CharacterCreatorModal extends ObsidianModal {
             draft.identity.alignment = value;
           });
       });
+  }
+
+  /* ── Catalog-aware step renderers ─────────────────────────────── */
+
+  /**
+   * Renders the Sources step: checkboxes for source books filtered
+   * by the draft's selected ruleset. Uses catalog data when available.
+   */
+  private async renderSourcesStep(container: HTMLElement): Promise<void> {
+    const draft = this.controller.draft;
+    const ruleset = draft.ruleset.ruleset;
+
+    if (ruleset === null) {
+      container.createEl("p", {
+        text: "Please select a ruleset first.",
+      });
+      return;
+    }
+
+    const catalog = this.catalogService;
+    if (catalog === null) {
+      container.createEl("p", {
+        text: "Catalog service is not available. Configure a catalog URL in settings.",
+      });
+      return;
+    }
+
+    const status = catalog.getRuntimeStatus();
+    const revision = status.activeRevision;
+    if (revision === undefined) {
+      container.createEl("p", {
+        text: "Catalog is not active. Refresh the catalog in plugin settings.",
+      });
+      return;
+    }
+
+    // Show loading state
+    const loadingEl = container.createDiv({
+      cls: "dnd-creator-loading",
+    });
+    loadingEl.createEl("p", { text: "Loading sources..." });
+
+    try {
+      const sources = await catalog.fetchSources(revision);
+      loadingEl.remove();
+
+      const filtered = sources.filter((s) => s.ruleset === ruleset);
+      if (filtered.length === 0) {
+        container.createEl("p", {
+          text: `No source books available for the ${ruleset} ruleset.`,
+        });
+        return;
+      }
+
+      // Track selected source IDs
+      const selectedIds = new Set(draft.sources.enabledSourceIds);
+
+      // Render checkboxes for each source
+      for (const source of filtered) {
+        const setting = new Setting(container);
+        setting.setName(source.name);
+        setting.setDesc(`${source.abbreviation} — ${source.category}`);
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = selectedIds.has(source.id);
+        checkbox.setAttribute("aria-label", `Select ${source.name}`);
+
+        checkbox.addEventListener("change", () => {
+          if (checkbox.checked) {
+            selectedIds.add(source.id);
+          } else {
+            selectedIds.delete(source.id);
+          }
+        });
+
+        setting.controlEl.appendChild(checkbox);
+      }
+
+      // Confirm button to apply selection
+      const confirmBtn = new ButtonComponent(container);
+      confirmBtn.setButtonText("Confirm Sources")
+        .setClass("dnd-creator-confirm-sources")
+        .onClick(() => {
+          const ids = [...selectedIds];
+          if (selectSources(draft, ids)) {
+            this.renderCurrentStep();
+          }
+        });
+    } catch {
+      loadingEl.remove();
+      container.createEl("p", {
+        text: "Failed to load sources. Check your connection and try again.",
+      });
+    }
+  }
+
+  /**
+   * Renders the Species step: dropdown for species selection filtered
+   * by ruleset and enabled sources. Uses catalog data when available.
+   */
+  private async renderSpeciesStep(container: HTMLElement): Promise<void> {
+    const draft = this.controller.draft;
+    const ruleset = draft.ruleset.ruleset;
+
+    if (ruleset === null) {
+      container.createEl("p", { text: "Please select a ruleset first." });
+      return;
+    }
+
+    const catalog = this.catalogService;
+    if (catalog === null) {
+      container.createEl("p", {
+        text: "Catalog service is not available.",
+      });
+      return;
+    }
+
+    const status = catalog.getRuntimeStatus();
+    const revision = status.activeRevision;
+    if (revision === undefined) {
+      container.createEl("p", { text: "Catalog is not active." });
+      return;
+    }
+
+    const loadingEl = container.createDiv({ cls: "dnd-creator-loading" });
+    loadingEl.createEl("p", { text: "Loading species..." });
+
+    try {
+      const speciesIndex = await catalog.fetchIndex(revision, "species");
+      loadingEl.remove();
+
+      const filtered = speciesIndex.filter((s) => s.ruleset === ruleset);
+      if (filtered.length === 0) {
+        container.createEl("p", {
+          text: `No species available for the ${ruleset} ruleset.`,
+        });
+        return;
+      }
+
+      // Sort by name for consistent display
+      const sorted = [...filtered].sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
+
+      const setting = new Setting(container);
+      setting.setName("Species");
+      setting.setDesc("Select your character's species.");
+
+      const currentId = draft.species.speciesId ?? "";
+      const options: Record<string, string> = {};
+      options[""] = "— Select species —";
+      for (const entry of sorted) {
+        options[entry.id] = entry.name;
+      }
+
+      setting.addDropdown((dropdown) => {
+        dropdown.addOptions(options)
+          .setValue(currentId)
+          .onChange((value) => {
+            if (value !== "" && selectSpecies(draft, value)) {
+              this.renderCurrentStep();
+            }
+          });
+      });
+    } catch {
+      loadingEl.remove();
+      container.createEl("p", {
+        text: "Failed to load species. Check your connection and try again.",
+      });
+    }
+  }
+
+  /**
+   * Renders the Background step: dropdown for background selection
+   * filtered by ruleset. Uses catalog data when available.
+   */
+  private async renderBackgroundStep(container: HTMLElement): Promise<void> {
+    const draft = this.controller.draft;
+    const ruleset = draft.ruleset.ruleset;
+
+    if (ruleset === null) {
+      container.createEl("p", { text: "Please select a ruleset first." });
+      return;
+    }
+
+    const catalog = this.catalogService;
+    if (catalog === null) {
+      container.createEl("p", { text: "Catalog service is not available." });
+      return;
+    }
+
+    const status = catalog.getRuntimeStatus();
+    const revision = status.activeRevision;
+    if (revision === undefined) {
+      container.createEl("p", { text: "Catalog is not active." });
+      return;
+    }
+
+    const loadingEl = container.createDiv({ cls: "dnd-creator-loading" });
+    loadingEl.createEl("p", { text: "Loading backgrounds..." });
+
+    try {
+      const bgIndex = await catalog.fetchIndex(revision, "background");
+      loadingEl.remove();
+
+      const filtered = bgIndex.filter((b) => b.ruleset === ruleset);
+      if (filtered.length === 0) {
+        container.createEl("p", {
+          text: `No backgrounds available for the ${ruleset} ruleset.`,
+        });
+        return;
+      }
+
+      const sorted = [...filtered].sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
+
+      const setting = new Setting(container);
+      setting.setName("Background");
+      setting.setDesc("Select your character's background.");
+
+      const currentId = draft.background.backgroundId ?? "";
+      const options: Record<string, string> = {};
+      options[""] = "— Select background —";
+      for (const entry of sorted) {
+        options[entry.id] = entry.name;
+      }
+
+      setting.addDropdown((dropdown) => {
+        dropdown.addOptions(options)
+          .setValue(currentId)
+          .onChange((value) => {
+            if (value !== "") {
+              draft.background.backgroundId = createEntityId(value);
+              this.controller.markStepResolved("background");
+              this.renderCurrentStep();
+            }
+          });
+      });
+    } catch {
+      loadingEl.remove();
+      container.createEl("p", {
+        text: "Failed to load backgrounds. Check your connection and try again.",
+      });
+    }
+  }
+
+  /**
+   * Renders the Class step: dropdown for class selection filtered
+   * by ruleset. Uses catalog data when available.
+   */
+  private async renderClassStep(container: HTMLElement): Promise<void> {
+    const draft = this.controller.draft;
+    const ruleset = draft.ruleset.ruleset;
+
+    if (ruleset === null) {
+      container.createEl("p", { text: "Please select a ruleset first." });
+      return;
+    }
+
+    const catalog = this.catalogService;
+    if (catalog === null) {
+      container.createEl("p", { text: "Catalog service is not available." });
+      return;
+    }
+
+    const status = catalog.getRuntimeStatus();
+    const revision = status.activeRevision;
+    if (revision === undefined) {
+      container.createEl("p", { text: "Catalog is not active." });
+      return;
+    }
+
+    const loadingEl = container.createDiv({ cls: "dnd-creator-loading" });
+    loadingEl.createEl("p", { text: "Loading classes..." });
+
+    try {
+      const classIndex = await catalog.fetchIndex(revision, "class");
+      loadingEl.remove();
+
+      const filtered = classIndex.filter((c) => c.ruleset === ruleset);
+      if (filtered.length === 0) {
+        container.createEl("p", {
+          text: `No classes available for the ${ruleset} ruleset.`,
+        });
+        return;
+      }
+
+      const sorted = [...filtered].sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
+
+      const setting = new Setting(container);
+      setting.setName("Class");
+      setting.setDesc("Select your character's class.");
+
+      const currentId = draft.class.classId ?? "";
+      const options: Record<string, string> = {};
+      options[""] = "— Select class —";
+      for (const entry of sorted) {
+        options[entry.id] = entry.name;
+      }
+
+      setting.addDropdown((dropdown) => {
+        dropdown.addOptions(options)
+          .setValue(currentId)
+          .onChange((value) => {
+            if (value !== "") {
+              draft.class.classId = createEntityId(value);
+              this.controller.markStepResolved("class");
+              this.renderCurrentStep();
+            }
+          });
+      });
+    } catch {
+      loadingEl.remove();
+      container.createEl("p", {
+        text: "Failed to load classes. Check your connection and try again.",
+      });
+    }
+  }
+
+  /**
+   * Renders the Ability Scores step: method selector and score inputs
+   * for STR, DEX, CON, INT, WIS, CHA.
+   */
+  private renderAbilitiesStep(container: HTMLElement): void {
+    const draft = this.controller.draft;
+
+    // Method selector
+    const methodSetting = new Setting(container);
+    methodSetting.setName("Score Method");
+    methodSetting.setDesc("How ability scores are determined.");
+
+    const methods: Record<string, string> = {
+      "standard-array": "Standard Array",
+      "point-buy": "Point Buy",
+      "rolling": "Rolling (4d6 drop lowest)",
+      "custom": "Custom",
+    };
+
+    methodSetting.addDropdown((dropdown) => {
+      dropdown.addOptions(methods)
+        .setValue(draft.abilities.method ?? "standard-array")
+        .onChange((value) => {
+          draft.abilities.method = value as
+            | "standard-array"
+            | "point-buy"
+            | "rolling"
+            | "custom";
+        });
+    });
+
+    // Ability score inputs
+    const abilities: ReadonlyArray<{
+      key: "STR" | "DEX" | "CON" | "INT" | "WIS" | "CHA";
+      label: string;
+    }> = [
+      { key: "STR", label: "Strength" },
+      { key: "DEX", label: "Dexterity" },
+      { key: "CON", label: "Constitution" },
+      { key: "INT", label: "Intelligence" },
+      { key: "WIS", label: "Wisdom" },
+      { key: "CHA", label: "Charisma" },
+    ];
+
+    const scores: Record<Ability, number> =
+      draft.abilities.scores ??
+      ({} as Record<Ability, number>);
+    const inputs: Record<Ability, TextComponent> = {} as Record<
+      Ability,
+      TextComponent
+    >;
+
+    for (const ability of abilities) {
+      const scoreSetting = new Setting(container);
+      scoreSetting.setName(ability.label);
+
+      scoreSetting.addText((text) => {
+        text.setPlaceholder("8-20")
+          .setValue(String(scores[ability.key] ?? 10))
+          .onChange((value) => {
+            const num = parseInt(value, 10);
+            if (!isNaN(num) && num >= 1 && num <= 30) {
+              scores[ability.key] = num;
+            }
+          });
+        inputs[ability.key] = text;
+      });
+    }
+
+    // Confirm button
+    const confirmBtn = new ButtonComponent(container);
+    confirmBtn.setButtonText("Confirm Ability Scores")
+      .setClass("dnd-creator-confirm-abilities")
+      .onClick(() => {
+        const allFilled = abilities.every((a) => a.key in scores);
+        if (allFilled && selectAbilityScores(draft, scores)) {
+          this.renderCurrentStep();
+        }
+      });
+  }
+
+  /**
+   * Renders the Proficiencies & Languages step: skill/tool checkboxes
+   * and language selection from catalog.
+   */
+  private async renderProficienciesAndLanguagesStep(
+    container: HTMLElement,
+  ): Promise<void> {
+    const draft = this.controller.draft;
+    const ruleset = draft.ruleset.ruleset;
+
+    if (ruleset === null) {
+      container.createEl("p", { text: "Please select a ruleset first." });
+      return;
+    }
+
+    // Skill proficiencies (static list of standard skills)
+    const skillSection = container.createDiv({
+      cls: "dnd-creator-section",
+    });
+    skillSection.createEl("h3", { text: "Skill Proficiencies" });
+
+    const standardSkills: ReadonlyArray<{ id: string; name: string }> = [
+      { id: "skill:2024:core:acrobatics", name: "Acrobatics" },
+      { id: "skill:2024:core:animal-handling", name: "Animal Handling" },
+      { id: "skill:2024:core:arcana", name: "Arcana" },
+      { id: "skill:2024:core:athletics", name: "Athletics" },
+      { id: "skill:2024:core:deception", name: "Deception" },
+      { id: "skill:2024:core:history", name: "History" },
+      { id: "skill:2024:core:insight", name: "Insight" },
+      { id: "skill:2024:core:intimidation", name: "Intimidation" },
+      { id: "skill:2024:core:investigation", name: "Investigation" },
+      { id: "skill:2024:core:medicine", name: "Medicine" },
+      { id: "skill:2024:core:nature", name: "Nature" },
+      { id: "skill:2024:core:perception", name: "Perception" },
+      { id: "skill:2024:core:performance", name: "Performance" },
+      { id: "skill:2024:core:persuasion", name: "Persuasion" },
+      { id: "skill:2024:core:religion", name: "Religion" },
+      { id: "skill:2024:core:sleight-of-hand", name: "Sleight of Hand" },
+      { id: "skill:2024:core:stealth", name: "Stealth" },
+      { id: "skill:2024:core:survival", name: "Survival" },
+    ];
+
+    const selectedSkills = new Set(draft.proficiencies.skillProficiencies);
+
+    for (const skill of standardSkills) {
+      const setting = new Setting(skillSection);
+      setting.setName(skill.name);
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      const skillEntityId = createEntityId(skill.id);
+      checkbox.checked = selectedSkills.has(skillEntityId);
+      checkbox.setAttribute("aria-label", `Select ${skill.name} proficiency`);
+
+      checkbox.addEventListener("change", () => {
+        if (checkbox.checked) {
+          selectedSkills.add(skillEntityId);
+        } else {
+          selectedSkills.delete(skillEntityId);
+        }
+      });
+
+      setting.controlEl.appendChild(checkbox);
+    }
+
+    // Tool proficiencies
+    const toolSection = container.createDiv({
+      cls: "dnd-creator-section",
+    });
+    toolSection.createEl("h3", { text: "Tool Proficiencies" });
+
+    const selectedTools = new Set(draft.proficiencies.toolProficiencies);
+
+    // Tool proficiencies are loaded from catalog when available
+    // Note: "tool" is not a standard RuleEntityKind, so we use a static list
+    const staticTools: ReadonlyArray<{ id: string; name: string }> = [
+      { id: "tool:2024:core:herbalism-kit", name: "Herbalism Kit" },
+      { id: "tool:2024:core:musical-instrument", name: "Musical Instrument" },
+      { id: "tool:2024:core:thieves-tools", name: "Thieves' Tools" },
+      { id: "tool:2024:core:artisan-tools", name: "Artisan's Tools" },
+      { id: "tool:2024:core:gaming-set", name: "Gaming Set" },
+      { id: "tool:2024:core:vehicles-land", name: "Vehicles (Land)" },
+      { id: "tool:2024:core:vehicles-water", name: "Vehicles (Water)" },
+    ];
+
+    for (const tool of staticTools) {
+      const setting = new Setting(toolSection);
+      setting.setName(tool.name);
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      const toolEntityId = createEntityId(tool.id);
+      checkbox.checked = selectedTools.has(toolEntityId);
+      checkbox.setAttribute("aria-label", `Select ${tool.name}`);
+
+      checkbox.addEventListener("change", () => {
+        if (checkbox.checked) {
+          selectedTools.add(toolEntityId);
+        } else {
+          selectedTools.delete(toolEntityId);
+        }
+      });
+
+      setting.controlEl.appendChild(checkbox);
+    }
+
+    // Language selection
+    const langSection = container.createDiv({
+      cls: "dnd-creator-section",
+    });
+    langSection.createEl("h3", { text: "Languages" });
+
+    const selectedLangs = new Set(draft.languages.languageIds);
+
+    // Load languages from catalog
+    let langOptions: ReadonlyArray<{ id: string; name: string }> = [];
+    const catalog = this.catalogService;
+    if (catalog !== null) {
+      const status = catalog.getRuntimeStatus();
+      const revision = status.activeRevision;
+      if (revision !== undefined) {
+        try {
+          const langIndex = await catalog.fetchIndex(revision, "language");
+          const filtered = langIndex.filter((l) => l.ruleset === ruleset);
+          langOptions = filtered.map((l) => ({ id: l.id, name: l.name }));
+        } catch {
+          // Fall through to empty list
+        }
+      }
+    }
+
+    // Add standard languages as fallback
+    if (langOptions.length === 0) {
+      langOptions = [
+        { id: "language:2024:core:common", name: "Common" },
+        { id: "language:2024:core:dwarvish", name: "Dwarvish" },
+        { id: "language:2024:core:elvish", name: "Elvish" },
+        { id: "language:2024:core:giant", name: "Giant" },
+        { id: "language:2024:core:goblin", name: "Goblin" },
+        { id: "language:2024:core:gnomish", name: "Gnomish" },
+        { id: "language:2024:core:halfling", name: "Halfling" },
+        { id: "language:2024:core:orcish", name: "Orcish" },
+        { id: "language:2024:core:sylvan", name: "Sylvan" },
+        { id: "language:2024:core:undercommon", name: "Undercommon" },
+      ];
+    }
+
+    for (const lang of langOptions) {
+      const setting = new Setting(langSection);
+      setting.setName(lang.name);
+
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      const langEntityId = createEntityId(lang.id);
+      checkbox.checked = selectedLangs.has(langEntityId);
+      checkbox.setAttribute("aria-label", `Select ${lang.name}`);
+
+      checkbox.addEventListener("change", () => {
+        if (checkbox.checked) {
+          selectedLangs.add(langEntityId);
+        } else {
+          selectedLangs.delete(langEntityId);
+        }
+      });
+
+      setting.controlEl.appendChild(checkbox);
+    }
+
+    // Confirm button
+    const confirmBtn = new ButtonComponent(container);
+    confirmBtn.setButtonText("Confirm Proficiencies & Languages")
+      .setClass("dnd-creator-confirm-proficiencies")
+      .onClick(() => {
+        const profOk = selectProficiencies(draft, {
+          skillProficiencies: [...selectedSkills],
+          toolProficiencies: [...selectedTools],
+        });
+        const langOk = selectLanguages(draft, {
+          languageIds: [...selectedLangs],
+        });
+        if (profOk && langOk) {
+          this.renderCurrentStep();
+        }
+      });
+  }
+
+  /**
+   * Renders the Equipment step: starting equipment choices.
+   * Shows current equipment and allows manual entry.
+   */
+  private renderEquipmentStep(container: HTMLElement): void {
+    const draft = this.controller.draft;
+
+    // Display current equipment choices
+    const choices = draft.equipmentChoices.choices;
+    const choiceKeys = Object.keys(choices);
+
+    if (choiceKeys.length > 0) {
+      const info = container.createDiv({ cls: "dnd-creator-info" });
+      info.createEl("h3", { text: "Current Equipment Choices" });
+      for (const key of choiceKeys) {
+        const choice = choices[key as keyof typeof choices];
+        if (choice) {
+          const item = info.createDiv({ cls: "dnd-creator-equipment-item" });
+          item.createEl("strong", { text: `${key}:` });
+          item.createSpan({ text: String(choice) });
+        }
+      }
+    } else {
+      container.createEl("p", {
+        text: "No equipment choices have been made yet. Select your starting equipment.",
+      });
+    }
+
+    // Manual equipment entry
+    const setting = new Setting(container);
+    setting.setName("Add Equipment Item");
+    setting.setDesc("Enter an equipment item ID or name.");
+
+    setting.addText((text) => {
+      text.setPlaceholder("Equipment item ID");
+    });
+
+    const addBtn = new ButtonComponent(container);
+    addBtn.setButtonText("Add")
+      .setClass("dnd-creator-add-equipment")
+      .onClick(() => {
+        // Equipment choices are resolved by the domain step
+        this.controller.markStepResolved("equipment");
+        this.renderCurrentStep();
+      });
+  }
+
+  /**
+   * Renders the Spells step: checks spell eligibility and allows
+   * spell selection for spellcasters.
+   */
+  private async renderSpellsStep(container: HTMLElement): Promise<void> {
+    const draft = this.controller.draft;
+
+    // Check if character is a spellcaster
+    if (draft.spellEligibility.isSpellcaster === false) {
+      container.createEl("p", {
+        text: "This character is not a spellcaster. No spells to select.",
+      });
+      return;
+    }
+
+    // Auto-query spell eligibility if not yet resolved
+    if (draft.spellEligibility.isSpellcaster === undefined) {
+      // Default to non-spellcaster if class doesn't indicate spellcasting
+      const eligibility = {
+        isSpellcaster: false,
+        spellcastingAbility: undefined,
+      };
+      querySpellEligibility(draft, eligibility);
+      container.createEl("p", {
+        text: "This character is not a spellcaster. No spells to select.",
+      });
+      return;
+    }
+
+    const catalog = this.catalogService;
+    const ruleset = draft.ruleset.ruleset;
+
+    if (catalog === null || ruleset === null) {
+      container.createEl("p", {
+        text: "Catalog service is not available or ruleset not set.",
+      });
+      return;
+    }
+
+    const status = catalog.getRuntimeStatus();
+    const revision = status.activeRevision;
+    if (revision === undefined) {
+      container.createEl("p", { text: "Catalog is not active." });
+      return;
+    }
+
+    const loadingEl = container.createDiv({ cls: "dnd-creator-loading" });
+    loadingEl.createEl("p", { text: "Loading spells..." });
+
+    try {
+      const spellIndex = await catalog.fetchIndex(revision, "spell");
+      loadingEl.remove();
+
+      const filtered = spellIndex.filter((s) => s.ruleset === ruleset);
+      if (filtered.length === 0) {
+        container.createEl("p", {
+          text: `No spells available for the ${ruleset} ruleset.`,
+        });
+        return;
+      }
+
+      const sorted = [...filtered].sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
+
+      const selectedSpellIds = new Set(
+        draft.spells.selections.map((s) => s.spellId),
+      );
+
+      container.createEl("h3", { text: "Available Spells" });
+
+      for (const spell of sorted) {
+        const setting = new Setting(container);
+        setting.setName(spell.name);
+        setting.setDesc(`${spell.kind} — ${spell.access}`);
+
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = selectedSpellIds.has(spell.id);
+        checkbox.setAttribute("aria-label", `Select ${spell.name}`);
+
+        checkbox.addEventListener("change", () => {
+          if (checkbox.checked) {
+            selectedSpellIds.add(spell.id);
+          } else {
+            selectedSpellIds.delete(spell.id);
+          }
+        });
+
+        setting.controlEl.appendChild(checkbox);
+      }
+
+      // Confirm button
+      const confirmBtn = new ButtonComponent(container);
+      confirmBtn.setButtonText("Confirm Spells")
+        .setClass("dnd-creator-confirm-spells")
+        .onClick(() => {
+          const selections = [...selectedSpellIds].map((spellId) => ({
+            spellId,
+            acquisition: "known" as const,
+          }));
+          if (selectSpells(draft, selections)) {
+            this.renderCurrentStep();
+          }
+        });
+    } catch {
+      loadingEl.remove();
+      container.createEl("p", {
+        text: "Failed to load spells. Check your connection and try again.",
+      });
+    }
   }
 
   private renderPlaceholderStep(container: HTMLElement, step: CreatorStep): void {
