@@ -531,15 +531,17 @@ export class CharacterCreatorModal extends ObsidianModal {
   /* ── Navigation ────────────────────────────────────────────── */
 
   private navigateNext(): void {
-    const nextStep = this.controller.next();
-    if (nextStep !== this.controller.currentStep) {
+    const prevStep = this.controller.currentStep;
+    this.controller.next();
+    if (this.controller.currentStep !== prevStep) {
       this.renderCurrentStep();
     }
   }
 
   private navigatePrevious(): void {
-    const prevStep = this.controller.previous();
-    if (prevStep !== this.controller.currentStep) {
+    const prevStep = this.controller.currentStep;
+    this.controller.previous();
+    if (this.controller.currentStep !== prevStep) {
       this.renderCurrentStep();
     }
   }

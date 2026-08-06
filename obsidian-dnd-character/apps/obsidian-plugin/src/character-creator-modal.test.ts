@@ -444,4 +444,150 @@ describe("CharacterCreatorModal", () => {
       expect(warnings).toHaveLength(1);
     });
   });
+
+  /* eslint-disable @typescript-eslint/no-explicit-any -- testing private modal members */
+  describe("Navigation button behavior (P10-T020 corrective)", () => {
+    it("navigateNext renders current step when advancing from ruleset to sources", () => {
+      const modal = new CharacterCreatorModal(app, draft);
+      const renderSpy = vi.spyOn(modal, "renderCurrentStep" as any);
+
+      // Start at ruleset (step 0)
+      expect((modal as any).controller.currentStep).toBe("ruleset");
+
+      // Navigate next — should advance and render
+      (modal as any).navigateNext();
+      expect((modal as any).controller.currentStep).toBe("sources");
+      expect(renderSpy).toHaveBeenCalled();
+    });
+
+    it("navigateNext does not render when already at last step", () => {
+      const modal = new CharacterCreatorModal(app, draft);
+
+      // Navigate all the way to review
+      for (let i = 0; i < 10; i++) {
+        (modal as any).navigateNext();
+      }
+      expect((modal as any).controller.currentStep).toBe("review");
+
+      const renderSpy = vi.spyOn(modal, "renderCurrentStep" as any);
+      // Already at last step — next() returns same step, no render
+      (modal as any).navigateNext();
+      expect((modal as any).controller.currentStep).toBe("review");
+      expect(renderSpy).not.toHaveBeenCalled();
+    });
+
+    it("navigatePrevious renders current step when going back from sources to ruleset", () => {
+      const modal = new CharacterCreatorModal(app, draft);
+
+      // First advance to sources
+      (modal as any).navigateNext();
+      expect((modal as any).controller.currentStep).toBe("sources");
+
+      const renderSpy = vi.spyOn(modal, "renderCurrentStep" as any);
+
+      // Navigate back — should go to ruleset and render
+      (modal as any).navigatePrevious();
+      expect((modal as any).controller.currentStep).toBe("ruleset");
+      expect(renderSpy).toHaveBeenCalled();
+    });
+
+    it("navigatePrevious does not render when already at first step", () => {
+      const modal = new CharacterCreatorModal(app, draft);
+      expect((modal as any).controller.currentStep).toBe("ruleset");
+
+      const renderSpy = vi.spyOn(modal, "renderCurrentStep" as any);
+
+      // Already at first step — previous() returns same step, no render
+      (modal as any).navigatePrevious();
+      expect((modal as any).controller.currentStep).toBe("ruleset");
+      expect(renderSpy).not.toHaveBeenCalled();
+    });
+
+    it("repeated Next/Back updates step index and current step", () => {
+      const modal = new CharacterCreatorModal(app, draft);
+
+      // Forward: ruleset -> sources -> identity
+      (modal as any).navigateNext();
+      expect((modal as any).controller.currentStep).toBe("sources");
+      expect((modal as any).controller.currentStepIndex).toBe(1);
+
+      (modal as any).navigateNext();
+      expect((modal as any).controller.currentStep).toBe("identity");
+      expect((modal as any).controller.currentStepIndex).toBe(2);
+
+      // Back: identity -> sources -> ruleset
+      (modal as any).navigatePrevious();
+      expect((modal as any).controller.currentStep).toBe("sources");
+      expect((modal as any).controller.currentStepIndex).toBe(1);
+
+      (modal as any).navigatePrevious();
+      expect((modal as any).controller.currentStep).toBe("ruleset");
+      expect((modal as any).controller.currentStepIndex).toBe(0);
+    });
+
+    it("draft selections survive Back/Next navigation", () => {
+      const modal = new CharacterCreatorModal(app, draft);
+
+      // Make a selection on the current step
+      draft.identity.name = "Test Character";
+      draft.identity.alignment = "Lawful Good";
+
+      // Navigate forward and back
+      (modal as any).navigateNext();
+      (modal as any).navigatePrevious();
+
+      // Selections should persist
+      expect(draft.identity.name).toBe("Test Character");
+      expect(draft.identity.alignment).toBe("Lawful Good");
+    });
+
+    it("direct step-tab jump and button navigation produce same controller state", () => {
+      const modal = new CharacterCreatorModal(app, draft);
+
+      // Navigate via button to sources
+      (modal as any).navigateNext();
+      expect((modal as any).controller.currentStep).toBe("sources");
+      expect((modal as any).controller.currentStepIndex).toBe(1);
+
+      // Navigate back to ruleset
+      (modal as any).navigatePrevious();
+      expect((modal as any).controller.currentStep).toBe("ruleset");
+      expect((modal as any).controller.currentStepIndex).toBe(0);
+
+      // Now jump directly via controller
+      (modal as any).controller.jumpTo("sources");
+      expect((modal as any).controller.currentStep).toBe("sources");
+      expect((modal as any).controller.currentStepIndex).toBe(1);
+    });
+
+    it("back button should be disabled on ruleset step", () => {
+      const modal = new CharacterCreatorModal(app, draft);
+      expect((modal as any).controller.currentStep).toBe("ruleset");
+      expect((modal as any).controller.currentStepIndex).toBe(0);
+
+      // updateNavigationButtons disables back when currentStepIndex === 0
+      // Mock a button to verify the logic
+      const mockButton = { setDisabled: vi.fn() };
+      (modal as any).backButton = mockButton;
+      (modal as any).updateNavigationButtons();
+      expect(mockButton.setDisabled).toHaveBeenCalledWith(true);
+    });
+
+    it("next button should be disabled on review step", () => {
+      const modal = new CharacterCreatorModal(app, draft);
+
+      // Navigate to review
+      for (let i = 0; i < 10; i++) {
+        (modal as any).navigateNext();
+      }
+      expect((modal as any).controller.currentStep).toBe("review");
+
+      // Mock a button to verify the logic
+      const mockButton = { setDisabled: vi.fn() };
+      (modal as any).nextButton = mockButton;
+      (modal as any).updateNavigationButtons();
+      expect(mockButton.setDisabled).toHaveBeenCalledWith(true);
+    });
+  });
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 });
