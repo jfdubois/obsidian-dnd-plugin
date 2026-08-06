@@ -484,10 +484,10 @@ Create valid level-one characters through a dependency-aware modal.
 
 ### Phase 10 gate
 
-- [ ] Complete valid level-one character for each ruleset.
-- [ ] Core content always appears.
-- [ ] Non-selected source content does not appear.
-- [ ] Upstream changes invalidate dependent selections explicitly.
+- [x] Complete valid level-one character for each ruleset.
+- [x] Core content always appears.
+- [x] Non-selected source content does not appear.
+- [x] Upstream changes invalidate dependent selections explicitly.
 
 ---
 
