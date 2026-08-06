@@ -187,6 +187,9 @@ describe("Re-resolution invalidation (CRE-005/006/007)", () => {
 describe("Diagnostics", () => {
   it("produces warning for invalidated steps", () => {
     const draft = createEmptyCharacterDraft();
+    // Resolve prerequisites first (realistic flow)
+    markStepResolved(draft, "ruleset");
+    markStepResolved(draft, "sources");
     markStepResolved(draft, "species");
     invalidateDependentSteps(draft, "species");
 
@@ -197,20 +200,25 @@ describe("Diagnostics", () => {
 
   it("hasErrors returns false when only warnings exist", () => {
     const draft = createEmptyCharacterDraft();
+    // Resolve prerequisites first (realistic flow)
+    markStepResolved(draft, "ruleset");
+    markStepResolved(draft, "sources");
     markStepResolved(draft, "species");
     invalidateDependentSteps(draft, "species");
 
     expect(hasErrors(draft)).toBe(false);
   });
 
-  it("buildDraftDiagnostics produces error for unresolved required steps", () => {
+  it("buildDraftDiagnostics does not produce error for unvisited steps without resolved dependents", () => {
+    // After initial ruleset selection, downstream steps are unvisited but not
+    // skipped. They should not produce error diagnostics.
     const statuses = [
       { step: "species" as const, state: "resolved" as const },
       { step: "species-choices" as const, state: "unvisited" as const },
     ];
     const diagnostics = buildDraftDiagnostics(statuses);
     const hasError = diagnostics.some((d) => d.severity === "error");
-    expect(hasError).toBe(true);
+    expect(hasError).toBe(false);
   });
 });
 

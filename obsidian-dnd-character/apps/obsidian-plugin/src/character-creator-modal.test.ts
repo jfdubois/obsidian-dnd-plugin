@@ -9,6 +9,7 @@ import {
   createEmptyCharacterDraft,
   isDraftComplete,
   hasErrors,
+  markStepResolved,
 } from "./character-draft";
 import type { CreatorStep } from "./character-step-controller";
 import { StepController } from "./character-step-controller";
@@ -328,6 +329,42 @@ describe("CharacterCreatorModal", () => {
       // After fix: 1 consolidated warning
       expect(warnings.length).toBeLessThan(4);
       expect(warnings.length).toBe(1);
+    });
+
+    it("first ruleset selection produces zero diagnostics", () => {
+      const freshDraft = createEmptyCharacterDraft();
+      selectRuleset(freshDraft, "2014");
+      expect(freshDraft.diagnostics).toHaveLength(0);
+    });
+
+    it("first ruleset selection to 2024 also produces zero diagnostics", () => {
+      const freshDraft = createEmptyCharacterDraft();
+      selectRuleset(freshDraft, "2024");
+      expect(freshDraft.diagnostics).toHaveLength(0);
+    });
+
+    it("no diagnostics have empty or whitespace-only messages", () => {
+      const freshDraft = createEmptyCharacterDraft();
+      selectRuleset(freshDraft, "2024");
+      const hasEmptyMessage = freshDraft.diagnostics.some(
+        (d) => d.message == null || d.message.trim().length === 0,
+      );
+      expect(hasEmptyMessage).toBe(false);
+    });
+
+    it("ruleset change after resolved downstream steps produces one warning", () => {
+      const freshDraft = createEmptyCharacterDraft();
+      selectRuleset(freshDraft, "2014");
+      markStepResolved(freshDraft, "species");
+      markStepResolved(freshDraft, "species-choices");
+      selectRuleset(freshDraft, "2024");
+
+      const warnings = freshDraft.diagnostics.filter(
+        (d) => d.severity === "warning",
+      );
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]!.message.trim().length).toBeGreaterThan(0);
+      expect(warnings[0]!.message).toContain("step");
     });
   });
 });

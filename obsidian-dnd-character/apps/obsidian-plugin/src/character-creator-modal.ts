@@ -217,7 +217,9 @@ export class CharacterCreatorModal extends ObsidianModal {
     if (!this.diagnosticsEl) return;
     this.diagnosticsEl.empty();
 
-    const diagnostics = this.controller.draft.diagnostics;
+    const diagnostics = this.controller.draft.diagnostics.filter(
+      (d) => d.message != null && d.message.trim().length > 0,
+    );
     if (diagnostics.length === 0) return;
 
     const errors = diagnostics.filter((d) => d.severity === "error");

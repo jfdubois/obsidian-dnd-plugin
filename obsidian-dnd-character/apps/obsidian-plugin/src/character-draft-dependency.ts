@@ -58,7 +58,7 @@ function getDependencies(step: DraftStep): ReadonlyArray<DraftStep> {
   return entry?.dependsOn ?? [];
 }
 
-function getDependents(step: DraftStep): DraftStep[] {
+export function getDependents(step: DraftStep): DraftStep[] {
   const dependents: DraftStep[] = [];
   for (const dep of DEPENDENCY_GRAPH) {
     if (dep.dependsOn.includes(step)) {
@@ -122,12 +122,15 @@ export function buildDraftDiagnostics(
     if (state === "invalidated") {
       invalidatedSteps.push(dep.step);
     } else if (state === "unvisited") {
-      // Only flag as error if this step has dependencies that are resolved
-      // (meaning the user has progressed past it)
-      const hasResolvedDependency = dep.dependsOn.some(
+      // Only flag as error if this step was actually skipped (has resolved
+      // dependents downstream), not merely unvisited because the user hasn't
+      // reached it yet. After initial ruleset selection, downstream steps are
+      // unvisited but not skipped — they should not produce error diagnostics.
+      const dependents = getDependents(dep.step);
+      const hasResolvedDependent = dependents.some(
         (s) => statusMap.get(s) === "resolved",
       );
-      if (hasResolvedDependency) {
+      if (hasResolvedDependent) {
         diagnostics.push({
           step: dep.step,
           message: `Required step not yet completed`,
