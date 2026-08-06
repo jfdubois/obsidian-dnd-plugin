@@ -479,7 +479,7 @@ Create valid level-one characters through a dependency-aware modal.
 - [x] **P10-T016 — Implement unresolved-choice diagnostics**
 - [x] **P10-T017 — Implement review snapshot**
 - [x] **P10-T018 — Implement atomic final save**
-- [ ] **P10-T019 — Add creator state-machine tests**
+- [x] **P10-T019 — Add creator state-machine tests**
 - [ ] **P10-T020 — Complete desktop/mobile manual scenarios**
 
 ### Phase 10 gate
