@@ -1,0 +1,198 @@
+/* ── Character Creator Modal Styles ──────────────────────────────
+   Mobile-compatible, responsive styling for the character creator
+   modal. Uses Obsidian theme variables for consistency.           */
+
+/* ── Modal container ───────────────────────────────────────────── */
+
+.dnd-character-creator-modal .modal-content {
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+.dnd-character-creator-modal .modal-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  font-size: 1.2em;
+  font-weight: 600;
+}
+
+/* ── Progress bar ──────────────────────────────────────────────── */
+
+.dnd-creator-progress-text {
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.dnd-creator-step-indicators {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+  margin-bottom: 16px;
+  padding: 8px;
+  background: var(--background-secondary);
+  border-radius: 6px;
+}
+
+.dnd-creator-step-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  font-size: 0.75em;
+  color: var(--text-muted);
+  background: var(--background-primary);
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.dnd-creator-step-dot:hover {
+  background: var(--background-modifier-hover);
+  border-color: var(--interactive-accent);
+}
+
+.dnd-creator-step-dot-active {
+  color: var(--text-on-accent);
+  background: var(--interactive-accent);
+  border-color: var(--interactive-accent);
+  font-weight: 600;
+}
+
+.dnd-creator-step-dot-resolved {
+  color: var(--text-accent);
+  border-color: var(--interactive-accent);
+}
+
+/* ── Diagnostics banner ────────────────────────────────────────── */
+
+.dnd-creator-diagnostics-error {
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  background: var(--background-modifier-error);
+  border: 1px solid var(--interactive-accent-red);
+  border-radius: 6px;
+  color: var(--text-error);
+  font-size: 0.85em;
+}
+
+.dnd-creator-diagnostics-warning {
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  background: var(--background-modifier-warning);
+  border: 1px solid var(--interactive-accent-yellow);
+  border-radius: 6px;
+  color: var(--text-warning);
+  font-size: 0.85em;
+}
+
+.dnd-creator-diagnostic-item {
+  margin-top: 4px;
+  padding-left: 8px;
+  border-left: 2px solid var(--background-modifier-border);
+}
+
+/* ── Step content ──────────────────────────────────────────────── */
+
+.dnd-creator-step-content {
+  min-height: 200px;
+  padding: 12px 0;
+}
+
+.dnd-creator-placeholder {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── Navigation buttons ────────────────────────────────────────── */
+
+.dnd-creator-navigation {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.dnd-creator-navigation button {
+  flex: 1;
+  max-width: 160px;
+}
+
+/* ── Review step ───────────────────────────────────────────────── */
+
+.dnd-creator-review-section {
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  background: var(--background-secondary);
+  border-radius: 6px;
+}
+
+.dnd-creator-review-section h4 {
+  margin: 0 0 8px 0;
+  font-size: 0.9em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dnd-creator-review-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  font-size: 0.9em;
+  border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.dnd-creator-review-item:last-child {
+  border-bottom: none;
+}
+
+.dnd-creator-review-label {
+  color: var(--text-muted);
+}
+
+.dnd-creator-review-value {
+  font-weight: 500;
+  text-align: right;
+}
+
+/* ── Mobile responsive adjustments ─────────────────────────────── */
+
+@media (max-width: 480px) {
+  .dnd-character-creator-modal .modal-content {
+    padding: 8px;
+  }
+
+  .dnd-creator-step-indicators {
+    gap: 2px;
+    padding: 4px;
+  }
+
+  .dnd-creator-step-dot {
+    padding: 2px 4px;
+    font-size: 0.65em;
+  }
+
+  .dnd-creator-navigation {
+    flex-direction: row;
+    gap: 4px;
+  }
+
+  .dnd-creator-navigation button {
+    max-width: none;
+    font-size: 0.85em;
+    padding: 8px 12px;
+  }
+}

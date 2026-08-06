@@ -101,8 +101,9 @@ export function getStepDependencies(step: DraftStep): ReadonlyArray<DraftStep> {
 
 /**
  * Builds a list of diagnostics for the current draft state.
- * Steps that are invalidated will produce warning diagnostics.
- * Steps that are unresolved but required will produce error diagnostics.
+ * Invalidated steps are consolidated into a single warning diagnostic
+ * to avoid repeated stale-selection warnings. Steps that are unresolved
+ * but required will produce error diagnostics.
  */
 export function buildDraftDiagnostics(
   stepStatuses: ReadonlyArray<DraftStepStatus>,
@@ -114,14 +115,12 @@ export function buildDraftDiagnostics(
     statusMap.set(status.step, status.state);
   }
 
+  // Collect invalidated steps for consolidated warning
+  const invalidatedSteps: DraftStep[] = [];
   for (const dep of DEPENDENCY_GRAPH) {
     const state = statusMap.get(dep.step);
     if (state === "invalidated") {
-      diagnostics.push({
-        step: dep.step,
-        message: `Selections may be outdated due to upstream changes`,
-        severity: "warning",
-      });
+      invalidatedSteps.push(dep.step);
     } else if (state === "unvisited") {
       // Only flag as error if this step has dependencies that are resolved
       // (meaning the user has progressed past it)
@@ -136,6 +135,15 @@ export function buildDraftDiagnostics(
         });
       }
     }
+  }
+
+  // Emit a single consolidated warning for all invalidated steps
+  if (invalidatedSteps.length > 0) {
+    diagnostics.push({
+      step: invalidatedSteps[0]!,
+      message: `Selections may be outdated due to upstream changes (${invalidatedSteps.length} step${invalidatedSteps.length > 1 ? "s" : ""} affected)`,
+      severity: "warning",
+    });
   }
 
   return diagnostics;

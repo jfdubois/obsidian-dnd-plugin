@@ -200,10 +200,10 @@ describe("selectSpecies does not mutate draft on rejection", () => {
   it("does not set species when sources not resolved", () => {
     const draft = createEmptyCharacterDraft();
     selectRuleset(draft, "2024");
-    // sources is invalidated by ruleset selection, not resolved
+    // sources remains unvisited on first ruleset selection, not resolved
 
     selectSpecies(draft, createEntityId("human"));
     expect(draft.species.speciesId).toBeNull();
-    expect(getStepState(draft, "species")).toBe("invalidated");
+    expect(getStepState(draft, "species")).toBe("unvisited");
   });
 });

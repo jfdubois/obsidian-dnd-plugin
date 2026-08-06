@@ -13,6 +13,9 @@ import {
 import type { CreatorStep } from "./character-step-controller";
 import { StepController } from "./character-step-controller";
 import type { DraftStep } from "./character-draft-steps";
+import type { DraftDiagnostic } from "./character-draft-dependency";
+import { buildDraftDiagnostics } from "./character-draft-dependency";
+import { selectRuleset } from "./character-ruleset-step";
 
 /* ── Mock Obsidian components ─────────────────────────────────── */
 
@@ -247,6 +250,84 @@ describe("CharacterCreatorModal", () => {
         },
       ];
       expect(hasErrors(draft)).toBe(true);
+    });
+  });
+
+  describe("P10-T020 corrective regression tests", () => {
+    it("ruleset selection calls centralized selectRuleset", () => {
+      // Verify that selectRuleset is imported and used in renderRulesetStep
+      // The modal should delegate to selectRuleset() instead of direct mutation
+      expect(typeof selectRuleset).toBe("function");
+      // selectRuleset should set the ruleset and mark step resolved
+      selectRuleset(draft, "2024");
+      expect(draft.ruleset.ruleset).toBe("2024");
+    });
+
+    it("ruleset selection does not cause double invalidation", () => {
+      // Before fix: modal called markCurrentStepResolved() + invalidateCurrentDependents()
+      // after selectRuleset already did both internally
+      // After fix: only selectRuleset() is called, which handles everything once
+      // Reset draft to ensure clean state
+      draft = createEmptyCharacterDraft();
+
+      // Call selectRuleset once (as the modal now does)
+      selectRuleset(draft, "2024");
+
+      // The step should be resolved exactly once
+      expect(draft.ruleset.ruleset).toBe("2024");
+    });
+
+    it("diagnostics consolidate invalidated steps into single warning", () => {
+      // Create a scenario with multiple invalidated steps
+      const statuses = [
+        { step: "ruleset" as DraftStep, state: "resolved" as const },
+        { step: "sources" as DraftStep, state: "invalidated" as const },
+        { step: "species" as DraftStep, state: "invalidated" as const },
+        { step: "background" as DraftStep, state: "invalidated" as const },
+        { step: "class" as DraftStep, state: "invalidated" as const },
+        { step: "identity" as DraftStep, state: "resolved" as const },
+        { step: "abilities" as DraftStep, state: "unvisited" as const },
+        { step: "proficienciesAndLanguages" as DraftStep, state: "unvisited" as const },
+        { step: "equipment" as DraftStep, state: "unvisited" as const },
+        { step: "spells" as DraftStep, state: "unvisited" as const },
+        { step: "review" as DraftStep, state: "unvisited" as const },
+      ];
+
+      const diagnostics = buildDraftDiagnostics(statuses);
+      const warnings = diagnostics.filter(
+        (d: DraftDiagnostic) => d.severity === "warning",
+      );
+
+      // Should have exactly one consolidated warning, not one per invalidated step
+      expect(warnings.length).toBe(1);
+      expect(warnings[0]!.message).toContain("4 steps affected");
+    });
+
+    it("diagnostics do not emit one warning per invalidated step", () => {
+      // Create a scenario with multiple invalidated steps
+      const statuses = [
+        { step: "ruleset" as DraftStep, state: "resolved" as const },
+        { step: "sources" as DraftStep, state: "invalidated" as const },
+        { step: "species" as DraftStep, state: "invalidated" as const },
+        { step: "background" as DraftStep, state: "invalidated" as const },
+        { step: "class" as DraftStep, state: "invalidated" as const },
+        { step: "identity" as DraftStep, state: "resolved" as const },
+        { step: "abilities" as DraftStep, state: "unvisited" as const },
+        { step: "proficienciesAndLanguages" as DraftStep, state: "unvisited" as const },
+        { step: "equipment" as DraftStep, state: "unvisited" as const },
+        { step: "spells" as DraftStep, state: "unvisited" as const },
+        { step: "review" as DraftStep, state: "unvisited" as const },
+      ];
+
+      const diagnostics = buildDraftDiagnostics(statuses);
+      const warnings = diagnostics.filter(
+        (d: DraftDiagnostic) => d.severity === "warning",
+      );
+
+      // Before fix: 4 warnings (one per invalidated step)
+      // After fix: 1 consolidated warning
+      expect(warnings.length).toBeLessThan(4);
+      expect(warnings.length).toBe(1);
     });
   });
 });

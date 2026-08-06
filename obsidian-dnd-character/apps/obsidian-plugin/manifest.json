@@ -6,5 +6,6 @@
 	"description": "D&D character management for Obsidian.",
 	"author": "obsidian-dnd",
 	"authorUrl": "",
-	"isDesktopOnly": false
+	"isDesktopOnly": false,
+	"styles": ["styles.css"]
 }

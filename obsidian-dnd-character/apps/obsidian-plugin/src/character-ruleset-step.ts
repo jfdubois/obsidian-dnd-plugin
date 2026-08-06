@@ -5,10 +5,7 @@
 import type { Ruleset } from "@obsidian-dnd/domain";
 import { RULESETS, isRuleset } from "@obsidian-dnd/domain";
 import type { CharacterDraft } from "./character-draft";
-import {
-  markStepResolved,
-  invalidateDependentSteps,
-} from "./character-draft";
+import { markStepResolved } from "./character-draft";
 
 /* ── Available ruleset options ─────────────────────────────────── */
 
@@ -31,6 +28,10 @@ export function validateRulesetSelection(value: unknown): value is Ruleset {
  * Selects a ruleset on the draft, marking the ruleset step as
  * resolved and invalidating all downstream dependent steps.
  *
+ * On first selection (previous value is null), dependents are NOT
+ * invalidated since they are still unvisited. On ruleset change,
+ * dependents are invalidated exactly once.
+ *
  * Returns true if the ruleset was accepted and applied,
  * false if the value was rejected.
  */
@@ -42,8 +43,22 @@ export function selectRuleset(
     return false;
   }
 
+  // Same value — no-op
+  if (draft.ruleset.ruleset === ruleset) {
+    return true;
+  }
+
+  const isFirstSelection = draft.ruleset.ruleset === null;
+
   draft.ruleset.ruleset = ruleset;
-  markStepResolved(draft, "ruleset");
-  invalidateDependentSteps(draft, "ruleset");
+
+  if (isFirstSelection) {
+    // First selection: mark resolved but don't invalidate unvisited dependents
+    markStepResolved(draft, "ruleset", false);
+  } else {
+    // Changing ruleset: mark resolved and invalidate dependents (once)
+    markStepResolved(draft, "ruleset", true);
+  }
+
   return true;
 }

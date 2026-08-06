@@ -14,6 +14,7 @@ import { StepController, CREATOR_STEPS } from "./character-step-controller";
 import type { ReviewSnapshot } from "./character-review-snapshot";
 import { buildReviewSnapshot } from "./character-review-snapshot";
 import { finalizeCharacter } from "./character-finalize";
+import { selectRuleset } from "./character-ruleset-step";
 
 /* ── Persistence callback ─────────────────────────────────────── */
 
@@ -317,9 +318,7 @@ export class CharacterCreatorModal extends ObsidianModal {
       radio.setAttribute("aria-label", `Select ${ruleset} ruleset`);
 
       radio.addEventListener("change", () => {
-        draft.ruleset.ruleset = ruleset as "2014" | "2024" | null;
-        this.controller.markCurrentStepResolved();
-        this.controller.invalidateCurrentDependents();
+        selectRuleset(draft, ruleset);
         this.renderCurrentStep();
       });
 

@@ -146,12 +146,12 @@ describe("selectSources does not mutate draft on rejection", () => {
     const draft = createEmptyCharacterDraft();
     selectRuleset(draft, "2024");
 
-    // sources is already "invalidated" by ruleset selection
-    expect(getStepState(draft, "sources")).toBe("invalidated");
+    // sources remains "unvisited" on first ruleset selection
+    expect(getStepState(draft, "sources")).toBe("unvisited");
 
     selectSources(draft, [null]);
-    // Must remain invalidated, not become resolved
-    expect(getStepState(draft, "sources")).toBe("invalidated");
+    // Must remain unvisited, not become resolved
+    expect(getStepState(draft, "sources")).toBe("unvisited");
   });
 
   it("does not invalidate dependents for invalid input", () => {

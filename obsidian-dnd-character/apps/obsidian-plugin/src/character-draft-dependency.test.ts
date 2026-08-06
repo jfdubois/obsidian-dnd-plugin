@@ -12,6 +12,8 @@ import {
   buildDraftDiagnostics,
 } from "./character-draft-dependency";
 import { ALL_DRAFT_STEPS } from "./character-draft-steps";
+import type { DraftStep } from "./character-draft-steps";
+import type { DraftStepState } from "./character-draft-dependency";
 
 describe("Dependency graph", () => {
   it("species depends on ruleset and sources", () => {
@@ -209,5 +211,31 @@ describe("Diagnostics", () => {
     const diagnostics = buildDraftDiagnostics(statuses);
     const hasError = diagnostics.some((d) => d.severity === "error");
     expect(hasError).toBe(true);
+  });
+});
+
+describe("buildDraftDiagnostics uniqueness", () => {
+  it("invalidation diagnostics are unique and identify affected steps", () => {
+    const statuses = [
+      { step: "ruleset" as DraftStep, state: "resolved" as DraftStepState },
+      { step: "sources" as DraftStep, state: "invalidated" as DraftStepState },
+      { step: "species" as DraftStep, state: "invalidated" as DraftStepState },
+      { step: "background" as DraftStep, state: "invalidated" as DraftStepState },
+      { step: "class" as DraftStep, state: "unvisited" as DraftStepState },
+      { step: "identity" as DraftStep, state: "resolved" as DraftStepState },
+      { step: "abilities" as DraftStep, state: "unvisited" as DraftStepState },
+      { step: "proficienciesAndLanguages" as DraftStep, state: "unvisited" as DraftStepState },
+      { step: "equipment" as DraftStep, state: "unvisited" as DraftStepState },
+      { step: "spells" as DraftStep, state: "unvisited" as DraftStepState },
+      { step: "review" as DraftStep, state: "unvisited" as DraftStepState },
+    ];
+
+    const diagnostics = buildDraftDiagnostics(statuses);
+    const warnings = diagnostics.filter((d) => d.severity === "warning");
+
+    // Exactly one consolidated warning
+    expect(warnings).toHaveLength(1);
+    // The warning mentions the count
+    expect(warnings[0]!.message).toContain("3 steps affected");
   });
 });
