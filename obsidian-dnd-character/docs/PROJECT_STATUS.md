@@ -22,7 +22,7 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-P10-T018 — Implement atomic final save
+P10-T019 — Add creator state-machine tests
 
 ## Branch baseline
 
@@ -80,12 +80,18 @@ None recorded.
 - Phase 9 starting commit: a362900
 - Completed Phase 9 task commits: P9-T001 — see Git history for P9-T001; P9-T002 — see Git history for P9-T002; P9-T003 — see Git history for P9-T003; P9-T004 — see Git history for P9-T004; P9-T005 — see Git history for P9-T005; P9-T006 — see Git history for P9-T006; P9-T007 — see Git history for P9-T007; P9-T008 — see Git history for P9-T008; P9-T009 — see Git history for P9-T009; P9-T010 — see Git history for P9-T010; P9-T011 — see Git history for P9-T011; P9-T012 — c3032a7; P9-T013 — 2111f0c; P9-T014 — 541120b; P9-T015 — 2db464f; P9-T016 — a0d9726; P9-T017 — see Git history for P9-T017; P9-T018 — see Git history for P9-T018
 - Phase 10 starting commit: 77baeed
-- Completed Phase 10 task commits: P10-T001 — see Git history for P10-T001; P10-T002 — see Git history for P10-T002; P10-T003 — see Git history for P10-T003; P10-T004 — see Git history for P10-T004; P10-T005 — see Git history for P10-T005; P10-T006 — see Git history for P10-T006; P10-T007 — see Git history for P10-T007; P10-T008 — see Git history for P10-T008; P10-T009 — 0b69134; P10-T010 — see Git history for P10-T010; P10-T011 — see Git history for P10-T011; P10-T012 — see Git history for P10-T012; P10-T013 — see Git history for P10-T013; P10-T014 — see Git history for P10-T014; P10-T015 — see Git history for P10-T015; P10-T016 — see Git history for P10-T016; P10-T017 — see Git history for P10-T017
+- Completed Phase 10 task commits: P10-T001 — see Git history for P10-T001; P10-T002 — see Git history for P10-T002; P10-T003 — see Git history for P10-T003; P10-T004 — see Git history for P10-T004; P10-T005 — see Git history for P10-T005; P10-T006 — see Git history for P10-T006; P10-T007 — see Git history for P10-T007; P10-T008 — see Git history for P10-T008; P10-T009 — 0b69134; P10-T010 — see Git history for P10-T010; P10-T011 — see Git history for P10-T011; P10-T012 — see Git history for P10-T012; P10-T013 — see Git history for P10-T013; P10-T014 — see Git history for P10-T014; P10-T015 — see Git history for P10-T015; P10-T016 — see Git history for P10-T016; P10-T017 — see Git history for P10-T017; P10-T018 — see Git history for P10-T018
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-05 — P10-T018 — Implement atomic final save — complete
+Summary: Created atomic final save module with 2 new files. `finalizeCharacter` validates all steps resolved and required entities populated, maps 18 draft sections to `Character` contract fields, returns `Character | null`. Persists only selections and origin grants—never candidate lists or catalog copies. Positive tests for valid character, content policy, identity, origins, progression, selections merge, abilities, inventory, metadata, resources, overrides, schema version. Negative tests for incomplete draft, missing species/background/class/ruleset/identity/abilities.
+Validation: 4667 tests passing (20 new), typecheck and lint pass, build passes.
+Compatibility notes: Pure TypeScript. No Obsidian API usage. All APIs mobile-compatible.
+Commit: see Git history for P10-T018.
 
 2026-08-05 — P10-T017 — Implement review snapshot — complete
 Summary: Created review snapshot module with 2 new files. `buildReviewSnapshot` checks all 18 data steps are resolved, returns a `ReviewSnapshot` aggregating all draft sections as `Readonly` references. Returns `null` when any data step is unresolved. Positive test verifies all 18 sections match populated draft selections. Negative tests for no steps resolved, one step resolved, one unresolved, and review-only resolved.
@@ -98,21 +104,6 @@ Summary: Added `buildUnresolvedChoiceDiagnostics` in character-draft.ts that det
 Validation: 4641 tests passing (5 new), typecheck and lint pass, build passes.
 Compatibility notes: Pure TypeScript. No Obsidian API usage. All APIs mobile-compatible.
 Commit: see Git history for P10-T016.
-
-2026-08-05 — P10-T015 — Implement dependency invalidation — complete
-Summary: Modified `markStepResolved` in character-draft.ts to auto-invalidate all transitive dependents before marking a step resolved. This ensures re-resolving an upstream step (e.g., changing species after species-choices already resolved) cascades invalidation to all downstream dependent steps. Added 4 tests covering CRE-005 (ruleset change), CRE-006 (species change), CRE-007 (class change), and isolation (unrelated steps unaffected).
-Validation: 4636 tests passing (4 new), typecheck and lint pass, build passes.
-Compatibility notes: Pure TypeScript. No Obsidian API usage. All APIs mobile-compatible.
-Commit: see Git history for P10-T015.
-Validation: 4200 tests passing (64 new), typecheck and lint pass, build passes.
-Compatibility notes: Pure TypeScript controller. No Obsidian API usage. All APIs mobile-compatible.
-Commit: see Git history for P10-T002.
-
-2026-08-05 — P10-T001 — Implement draft state model — complete
-Summary: Created the character draft state model with 8 new files. Top-level `CharacterDraft` interface holds 16 step data sections (ruleset, sources, identity, species, species choices, background, background choices, class, class grants, abilities, proficiencies, languages, equipment, spell eligibility, spells). Dependency graph tracks 16 steps with upstream/downstream relationships. Step status tracking (unvisited/resolved/invalidated) with transitive invalidation. Type guards and factory functions for every step data type. Positive tests for factory, validators, step operations, mutation. Negative tests for all type guards. Dependency invalidation and diagnostic tests.
-Validation: 4136 tests passing (100 new), typecheck and lint pass, build passes.
-Compatibility notes: Pure TypeScript model. No Obsidian API usage. All APIs mobile-compatible.
-Commit: see Git history for P10-T001.
 
 2026-08-05 — Phase 9 gate — Deterministic rules engine — complete
 Summary: Phase 9 gate passed. All 6 gate criteria verified: (1) Same inputs always produce identical snapshot — golden-character determinism tests; (2) Important totals explain their contributors — contribution-traces module with provenance; (3) Conditional effects identify predicates and originating feature — conditional-roll-mode effects tracked with provenance in unsupported-mechanics diagnostics; (4) Defenses and capabilities remain semantically distinct — separate projection sections with distinct types; (5) Multiple projections do not re-evaluate effects — single shared frozen effect collection; (6) No derived total or projection in persisted character JSON — character contract contains only base scores, selections, and mutable state.
