@@ -26,6 +26,20 @@ export default tseslint.config(
     },
   },
   {
+    files: ["vitest.setup.ts"],
+    languageOptions: {
+      parser: tseslint.parser,
+      parserOptions: {
+        projectService: false,
+        allowDefaultProject: true,
+      },
+    },
+    rules: {
+      "@typescript-eslint/no-floating-promises": "off",
+      "@typescript-eslint/no-misused-promises": "off",
+    },
+  },
+  {
     ignores: [
       "**/node_modules/",
       "**/dist/",
@@ -42,6 +56,7 @@ export default tseslint.config(
       "external/**",
       "test/**",
       "apps/obsidian-plugin/main.js",
+      "vitest.setup.js",
     ],
   },
 );

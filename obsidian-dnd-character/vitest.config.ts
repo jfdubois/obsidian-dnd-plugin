@@ -12,6 +12,7 @@ export default defineConfig({
     },
   },
   test: {
+    setupFiles: ["./vitest.setup.ts"],
     include: ["apps/**/*.test.ts", "packages/**/*.test.ts", "test/**/*.test.ts"],
     exclude: [
       "**/node_modules/**",
