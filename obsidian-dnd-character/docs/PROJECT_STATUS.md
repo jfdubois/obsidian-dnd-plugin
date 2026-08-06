@@ -27,7 +27,7 @@ P10-T020 — Complete desktop/mobile manual scenarios
 ## Branch baseline
 
 - Branch: `dev`
-- Last synchronized commit: `c88b41c` (P8-CORRECTIVE-002 documentation)
+- Last synchronized commit: `780a76b` (P10-T020 runtime integration)
 - Working tree expected: clean
 
 ## Blockers
@@ -36,7 +36,7 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-P8-CORRECTIVE-002-R1 (typecheck, lint, full test suite; 14 pre-existing console warnings).
+- `npm --prefix obsidian-dnd-character run check`: passing post-P10-T020-runtime (typecheck, lint, full test suite; 4730 tests; 14 pre-existing console warnings).
 - `npm --prefix obsidian-dnd-character run build`: passing post-P8-CORRECTIVE-002-R1.
 - `npm --workspace @obsidian-dnd/obsidian-plugin run bundle`: script not defined in current workspace.
 - Tests: full suite passing after P8-CORRECTIVE-002-R1.
@@ -80,12 +80,18 @@ None recorded.
 - Phase 9 starting commit: a362900
 - Completed Phase 9 task commits: P9-T001 — see Git history for P9-T001; P9-T002 — see Git history for P9-T002; P9-T003 — see Git history for P9-T003; P9-T004 — see Git history for P9-T004; P9-T005 — see Git history for P9-T005; P9-T006 — see Git history for P9-T006; P9-T007 — see Git history for P9-T007; P9-T008 — see Git history for P9-T008; P9-T009 — see Git history for P9-T009; P9-T010 — see Git history for P9-T010; P9-T011 — see Git history for P9-T011; P9-T012 — c3032a7; P9-T013 — 2111f0c; P9-T014 — 541120b; P9-T015 — 2db464f; P9-T016 — a0d9726; P9-T017 — see Git history for P9-T017; P9-T018 — see Git history for P9-T018
 - Phase 10 starting commit: 77baeed
-- Completed Phase 10 task commits: P10-T001 — see Git history for P10-T001; P10-T002 — see Git history for P10-T002; P10-T003 — see Git history for P10-T003; P10-T004 — see Git history for P10-T004; P10-T005 — see Git history for P10-T005; P10-T006 — see Git history for P10-T006; P10-T007 — see Git history for P10-T007; P10-T008 — see Git history for P10-T008; P10-T009 — 0b69134; P10-T010 — see Git history for P10-T010; P10-T011 — see Git history for P10-T011; P10-T012 — see Git history for P10-T012; P10-T013 — see Git history for P10-T013; P10-T014 — see Git history for P10-T014; P10-T015 — see Git history for P10-T015; P10-T016 — see Git history for P10-T016; P10-T017 — see Git history for P10-T017; P10-T018 — see Git history for P10-T018; P10-T019 — see Git history for P10-T019; modal UI — see Git history for P10-T020
+- Completed Phase 10 task commits: P10-T001 — see Git history for P10-T001; P10-T002 — see Git history for P10-T002; P10-T003 — see Git history for P10-T003; P10-T004 — see Git history for P10-T004; P10-T005 — see Git history for P10-T005; P10-T006 — see Git history for P10-T006; P10-T007 — see Git history for P10-T007; P10-T008 — see Git history for P10-T008; P10-T009 — 0b69134; P10-T010 — see Git history for P10-T010; P10-T011 — see Git history for P10-T011; P10-T012 — see Git history for P10-T012; P10-T013 — see Git history for P10-T013; P10-T014 — see Git history for P10-T014; P10-T015 — see Git history for P10-T015; P10-T016 — see Git history for P10-T016; P10-T017 — see Git history for P10-T017; P10-T018 — see Git history for P10-T018; P10-T019 — see Git history for P10-T019; modal UI — see Git history for P10-T020; runtime integration — 780a76b
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-06 — P10-T020 runtime integration — complete
+Summary: Created character creator runtime integration with 3 new files and 3 modified files. `CharacterCreatorRuntime` class provides command registration, catalog gating (prevents modal opening when catalog is not current), persistence callback wiring to `CharacterRepository.create`, and modal instantiation. `CharacterPersistenceCallback` type added to modal constructor and invoked in `handleSave`. Plugin lifecycle wires catalog service updates on reconfigure/unload. 50 tests: constructor validation, catalog gating (current/error/loading/absent), persistence callback, modal opening, catalog lifecycle wiring.
+Validation: 4730 tests passing (50 new), typecheck and lint pass, build passes.
+Compatibility notes: Uses Obsidian Modal, ButtonComponent, Setting (approved APIs). Mobile-compatible. No Node/Electron-only APIs.
+Commit: 780a76b.
 
 2026-08-05 — Creator modal UI (bonus work) — complete
 Summary: Created creator modal UI with 5 new files. `CharacterCreatorModal` extends Obsidian Modal with 11-step workflow, navigation (Next/Back/Save), progress bar, diagnostics banner, review screen, and save gating. `StepController` maps 11 modal steps to 16 draft data sections. Uses only approved Obsidian APIs (Modal, ButtonComponent, Setting). 19 unit tests plus vitest setup for obsidian mocking.
