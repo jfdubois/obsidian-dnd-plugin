@@ -2,7 +2,7 @@
 
 ## Current work
 
-Phase 10 — Character creator
+Phase 10 — Character creator (production catalog generation complete, manual validation pending)
 
 ## PB8-004 automated gate
 
@@ -22,12 +22,12 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-P10-T020 corrective — desktop manual blocker repair (prerequisite enforcement, empty-source handling, source-policy filtering, error diagnostics)
+Phase 10 manual validation — create/save 2014 and 2024 level-one characters against `5etools-3c5d9d3` catalog, verify source filtering, dependency invalidation, saved file reopening
 
 ## Branch baseline
 
 - Branch: `dev`
-- Last synchronized commit: `24c7860` (P10-T020)
+- Last synchronized commit: `a961383` (P10-T013 orchestrator split + tests)
 - Working tree expected: clean
 
 ## Blockers
@@ -46,7 +46,11 @@ None recorded.
 - 5eTools source commit: `3c5d9d3175ca9637132011c75efd73aad7a2364d` pinned and verified clean.
 - Pinned source inventory: 502 files, 404 collections, 25672 raw records, 2801 `_copy` records, 317 nested copy chains, 259 `_preserve` payloads, 127 records with `_versions`, 359 version entries, 7 abstract bundles, 50 abstract implementations, 187 copy template references, 21 version template references.
 - Catalog schema version: 1.
-- Active catalog revision: none.
+- Active catalog revision: `5etools-3c5d9d3` (real production catalog, generated 2026-08-07).
+- Production catalog: 75 entities (39 × 2014, 36 × 2024), 2 kinds (background, species), 63 sources, 81 published files.
+- Validation: `valid: true`, 0 duplicates, 0 unresolved references, 38 unmapped-narrative warnings (non-blocking).
+- Smoke catalog `manual-smoke-001` preserved unchanged alongside production revision.
+- Catalog server verified serving `5etools-3c5d9d3` via Docker (nginx:alpine, port 8080).
 
 ## Plugin baseline
 
