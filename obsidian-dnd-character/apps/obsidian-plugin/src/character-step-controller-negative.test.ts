@@ -150,6 +150,17 @@ describe("StepController invalid resolution state", () => {
 describe("StepController skip logic edge cases", () => {
   it("next() skips spells and lands on review when spells is skippable", () => {
     const ctrl = new StepController(createEmptyCharacterDraft());
+    // Resolve prerequisites for equipment step
+    ctrl.markStepResolved("ruleset");
+    ctrl.markStepResolved("sources");
+    ctrl.markStepResolved("identity");
+    ctrl.markStepResolved("species");
+    ctrl.markStepResolved("background");
+    ctrl.markStepResolved("class");
+    ctrl.markStepResolved("abilities");
+    ctrl.markStepResolved("proficienciesAndLanguages");
+    // equipment-choices is not mapped to a CreatorStep; resolve manually
+    ctrl.draft.stepStatuses.set("equipment-choices", "resolved");
     ctrl.jumpTo("equipment");
     const nextStep = ctrl.next();
     expect(nextStep).toBe("review");

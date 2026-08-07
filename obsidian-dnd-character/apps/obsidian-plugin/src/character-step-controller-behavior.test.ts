@@ -68,6 +68,17 @@ describe("StepController skip logic", () => {
 
   it("next() skips spells step when not a spellcaster", () => {
     const ctrl = new StepController(createEmptyCharacterDraft());
+    // Resolve prerequisites for equipment step
+    ctrl.markStepResolved("ruleset");
+    ctrl.markStepResolved("sources");
+    ctrl.markStepResolved("identity");
+    ctrl.markStepResolved("species");
+    ctrl.markStepResolved("background");
+    ctrl.markStepResolved("class");
+    ctrl.markStepResolved("abilities");
+    ctrl.markStepResolved("proficienciesAndLanguages");
+    // equipment-choices is not mapped to a CreatorStep; resolve manually
+    ctrl.draft.stepStatuses.set("equipment-choices", "resolved");
     ctrl.jumpTo("equipment");
     expect(ctrl.next()).toBe("review");
   });
@@ -75,6 +86,17 @@ describe("StepController skip logic", () => {
   it("next() does not skip spells step when is a spellcaster", () => {
     const ctrl = new StepController(createEmptyCharacterDraft());
     ctrl.draft.spellEligibility.isSpellcaster = true;
+    // Resolve prerequisites for equipment step
+    ctrl.markStepResolved("ruleset");
+    ctrl.markStepResolved("sources");
+    ctrl.markStepResolved("identity");
+    ctrl.markStepResolved("species");
+    ctrl.markStepResolved("background");
+    ctrl.markStepResolved("class");
+    ctrl.markStepResolved("abilities");
+    ctrl.markStepResolved("proficienciesAndLanguages");
+    // equipment-choices is not mapped to a CreatorStep; resolve manually
+    ctrl.draft.stepStatuses.set("equipment-choices", "resolved");
     ctrl.jumpTo("equipment");
     expect(ctrl.next()).toBe("spells");
   });

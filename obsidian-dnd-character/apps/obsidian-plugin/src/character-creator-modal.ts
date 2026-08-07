@@ -25,6 +25,8 @@ import { selectRuleset } from "./character-ruleset-step";
 import type { CatalogService } from "./catalog/catalog-service";
 import { selectSources } from "./character-source-step";
 import { selectSpecies } from "./character-species-step";
+import { selectBackground } from "./character-background-step";
+import { selectClass } from "./character-class-step";
 import { selectAbilityScores } from "./character-ability-scores-step";
 import {
   selectProficiencies,
@@ -249,12 +251,23 @@ export class CharacterCreatorModal extends ObsidianModal {
       const errorBanner = this.diagnosticsEl.createDiv({
         cls: "dnd-creator-diagnostics-error",
       });
-      errorBanner.createEl("strong", { text: "Errors:" });
+      errorBanner.style.borderLeft = "3px solid var(--text-error)";
+      errorBanner.style.backgroundColor = "var(--background-secondary)";
+      errorBanner.style.padding = "8px 12px";
+      errorBanner.style.marginBottom = "8px";
+      errorBanner.style.borderRadius = "4px";
+      const errorTitle = errorBanner.createEl("strong", { text: "Errors:" });
+      errorTitle.style.color = "var(--text-error)";
+      errorTitle.style.display = "block";
+      errorTitle.style.marginBottom = "4px";
       for (const diag of errors) {
-        errorBanner.createEl("div", {
+        const item = errorBanner.createEl("div", {
           cls: "dnd-creator-diagnostic-item",
           text: diag.message,
         });
+        item.style.color = "var(--text-error)";
+        item.style.fontSize = "0.85em";
+        item.style.paddingLeft = "4px";
       }
     }
 
@@ -262,12 +275,23 @@ export class CharacterCreatorModal extends ObsidianModal {
       const warningBanner = this.diagnosticsEl.createDiv({
         cls: "dnd-creator-diagnostics-warning",
       });
-      warningBanner.createEl("strong", { text: "Warnings:" });
+      warningBanner.style.borderLeft = "3px solid var(--text-warning)";
+      warningBanner.style.backgroundColor = "var(--background-secondary)";
+      warningBanner.style.padding = "8px 12px";
+      warningBanner.style.marginBottom = "8px";
+      warningBanner.style.borderRadius = "4px";
+      const warningTitle = warningBanner.createEl("strong", { text: "Warnings:" });
+      warningTitle.style.color = "var(--text-warning)";
+      warningTitle.style.display = "block";
+      warningTitle.style.marginBottom = "4px";
       for (const diag of warnings) {
-        warningBanner.createEl("div", {
+        const item = warningBanner.createEl("div", {
           cls: "dnd-creator-diagnostic-item",
           text: diag.message,
         });
+        item.style.color = "var(--text-warning)";
+        item.style.fontSize = "0.85em";
+        item.style.paddingLeft = "4px";
       }
     }
   }
@@ -426,6 +450,19 @@ export class CharacterCreatorModal extends ObsidianModal {
   /* ── Catalog-aware step renderers ─────────────────────────────── */
 
   /**
+   * Filters catalog entity summaries by source-policy eligibility.
+   * Core entities are always eligible; source entities are only
+   * eligible if their sourceId is in the draft's enabledSourceIds.
+   */
+  private isEntityEligible(sourceId: string, access: string): boolean {
+    const enabled = this.controller.draft.sources.enabledSourceIds;
+    // Core entities are always eligible
+    if (access === "core") return true;
+    // Source entities require their source to be enabled
+    return enabled.includes(sourceId as never);
+  }
+
+  /**
    * Renders the Sources step: checkboxes for source books filtered
    * by the draft's selected ruleset. Uses catalog data when available.
    */
@@ -469,9 +506,25 @@ export class CharacterCreatorModal extends ObsidianModal {
 
       const filtered = sources.filter((s) => s.ruleset === ruleset);
       if (filtered.length === 0) {
-        container.createEl("p", {
-          text: `No source books available for the ${ruleset} ruleset.`,
-        });
+        // 2014 ruleset: no optional sources required; show info and auto-confirm
+        if (ruleset === "2014") {
+          const infoEl = container.createEl("p", {
+            cls: "dnd-creator-info-message",
+            text: "The 2014 ruleset uses core rules only — no optional source books are required.",
+          });
+          infoEl.style.borderLeft = "3px solid var(--text-accent)";
+          infoEl.style.paddingLeft = "8px";
+          infoEl.style.color = "var(--text-muted)";
+
+          // Auto-confirm empty source selection
+          if (selectSources(draft, [])) {
+            this.renderCurrentStep();
+          }
+        } else {
+          container.createEl("p", {
+            text: `No source books available for the ${ruleset} ruleset.`,
+          });
+        }
         return;
       }
 
@@ -553,10 +606,12 @@ export class CharacterCreatorModal extends ObsidianModal {
       const speciesIndex = await catalog.fetchIndex(revision, "species");
       loadingEl.remove();
 
-      const filtered = speciesIndex.filter((s) => s.ruleset === ruleset);
+      const filtered = speciesIndex.filter((s) =>
+        s.ruleset === ruleset && this.isEntityEligible(s.sourceId, s.access),
+      );
       if (filtered.length === 0) {
         container.createEl("p", {
-          text: `No species available for the ${ruleset} ruleset.`,
+          text: `No species available for the ${ruleset} ruleset with your selected sources.`,
         });
         return;
       }
@@ -627,10 +682,12 @@ export class CharacterCreatorModal extends ObsidianModal {
       const bgIndex = await catalog.fetchIndex(revision, "background");
       loadingEl.remove();
 
-      const filtered = bgIndex.filter((b) => b.ruleset === ruleset);
+      const filtered = bgIndex.filter((b) =>
+        b.ruleset === ruleset && this.isEntityEligible(b.sourceId, b.access),
+      );
       if (filtered.length === 0) {
         container.createEl("p", {
-          text: `No backgrounds available for the ${ruleset} ruleset.`,
+          text: `No backgrounds available for the ${ruleset} ruleset with your selected sources.`,
         });
         return;
       }
@@ -654,9 +711,7 @@ export class CharacterCreatorModal extends ObsidianModal {
         dropdown.addOptions(options)
           .setValue(currentId)
           .onChange((value) => {
-            if (value !== "") {
-              draft.background.backgroundId = createEntityId(value);
-              this.controller.markStepResolved("background");
+            if (value !== "" && selectBackground(draft, value)) {
               this.renderCurrentStep();
             }
           });
@@ -702,10 +757,12 @@ export class CharacterCreatorModal extends ObsidianModal {
       const classIndex = await catalog.fetchIndex(revision, "class");
       loadingEl.remove();
 
-      const filtered = classIndex.filter((c) => c.ruleset === ruleset);
+      const filtered = classIndex.filter((c) =>
+        c.ruleset === ruleset && this.isEntityEligible(c.sourceId, c.access),
+      );
       if (filtered.length === 0) {
         container.createEl("p", {
-          text: `No classes available for the ${ruleset} ruleset.`,
+          text: `No classes available for the ${ruleset} ruleset with your selected sources.`,
         });
         return;
       }
@@ -729,9 +786,7 @@ export class CharacterCreatorModal extends ObsidianModal {
         dropdown.addOptions(options)
           .setValue(currentId)
           .onChange((value) => {
-            if (value !== "") {
-              draft.class.classId = createEntityId(value);
-              this.controller.markStepResolved("class");
+            if (value !== "" && selectClass(draft, value)) {
               this.renderCurrentStep();
             }
           });

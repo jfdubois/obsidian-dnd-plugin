@@ -140,15 +140,28 @@ describe("StepController navigation", () => {
     expect(ctrl.currentStepIndex).toBe(10);
   });
 
-  it("jumpTo() navigates to middle steps", () => {
+  it("jumpTo() navigates to middle steps when prerequisites resolved", () => {
     const ctrl = makeController();
+    // Resolve upstream dependencies for abilities: ruleset, sources, identity, species, background, class
+    ctrl.markStepResolved("ruleset");
+    ctrl.markStepResolved("sources");
+    ctrl.markStepResolved("identity");
+    ctrl.markStepResolved("species");
+    ctrl.markStepResolved("background");
+    ctrl.markStepResolved("class");
     expect(ctrl.jumpTo("abilities")).toBe(true);
     expect(ctrl.currentStep).toBe("abilities");
     expect(ctrl.currentStepIndex).toBe(6);
   });
 
-  it("canNavigateTo() returns true for valid steps", () => {
+  it("canNavigateTo() returns true for valid steps when prerequisites resolved", () => {
     const ctrl = makeController();
+    // Resolve all steps so every step's prerequisites are met
+    for (const step of CREATOR_STEPS) {
+      ctrl.markStepResolved(step);
+    }
+    // equipment-choices is not mapped to a CreatorStep; resolve manually
+    ctrl.draft.stepStatuses.set("equipment-choices", "resolved");
     for (const step of CREATOR_STEPS) {
       expect(ctrl.canNavigateTo(step)).toBe(true);
     }

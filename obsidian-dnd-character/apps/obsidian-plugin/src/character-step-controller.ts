@@ -10,6 +10,7 @@ import {
   invalidateDependentSteps,
   getStepState,
 } from "./character-draft";
+import { getStepDependencies } from "./character-draft-dependency";
 import type {
   DraftRulesetData,
   DraftSourceData,
@@ -157,13 +158,29 @@ export class StepController {
   jumpTo(step: CreatorStep): boolean {
     const index = CREATOR_STEPS.indexOf(step);
     if (index === -1) return false;
+    if (!this.arePrerequisitesMet(step)) return false;
     this._currentIndex = index;
+    return true;
+  }
+
+  /** Returns true if all upstream prerequisite steps for a given step are resolved. */
+  private arePrerequisitesMet(step: CreatorStep): boolean {
+    const draftSteps = new Set(getDraftStepsForCreatorStep(step));
+    for (const draftStep of draftSteps) {
+      const dependencies = getStepDependencies(draftStep);
+      for (const dep of dependencies) {
+        // Only check dependencies that are outside this creator step's own draft steps
+        if (!draftSteps.has(dep) && getStepState(this.draft, dep) !== "resolved") {
+          return false;
+        }
+      }
+    }
     return true;
   }
 
   /** Returns true if the given step is a valid navigation target. */
   canNavigateTo(step: CreatorStep): boolean {
-    return CREATOR_STEPS.includes(step);
+    return CREATOR_STEPS.includes(step) && this.arePrerequisitesMet(step);
   }
 
   /* ── Step resolution ───────────────────────────────────────── */

@@ -18,6 +18,9 @@ import type { DraftStep } from "./character-draft-steps";
 import type { DraftDiagnostic } from "./character-draft-dependency";
 import { buildDraftDiagnostics } from "./character-draft-dependency";
 import { selectRuleset } from "./character-ruleset-step";
+import { selectSources } from "./character-source-step";
+import { selectBackground } from "./character-background-step";
+import { selectClass } from "./character-class-step";
 
 /* ── Mock Obsidian components ─────────────────────────────────── */
 
@@ -544,6 +547,9 @@ describe("CharacterCreatorModal", () => {
     it("direct step-tab jump and button navigation produce same controller state", () => {
       const modal = new CharacterCreatorModal(app, draft);
 
+      // Resolve ruleset so sources prerequisites are met
+      selectRuleset(draft, "2024");
+
       // Navigate via button to sources
       (modal as any).navigateNext();
       expect((modal as any).controller.currentStep).toBe("sources");
@@ -554,7 +560,7 @@ describe("CharacterCreatorModal", () => {
       expect((modal as any).controller.currentStep).toBe("ruleset");
       expect((modal as any).controller.currentStepIndex).toBe(0);
 
-      // Now jump directly via controller
+      // Now jump directly via controller (prerequisites met)
       (modal as any).controller.jumpTo("sources");
       expect((modal as any).controller.currentStep).toBe("sources");
       expect((modal as any).controller.currentStepIndex).toBe(1);
@@ -590,4 +596,182 @@ describe("CharacterCreatorModal", () => {
     });
   });
   /* eslint-enable @typescript-eslint/no-explicit-any */
+
+  /* ── P10-T020 Corrective Regression Tests (14 tests) ────────── */
+
+  describe("Issue A: Zero optional sources for 2014 ruleset", () => {
+    it("selectSources accepts empty array for 2014 ruleset", () => {
+      selectRuleset(draft, "2014");
+      const result = selectSources(draft, []);
+      expect(result).toBe(true);
+      expect(draft.sources.enabledSourceIds).toEqual([]);
+    });
+
+    it("selectSources requires sources step to not block on empty 2014 selection", () => {
+      selectRuleset(draft, "2014");
+      // Empty source selection should succeed for 2014
+      const result = selectSources(draft, []);
+      expect(result).toBe(true);
+      // Sources step should be marked resolved
+      expect(getStepState(draft, "sources")).toBe("resolved");
+    });
+  });
+
+  describe("Issue B: Navigation prerequisite enforcement", () => {
+    it("jumpTo species fails when ruleset is unresolved", () => {
+      const controller = new StepController(draft);
+      // Ruleset not resolved yet
+      expect(controller.jumpTo("species")).toBe(false);
+      expect(controller.currentStep).toBe("ruleset");
+    });
+
+    it("jumpTo species succeeds when ruleset and sources are resolved", () => {
+      const controller = new StepController(draft);
+      selectRuleset(draft, "2024");
+      selectSources(draft, []);
+      expect(controller.jumpTo("species")).toBe(true);
+      expect(controller.currentStep).toBe("species");
+    });
+
+    it("next() does not advance past unresolved prerequisites", () => {
+      const controller = new StepController(draft);
+      // Resolve ruleset but not sources; species depends on both
+      selectRuleset(draft, "2024");
+      // Move to sources step
+      controller.next();
+      expect(controller.currentStep).toBe("sources");
+      // Without resolving sources, next should still advance to identity
+      // (identity has no dependencies), not skip to species
+      controller.next();
+      expect(controller.currentStep).toBe("identity");
+    });
+  });
+
+  describe("Issue C: Atomic step selection semantics", () => {
+    it("selectBackground requires ruleset resolved", () => {
+      // Ruleset not resolved
+      const result = selectBackground(draft, "background:acolyte");
+      expect(result).toBe(false);
+    });
+
+    it("selectBackground requires sources resolved", () => {
+      selectRuleset(draft, "2024");
+      // Sources not resolved
+      const result = selectBackground(draft, "background:acolyte");
+      expect(result).toBe(false);
+    });
+
+    it("selectClass requires ruleset and sources resolved", () => {
+      // Neither resolved
+      const result = selectClass(draft, "class:fighter");
+      expect(result).toBe(false);
+    });
+
+    it("selectClass marks class step resolved on success", () => {
+      selectRuleset(draft, "2024");
+      selectSources(draft, []);
+      const result = selectClass(draft, "class:fighter");
+      expect(result).toBe(true);
+      expect(getStepState(draft, "class")).toBe("resolved");
+    });
+  });
+
+  describe("Issue D: Source-policy eligibility filtering", () => {
+    it("isEntityEligible returns true for core access", () => {
+      const modal = new CharacterCreatorModal(app, draft);
+      selectRuleset(draft, "2024");
+      selectSources(draft, []);
+      // @ts-expect-error — testing private method
+      expect(modal.isEntityEligible("phb", "core")).toBe(true);
+    });
+
+    it("isEntityEligible returns false for source access when source not enabled", () => {
+      const modal = new CharacterCreatorModal(app, draft);
+      selectRuleset(draft, "2024");
+      selectSources(draft, []);
+      // @ts-expect-error — testing private method
+      expect(modal.isEntityEligible("xphb", "source")).toBe(false);
+    });
+
+    it("isEntityEligible returns true for source access when source is enabled", () => {
+      const modal = new CharacterCreatorModal(app, draft);
+      selectRuleset(draft, "2024");
+      selectSources(draft, ["xphb" as never]);
+      // @ts-expect-error — testing private method
+      expect(modal.isEntityEligible("xphb", "source")).toBe(true);
+    });
+  });
+
+  describe("Issue E: Error diagnostic presentation", () => {
+    it("renderDiagnosticsBanner renders error banner with inline styles", () => {
+      draft.diagnostics = [
+        {
+          step: "species" as DraftStep,
+          message: "Test error",
+          severity: "error" as const,
+        },
+      ];
+      const modal = new CharacterCreatorModal(app, draft);
+      // Mock Obsidian Component with createDiv/createEl/empty
+      const createdElements: Record<string, unknown> = {};
+      let createDivCallCount = 0;
+      let createElCallCount = 0;
+      const mockEl = {
+        empty: vi.fn(),
+        createDiv: vi.fn((opts) => {
+          createDivCallCount++;
+          const key = `div-${createDivCallCount}`;
+          createdElements[key] = {
+            cls: opts?.cls,
+            style: {},
+            createEl: vi.fn((tag, tagOpts) => {
+              createElCallCount++;
+              const childKey = `el-${createElCallCount}`;
+              createdElements[childKey] = {
+                text: tagOpts?.text,
+                style: {},
+              };
+              return createdElements[childKey];
+            }),
+          };
+          return createdElements[key];
+        }),
+      } as unknown as typeof modal["contentEl"];
+      // @ts-expect-error — testing private member
+      modal.diagnosticsEl = mockEl;
+      // @ts-expect-error — testing private method
+      modal.renderDiagnosticsBanner();
+
+      expect(mockEl.createDiv).toHaveBeenCalledWith(
+        expect.objectContaining({ cls: "dnd-creator-diagnostics-error" }),
+      );
+    });
+
+    it("renderDiagnosticsBanner renders warning banner with inline styles", () => {
+      draft.diagnostics = [
+        {
+          step: "species" as DraftStep,
+          message: "Test warning",
+          severity: "warning" as const,
+        },
+      ];
+      const modal = new CharacterCreatorModal(app, draft);
+      const mockEl = {
+        empty: vi.fn(),
+        createDiv: vi.fn((opts) => ({
+          cls: opts?.cls,
+          style: {},
+          createEl: vi.fn(() => ({ style: {} })),
+        })),
+      } as unknown as typeof modal["contentEl"];
+      // @ts-expect-error — testing private member
+      modal.diagnosticsEl = mockEl;
+      // @ts-expect-error — testing private method
+      modal.renderDiagnosticsBanner();
+
+      expect(mockEl.createDiv).toHaveBeenCalledWith(
+        expect.objectContaining({ cls: "dnd-creator-diagnostics-warning" }),
+      );
+    });
+  });
 });
