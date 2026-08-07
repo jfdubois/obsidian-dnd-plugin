@@ -5,7 +5,7 @@ import { makeCopyModRawRecord, ctx } from "./item-normalizer-test-helpers";
 describe("normalizeItems - edge cases", () => {
   describe("diagnostic structure", () => {
     it("includes record name in diagnostic", () => {
-      const record = makeCopyModRawRecord({ name: "Exotic Blade", source: "DMG" });
+      const record = makeCopyModRawRecord({ name: "Exotic Blade", source: "MM" });
       const input: ItemNormalizerInput = { records: [record], context: ctx };
 
       const result = normalizeItems(input);
@@ -13,7 +13,7 @@ describe("normalizeItems - edge cases", () => {
     });
 
     it("includes entity kind in diagnostic", () => {
-      const record = makeCopyModRawRecord({ name: "Dagger", source: "DMG" });
+      const record = makeCopyModRawRecord({ name: "Dagger", source: "MM" });
       const input: ItemNormalizerInput = { records: [record], context: ctx };
 
       const result = normalizeItems(input);
@@ -21,7 +21,7 @@ describe("normalizeItems - edge cases", () => {
     });
 
     it("includes record index in diagnostic", () => {
-      const record = makeCopyModRawRecord({ name: "Dagger", source: "DMG" });
+      const record = makeCopyModRawRecord({ name: "Dagger", source: "MM" });
       const input: ItemNormalizerInput = { records: [record], context: ctx };
 
       const result = normalizeItems(input);
@@ -29,7 +29,7 @@ describe("normalizeItems - edge cases", () => {
     });
 
     it("diagnostics are frozen", () => {
-      const record = makeCopyModRawRecord({ name: "Dagger", source: "DMG" });
+      const record = makeCopyModRawRecord({ name: "Dagger", source: "MM" });
       const input: ItemNormalizerInput = { records: [record], context: ctx };
 
       const result = normalizeItems(input);

@@ -6,7 +6,9 @@ import type { FrozenReadonlySet } from "./species-source-inventory";
 
 export const SUPPORTED_ITEM_SOURCES = Object.freeze([
   Object.freeze({ source: "PHB", ruleset: "2014" }),
+  Object.freeze({ source: "DMG", ruleset: "2014" }),
   Object.freeze({ source: "XPHB", ruleset: "2024" }),
+  Object.freeze({ source: "XDMG", ruleset: "2024" }),
 ] as const);
 
 export type SupportedItemSourceEntry = (typeof SUPPORTED_ITEM_SOURCES)[number];
@@ -57,7 +59,9 @@ export interface ItemSourceScopeDiagnostic {
 
 export type ItemSourceScopeSuccess =
   | { readonly ok: true; readonly record: RawRecord; readonly source: "PHB"; readonly ruleset: "2014"; }
-  | { readonly ok: true; readonly record: RawRecord; readonly source: "XPHB"; readonly ruleset: "2024"; };
+  | { readonly ok: true; readonly record: RawRecord; readonly source: "DMG"; readonly ruleset: "2014"; }
+  | { readonly ok: true; readonly record: RawRecord; readonly source: "XPHB"; readonly ruleset: "2024"; }
+  | { readonly ok: true; readonly record: RawRecord; readonly source: "XDMG"; readonly ruleset: "2024"; };
 
 export interface ItemSourceScopeFailure {
   readonly ok: false;
@@ -148,11 +152,27 @@ export function classifyItemSourceScope(
         ruleset: "2014" as const,
       });
     }
-    // source === "XPHB" (exhaustive check)
+    if (source === "DMG") {
+      return Object.freeze({
+        ok: true,
+        record: input.record,
+        source: "DMG" as const,
+        ruleset: "2014" as const,
+      });
+    }
+    if (source === "XPHB") {
+      return Object.freeze({
+        ok: true,
+        record: input.record,
+        source: "XPHB" as const,
+        ruleset: "2024" as const,
+      });
+    }
+    // source === "XDMG" (exhaustive check)
     return Object.freeze({
       ok: true,
       record: input.record,
-      source: "XPHB" as const,
+      source: "XDMG" as const,
       ruleset: "2024" as const,
     });
   }
@@ -164,7 +184,7 @@ export function classifyItemSourceScope(
       diagnostic: buildDiagnostic(
         input,
         "UNSUPPORTED_ITEM_SOURCE",
-        `Source "${source}" is a known pinned source but is excluded from the initial item normalizer scope (PHB and XPHB only).`,
+        `Source "${source}" is a known pinned source but is excluded from the initial item normalizer scope.`,
         source,
       ),
     });

@@ -65,6 +65,106 @@ export function extractItemSummary(remaining: Record<string, unknown>): string |
 
 /* ── Category extraction ───────────────────────────────────────── */
 
+/**
+ * Maps 5eTools item type abbreviations (from parser.js ITM_TYP_ABV__*)
+ * to catalog EquipmentCategory values.
+ *
+ * Source: external/5etools-src/js/parser.js
+ * - M = Melee Weapon
+ * - R = Ranged Weapon
+ * - A = Ammunition
+ * - AF = Ammunition Futuristic
+ * - LA = Light Armor
+ * - MA = Medium Armor
+ * - HA = Heavy Armor
+ * - S = Shield
+ * - G = Adventuring Gear
+ * - T = Tool
+ * - AT = Artisan Tool
+ * - INS = Instrument
+ * - GS = Gaming Set
+ * - TAH = Tack and Harness
+ * - TG = Trade Good
+ * - P = Potion
+ * - SC = Scroll
+ * - FD = Food and Drink
+ * - EXP = Explosive
+ * - IDG = Illegal Drug
+ * - SCF = Spellcasting Focus
+ * - RD = Rod
+ * - RG = Ring
+ * - WD = Wand
+ * - $ = Treasure
+ * - $A = Treasure Art Object
+ * - $C = Treasure Coinage
+ * - $G = Treasure Gemstone
+ * - OTH = Other
+ * - GV = Generic Variant
+ * - TB = Trade Bar
+ * - MNT = Mount
+ * - VEH = Vehicle Land
+ * - AIR = Vehicle Air
+ * - SHP = Vehicle Water
+ * - SPC = Vehicle Space
+ */
+const ITEM_TYPE_TO_CATEGORY: ReadonlyMap<string, EquipmentCategory> = Object.freeze(
+  new Map<string, EquipmentCategory>([
+    // Weapons
+    ["M", "weapon"],
+    ["R", "weapon"],
+    ["A", "weapon"],
+    ["AF", "weapon"],
+    // Armor
+    ["LA", "armor"],
+    ["MA", "armor"],
+    ["HA", "armor"],
+    ["S", "armor"],
+    // Adventuring gear
+    ["G", "adventuring-gear"],
+    ["T", "adventuring-gear"],
+    ["AT", "adventuring-gear"],
+    ["INS", "adventuring-gear"],
+    ["GS", "adventuring-gear"],
+    ["TAH", "adventuring-gear"],
+    ["TG", "adventuring-gear"],
+    // Consumables
+    ["P", "consumable"],
+    ["SC", "consumable"],
+    ["FD", "consumable"],
+    ["EXP", "consumable"],
+    ["IDG", "consumable"],
+    // Other (magic item types, treasure, vehicles, mounts, etc.)
+    ["SCF", "other"],
+    ["RD", "other"],
+    ["RG", "other"],
+    ["WD", "other"],
+    ["$", "other"],
+    ["$A", "other"],
+    ["$C", "other"],
+    ["$G", "other"],
+    ["OTH", "other"],
+    ["GV", "other"],
+    ["TB", "other"],
+    ["MNT", "other"],
+    ["VEH", "other"],
+    ["AIR", "other"],
+    ["SHP", "other"],
+    ["SPC", "other"],
+  ]),
+);
+
+/**
+ * Strips the 2024 pipe-notation suffix from a type code.
+ * e.g., "S|XPHB" -> "S", "MA|XDMG" -> "MA", "G" -> "G"
+ */
+function stripTypeSourceSuffix(typeCode: string): string {
+  const pipeIndex = typeCode.indexOf("|");
+  if (pipeIndex !== -1) {
+    return typeCode.substring(0, pipeIndex);
+  }
+  return typeCode;
+}
+
 const KNOWN_CATEGORIES: ReadonlySet<string> = new Set([
   "weapon",
   "armor",
@@ -75,16 +175,26 @@ const KNOWN_CATEGORIES: ReadonlySet<string> = new Set([
 ]);
 
 export function extractItemCategory(remaining: Record<string, unknown>): EquipmentCategory {
-  // Check "type" field first (common in 5eTools item data)
+  // Check "type" field first (5eTools item data uses type abbreviations)
   const type = remaining.type;
-  if (typeof type === "string") {
+  if (typeof type === "string" && type.length > 0) {
+    // Strip 2024 pipe-notation suffix (e.g., "S|XPHB" -> "S")
+    const baseType = stripTypeSourceSuffix(type);
+
+    // Look up in the 5eTools type-to-category mapping
+    const mapped = ITEM_TYPE_TO_CATEGORY.get(baseType);
+    if (mapped !== undefined) {
+      return mapped;
+    }
+
+    // Fallback: check if the type is already a normalized category name
     const normalized = type.toLowerCase().trim().replace(/\s+/g, "-");
     if (KNOWN_CATEGORIES.has(normalized)) {
       return normalized as EquipmentCategory;
     }
   }
 
-  // Check "category" field
+  // Check "category" field (some formats use explicit category)
   const category = remaining.category;
   if (typeof category === "string") {
     const normalized = category.toLowerCase().trim().replace(/\s+/g, "-");

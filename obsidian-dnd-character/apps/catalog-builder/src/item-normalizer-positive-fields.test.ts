@@ -41,6 +41,160 @@ describe("normalizeItems - field extraction", () => {
     expect(result.items[0]!.category).toBe("weapon");
   });
 
+  describe("5eTools type abbreviation to category mapping", () => {
+    it("maps PHB melee weapon type 'M' to weapon category", () => {
+      const record = makeCopyModRawRecord({ name: "Longsword", source: "PHB", type: "M" });
+      const input: ItemNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeItems(input);
+      expect(result.items[0]!.category).toBe("weapon");
+    });
+
+    it("maps PHB ranged weapon type 'R' to weapon category", () => {
+      const record = makeCopyModRawRecord({ name: "Shortbow", source: "PHB", type: "R" });
+      const input: ItemNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeItems(input);
+      expect(result.items[0]!.category).toBe("weapon");
+    });
+
+    it("maps PHB light armor type 'LA' to armor category", () => {
+      const record = makeCopyModRawRecord({ name: "Leather Armor", source: "PHB", type: "LA" });
+      const input: ItemNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeItems(input);
+      expect(result.items[0]!.category).toBe("armor");
+    });
+
+    it("maps PHB medium armor type 'MA' to armor category", () => {
+      const record = makeCopyModRawRecord({ name: "Studded Leather", source: "PHB", type: "MA" });
+      const input: ItemNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeItems(input);
+      expect(result.items[0]!.category).toBe("armor");
+    });
+
+    it("maps PHB heavy armor type 'HA' to armor category", () => {
+      const record = makeCopyModRawRecord({ name: "Plate", source: "PHB", type: "HA" });
+      const input: ItemNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeItems(input);
+      expect(result.items[0]!.category).toBe("armor");
+    });
+
+    it("maps PHB shield type 'S' to armor category", () => {
+      const record = makeCopyModRawRecord({ name: "Shield", source: "PHB", type: "S" });
+      const input: ItemNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeItems(input);
+      expect(result.items[0]!.category).toBe("armor");
+    });
+
+    it("maps PHB adventuring gear type 'G' to adventuring-gear category", () => {
+      const record = makeCopyModRawRecord({ name: "Backpack", source: "PHB", type: "G" });
+      const input: ItemNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeItems(input);
+      expect(result.items[0]!.category).toBe("adventuring-gear");
+    });
+
+    it("maps PHB tool type 'T' to adventuring-gear category", () => {
+      const record = makeCopyModRawRecord({ name: "Alchemist's Supplies", source: "PHB", type: "T" });
+      const input: ItemNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeItems(input);
+      expect(result.items[0]!.category).toBe("adventuring-gear");
+    });
+
+    it("maps PHB gaming set type 'GS' to adventuring-gear category", () => {
+      const record = makeCopyModRawRecord({ name: "Dice Set", source: "PHB", type: "GS" });
+      const input: ItemNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeItems(input);
+      expect(result.items[0]!.category).toBe("adventuring-gear");
+    });
+
+    it("maps PHB potion type 'P' to consumable category", () => {
+      const record = makeCopyModRawRecord({ name: "Potion of Healing", source: "PHB", type: "P" });
+      const input: ItemNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeItems(input);
+      expect(result.items[0]!.category).toBe("consumable");
+    });
+
+    it("maps PHB food and drink type 'FD' to consumable category", () => {
+      const record = makeCopyModRawRecord({ name: "Wine", source: "PHB", type: "FD" });
+      const input: ItemNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeItems(input);
+      expect(result.items[0]!.category).toBe("consumable");
+    });
+
+    it("maps PHB spellcasting focus type 'SCF' to other category", () => {
+      const record = makeCopyModRawRecord({ name: "Crystal", source: "PHB", type: "SCF" });
+      const input: ItemNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeItems(input);
+      expect(result.items[0]!.category).toBe("other");
+    });
+
+    it("maps DMG treasure coin type '$C' to other category", () => {
+      const record = makeCopyModRawRecord({ name: "Gold Piece", source: "DMG", type: "$C" });
+      const input: ItemNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeItems(input);
+      expect(result.items[0]!.category).toBe("other");
+    });
+
+    it("maps XPHB pipe-notation type 'S|XPHB' to armor category", () => {
+      const record = makeCopyModRawRecord({ name: "Shield", source: "XPHB", type: "S|XPHB" });
+      const input: ItemNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeItems(input);
+      expect(result.items[0]!.category).toBe("armor");
+    });
+
+    it("maps XPHB pipe-notation type 'MA|XPHB' to armor category", () => {
+      const record = makeCopyModRawRecord({ name: "Studded Leather", source: "XPHB", type: "MA|XPHB" });
+      const input: ItemNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeItems(input);
+      expect(result.items[0]!.category).toBe("armor");
+    });
+
+    it("maps XPHB pipe-notation type 'G|XPHB' to adventuring-gear category", () => {
+      const record = makeCopyModRawRecord({ name: "Backpack", source: "XPHB", type: "G|XPHB" });
+      const input: ItemNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeItems(input);
+      expect(result.items[0]!.category).toBe("adventuring-gear");
+    });
+
+    it("maps XPHB pipe-notation type 'SCF|XPHB' to other category", () => {
+      const record = makeCopyModRawRecord({ name: "Crystal", source: "XPHB", type: "SCF|XPHB" });
+      const input: ItemNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeItems(input);
+      expect(result.items[0]!.category).toBe("other");
+    });
+
+    it("maps XDMG pipe-notation type 'P|XDMG' to consumable category", () => {
+      const record = makeCopyModRawRecord({ name: "Potion of Healing", source: "XDMG", type: "P|XDMG" });
+      const input: ItemNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeItems(input);
+      expect(result.items[0]!.category).toBe("consumable");
+    });
+
+    it("maps XDMG pipe-notation type 'SC|XDMG' to consumable category", () => {
+      const record = makeCopyModRawRecord({ name: "Scroll of Fireball", source: "XDMG", type: "SC|XDMG" });
+      const input: ItemNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeItems(input);
+      expect(result.items[0]!.category).toBe("consumable");
+    });
+  });
+
   it("extracts item category from category field", () => {
     const record = makeCopyModRawRecord({ name: "Leather Armor", category: "armor" });
     const input: ItemNormalizerInput = { records: [record], context: ctx };

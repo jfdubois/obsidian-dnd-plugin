@@ -24,13 +24,24 @@ describe("normalizeItems - source failures", () => {
       expect(result.diagnostics[0]!.code).toBe("EXCLUDED_SOURCE");
     });
 
-    it("rejects DMG source with EXCLUDED_SOURCE", () => {
-      const record = makeCopyModRawRecord({ name: "Dagger", source: "DMG" });
+    it("accepts DMG source as supported 2014 magic item source", () => {
+      const record = makeCopyModRawRecord({ name: "Magic Sword", source: "DMG" });
       const input: ItemNormalizerInput = { records: [record], context: ctx };
 
       const result = normalizeItems(input);
-      expect(result.items.length).toBe(0);
-      expect(result.diagnostics[0]!.code).toBe("EXCLUDED_SOURCE");
+      expect(result.items.length).toBe(1);
+      expect(result.items[0]!.ruleset).toBe("2014");
+      expect(result.diagnostics.length).toBe(0);
+    });
+
+    it("accepts XDMG source as supported 2024 magic item source", () => {
+      const record = makeCopyModRawRecord({ name: "Wand of Magic", source: "XDMG" });
+      const input: ItemNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeItems(input);
+      expect(result.items.length).toBe(1);
+      expect(result.items[0]!.ruleset).toBe("2024");
+      expect(result.diagnostics.length).toBe(0);
     });
 
     it("rejects MM source with EXCLUDED_SOURCE", () => {
@@ -76,15 +87,18 @@ describe("normalizeItems - source failures", () => {
   });
 
   describe("mixed batch handling", () => {
-    it("accepts PHB items and rejects unsupported sources in same batch", () => {
-      const valid = makeCopyModRawRecord({ name: "Dagger" });
-      const invalid = makeCopyModRawRecord({ name: "Magic Sword", source: "DMG" });
+    it("accepts PHB and DMG items and rejects unsupported sources in same batch", () => {
+      const validPhb = makeCopyModRawRecord({ name: "Dagger" });
+      const validDmg = makeCopyModRawRecord({ name: "Magic Sword", source: "DMG" });
+      const invalid = makeCopyModRawRecord({ name: "Exotic Item", source: "XGtE" });
 
-      const input: ItemNormalizerInput = { records: [valid, invalid], context: ctx };
+      const input: ItemNormalizerInput = { records: [validPhb, validDmg, invalid], context: ctx };
 
       const result = normalizeItems(input);
-      expect(result.items.length).toBe(1);
+      expect(result.items.length).toBe(2);
       expect(result.items[0]!.name).toBe("Dagger");
+      expect(result.items[1]!.name).toBe("Magic Sword");
+      expect(result.items[1]!.ruleset).toBe("2014");
       expect(result.diagnostics.length).toBe(1);
       expect(result.diagnostics[0]!.code).toBe("EXCLUDED_SOURCE");
     });
@@ -105,9 +119,9 @@ describe("normalizeItems - source failures", () => {
 
     it("rejects all items when none are from supported sources", () => {
       const records = [
-        makeCopyModRawRecord({ name: "A", source: "DMG" }),
-        makeCopyModRawRecord({ name: "B", source: "MM" }),
-        makeCopyModRawRecord({ name: "C", source: "XGtE" }),
+        makeCopyModRawRecord({ name: "A", source: "MM" }),
+        makeCopyModRawRecord({ name: "B", source: "XGtE" }),
+        makeCopyModRawRecord({ name: "C", source: "ERLW" }),
       ];
       const input: ItemNormalizerInput = { records, context: ctx };
 
