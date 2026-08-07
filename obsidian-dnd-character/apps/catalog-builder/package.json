@@ -8,7 +8,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc",
-    "publish:catalog-smoke": "npm run build && node --experimental-loader ./catalog-node-loader.config.mjs dist/catalog-smoke-publish.js"
+    "publish:catalog-smoke": "npm run build && node --experimental-loader ./catalog-node-loader.config.mjs dist/catalog-smoke-publish.js",
+    "publish:catalog-real": "npm run build && node --experimental-loader ./catalog-node-loader.config.mjs dist/catalog-build-cli.js --clone-path ../../external/5etools-src --output-root ../catalog-server"
   },
   "dependencies": {
     "@obsidian-dnd/domain": "0.0.0",
