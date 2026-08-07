@@ -22,6 +22,7 @@ import {
   normalizeClassIndexKind,
 } from "./catalog-build-normalizers.js";
 import { loadSources } from "./catalog-build-sources.js";
+import { validateRequiredEntityKinds } from "./catalog-build-publication-guard.js";
 
 export interface CatalogBuildResult {
   readonly publishResult: PublishCatalogReleaseResult;
@@ -167,6 +168,12 @@ export function buildCatalog(
   /* Step 10b: Load sources from books.json */
   const booksPath = path.join(config.clonePath, "data", "books.json");
   const sources = loadSources(booksPath, diagnostics);
+
+  /* Step 10c: Validate required entity kinds before publication */
+  const missingKindErrors = validateRequiredEntityKinds(allEntities);
+  if (missingKindErrors.length > 0) {
+    return createFailureResult([...missingKindErrors], sourceManifest.commitHash);
+  }
 
   /* Step 11: Publish catalog */
   const publishResult = publishCatalogRelease({
