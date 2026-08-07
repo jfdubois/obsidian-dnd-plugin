@@ -5,7 +5,62 @@ import { loadClassIndex } from "./class-index-loader";
 
 /* ── Helpers ───────────────────────────────────────────────────── */
 
-function classRec(
+/**
+ * Creates a PHB (2014) class record with pinned 5eTools shapes:
+ * - hd: { number, faces }
+ * - proficiency: ["str", "con"] (saving throws + primary abilities)
+ */
+function classRec2014(
+  source: string,
+  name = "Fighter",
+  hdFaces = 10,
+  proficiency: string[] = ["str", "con"],
+  rem: Record<string, unknown> = {},
+): RawRecord {
+  return {
+    name,
+    source,
+    remaining: {
+      hd: { number: 1, faces: hdFaces },
+      proficiency,
+      ...rem,
+    },
+  };
+}
+
+/**
+ * Creates an XPHB (2024) class record with pinned 5eTools shapes:
+ * - hd: { number, faces }
+ * - primaryAbility: [{ str: true, cha: true }]
+ * - proficiencies: [{ name: "...", type: "saving_throw", ability: "str" }]
+ */
+function classRec2024(
+  source: string,
+  name = "Fighter",
+  hdFaces = 10,
+  primaryAbility: Record<string, boolean>[] = [{ str: true }],
+  proficiencies: Array<{ name: string; type: string; ability: string }> = [
+    { name: "Athletics", type: "saving_throw", ability: "str" },
+    { name: "Endurance", type: "saving_throw", ability: "con" },
+  ],
+  rem: Record<string, unknown> = {},
+): RawRecord {
+  return {
+    name,
+    source,
+    remaining: {
+      hd: { number: 1, faces: hdFaces },
+      primaryAbility,
+      proficiencies,
+      ...rem,
+    },
+  };
+}
+
+/**
+ * Legacy helper for test fixtures that use old field names.
+ */
+function classRecLegacy(
   source: string,
   name = "Fighter",
   hitdie = 10,
@@ -98,8 +153,8 @@ describe("loadClassIndex - empty input", () => {
 /* ── loadClassIndex - positive indexing ────────────────────────── */
 
 describe("loadClassIndex - positive indexing", () => {
-  it("indexes a PHB class correctly", () => {
-    const fighter = classRec("PHB", "Fighter", 10, ["STR"], ["STR", "CON"]);
+  it("indexes a PHB class with pinned 5eTools shapes", () => {
+    const fighter = classRec2014("PHB", "Fighter", 10, ["str", "con"]);
     const r = loadClassIndex({
       validatedFiles: makeValidatedFiles([fighter]),
       copyResolverContext: emptyCopyContext,
@@ -113,12 +168,15 @@ describe("loadClassIndex - positive indexing", () => {
     expect(entry.ruleset).toBe("2014");
     expect(entry.isSubclass).toBe(false);
     expect(entry.hitDie).toBe(10);
-    expect(entry.primaryAbilities).toEqual(["STR"]);
+    expect(entry.primaryAbilities).toEqual(["STR", "CON"]);
     expect(entry.savingThrowProficiencies).toEqual(["STR", "CON"]);
   });
 
-  it("indexes an XPHB class correctly", () => {
-    const fighter = classRec("XPHB", "Fighter", 10, ["STR"], ["STR", "CON"]);
+  it("indexes an XPHB class with pinned 5eTools shapes", () => {
+    const fighter = classRec2024("XPHB", "Fighter", 10, [{ str: true }], [
+      { name: "Athletics", type: "saving_throw", ability: "str" },
+      { name: "Endurance", type: "saving_throw", ability: "con" },
+    ]);
     const r = loadClassIndex({
       validatedFiles: makeValidatedFiles([fighter]),
       copyResolverContext: emptyCopyContext,
@@ -130,6 +188,26 @@ describe("loadClassIndex - positive indexing", () => {
     expect(entry.name).toBe("Fighter");
     expect(entry.source).toBe("XPHB");
     expect(entry.ruleset).toBe("2024");
+    expect(entry.hitDie).toBe(10);
+    expect(entry.primaryAbilities).toEqual(["STR"]);
+    expect(entry.savingThrowProficiencies).toEqual(["STR", "CON"]);
+  });
+
+  it("indexes an XPHB caster class with multi-ability primaryAbility", () => {
+    const cleric = classRec2024("XPHB", "Cleric", 8, [{ wis: true, cha: true }], [
+      { name: "Insight", type: "saving_throw", ability: "wis" },
+      { name: "Persuasion", type: "saving_throw", ability: "cha" },
+    ]);
+    const r = loadClassIndex({
+      validatedFiles: makeValidatedFiles([cleric]),
+      copyResolverContext: emptyCopyContext,
+      sourceScopeContext: ctx,
+      entityKind: "class",
+    });
+    expect(r.classes).toHaveLength(1);
+    const entry = r.classes[0]!;
+    expect(entry.primaryAbilities).toEqual(["WIS", "CHA"]);
+    expect(entry.savingThrowProficiencies).toEqual(["WIS", "CHA"]);
   });
 
   it("identifies subclass by parent field", () => {
@@ -147,7 +225,7 @@ describe("loadClassIndex - positive indexing", () => {
   });
 
   it("base class has no parent", () => {
-    const fighter = classRec("PHB", "Fighter", 10, ["STR"], ["STR", "CON"]);
+    const fighter = classRec2014("PHB", "Fighter", 10, ["str", "con"]);
     const r = loadClassIndex({
       validatedFiles: makeValidatedFiles([fighter]),
       copyResolverContext: emptyCopyContext,
@@ -161,8 +239,8 @@ describe("loadClassIndex - positive indexing", () => {
   });
 
   it("indexes multiple classes", () => {
-    const fighter = classRec("PHB", "Fighter", 10, ["STR"], ["STR", "CON"]);
-    const wizard = classRec("PHB", "Wizard", 6, ["INT"], ["INT", "WIS"]);
+    const fighter = classRec2014("PHB", "Fighter", 10, ["str", "con"]);
+    const wizard = classRec2014("PHB", "Wizard", 6, ["int", "wis"]);
     const r = loadClassIndex({
       validatedFiles: makeValidatedFiles([fighter, wizard]),
       copyResolverContext: emptyCopyContext,
@@ -175,7 +253,7 @@ describe("loadClassIndex - positive indexing", () => {
   });
 
   it("summary counts base and subclass correctly", () => {
-    const fighter = classRec("PHB", "Fighter", 10, ["STR"], ["STR", "CON"]);
+    const fighter = classRec2014("PHB", "Fighter", 10, ["str", "con"]);
     const champion = subclassRec("PHB", "Champion", "Fighter");
     const r = loadClassIndex({
       validatedFiles: makeValidatedFiles([fighter, champion]),
@@ -187,13 +265,28 @@ describe("loadClassIndex - positive indexing", () => {
     expect(r.summary.subclasses).toBe(1);
     expect(r.summary.indexedClasses).toBe(2);
   });
+
+  it("falls back to legacy field names when pinned shapes missing", () => {
+    const fighter = classRecLegacy("PHB", "Fighter", 10, ["STR"], ["STR", "CON"]);
+    const r = loadClassIndex({
+      validatedFiles: makeValidatedFiles([fighter]),
+      copyResolverContext: emptyCopyContext,
+      sourceScopeContext: ctx,
+      entityKind: "class",
+    });
+    expect(r.classes).toHaveLength(1);
+    const entry = r.classes[0]!;
+    expect(entry.hitDie).toBe(10);
+    expect(entry.primaryAbilities).toEqual(["STR"]);
+    expect(entry.savingThrowProficiencies).toEqual(["STR", "CON"]);
+  });
 });
 
 /* ── loadClassIndex - excluded sources ─────────────────────────── */
 
 describe("loadClassIndex - excluded sources", () => {
   it("excludes non-PHB/XPHB sources with diagnostic", () => {
-    const artificer = classRec("XGtE", "Artificer", 8, ["INT"], ["INT", "CON"]);
+    const artificer = classRecLegacy("XGtE", "Artificer", 8, ["INT"], ["INT", "CON"]);
     const r = loadClassIndex({
       validatedFiles: makeValidatedFiles([artificer]),
       copyResolverContext: emptyCopyContext,
@@ -207,7 +300,7 @@ describe("loadClassIndex - excluded sources", () => {
   });
 
   it("unknown source emits UNKNOWN_SOURCE diagnostic", () => {
-    const fake = classRec("FAKE", "FakeClass", 8, ["STR"], ["STR"]);
+    const fake = classRecLegacy("FAKE", "FakeClass", 8, ["STR"], ["STR"]);
     const r = loadClassIndex({
       validatedFiles: makeValidatedFiles([fake]),
       copyResolverContext: emptyCopyContext,

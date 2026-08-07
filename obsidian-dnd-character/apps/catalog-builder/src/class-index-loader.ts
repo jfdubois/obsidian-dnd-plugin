@@ -22,6 +22,10 @@ import {
   isSubclassRecord,
   extractParentId,
   extractHitDie,
+  extractPrimaryAbilities2014,
+  extractPrimaryAbilities2024,
+  extractSavingThrows2014,
+  extractSavingThrows2024,
   extractAbilityArray,
   collectClassRecords,
 } from "./class-index-helpers";
@@ -130,7 +134,7 @@ function indexSingleClass(
   const isSubclass = isSubclassRecord(resolvedRecord);
   const parentId = isSubclass ? extractParentId(resolvedRecord) : undefined;
 
-  // 5. Extract class-specific fields
+  // 5. Extract class-specific fields (ruleset-aware)
   const remaining = resolvedRecord.remaining;
   const hitDie = extractHitDie(remaining);
 
@@ -150,7 +154,28 @@ function indexSingleClass(
     ));
   }
 
-  const primaryAbilities = extractAbilityArray(remaining, "primaryability");
+  // Extract primary abilities and saving throws based on ruleset
+  let primaryAbilities: readonly string[];
+  let savingThrowProficiencies: readonly string[];
+
+  if (scopeResult.ruleset === "2024") {
+    // 2024 (XPHB): primaryAbility array-of-objects, proficiencies with type: "saving_throw"
+    primaryAbilities = extractPrimaryAbilities2024(remaining);
+    savingThrowProficiencies = extractSavingThrows2024(remaining);
+  } else {
+    // 2014 (PHB): proficiency array for both saving throws and primary abilities
+    primaryAbilities = extractPrimaryAbilities2014(remaining);
+    savingThrowProficiencies = extractSavingThrows2014(remaining);
+  }
+
+  // Fallback: if ruleset-specific extractors return empty, try legacy field names
+  if (primaryAbilities.length === 0) {
+    primaryAbilities = extractAbilityArray(remaining, "primaryability");
+  }
+  if (savingThrowProficiencies.length === 0) {
+    savingThrowProficiencies = extractAbilityArray(remaining, "savingthrows");
+  }
+
   if (primaryAbilities.length === 0) {
     diagnostics.push(makeDiagnostic(
       "MISSING_PRIMARY_ABILITIES",
@@ -160,7 +185,6 @@ function indexSingleClass(
     ));
   }
 
-  const savingThrowProficiencies = extractAbilityArray(remaining, "savingthrows");
   if (savingThrowProficiencies.length === 0) {
     diagnostics.push(makeDiagnostic(
       "MISSING_SAVING_THROW_PROFICIENCIES",
