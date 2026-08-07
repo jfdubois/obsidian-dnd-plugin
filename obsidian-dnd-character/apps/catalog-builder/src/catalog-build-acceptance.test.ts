@@ -4,7 +4,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { buildCatalog } from "./catalog-build.js";
 import { readSourceManifest } from "./source-manifest.js";
-import { createBuilderConfig } from "./config.js";
+import { createBuilderConfig, BUILDER_VERSION } from "./config.js";
 
 let tempRoot: string;
 const CLONE_PATH = path.resolve(process.cwd(), "../external/5etools-src");
@@ -95,6 +95,33 @@ describe("catalog build — additional required acceptance tests", () => {
     );
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
     expect(manifest.catalogRevision).not.toContain("manual-smoke");
+  });
+
+  it("catalog revision includes builder version suffix", () => {
+    const sourceManifest = readSourceManifest(CLONE_PATH);
+    const config = createBuilderConfig({
+      clonePath: CLONE_PATH,
+      outputPath: tempRoot,
+      includedRulesets: ["2014", "2024"],
+      contentPolicy: { enabledSourceIds: [], includeCore: true },
+      buildMode: "full",
+    });
+
+    const result = buildCatalog(config, sourceManifest);
+    expect(result.publishResult.success).toBe(true);
+
+    // Verify builder version suffix is present
+    expect(result.catalogRevision).toContain(`-${BUILDER_VERSION}`);
+    // Verify full format: 5etools-{shortHash}-{builderVersion}
+    expect(result.catalogRevision).toMatch(/^5etools-[0-9a-f]{7}-b1$/);
+
+    // Verify manifest also includes the builder version in the revision
+    const manifestPath = path.join(
+      tempRoot, "catalog", "v1", "revisions", result.catalogRevision, "manifest.json",
+    );
+    const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+    expect(manifest.catalogRevision).toBe(result.catalogRevision);
+    expect(manifest.catalogRevision).toContain(`-${BUILDER_VERSION}`);
   });
 
   it("preserves previous revision when building new catalog", () => {

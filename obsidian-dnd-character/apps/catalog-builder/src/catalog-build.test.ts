@@ -4,7 +4,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { buildCatalog } from "./catalog-build.js";
 import { readSourceManifest } from "./source-manifest.js";
-import { createBuilderConfig } from "./config.js";
+import { createBuilderConfig, BUILDER_VERSION } from "./config.js";
 
 /* ── Temp directory helpers ────────────────────────────────────── */
 
@@ -55,6 +55,22 @@ describe("catalog build — real 5eTools pipeline", () => {
     const result = buildCatalog(config, sourceManifest);
     expect(result.catalogRevision).toContain("5etools-");
     expect(result.sourceRevision).toMatch(/^[0-9a-f]{40}$/);
+  });
+
+  it("includes builder version suffix in catalog revision", () => {
+    const sourceManifest = readSourceManifest(CLONE_PATH);
+    const config = createBuilderConfig({
+      clonePath: CLONE_PATH,
+      outputPath: tempRoot,
+      includedRulesets: ["2014", "2024"],
+      contentPolicy: { enabledSourceIds: [], includeCore: true },
+      buildMode: "full",
+    });
+
+    const result = buildCatalog(config, sourceManifest);
+    expect(result.catalogRevision).toContain(`-${BUILDER_VERSION}`);
+    // Verify full format: 5etools-{shortHash}-{builderVersion}
+    expect(result.catalogRevision).toMatch(/^5etools-[0-9a-f]{7}-b1$/);
   });
 
   it("publishes manifest.json with correct metadata", () => {

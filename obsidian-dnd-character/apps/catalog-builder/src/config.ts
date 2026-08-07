@@ -8,6 +8,16 @@ export type BuildMode = "full" | "incremental";
 
 export const BUILD_MODES: readonly BuildMode[] = ["full", "incremental"];
 
+/* ── Builder version ──────────────────────────────────────────── */
+
+/**
+ * Bumpable builder version suffix appended to catalog revisions.
+ * Format: `5etools-{shortHash}-{BUILDER_VERSION}` (e.g., `5etools-3c5d9d3-b1`).
+ * Bump this value whenever builder behavior changes that could alter catalog output
+ * for the same source hash.
+ */
+export const BUILDER_VERSION = "b1";
+
 export function isBuildMode(value: unknown): value is BuildMode {
   return value === "full" || value === "incremental";
 }

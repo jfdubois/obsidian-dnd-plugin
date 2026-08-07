@@ -1,5 +1,6 @@
 import * as path from "node:path";
 import type { BuilderConfig } from "./config.js";
+import { BUILDER_VERSION } from "./config.js";
 import type { SourceManifest } from "./source-manifest.js";
 import type { PublishCatalogReleaseResult } from "./catalog-publisher.js";
 import type { RawRecord } from "./raw-boundary.js";
@@ -146,7 +147,7 @@ export function buildCatalog(
   const checksums = computeChecksums(detailFiles);
 
   /* Step 9: Generate manifest */
-  const catalogRevision = createCatalogRevision(`5etools-${sourceManifest.shortHash}`);
+  const catalogRevision = createCatalogRevision(`5etools-${sourceManifest.shortHash}-${BUILDER_VERSION}`);
   const manifest = generateManifest({
     schemaVersion: 1,
     catalogRevision,
