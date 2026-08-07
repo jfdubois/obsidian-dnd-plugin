@@ -164,6 +164,14 @@ function resolveCopiesForKind(
 
   for (const record of records) {
     const copyModRecord = toCopyModRecord(record);
+
+    // Direct record: no _copy field → pass through unchanged as a CopyModRawRecord
+    if (copyModRecord.remaining._copy === undefined) {
+      resolved.push(copyModRecord);
+      continue;
+    }
+
+    // Record with _copy → resolve through the copy/mod materialization pipeline
     const resolution = resolveCopyWithMods(copyModRecord, copyResolverContext, copyModContext);
     if (resolution.ok) {
       resolved.push(resolution.record);

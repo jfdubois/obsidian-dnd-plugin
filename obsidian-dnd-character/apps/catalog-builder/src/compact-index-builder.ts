@@ -20,7 +20,8 @@ export type CompactIndexDiagnosticCode =
   | "MISSING_ENTITY_NAME"
   | "MISSING_ENTITY_ID"
   | "INVALID_ENTITY_KIND"
-  | "MISSING_REQUIRED_FIELD";
+  | "MISSING_REQUIRED_FIELD"
+  | "DUPLICATE_ENTITY_ID";
 
 export interface CompactIndexDiagnostic {
   readonly code: CompactIndexDiagnosticCode;
@@ -122,12 +123,26 @@ export function buildCompactIndex(
 ): CompactIndexResult {
   const diagnostics: CompactIndexDiagnostic[] = [];
   const kindGroups = new Map<RuleEntityKind, CatalogEntitySummary[]>();
+  const seenIds = new Set<string>();
 
   for (const entity of entities) {
     const summary = entityToSummary(entity, diagnostics);
     if (summary === undefined) {
       continue;
     }
+
+    // Deduplicate by canonical ID – keep first occurrence, skip rest
+    if (seenIds.has(summary.id)) {
+      diagnostics.push(Object.freeze({
+        code: "DUPLICATE_ENTITY_ID",
+        severity: "warning",
+        message: `Duplicate entity ID "${summary.id}" (${entity.kind}) – skipping.`,
+        entityId: entity.id,
+        entityKind: entity.kind,
+      }));
+      continue;
+    }
+    seenIds.add(summary.id);
 
     const kind = entity.kind;
     if (!kindGroups.has(kind)) {
