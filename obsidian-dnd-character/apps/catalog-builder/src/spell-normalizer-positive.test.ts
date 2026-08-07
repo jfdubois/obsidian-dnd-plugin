@@ -213,5 +213,106 @@ describe("normalizeSpells", () => {
       expect(result.spells[0]!.concentration).toBe(true);
       expect(result.spells[0]!.duration).toBe("1 hour");
     });
+
+    it("normalizes a self-range spell (Detect Magic PHB shape)", () => {
+      const record = makeCopyModRawRecord({
+        name: "Detect Magic",
+        level: 1,
+        school: "D",
+        range: { type: "point", distance: { type: "self" } },
+      });
+      const input: SpellNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeSpells(input);
+
+      expect(result.spells.length).toBe(1);
+      expect(result.spells[0]!.range).toBe("Self");
+      expect(result.diagnostics.length).toBe(0);
+    });
+
+    it("normalizes a touch-range spell (Tongues PHB shape)", () => {
+      const record = makeCopyModRawRecord({
+        name: "Tongues",
+        level: 3,
+        school: "D",
+        range: { type: "point", distance: { type: "touch" } },
+      });
+      const input: SpellNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeSpells(input);
+
+      expect(result.spells.length).toBe(1);
+      expect(result.spells[0]!.range).toBe("Touch");
+      expect(result.diagnostics.length).toBe(0);
+    });
+
+    it("normalizes a bonus action spell (Healing Word PHB shape)", () => {
+      const record = makeCopyModRawRecord({
+        name: "Healing Word",
+        level: 1,
+        school: "V",
+        time: [{ number: 1, unit: "bonus" }],
+      });
+      const input: SpellNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeSpells(input);
+
+      expect(result.spells.length).toBe(1);
+      expect(result.spells[0]!.castingTime).toBe("1 bonus action");
+      expect(result.diagnostics.length).toBe(0);
+    });
+
+    it("normalizes a reaction spell with condition (Shield PHB shape)", () => {
+      const record = makeCopyModRawRecord({
+        name: "Shield",
+        level: 1,
+        school: "A",
+        time: [{ number: 1, unit: "reaction", condition: "which you take when you are hit by an attack" }],
+        duration: [{ type: "timed", duration: { type: "round", amount: 1 } }],
+      });
+      const input: SpellNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeSpells(input);
+
+      expect(result.spells.length).toBe(1);
+      expect(result.spells[0]!.castingTime).toBe("1 reaction (which you take when you are hit by an attack)");
+      expect(result.spells[0]!.duration).toBe("1 round");
+      expect(result.diagnostics.length).toBe(0);
+    });
+
+    it("normalizes a reaction spell without condition", () => {
+      const record = makeCopyModRawRecord({
+        name: "Feather Fall",
+        level: 1,
+        school: "T",
+        time: [{ number: 1, unit: "reaction" }],
+        duration: [{ type: "timed", duration: { type: "minute", amount: 1 } }],
+      });
+      const input: SpellNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeSpells(input);
+
+      expect(result.spells.length).toBe(1);
+      expect(result.spells[0]!.castingTime).toBe("1 reaction");
+      expect(result.diagnostics.length).toBe(0);
+    });
+
+    it("normalizes an XPHB sphere-range spell (Detect Magic XPHB shape)", () => {
+      const record = makeCopyModRawRecord({
+        name: "Detect Magic",
+        source: "XPHB",
+        level: 1,
+        school: "D",
+        range: { type: "sphere", distance: { type: "feet", amount: 30 } },
+      });
+      const input: SpellNormalizerInput = { records: [record], context: ctx };
+
+      const result = normalizeSpells(input);
+
+      expect(result.spells.length).toBe(1);
+      expect(result.spells[0]!.range).toBe("30 feet");
+      expect(result.spells[0]!.ruleset).toBe("2024");
+      expect(result.diagnostics.length).toBe(0);
+    });
   });
 });

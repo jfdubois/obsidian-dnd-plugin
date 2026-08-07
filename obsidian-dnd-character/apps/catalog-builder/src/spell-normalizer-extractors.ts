@@ -39,7 +39,17 @@ export function extractCastingTime(remaining: Record<string, unknown>): string |
 
   // Handle standard casting times
   if (typeof t.number === "number" && typeof t.unit === "string") {
-    return `${t.number} ${t.unit}`;
+    let unit = t.unit;
+    // Map "bonus" to "bonus action" (5eTools shorthand)
+    if (unit === "bonus") {
+      unit = "bonus action";
+    }
+    let result = `${t.number} ${unit}`;
+    // Append condition text for reaction spells
+    if (unit === "reaction" && typeof t.condition === "string" && t.condition.length > 0) {
+      result += ` (${t.condition})`;
+    }
+    return result;
   }
 
   return undefined;
@@ -70,6 +80,18 @@ export function extractRange(remaining: Record<string, unknown>): string | undef
     const distance = r.distance;
     if (typeof distance === "object" && distance !== null) {
       const d = distance as Record<string, unknown>;
+
+      // Handle self range inside distance object (e.g., Detect Magic PHB)
+      if (d.type === "self") {
+        return "Self";
+      }
+
+      // Handle touch range inside distance object (e.g., Tongues PHB)
+      if (d.type === "touch") {
+        return "Touch";
+      }
+
+      // Handle numeric distance (e.g., "150 feet")
       if (typeof d.amount === "number" && typeof d.type === "string") {
         return `${d.amount} ${d.type}`;
       }
