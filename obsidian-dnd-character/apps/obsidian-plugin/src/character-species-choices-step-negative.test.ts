@@ -278,3 +278,79 @@ describe("selectSpeciesChoices does not mutate draft on rejection", () => {
     expect(getStepState(draft, "species-choices")).toBe("unvisited");
   });
 });
+
+/* ── Zero-choice recursion guard (P10-T020) ─────────────────────
+   Prevents infinite loop: renderSpeciesChoices() -> zero choices ->
+   onChoicesResolved({}) -> selectSpeciesChoices() returns true ->
+   renderCurrentStep() -> renderSpeciesChoices() -> repeat forever.   */
+
+describe("selectSpeciesChoices zero-choice recursion guard", () => {
+  it("rejects empty choices when step is already resolved", () => {
+    const draft = createEmptyCharacterDraft();
+    selectRuleset(draft, "2024");
+    selectSources(draft, []);
+    selectSpecies(draft, createEntityId("human"));
+
+    // First call: empty choices succeeds (zero-choice auto-resolve)
+    expect(selectSpeciesChoices(draft, {})).toBe(true);
+    expect(getStepState(draft, "species-choices")).toBe("resolved");
+
+    // Second call: empty choices must be rejected (prevents infinite loop)
+    expect(selectSpeciesChoices(draft, {})).toBe(false);
+  });
+
+  it("still accepts empty choices after species change invalidates step", () => {
+    const draft = createEmptyCharacterDraft();
+    selectRuleset(draft, "2024");
+    selectSources(draft, []);
+    selectSpecies(draft, createEntityId("human"));
+
+    // Resolve with empty choices (zero-choice species)
+    expect(selectSpeciesChoices(draft, {})).toBe(true);
+    expect(getStepState(draft, "species-choices")).toBe("resolved");
+
+    // Change species -> invalidates species-choices step
+    selectSpecies(draft, createEntityId("elf"));
+    expect(getStepState(draft, "species-choices")).toBe("invalidated");
+
+    // Empty choices must be accepted again for new species
+    expect(selectSpeciesChoices(draft, {})).toBe(true);
+    expect(getStepState(draft, "species-choices")).toBe("resolved");
+  });
+
+  it("still accepts non-empty choices after step is resolved", () => {
+    const draft = createEmptyCharacterDraft();
+    selectRuleset(draft, "2024");
+    selectSources(draft, []);
+    selectSpecies(draft, createEntityId("elf"));
+
+    // First resolve with empty choices
+    expect(selectSpeciesChoices(draft, {})).toBe(true);
+
+    // Now submit actual choices (user interacted with dropdown)
+    const choice = createCharacterChoice({
+      instanceId: createChoiceInstanceId("fey_ancestry"),
+      definitionId: createChoiceDefinitionId("fey_ancestry_def"),
+      originGrantId: createEntityId("elf"),
+      selectedOptionIds: [createEntityId("fey_ancestry_feat")],
+    });
+    expect(selectSpeciesChoices(draft, { feyAncestry: choice })).toBe(true);
+    expect(draft.speciesChoices.choices).toHaveProperty("feyAncestry");
+  });
+
+  it("does not mutate draft when rejecting duplicate empty choices", () => {
+    const draft = createEmptyCharacterDraft();
+    selectRuleset(draft, "2024");
+    selectSources(draft, []);
+    selectSpecies(draft, createEntityId("human"));
+
+    // First call resolves
+    expect(selectSpeciesChoices(draft, {})).toBe(true);
+    const firstState = getStepState(draft, "species-choices");
+
+    // Second call must not change anything
+    expect(selectSpeciesChoices(draft, {})).toBe(false);
+    expect(getStepState(draft, "species-choices")).toBe(firstState);
+    expect(draft.speciesChoices.choices).toEqual({});
+  });
+});

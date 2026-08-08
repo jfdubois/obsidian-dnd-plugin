@@ -46,11 +46,11 @@ None recorded.
 - 5eTools source commit: `3c5d9d3175ca9637132011c75efd73aad7a2364d` pinned and verified clean.
 - Pinned source inventory: 502 files, 404 collections, 25672 raw records, 2801 `_copy` records, 317 nested copy chains, 259 `_preserve` payloads, 127 records with `_versions`, 359 version entries, 7 abstract bundles, 50 abstract implementations, 187 copy template references, 21 version template references.
 - Catalog schema version: 1.
-- Active catalog revision: `5etools-3c5d9d3` (real production catalog, generated 2026-08-07).
-- Production catalog: 75 entities (39 × 2014, 36 × 2024), 2 kinds (background, species), 63 sources, 81 published files.
+- Active catalog revision: `5etools-3c5d9d3-b1` (real production catalog, generated 2026-08-07).
+- Production catalog: 3170 entities (1501 × 2014, 1669 × 2024), 8 kinds (background: 36, class: 12, class-feature: 296, feat: 119, item: 1375, species: 39, spell: 740, subclass-feature: 553), 4 sources (dmg, phb, xdmg, xphb).
 - Validation: `valid: true`, 0 duplicates, 0 unresolved references, 38 unmapped-narrative warnings (non-blocking).
 - Smoke catalog `manual-smoke-001` preserved unchanged alongside production revision.
-- Catalog server verified serving `5etools-3c5d9d3` via Docker (nginx:alpine, port 8080).
+- Catalog server verified serving `5etools-3c5d9d3-b1` via Docker (nginx:alpine, port 8080).
 
 ## Plugin baseline
 
@@ -84,13 +84,18 @@ None recorded.
 - Phase 9 starting commit: a362900
 - Completed Phase 9 task commits: P9-T001 — see Git history for P9-T001; P9-T002 — see Git history for P9-T002; P9-T003 — see Git history for P9-T003; P9-T004 — see Git history for P9-T004; P9-T005 — see Git history for P9-T005; P9-T006 — see Git history for P9-T006; P9-T007 — see Git history for P9-T007; P9-T008 — see Git history for P9-T008; P9-T009 — see Git history for P9-T009; P9-T010 — see Git history for P9-T010; P9-T011 — see Git history for P9-T011; P9-T012 — c3032a7; P9-T013 — 2111f0c; P9-T014 — 541120b; P9-T015 — 2db464f; P9-T016 — a0d9726; P9-T017 — see Git history for P9-T017; P9-T018 — see Git history for P9-T018
 - Phase 10 starting commit: 77baeed
-- Completed Phase 10 task commits: P10-T001 — see Git history for P10-T001; P10-T002 — see Git history for P10-T002; P10-T003 — see Git history for P10-T003; P10-T004 — see Git history for P10-T004; P10-T005 — see Git history for P10-T005; P10-T006 — see Git history for P10-T006; P10-T007 — see Git history for P10-T007; P10-T008 — see Git history for P10-T008; P10-T009 — 0b69134; P10-T010 — see Git history for P10-T010; P10-T011 — see Git history for P10-T011; P10-T012 — see Git history for P10-T012; P10-T013 — see Git history for P10-T013; P10-T014 — see Git history for P10-T014; P10-T015 — see Git history for P10-T015; P10-T016 — see Git history for P10-T016; P10-T017 — see Git history for P10-T017; P10-T018 — see Git history for P10-T018; P10-T019 — see Git history for P10-T019; P10-T020 — see Git history for P10-T020; P10-T020-CORRECTIVE — see Git history for P10-T020-CORRECTIVE; P10-T020-CORRECTIVE-G-R1 — see Git history for P10-T020-CORRECTIVE-G-R1
+- Completed Phase 10 task commits: P10-T001 — see Git history for P10-T001; P10-T002 — see Git history for P10-T002; P10-T003 — see Git history for P10-T003; P10-T004 — see Git history for P10-T004; P10-T005 — see Git history for P10-T005; P10-T006 — see Git history for P10-T006; P10-T007 — see Git history for P10-T007; P10-T008 — see Git history for P10-T008; P10-T009 — 0b69134; P10-T010 — see Git history for P10-T010; P10-T011 — see Git history for P10-T011; P10-T012 — see Git history for P10-T012; P10-T013 — see Git history for P10-T013; P10-T014 — see Git history for P10-T014; P10-T015 — see Git history for P10-T015; P10-T016 — see Git history for P10-T016; P10-T017 — see Git history for P10-T017; P10-T018 — see Git history for P10-T018; P10-T019 — see Git history for P10-T019; P10-T020 — see Git history for P10-T020; P10-T020-CORRECTIVE — see Git history for P10-T020-CORRECTIVE; P10-T020-CORRECTIVE-G-R1 — see Git history for P10-T020-CORRECTIVE-G-R1; P10-T020-CORRECTIVE-G-R2 — see Git history for P10-T020-CORRECTIVE-G-R2
 - Phase 10 gate: complete (corrective P10-T020-CORRECTIVE applied post-gate)
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-08 — P10-T020-CORRECTIVE-G-R2 — Species-choice runtime correctness and test-evidence gaps — complete
+Summary: Closed 6 sub-tasks: (1) Zero-choice rerender recursion — added recursion guard in selectSpeciesChoices so it returns false when species-choices already resolved and choices are empty. (2) Real interaction behavior tests — 10 behavioral buildChoices min/max enforcement tests plus catalog query inventory test. (3) Species ChoiceDefinition query types inventory — all 8 types confirmed (entity, ability, skill-proficiency, tool-proficiency, language, equipment, spell, feature). (4) Renderer tests for production data — 12 tests covering all 8 ChoiceDefinitionType renderers. (5) PROJECT_STATUS.md catalog baseline corrected to revision 5etools-3c5d9d3-b1 with actual entity counts. (6) Validation — check, build, and bundle all pass. 3 files modified, 2 new test files.
+Validation: check (typecheck/lint/test) PASS, build PASS, bundle PASS.
+Compatibility notes: Uses only approved Obsidian APIs. Mobile-compatible. No Node/Electron-only APIs.
 
 2026-08-08 — P10-T020-CORRECTIVE-G-R1 — Complete species-choice runtime integration — complete
 Summary: Fixed 5 issues in species-choice runtime: (1) Zero-choice rerender recursion — added guard in modal so renderCurrentStep() only called when selectSpeciesChoices returns true. (2) Non-entity ChoiceDefinition types — implemented all 8 types (entity, ability, skill-proficiency, tool-proficiency, language, equipment, spell, feature) across new focused modules. (3) EntityQuery full evaluation — evaluateEntityQuery() now handles sourceId, access, tags, excludeLegacy filters. (4) Prerequisite evaluation — evaluatePrerequisites() handles ability-score, level, entity-selection types. (5) Module size — all new modules ≤300 lines (262, 253, 98, 76). 4 new files created, 3 files modified. Refactored renderer to delegate to type-specific renderers.

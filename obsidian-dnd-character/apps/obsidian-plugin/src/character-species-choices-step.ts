@@ -64,6 +64,17 @@ export function selectSpeciesChoices(
     return false;
   }
 
+  // Guard against infinite rerender loop: if the species-choices step is
+  // already resolved and the caller passes an empty choices record (zero-choice
+  // auto-resolve), do NOT re-resolve. This prevents the cycle:
+  // renderSpeciesChoices() -> zero choices -> onChoicesResolved({}) ->
+  // selectSpeciesChoices() returns true -> renderCurrentStep() ->
+  // renderSpeciesChoices() -> repeat forever.
+  if (getStepState(draft, "species-choices") === "resolved" &&
+      Object.keys(choices).length === 0) {
+    return false;
+  }
+
   draft.speciesChoices.choices = { ...choices };
   markStepResolved(draft, "species-choices");
   invalidateDependentSteps(draft, "species-choices");

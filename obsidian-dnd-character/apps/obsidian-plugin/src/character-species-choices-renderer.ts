@@ -121,7 +121,7 @@ function renderConfirmButton(
 
 /* ── Choice building ───────────────────────────────────────────── */
 
-function buildChoices(
+export function buildChoices(
   states: ChoiceDropdownState[],
   originGrantId: string,
 ): Record<string, CharacterChoice> | null {
