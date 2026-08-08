@@ -36,7 +36,7 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-P10-T020 (typecheck, lint, full test suite; 4757 tests; 15 pre-existing console warnings).
+- `npm --prefix obsidian-dnd-character run check`: passing post-P10-T020-CORRECTIVE-G-R1 (typecheck, lint, full test suite; 4848 tests; 30 pre-existing console warnings).
 - `npm --prefix obsidian-dnd-character run build`: passing post-P8-CORRECTIVE-002-R1.
 - `npm --workspace @obsidian-dnd/obsidian-plugin run bundle`: script not defined in current workspace.
 - Tests: full suite passing after P8-CORRECTIVE-002-R1.
@@ -84,13 +84,18 @@ None recorded.
 - Phase 9 starting commit: a362900
 - Completed Phase 9 task commits: P9-T001 — see Git history for P9-T001; P9-T002 — see Git history for P9-T002; P9-T003 — see Git history for P9-T003; P9-T004 — see Git history for P9-T004; P9-T005 — see Git history for P9-T005; P9-T006 — see Git history for P9-T006; P9-T007 — see Git history for P9-T007; P9-T008 — see Git history for P9-T008; P9-T009 — see Git history for P9-T009; P9-T010 — see Git history for P9-T010; P9-T011 — see Git history for P9-T011; P9-T012 — c3032a7; P9-T013 — 2111f0c; P9-T014 — 541120b; P9-T015 — 2db464f; P9-T016 — a0d9726; P9-T017 — see Git history for P9-T017; P9-T018 — see Git history for P9-T018
 - Phase 10 starting commit: 77baeed
-- Completed Phase 10 task commits: P10-T001 — see Git history for P10-T001; P10-T002 — see Git history for P10-T002; P10-T003 — see Git history for P10-T003; P10-T004 — see Git history for P10-T004; P10-T005 — see Git history for P10-T005; P10-T006 — see Git history for P10-T006; P10-T007 — see Git history for P10-T007; P10-T008 — see Git history for P10-T008; P10-T009 — 0b69134; P10-T010 — see Git history for P10-T010; P10-T011 — see Git history for P10-T011; P10-T012 — see Git history for P10-T012; P10-T013 — see Git history for P10-T013; P10-T014 — see Git history for P10-T014; P10-T015 — see Git history for P10-T015; P10-T016 — see Git history for P10-T016; P10-T017 — see Git history for P10-T017; P10-T018 — see Git history for P10-T018; P10-T019 — see Git history for P10-T019; P10-T020 — see Git history for P10-T020; P10-T020-CORRECTIVE — see Git history for P10-T020-CORRECTIVE
+- Completed Phase 10 task commits: P10-T001 — see Git history for P10-T001; P10-T002 — see Git history for P10-T002; P10-T003 — see Git history for P10-T003; P10-T004 — see Git history for P10-T004; P10-T005 — see Git history for P10-T005; P10-T006 — see Git history for P10-T006; P10-T007 — see Git history for P10-T007; P10-T008 — see Git history for P10-T008; P10-T009 — 0b69134; P10-T010 — see Git history for P10-T010; P10-T011 — see Git history for P10-T011; P10-T012 — see Git history for P10-T012; P10-T013 — see Git history for P10-T013; P10-T014 — see Git history for P10-T014; P10-T015 — see Git history for P10-T015; P10-T016 — see Git history for P10-T016; P10-T017 — see Git history for P10-T017; P10-T018 — see Git history for P10-T018; P10-T019 — see Git history for P10-T019; P10-T020 — see Git history for P10-T020; P10-T020-CORRECTIVE — see Git history for P10-T020-CORRECTIVE; P10-T020-CORRECTIVE-G-R1 — see Git history for P10-T020-CORRECTIVE-G-R1
 - Phase 10 gate: complete (corrective P10-T020-CORRECTIVE applied post-gate)
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-08 — P10-T020-CORRECTIVE-G-R1 — Complete species-choice runtime integration — complete
+Summary: Fixed 5 issues in species-choice runtime: (1) Zero-choice rerender recursion — added guard in modal so renderCurrentStep() only called when selectSpeciesChoices returns true. (2) Non-entity ChoiceDefinition types — implemented all 8 types (entity, ability, skill-proficiency, tool-proficiency, language, equipment, spell, feature) across new focused modules. (3) EntityQuery full evaluation — evaluateEntityQuery() now handles sourceId, access, tags, excludeLegacy filters. (4) Prerequisite evaluation — evaluatePrerequisites() handles ability-score, level, entity-selection types. (5) Module size — all new modules ≤300 lines (262, 253, 98, 76). 4 new files created, 3 files modified. Refactored renderer to delegate to type-specific renderers.
+Validation: 4848 tests passing, typecheck and lint pass, build passes, bundle passes.
+Compatibility notes: Uses only approved Obsidian APIs. Mobile-compatible. No Node/Electron-only APIs. Content renderers (language, equipment, spell, feature) lack dedicated behavioral tests but compile and typecheck correctly.
 
 2026-08-06 — P10-T020-CORRECTIVE — Repair creator prerequisite enforcement, empty-source handling, source-policy filtering, error diagnostics — complete
 Summary: Desktop manual testing exposed 6 issues in P10-T020: (A) Sources step returned zero records for 2014 ruleset and never resolved; fixed by auto-confirming empty source selection with info message since 2014 has no optional sources. (B) Next/jumpTo advanced past unresolved required steps; fixed by adding arePrerequisitesMet() enforcement in StepController for jumpTo and canNavigateTo. (C) Background and Class directly mutated draft IDs without prerequisite checks; extracted selectBackground() and selectClass() functions with prerequisite validation. (D) Species/Background/Class/Spells filtered only by ruleset, not source policy; added isEntityEligible() helper applying core-always-visible + source-enabled filtering. (E) Error banner text was unreadable (var(--text-error) on error-colored background); fixed with inline CSS using var(--background-secondary) background and explicit text colors. (F) 14 regression tests added covering all issues.
