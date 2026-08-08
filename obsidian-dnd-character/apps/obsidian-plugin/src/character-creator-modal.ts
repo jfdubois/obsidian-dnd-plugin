@@ -25,6 +25,8 @@ import { selectRuleset } from "./character-ruleset-step";
 import type { CatalogService } from "./catalog/catalog-service";
 import { selectSources } from "./character-source-step";
 import { selectSpecies } from "./character-species-step";
+import { selectSpeciesChoices } from "./character-species-choices-step";
+import { renderSpeciesChoices } from "./character-species-choices-renderer";
 import { selectBackground } from "./character-background-step";
 import { selectClass } from "./character-class-step";
 import { selectAbilityScores } from "./character-ability-scores-step";
@@ -641,6 +643,20 @@ export class CharacterCreatorModal extends ObsidianModal {
             }
           });
       });
+
+      // Render species choices section after species is selected
+      if (draft.species.speciesId) {
+        await renderSpeciesChoices(
+          container,
+          draft,
+          catalog,
+          (sourceId, access) => this.isEntityEligible(sourceId, access),
+          (choices) => {
+            selectSpeciesChoices(draft, choices);
+            this.renderCurrentStep();
+          },
+        );
+      }
     } catch {
       loadingEl.remove();
       container.createEl("p", {
