@@ -652,8 +652,9 @@ export class CharacterCreatorModal extends ObsidianModal {
           catalog,
           (sourceId, access) => this.isEntityEligible(sourceId, access),
           (choices) => {
-            selectSpeciesChoices(draft, choices);
-            this.renderCurrentStep();
+            if (selectSpeciesChoices(draft, choices)) {
+              this.renderCurrentStep();
+            }
           },
         );
       }

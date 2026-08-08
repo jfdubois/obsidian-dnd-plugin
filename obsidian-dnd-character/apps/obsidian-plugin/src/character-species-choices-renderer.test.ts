@@ -193,7 +193,7 @@ describe("renderSpeciesChoices", () => {
     expect(container.textContent).toContain("Elven Traits");
     expect(container.textContent).toContain("1 required");
   });
-  it("renders placeholder for non-entity choice types", async () => {
+  it("renders ability choice dropdown", async () => {
     const species = createSpecies(humanId, "Human", { defId: "species-human-ability", label: "Ability Score Increase", type: "ability", min: 1, max: 1, queryKind: "feat" });
     const catalog = createMockCatalogService(species);
     selectSpecies(draft, humanId);
@@ -201,8 +201,14 @@ describe("renderSpeciesChoices", () => {
       container, draft, catalog,
       createIsEntityEligible(), onChoicesResolved,
     );
-    expect(container.textContent).toContain("not yet implemented");
-    expect(container.textContent).toContain("ability");
+    expect(container.textContent).toContain("Ability Score Increase");
+    expect(container.textContent).toContain("Strength");
+    expect(container.textContent).toContain("Dexterity");
+    expect(container.textContent).toContain("Constitution");
+    expect(container.textContent).toContain("Intelligence");
+    expect(container.textContent).toContain("Wisdom");
+    expect(container.textContent).toContain("Charisma");
+    expect(container.textContent).toContain("Confirm choices");
   });
   it("renders multi-select checkboxes for max > 1", async () => {
     const species = createSpecies(humanId, "Human", { defId: "species-human-skills", label: "Skill Proficiencies", type: "entity", min: 1, max: 2, queryKind: "skill" });
