@@ -22,12 +22,12 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-Phase 10 manual validation — create/save 2014 and 2024 level-one characters against `5etools-3c5d9d3` catalog, verify source filtering, dependency invalidation, saved file reopening
+Phase 10 manual validation — create/save 2014 and 2024 level-one characters against `5etools-3c5d9d3-b1` catalog, verify source filtering, dependency invalidation, saved file reopening
 
 ## Branch baseline
 
 - Branch: `dev`
-- Last synchronized commit: `a961383` (P10-T013 orchestrator split + tests)
+- Last synchronized commit: `e86ae79` (P10-T020-CORRECTIVE-G-R2)
 - Working tree expected: clean
 
 ## Blockers
@@ -93,7 +93,7 @@ None recorded.
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
 
 2026-08-08 — P10-T020-CORRECTIVE-G-R2 — Species-choice runtime correctness and test-evidence gaps — complete
-Summary: Closed 6 sub-tasks: (1) Zero-choice rerender recursion — added recursion guard in selectSpeciesChoices so it returns false when species-choices already resolved and choices are empty. (2) Real interaction behavior tests — 10 behavioral buildChoices min/max enforcement tests plus catalog query inventory test. (3) Species ChoiceDefinition query types inventory — all 8 types confirmed (entity, ability, skill-proficiency, tool-proficiency, language, equipment, spell, feature). (4) Renderer tests for production data — 12 tests covering all 8 ChoiceDefinitionType renderers. (5) PROJECT_STATUS.md catalog baseline corrected to revision 5etools-3c5d9d3-b1 with actual entity counts. (6) Validation — check, build, and bundle all pass. 3 files modified, 2 new test files.
+Summary: Closed 6 sub-tasks: (1) Zero-choice rerender recursion — added recursion guard in selectSpeciesChoices so it returns false when species-choices already resolved and choices are empty. (2) Real interaction behavior tests — 10 behavioral buildChoices min/max enforcement tests plus catalog query inventory test. (3) Species ChoiceDefinition query types inventory — renderer dispatch and tests cover all 8 ChoiceDefinitionType values; the normalized-catalog fixture inventory currently observes only entity/entity; the current species normalizer emits no production species ChoiceDefinitions, so production occurrence of the other types has not been demonstrated. (4) Renderer tests for production data — 12 tests covering all 8 ChoiceDefinitionType renderers. (5) PROJECT_STATUS.md catalog baseline corrected to revision 5etools-3c5d9d3-b1 with actual entity counts. (6) Validation — check, build, and bundle all pass. 3 files modified, 2 new test files.
 Validation: check (typecheck/lint/test) PASS, build PASS, bundle PASS.
 Compatibility notes: Uses only approved Obsidian APIs. Mobile-compatible. No Node/Electron-only APIs.
 
