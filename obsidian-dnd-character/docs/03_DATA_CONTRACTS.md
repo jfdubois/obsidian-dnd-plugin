@@ -173,6 +173,7 @@ type ChoiceOptionGrant =
   | { type: "entity"; entityId: EntityId }
   | { type: "effect"; effect: RuleEffect }
   | { type: "item"; itemId: EntityId; quantity: number }
+  | { type: "named-item"; name: string; quantity: number }
   | {
       type: "currency";
       denomination: CurrencyDenomination;
@@ -188,7 +189,15 @@ Ability allocation is not an `EntityId` query and does not replace global base a
 
 `ChoiceOptionId` is a project-owned branded identifier, distinct from `EntityId`, that is deterministic, runtime-validated, catalog-owned, unique within its containing definition, and stable enough to identify a closed option without copying its definition to character state. The builder owns generation and must not derive it from display text alone; it may use its definition identity with a deterministic source-local key, path, or digest consistent with project ID conventions.
 
-Closed options are catalog authority. Their grants are deliberately limited to normalized entity, effect, item, and currency consequences. `entity` references must resolve; `item.quantity` is a positive integer and its item reference resolves; `currency.amount` is a non-negative integer with a supported denomination. `effect` is one already-supported normalized `RuleEffect` retaining normal automation metadata and provenance, not an escape hatch for unsupported narrative mechanics. No raw, generic JSON, string-valued special-equipment, or text mechanical payload is published. Source equipment that cannot normalize as an entity, effect, item, currency, or nested normalized choice produces an actionable coverage/unsupported diagnostic; narrative may remain normalized `RenderNode` content.
+Closed options are catalog authority. Their grants are deliberately limited to normalized entity, effect, item, named-item, and currency consequences. `entity` references must resolve; `item.quantity` is a positive integer and its item reference resolves; `currency.amount` is a non-negative integer with a supported denomination. `effect` is one already-supported normalized `RuleEffect` retaining normal automation metadata and provenance, not an escape hatch for unsupported narrative mechanics.
+
+A `named-item` is a concrete mundane/non-catalog inventory object. It is valid only when an authoritative structured source explicitly grants a physical equipment item, canonical `ItemRule` resolution was attempted and did not resolve it, and no additional mechanics must be invented. Runtime validation requires `type === "named-item"`, a string `name` that is trimmed and non-empty, and a positive-integer `quantity`. It rejects empty or whitespace-only names, zero, negative, or fractional quantities, arbitrary raw source objects, HTML, and free-form mechanical metadata. A named-item has exactly `type`, `name`, and `quantity`; it must not carry cost, weight, rarity, category, body slot, attunement, effects, raw source, `special`, or generic metadata.
+
+The builder must attempt existing canonical item resolution first: a structured source item that resolves to a canonical `ItemRule` emits the existing `item` grant; only an unresolved structured physical item with a usable normalized name emits `named-item`; all other cases emit an actionable normalization-coverage diagnostic. `named-item` is never a substitute for skipping canonical resolution and no entity-name exceptions are allowed. The builder translates the verified source value into normalized name and quantity only; raw 5eTools field names (including `special`) and raw DTOs remain builder-only and may appear only in internal diagnostics under existing diagnostic rules.
+
+`named-item` carries no mechanical behavior and is not a narrative-mechanics escape hatch. It never produces AC, attack, damage, proficiency, attunement, charges, resources, ability effects, or rule effects. Mechanics must not be inferred from its name: for example, `vestments` has no implied armor, clothing mechanics, body slot, AC, weight, or value. A future explicit catalog resolution or replacement operation may convert a materialized inventory entry to a canonical catalog item; until then it remains non-mechanical. Synthetic `ItemRule` entities are prohibited for these source-named items because unavailable category, rarity, cost, weight, properties, attunement, or body-slot data would require guessed mechanics.
+
+No raw, generic JSON, string-valued special-equipment, or text mechanical payload is published. Source equipment that cannot normalize as an entity, effect, item, named-item, currency, or nested normalized choice produces an actionable coverage/unsupported diagnostic; narrative may remain normalized `RenderNode` content.
 
 `ChoiceOption.choices` intentionally permits a catalog-owned package to combine fixed grants with subordinate player decisions. Every nested definition has its own `ChoiceDefinitionId` and normal origin/provenance rules; character state never copies its definition. Automatic normalized consequences instead use existing normalized effects, grants, or dependencies when they faithfully represent the mechanic. A fixed proficiency, language, or entity/feature grant is not represented as a fake one-option choice; genuine player selections use the applicable query, allocation, or closed-option definition.
 
@@ -558,21 +567,42 @@ interface CharacterSpellState {
 ## 16. Inventory state
 
 ```ts
-interface InventoryItemInstance {
+interface InventoryItemInstanceBase {
   instanceId: ItemInstanceId;
-  itemId: EntityId;
   quantity: number;
   equipped: boolean;
-  attuned: boolean;
   containerInstanceId?: ItemInstanceId;
-  chargesUsed?: number;
   customName?: string;
   notes?: string;
+}
+
+interface CatalogInventoryItemInstance extends InventoryItemInstanceBase {
+  type: "catalog-item";
+  itemId: EntityId;
+  attuned: boolean;
+  chargesUsed?: number;
   overrides?: ItemInstanceOverrides;
 }
+
+interface NamedInventoryItemInstance extends InventoryItemInstanceBase {
+  type: "named-item";
+  name: string;
+}
+
+type InventoryItemInstance =
+  | CatalogInventoryItemInstance
+  | NamedInventoryItemInstance;
 ```
 
-Selecting a closed equipment package is distinct from the resulting authoritative inventory or resource state. The selected `ChoiceOptionId` identifies the catalog package; materialized inventory remains character state.
+Selecting a closed equipment package is distinct from the resulting authoritative inventory or resource state. The selected `ChoiceOptionId` identifies the catalog package; materialized inventory remains character state. A selected package’s `named-item` grant (for example, `name: "vestments", quantity: 1`) remains catalog-owned until future creator finalization materializes a `NamedInventoryItemInstance` with a new `ItemInstanceId`. That instance is authoritative mutable character state, not a copied catalog entity or a persisted package definition.
+
+Both inventory variants retain quantity, organizational `equipped` state, an optional container relationship, and existing custom-name/notes behavior. A named inventory item has a concrete user-visible `name`, may use `customName` where applicable, and may be placed in a container when inventory supports it. It has no `itemId`, cannot be attuned, has no catalog charges, no `ItemRule` overrides, and does not activate catalog mechanics. `equipped` remains organizational/UI state for named items, not a source of mechanical behavior.
+
+The inventory validator is discriminated and exhaustive: catalog inventory requires `type: "catalog-item"`, a valid `itemId`, and its existing catalog fields; named inventory requires `type: "named-item"`, a trimmed non-empty `name`, and the shared valid base fields, while rejecting catalog-only fields. When the already-planned character schema increment is implemented, every valid legacy inventory object with `itemId` migrates losslessly to the `catalog-item` variant by adding `type: "catalog-item"`; no legacy item becomes `named-item`. Named inventory is introduced only by explicit future operations such as creator package materialization or later-approved user-created custom inventory support. H2 does not increment implementation constants.
+
+Rule evaluation preserves the distinction: `CatalogInventoryItemInstance` may resolve `ItemRule` mechanics when applicable, while `NamedInventoryItemInstance` contributes no catalog `RuleEffects`. Future Phase 12 inventory/equipment work must preserve this boundary; a named item cannot affect AC, attacks, defenses, resources, or other derived values merely because of its name.
+
+Future acceptance coverage must prove canonical source equipment emits `item`, non-canonical structured physical equipment emits valid `named-item`, and named-item grants never retain raw `special` data or generate `RuleEffects`. It must also prove named-item name/quantity validation; lossless legacy migration to `catalog-item`; required `itemId` for catalog inventory; valid named inventory without `itemId`; named-inventory no-attunement; and authoritative named-inventory materialization without copying a package definition.
 
 ```ts
 interface CharacterCurrencyState {

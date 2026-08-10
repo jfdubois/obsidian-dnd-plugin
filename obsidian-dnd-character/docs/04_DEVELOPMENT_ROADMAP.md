@@ -488,14 +488,16 @@ Create valid level-one characters through a dependency-aware modal.
   - Record accepted origin-owned consequence, typed selected-value, persistence, migration, normalization-coverage, and base-versus-origin ability architecture.
 - [x] **P10-CORRECTIVE-H1 — Specify typed catalog choice and package-grant contracts**
   - Publish the concrete discriminated choice, closed-package grant, selected-value, currency, and migration contracts that unblock implementation.
+- [x] **P10-CORRECTIVE-H2 — Define non-catalog named equipment grants**
+  - Publish strict named-item package and discriminated inventory contracts for structured physical source equipment that has no canonical ItemRule, without guessed mechanics or raw source payloads.
 - [ ] **P10-CORRECTIVE-I — Normalize major-origin grants and choices**
-  - Ready after H1: normalize usable 2014 and 2024 Species, Background, and starting-Class grants, choices, diagnostics, and level-one coverage.
+  - Ready after H2: normalize usable 2014 and 2024 Species, Background, and starting-Class grants, choices, diagnostics, and level-one coverage.
 - [ ] **P10-CORRECTIVE-J — Build origin-owned creator consequence service and draft integration**
 - [ ] **P10-CORRECTIVE-K — Render consequence panels and normalized details**
 - [ ] **P10-CORRECTIVE-L — Add supplemental 5eTools external-reference support**
 - [ ] **P10-CORRECTIVE-M — Rebaseline Phase 10 state-machine and manual validation**
 
-Dependencies: H → H1 → I → J → K; K → L; I/J/K/L as applicable → M. Existing stable correctness blockers remain valid and must be re-evaluated in the applicable corrective task. Capability tasks such as ability generation and equipment, proficiency/language, and spell selection remain reusable capabilities; they do not prescribe permanent visual pages or data ownership.
+Dependencies: H → H1 → H2 → I → J → K; K → L; I/J/K/L as applicable → M. Existing stable correctness blockers remain valid and must be re-evaluated in the applicable corrective task. Capability tasks such as ability generation and equipment, proficiency/language, and spell selection remain reusable capabilities; they do not prescribe permanent visual pages or data ownership.
 
 ### Phase 10 gate
 
