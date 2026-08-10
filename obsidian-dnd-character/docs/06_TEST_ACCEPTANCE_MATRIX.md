@@ -28,6 +28,10 @@
 | CAT-020 | Automatic entity equipment/named-item/currency | Uses RuleEntity grants without a fake choice; named item has no mechanics |
 | CAT-021 | Closed package consequence | Uses the same RuleGrant vocabulary and retains nested choices |
 | CAT-022 | Starting-Class-only consequence | Uses ClassRule startingGrants; it does not activate for a non-starting multiclass instance |
+| CAT-023 | Fixed currency grant | Normalizes to runtime-valid `CurrencyGrantAmount.fixed` with positive integer value |
+| CAT-024 | 5d4 × 10-style starting currency | Normalizes structurally as `dice` count/die sides/multiplier; no source dice tag leaks into catalog |
+| CAT-025 | Unsupported creator currency formula | Actionable coverage diagnostic identifies available entity/ruleset/source/path/normalizer and expression shape; no average, raw formula, or omission |
+| CAT-026 | Same normalized grant source/configuration | Deterministic, scope-unique `RuleGrantId`, not based only on display text |
 
 ## 2. Catalog client/cache
 
@@ -57,6 +61,8 @@
 | PER-009 | Ability allocation choice | Exact selected distribution, definition ID, and origin identity persist; eligible abilities/candidates do not |
 | PER-010 | Closed/package choice | Selected normalized option identity persists without copying its package definition; inventory/resources persist separately when materialized |
 | PER-011 | Automatic mutable materialization | Item, named-item, and currency materialize only in an atomic transaction; rerender/recalculation cannot duplicate them |
+| PER-012 | Resolved random starting currency | Final `CharacterCurrencyState` receives the existing resolved integer; CharacterDocument does not copy catalog dice expression |
+| PER-013 | Failed save then retry | Finalization consumes the same draft resolution and does not reroll |
 
 ## 4. Character creation
 
@@ -76,6 +82,9 @@
 | CRE-010 | Save succeeds | Character file contains selections, not candidate lists/catalog copies |
 | CRE-011 | Base score method plus origin ability adjustment | Base standard-array/point-buy/manual/entered-roll state remains distinct and calculation applies normalized origin effect |
 | CRE-012 | Selected Species, Background, or Class | `(?)` details action renders normalized summary/content, features, grants, choices, automation, provenance, source, ruleset, and page where available; no raw-source access |
+| CRE-013 | Selected option has unresolved random currency RuleGrant | Save blocked until explicit creator resolution exists for its RuleGrantId |
+| CRE-014 | Consequence render/recalculation/review/diagnostic refresh | Reads unresolved or existing resolved random grant; never rerolls |
+| CRE-015 | Explicit future reroll request | Only an intentional creator command may replace the current draft resolution; no implicit rerolls |
 
 ## 5. Rules engine
 

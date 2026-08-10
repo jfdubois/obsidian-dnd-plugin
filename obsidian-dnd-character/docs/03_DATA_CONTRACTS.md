@@ -13,6 +13,7 @@ type CharacterId = Brand<string, "CharacterId">;
 type CatalogRevision = Brand<string, "CatalogRevision">;
 type ChoiceDefinitionId = Brand<string, "ChoiceDefinitionId">;
 type ChoiceOptionId = Brand<string, "ChoiceOptionId">;
+type RuleGrantId = Brand<string, "RuleGrantId">;
 type ChoiceInstanceId = Brand<string, "ChoiceInstanceId">;
 type ClassInstanceId = Brand<string, "ClassInstanceId">;
 type ItemInstanceId = Brand<string, "ItemInstanceId">;
@@ -171,17 +172,22 @@ interface ChoiceOption {
 }
 
 type RuleGrant =
-  | { type: "entity"; entityId: EntityId }
-  | { type: "effect"; effect: RuleEffect }
-  | { type: "item"; itemId: EntityId; quantity: number }
-  | { type: "named-item"; name: string; quantity: number }
+  | { id: RuleGrantId; type: "entity"; entityId: EntityId }
+  | { id: RuleGrantId; type: "effect"; effect: RuleEffect }
+  | { id: RuleGrantId; type: "item"; itemId: EntityId; quantity: number }
+  | { id: RuleGrantId; type: "named-item"; name: string; quantity: number }
   | {
+      id: RuleGrantId;
       type: "currency";
       denomination: CurrencyDenomination;
-      amount: number;
+      amount: CurrencyGrantAmount;
     };
 
 type CurrencyDenomination = "cp" | "sp" | "ep" | "gp" | "pp";
+
+type CurrencyGrantAmount =
+  | { type: "fixed"; value: number }
+  | { type: "dice"; count: number; dieSides: number; multiplier: number };
 
 type ChoiceOptionGrant = RuleGrant;
 ```
@@ -192,7 +198,20 @@ Ability allocation is not an `EntityId` query and does not replace global base a
 
 `ChoiceOptionId` is a project-owned branded identifier, distinct from `EntityId`, that is deterministic, runtime-validated, catalog-owned, unique within its containing definition, and stable enough to identify a closed option without copying its definition to character state. The builder owns generation and must not derive it from display text alone; it may use its definition identity with a deterministic source-local key, path, or digest consistent with project ID conventions.
 
-`RuleGrant` is the one strict vocabulary for automatic entity consequences and selected closed-option consequences; `ChoiceOptionGrant` is a compatibility alias, not a second union. Its variants are limited to normalized entity, effect, item, named-item, and currency consequences. `entity` references resolve; item and named-item quantities are positive integers; currency amount is a positive integer in a supported denomination, rejecting no-op grants. No raw, generic, or free-form mechanical payload is valid.
+`RuleGrant` is the one strict vocabulary for automatic entity consequences and selected closed-option consequences; `ChoiceOptionGrant` is a compatibility alias, not a second union. Every published grant carries a runtime-validated, catalog-owned `RuleGrantId`, distinct from `EntityId`. The builder deterministically generates it from the owning normalized consequence scope plus a normalized source/path key: `BackgroundRule.grants` uses background origin plus grant path; `ClassRule.startingGrants` uses class origin plus starting-grant path; `ChoiceOption.grants` uses owning definition and option plus grant path; other entity grants use owning entity plus grant path. It is stable for the same normalized source/configuration and unique within its owner, but never derives solely from display text such as a label, item name, or formula. The exact generation helper belongs to I; canonical `EntityId` construction is unchanged.
+
+`CurrencyGrantAmount` is the sole authoritative currency amount representation. A `fixed` amount has exactly an integer `value > 0`; a `dice` amount has positive-integer `count`, integer `dieSides >= 2`, and positive-integer `multiplier` (including `1` for an unmultiplied dice amount). No zero/no-op or fractional amount is valid. The nested discriminant deliberately permits only verified fixed, `NdM`, and `NdM × K` structures: it has no modifier, operator, expression, formula, raw, text, AST, or generic-record escape hatch.
+
+The builder translates supported source dice markup into this normalized shape rather than publishing the markup: for example, a 5d4-times-10 starting-gold alternative becomes `{ type: "currency", denomination: "gp", amount: { type: "dice", count: 5, dieSides: 4, multiplier: 10 } }`. Fixed 10 gp similarly uses `{ type: "fixed", value: 10 }`. The catalog never contains source dice tags, raw formula strings, or raw source records. A creator-relevant currency expression outside this bounded structure emits an actionable normalization-coverage diagnostic identifying, where available, entity, ruleset, source, source field/path, normalizer/component, and unsupported expression shape; it is never averaged, rounded, guessed, converted to narrative, silently omitted, or published raw.
+
+Pinned-source inventory for this boundary is intentionally limited to the supported class starting-gold field. No unsupported arithmetic form was observed:
+
+| Source/ruleset | Field | Structured formula | Fits fixed/dice-multiplier contract |
+| --- | --- | --- | --- |
+| 2014 PHB Barbarian, Cleric, Druid, Fighter, Paladin, Ranger | `startingEquipment.goldAlternative` | `2d4 × 10` or `5d4 × 10` | Yes — dice |
+| 2014 PHB Bard, Rogue, Sorcerer, Warlock, Wizard | `startingEquipment.goldAlternative` | `3d4 × 10`, `4d4 × 10`, or `5d4 × 10` | Yes — dice |
+| 2014 PHB Monk | `startingEquipment.goldAlternative` | `5d4` | Yes — dice with multiplier `1` |
+| 2024 XPHB core classes | `startingEquipment.goldAlternative` | absent | Not applicable |
 
 `RuleEntity.effects` holds direct automatic mechanics while an entity is active, such as a fixed proficiency where an existing RuleEffect faithfully represents it, movement, senses, ability modifiers, resistances, or capabilities. `RuleEntity.grants` holds automatic non-choice consequences that are not direct effects: granted entities, canonical items, named items, and currency. Do not encode an automatic grant as a fake one-option choice or convert an item/currency grant into an effect. The effect grant variant remains for an effect conditional on a selected option or other grant container; unconditional entity-wide effects belong in `RuleEntity.effects`.
 
@@ -622,9 +641,11 @@ interface CharacterCurrencyState {
 }
 ```
 
-`currency` is authoritative character state near inventory/resources, not a mixed inventory entry. Every balance denomination is a non-negative integer; a new character and deterministic migration initialize balances to zero. A positive catalog RuleGrant currency amount defines an automatic or selected consequence; a later transaction adds it without persisting the grant/package definition.
+`currency` is authoritative character state near inventory/resources, not a mixed inventory entry. Every balance denomination is a non-negative integer; a new character and deterministic migration initialize balances to zero. A positive catalog RuleGrant currency amount defines an automatic or selected consequence; a later transaction adds its fixed value or already-resolved dice integer without persisting the grant/package definition.
 
-RuleGrant ownership comes from its normalized container: entity grants from the entity, starting grants from the starting Class, and option grants from choice/option plus parent origin. Entity/effect grants remain catalog-derived; item/named-item/currency grants materialize only in a validated atomic transaction. Rerendering/recalculation is disposable and must never duplicate mutable materialization; this is future J/M work. H3 defines fields only: I performs the already-required catalog schema increment, and character migration remains H1/H2 work.
+RuleGrant ownership comes from its normalized container: entity grants from the entity, starting grants from the starting Class, and option grants from choice/option plus parent origin. Entity/effect grants remain catalog-derived; item/named-item/currency grants materialize only in a validated atomic transaction. A dice definition is catalog data, not a result: future creator draft state maps `RuleGrantId` to an explicitly resolved integer. This correlation is required because the Selection Consequence Model is disposable; it must report a random grant as unresolved or use its existing draft resolution, never call random generation while rendering, recalculating, refreshing diagnostics, changing pages, or opening review.
+
+A selected random currency consequence without a draft resolution is unresolved and blocks final save. Future J implements the explicit resolution command/state behavior using an injectable random-source abstraction suitable for deterministic tests; catalog normalization never rolls. There are no implicit rerolls. A future user-requested reroll, if offered, is an intentional command replacing the draft resolution before finalization. Finalization consumes that existing resolved integer exactly once, so a failed atomic save and retry cannot reroll; it materializes only the integer into `CharacterCurrencyState`. `CharacterDocument` does not copy dice count, die sides, multiplier, raw formula, or catalog grant. I must increment the catalog schema for this finalized RuleGrant structure; the already-required character schema increment remains for H1/H2 typed-choice/currency/inventory migration and needs no dice-formula field.
 
 ## 17. Mutable resources
 

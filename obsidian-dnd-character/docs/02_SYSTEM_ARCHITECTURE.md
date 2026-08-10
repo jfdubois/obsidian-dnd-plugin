@@ -224,7 +224,7 @@ The derived snapshot must be reproducible and contain diagnostics and contributi
 
 ## 8.0 Creator consequence architecture
 
-The plugin/application service derives a disposable **Selection Consequence Model** from normalized catalog entities and the current creator draft. It is not a published catalog entity and is not persisted character state. For each selected origin it may expose the selected origin, automatic grants, choice definitions, resolved and unresolved selections, candidate results, diagnostics, dependencies, contextual render content, and provenance.
+The plugin/application service derives a disposable **Selection Consequence Model** from normalized catalog entities and the current creator draft. It is not a published catalog entity and is not persisted character state. For each selected origin it may expose the selected origin, automatic grants, choice definitions, resolved and unresolved selections, candidate results, diagnostics, dependencies, contextual render content, and provenance. A random currency grant is resolved only by future explicit creator command into origin-owned draft state keyed by `RuleGrantId`; the model reads that state and may report unresolved/resolved status, but never rolls because it rendered, rerendered, recalculated, refreshed diagnostics, changed page, or opened review.
 
 The normalized catalog remains authoritative for descriptions, traits/features, direct effects, automatic grants, choices, mechanics, prerequisites, dependencies, and provenance. The consequence model resolves and groups that data for creator use; it neither parses raw 5eTools data nor infers mechanics from narrative text. A starting Class additionally contributes starting grants and choices only to its starting-class instance. A missing normalized structured field is a catalog-normalization coverage defect with an actionable diagnostic, not a reason for a plugin exception or a global-step assumption.
 
@@ -238,7 +238,7 @@ The persistence boundary is explicit:
 
 - **Catalog authority, never copied to a character:** descriptions, traits, effect/grant definitions, choice definitions, candidate lists, equipment-package definitions, eligible abilities, source metadata, render content, dependencies, and provenance.
 - **Derived/disposable creator state:** consequence view models, candidate results, unresolved-choice summaries, UI grouping, review presentation, and consequence panels.
-- **Authoritative persisted character state:** selected Species and Background IDs, selected Class state, base ability state, typed resolved choices with origin identity, and only transaction-materialized inventory/currency/resources where applicable; recalculation never materializes them.
+- **Authoritative persisted character state:** selected Species and Background IDs, selected Class state, base ability state, typed resolved choices with origin identity, creator-draft random-grant resolutions before finalization, and only transaction-materialized inventory/currency/resources where applicable; recalculation never materializes them. Final character currency stores the resolved integer, not a copied dice definition or raw source formula.
 
 Species, Background, and Class details actions use normalized summary, safe content/render nodes, traits/features, effects/grants, choices, automation status, provenance, source, ruleset, and page where available. They do not require raw-source access. External 5eTools target identity/routing remains a separate supplemental architecture decision.
 
