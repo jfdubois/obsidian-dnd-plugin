@@ -119,52 +119,78 @@ Rendering must be safe. No arbitrary HTML or script is accepted from the catalog
 interface ChoiceDefinitionBase {
   id: ChoiceDefinitionId;
   label: string;
-  type:
-    | "entity"
-    | "ability"
-    | "skill-proficiency"
-    | "tool-proficiency"
-    | "language"
-    | "equipment"
-    | "spell"
-    | "feature";
-  minimum: number;
-  maximum: number;
-  repeatable: boolean;
   prerequisites: RulePrerequisite[];
 }
 
-type ChoiceDefinition =
-  | (ChoiceDefinitionBase & {
-      selection: { kind: "entity-query"; optionQuery: CatalogQuery };
-    })
-  | (ChoiceDefinitionBase & {
-      type: "ability";
-      selection: {
-        kind: "ability-allocation";
-        eligibleAbilities: Ability[];
-        allowedDistributions: AbilityAllocationDistribution[];
-      };
-    })
-  | (ChoiceDefinitionBase & {
-      selection: { kind: "closed-options"; options: ClosedChoiceOption[] };
-    });
+type QueryChoiceDefinitionType =
+  | "entity"
+  | "skill-proficiency"
+  | "tool-proficiency"
+  | "language"
+  | "equipment"
+  | "spell"
+  | "feature";
+
+interface QueryChoiceDefinition extends ChoiceDefinitionBase {
+  type: QueryChoiceDefinitionType;
+  minimum: number;
+  maximum: number;
+  repeatable: boolean;
+  optionQuery: CatalogQuery;
+}
+
+interface AbilityAllocationChoiceDefinition extends ChoiceDefinitionBase {
+  type: "ability-allocation";
+  eligibleAbilities: Ability[];
+  distributions: AbilityAllocationDistribution[];
+}
 
 interface AbilityAllocationDistribution {
-  increases: { ability: Ability; increase: number }[];
+  bonuses: number[];
 }
 
-interface ClosedChoiceOption {
+interface ClosedOptionChoiceDefinition extends ChoiceDefinitionBase {
+  type: "closed-option";
+  minimum: number;
+  maximum: number;
+  repeatable: boolean;
+  options: ChoiceOption[];
+}
+
+type ChoiceDefinition =
+  | QueryChoiceDefinition
+  | AbilityAllocationChoiceDefinition
+  | ClosedOptionChoiceDefinition;
+
+interface ChoiceOption {
   id: ChoiceOptionId;
   label: string;
-  content: RenderNode[];
-  grants: RuleEffect[];
+  grants: ChoiceOptionGrant[];
+  choices: ChoiceDefinition[];
 }
+
+type ChoiceOptionGrant =
+  | { type: "entity"; entityId: EntityId }
+  | { type: "effect"; effect: RuleEffect }
+  | { type: "item"; itemId: EntityId; quantity: number }
+  | {
+      type: "currency";
+      denomination: CurrencyDenomination;
+      amount: number;
+    };
+
+type CurrencyDenomination = "cp" | "sp" | "ep" | "gp" | "pp";
 ```
 
-`ChoiceOptionId` is the smallest consistent additional branded identifier. It is deterministic and runtime-validated by the normalized catalog contract, is unique and stable within its containing `ChoiceDefinition`, and must encode or be validated against that definition identity. It is never an `EntityId`. A closed-option payload (including a starting-equipment package) belongs to the catalog; a character retains only the selected option identity.
+Query-backed choices select canonical `EntityId` values. Their semantic meaning comes from `ChoiceDefinition.type`, never from the creator page where they render. They retain `minimum`, `maximum`, `repeatable`, `optionQuery`, and prerequisites; their selections later use the `entity-ids` selected-value variant.
 
-`selection` is exhaustive and runtime-validated. Entity-query choices retain candidate queries, ability-allocation choices retain their eligible abilities and permitted distributions, and closed-option choices retain their source-defined option definitions. The catalog must separately preserve automatic grants, selectable choices, prerequisites/dependencies, and provenance. Future contract work reuses effects, grants, and `ChoiceDefinition` where they fit; it adds vocabulary only when verified structured 2014/2024 data cannot be represented faithfully. An incompatible published catalog change increments the catalog schema version.
+Ability allocation is not an `EntityId` query and does not replace global base ability generation (`standard array`, `point buy`, `manual`, or `rolled`). `bonuses` are magnitudes rather than assignments. Runtime validation requires non-empty, non-duplicated eligible abilities; at least one non-empty distribution; positive integer bonuses; and deterministic rejection or canonicalization of duplicate equivalent distributions. The creator validates actual assignments against one allowed distribution.
+
+`ChoiceOptionId` is a project-owned branded identifier, distinct from `EntityId`, that is deterministic, runtime-validated, catalog-owned, unique within its containing definition, and stable enough to identify a closed option without copying its definition to character state. The builder owns generation and must not derive it from display text alone; it may use its definition identity with a deterministic source-local key, path, or digest consistent with project ID conventions.
+
+Closed options are catalog authority. Their grants are deliberately limited to normalized entity, effect, item, and currency consequences. `entity` references must resolve; `item.quantity` is a positive integer and its item reference resolves; `currency.amount` is a non-negative integer with a supported denomination. `effect` is one already-supported normalized `RuleEffect` retaining normal automation metadata and provenance, not an escape hatch for unsupported narrative mechanics. No raw, generic JSON, string-valued special-equipment, or text mechanical payload is published. Source equipment that cannot normalize as an entity, effect, item, currency, or nested normalized choice produces an actionable coverage/unsupported diagnostic; narrative may remain normalized `RenderNode` content.
+
+`ChoiceOption.choices` intentionally permits a catalog-owned package to combine fixed grants with subordinate player decisions. Every nested definition has its own `ChoiceDefinitionId` and normal origin/provenance rules; character state never copies its definition. Automatic normalized consequences instead use existing normalized effects, grants, or dependencies when they faithfully represent the mechanic. A fixed proficiency, language, or entity/feature grant is not represented as a fake one-option choice; genuine player selections use the applicable query, allocation, or closed-option definition.
 
 ## 8. Catalog queries
 
@@ -451,6 +477,7 @@ interface CharacterDocument {
   abilities: CharacterAbilityState;
   spells: CharacterSpellState;
   inventory: InventoryItemInstance[];
+  currency: CharacterCurrencyState;
   resources: CharacterResourceState;
   overrides: CharacterOverrides;
 
@@ -485,17 +512,24 @@ interface CharacterChoice {
 }
 
 type CharacterChoiceSelectedValue =
-  | { kind: "entity-ids"; entityIds: EntityId[] }
+  | { type: "entity-ids"; entityIds: EntityId[] }
   | {
-      kind: "ability-allocation";
-      increases: { ability: Ability; increase: number }[];
+      type: "ability-allocation";
+      allocations: AbilityAllocationSelection[];
     }
-  | { kind: "closed-option"; optionId: ChoiceOptionId };
+  | { type: "option-ids"; optionIds: ChoiceOptionId[] };
+
+interface AbilityAllocationSelection {
+  ability: Ability;
+  bonus: number;
+}
 ```
 
-The discriminator and every nested value are runtime-validatable and exhaustive. The persisted choice preserves instance identity, choice-definition identity, origin grant/entity identity, and the typed selected value. It retains no candidate list and copies no catalog definition.
+The discriminator and every nested value are runtime-validatable and exhaustive. `entity-ids` contains valid entity IDs with duplicates only where the originating definition permits repetition; its semantic minimum/maximum comes from that definition. `ability-allocation` is non-empty, uses valid abilities with positive integer bonuses and no duplicate ability assignment, and must assign eligible abilities using exactly one allowed distribution. `option-ids` contains valid option IDs, permits duplicates only where `repeatable` allows them, and every selected option must exist in the referenced closed-option definition.
 
-When implementation raises the character schema version, a deterministic runtime-validated migration maps each valid legacy `selectedOptionIds: EntityId[]` value losslessly to `{ kind: "entity-ids", entityIds: selectedOptionIds }`. It must reject invalid legacy values with a diagnostic, never silently replace a selection, add candidates, or copy catalog definitions. Migration tests remain mandatory even if no production character currently uses the old schema.
+The persisted choice preserves instance identity, choice-definition identity, origin grant/entity identity, and the typed selected value. It never persists candidate entities, eligible abilities, distributions, option definitions, package grants, or nested catalog choices. A parent package selection persists its option ID(s); each active nested choice persists separately with its own instance, definition, origin grant, and selected value. Catalog authority relates the parent option to its child definitions for later consequence/finalization resolution.
+
+When implementation raises the character schema version, a deterministic runtime-validated migration maps each valid legacy `selectedOptionIds: EntityId[]` value losslessly to `{ type: "entity-ids", entityIds: selectedOptionIds }`, preserving `instanceId`, `definitionId`, `originGrantId`, and meaningful selection order. It must reject invalid legacy values with a diagnostic, never silently replace a selection, add candidates, or copy catalog definitions. Migration tests remain mandatory even if no production character currently uses the old schema.
 
 ## 15. Spell state
 
@@ -538,7 +572,19 @@ interface InventoryItemInstance {
 }
 ```
 
-Selecting a closed equipment package is distinct from the resulting authoritative inventory or resource state. The selected `ChoiceOptionId` identifies the catalog package; materialized inventory remains character state. The current conceptual contract has no explicit currency field. If a package creates authoritative currency or another missing resource, future implementation must add a typed persisted contract for that resulting state rather than hiding it in a generic choice payload.
+Selecting a closed equipment package is distinct from the resulting authoritative inventory or resource state. The selected `ChoiceOptionId` identifies the catalog package; materialized inventory remains character state.
+
+```ts
+interface CharacterCurrencyState {
+  cp: number;
+  sp: number;
+  ep: number;
+  gp: number;
+  pp: number;
+}
+```
+
+`currency` is authoritative character state near inventory/resources, not a mixed inventory entry. Every denomination is a non-negative integer; a new character and deterministic migration from the current schema initialize all balances to zero. Later package materialization adds its currency grants to this state without persisting the package definition; that mutation belongs to P10-CORRECTIVE-J or its assigned corrective task.
 
 ## 17. Mutable resources
 
