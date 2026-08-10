@@ -62,6 +62,7 @@ export function selectBackground(
   }
 
   draft.background.backgroundId = backgroundId;
+  draft.backgroundChoices.choices = {};
   markStepResolved(draft, "background");
   invalidateDependentSteps(draft, "background");
   return true;

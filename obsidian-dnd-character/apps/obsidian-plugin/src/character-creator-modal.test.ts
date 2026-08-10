@@ -724,6 +724,24 @@ describe("CharacterCreatorModal", () => {
       expect(mockEl.createDiv).not.toHaveBeenCalled();
     });
 
+    it("does not render transient background or class internal-step errors while loading", () => {
+      selectRuleset(draft, "2014");
+      selectSources(draft, []);
+      selectBackground(draft, createEntityId("background:2014:phb:acolyte"));
+      selectClass(draft, createEntityId("class:2014:phb:fighter"));
+      const modal = new CharacterCreatorModal(app, draft);
+      const mockEl = { empty: vi.fn(), createDiv: vi.fn() } as unknown as HTMLElement;
+      // @ts-expect-error — testing private pending load state
+      modal.internalSubstepsPending.add("background-choices");
+      // @ts-expect-error — testing private pending load state
+      modal.internalSubstepsPending.add("class-starting-grants");
+      // @ts-expect-error — testing private member
+      modal.diagnosticsEl = mockEl;
+      // @ts-expect-error — testing private method
+      modal.renderDiagnosticsBanner();
+      expect(mockEl.createDiv).not.toHaveBeenCalled();
+    });
+
     it("renderDiagnosticsBanner renders error banner with inline styles", () => {
       draft.diagnostics = [
         {

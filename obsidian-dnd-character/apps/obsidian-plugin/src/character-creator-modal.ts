@@ -11,7 +11,7 @@ import {
   type TextComponent,
 } from "obsidian";
 
-import type { Character } from "@obsidian-dnd/character-contract";
+import type { Character, CharacterChoice } from "@obsidian-dnd/character-contract";
 import type { CharacterDraft } from "./character-draft";
 import { isDraftComplete, hasErrors } from "./character-draft";
 import type { CreatorStep } from "./character-step-controller";
@@ -29,6 +29,10 @@ import { selectSpeciesChoices } from "./character-species-choices-step";
 import { renderSpeciesChoices } from "./character-species-choices-renderer";
 import { selectBackground } from "./character-background-step";
 import { selectClass } from "./character-class-step";
+import { selectBackgroundChoices } from "./character-background-choices-step";
+import { selectClassStartingGrants } from "./character-class-starting-grants-step";
+import { renderBackgroundChoices } from "./character-background-choices-renderer";
+import { renderClassStartingGrants } from "./character-class-starting-grants-renderer";
 import { selectAbilityScores } from "./character-ability-scores-step";
 import {
   selectProficiencies,
@@ -79,6 +83,8 @@ const STEP_LABELS: ReadonlyMap<CreatorStep, string> = new Map([
   ["review", "Review"],
 ]);
 
+type InternalSubstep = "background-choices" | "class-starting-grants";
+
 function getStepLabel(step: CreatorStep): string {
   return STEP_LABELS.get(step) ?? step;
 }
@@ -97,6 +103,8 @@ export class CharacterCreatorModal extends ObsidianModal {
   private diagnosticsEl: HTMLElement | null = null;
   private speciesChoicesPending = false;
   private speciesChoiceLoadError: string | null = null;
+  private readonly internalSubstepsPending = new Set<InternalSubstep>();
+  private readonly internalSubstepLoadErrors = new Map<InternalSubstep, string>();
 
   constructor(
     app: App,
@@ -247,7 +255,11 @@ export class CharacterCreatorModal extends ObsidianModal {
       const isPendingSpeciesChoiceDiagnostic = this.speciesChoicesPending
         && d.step === "species-choices"
         && d.message === "Species choices not yet resolved";
+      const isPendingInternalDiagnostic = this.internalSubstepsPending.has(
+        d.step as InternalSubstep,
+      );
       return !isPendingSpeciesChoiceDiagnostic
+        && !isPendingInternalDiagnostic
         && d.message != null
         && d.message.trim().length > 0;
     });
@@ -257,6 +269,9 @@ export class CharacterCreatorModal extends ObsidianModal {
         message: this.speciesChoiceLoadError,
         severity: "error",
       });
+    }
+    for (const [step, message] of this.internalSubstepLoadErrors) {
+      diagnostics.push({ step, message, severity: "error" });
     }
     if (diagnostics.length === 0) return;
 
@@ -312,6 +327,39 @@ export class CharacterCreatorModal extends ObsidianModal {
     }
   }
 
+  private beginInternalSubstep(step: InternalSubstep): void {
+    this.internalSubstepsPending.add(step);
+    this.internalSubstepLoadErrors.delete(step);
+  }
+
+  private presentInternalSubstep(step: InternalSubstep): void {
+    this.internalSubstepsPending.delete(step);
+    this.renderDiagnosticsBanner();
+    this.updateNavigationButtons();
+  }
+
+  private failInternalSubstep(step: InternalSubstep, message: string): void {
+    this.internalSubstepsPending.delete(step);
+    this.internalSubstepLoadErrors.set(step, message);
+    this.renderDiagnosticsBanner();
+    this.updateNavigationButtons();
+  }
+
+  private resolveInternalSubstep(
+    step: InternalSubstep,
+    choices: Record<string, CharacterChoice>,
+    apply: (draft: CharacterDraft, choices: Record<string, CharacterChoice>) => boolean,
+  ): void {
+    this.internalSubstepsPending.delete(step);
+    this.internalSubstepLoadErrors.delete(step);
+    if (apply(this.controller.draft, choices)) {
+      this.renderCurrentStep();
+    } else {
+      this.renderDiagnosticsBanner();
+      this.updateNavigationButtons();
+    }
+  }
+
   /* ── Step rendering ────────────────────────────────────────── */
 
   private renderCurrentStep(): void {
@@ -325,6 +373,16 @@ export class CharacterCreatorModal extends ObsidianModal {
       && this.controller.draft.stepStatuses.get("species-choices") !== "resolved"
       && this.speciesChoiceLoadError === null) {
       this.speciesChoicesPending = true;
+    }
+    if (currentStep === "background" && this.controller.draft.background.backgroundId !== null
+      && this.controller.draft.stepStatuses.get("background-choices") !== "resolved"
+      && !this.internalSubstepLoadErrors.has("background-choices")) {
+      this.internalSubstepsPending.add("background-choices");
+    }
+    if (currentStep === "class" && this.controller.draft.class.classId !== null
+      && this.controller.draft.stepStatuses.get("class-starting-grants") !== "resolved"
+      && !this.internalSubstepLoadErrors.has("class-starting-grants")) {
+      this.internalSubstepsPending.add("class-starting-grants");
     }
 
     this.renderProgressBar();
@@ -770,10 +828,25 @@ export class CharacterCreatorModal extends ObsidianModal {
           .setValue(currentId)
           .onChange((value) => {
             if (value !== "" && selectBackground(draft, value)) {
+              this.beginInternalSubstep("background-choices");
               this.renderCurrentStep();
             }
           });
       });
+
+      if (draft.background.backgroundId) {
+        const selected = sorted.find((entry) => entry.id === draft.background.backgroundId);
+        if (selected === undefined) return;
+        await renderBackgroundChoices(
+          container, draft, catalog, selected,
+          (sourceId, access) => this.isEntityEligible(sourceId, access),
+          (choices) => this.resolveInternalSubstep(
+            "background-choices", choices, selectBackgroundChoices,
+          ),
+          () => this.presentInternalSubstep("background-choices"),
+          (message) => this.failInternalSubstep("background-choices", message),
+        );
+      }
     } catch {
       loadingEl.remove();
       container.createEl("p", {
@@ -845,10 +918,25 @@ export class CharacterCreatorModal extends ObsidianModal {
           .setValue(currentId)
           .onChange((value) => {
             if (value !== "" && selectClass(draft, value)) {
+              this.beginInternalSubstep("class-starting-grants");
               this.renderCurrentStep();
             }
           });
       });
+
+      if (draft.class.classId) {
+        const selected = sorted.find((entry) => entry.id === draft.class.classId);
+        if (selected === undefined) return;
+        await renderClassStartingGrants(
+          container, draft, catalog, selected,
+          (sourceId, access) => this.isEntityEligible(sourceId, access),
+          (choices) => this.resolveInternalSubstep(
+            "class-starting-grants", choices, selectClassStartingGrants,
+          ),
+          () => this.presentInternalSubstep("class-starting-grants"),
+          (message) => this.failInternalSubstep("class-starting-grants", message),
+        );
+      }
     } catch {
       loadingEl.remove();
       container.createEl("p", {
