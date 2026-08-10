@@ -21,6 +21,8 @@ import { selectRuleset } from "./character-ruleset-step";
 import { selectSources } from "./character-source-step";
 import { selectBackground } from "./character-background-step";
 import { selectClass } from "./character-class-step";
+import { selectSpecies } from "./character-species-step";
+import { createEntityId } from "@obsidian-dnd/domain";
 
 /* ── Mock Obsidian components ─────────────────────────────────── */
 
@@ -703,6 +705,25 @@ describe("CharacterCreatorModal", () => {
   });
 
   describe("Issue E: Error diagnostic presentation", () => {
+    it("does not render a false species-choice error while async evaluation is pending", () => {
+      selectRuleset(draft, "2014");
+      selectSources(draft, []);
+      selectSpecies(draft, createEntityId("species:2014:phb:elf"));
+      const modal = new CharacterCreatorModal(app, draft);
+      const mockEl = {
+        empty: vi.fn(),
+        createDiv: vi.fn(),
+      } as unknown as HTMLElement;
+      // @ts-expect-error — testing private pending load state
+      modal.speciesChoicesPending = true;
+      // @ts-expect-error — testing private member
+      modal.diagnosticsEl = mockEl;
+      // @ts-expect-error — testing private method
+      modal.renderDiagnosticsBanner();
+
+      expect(mockEl.createDiv).not.toHaveBeenCalled();
+    });
+
     it("renderDiagnosticsBanner renders error banner with inline styles", () => {
       draft.diagnostics = [
         {

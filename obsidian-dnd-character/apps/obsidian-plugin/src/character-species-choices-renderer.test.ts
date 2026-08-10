@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { CatalogService } from "./catalog/catalog-service";
 import type { CharacterDraft } from "./character-draft";
+import type { CharacterChoice } from "@obsidian-dnd/character-contract";
 import { createEmptyCharacterDraft } from "./character-draft";
 import { selectRuleset } from "./character-ruleset-step";
 import { selectSources } from "./character-source-step";
 import { selectSpecies } from "./character-species-step";
-import { renderSpeciesChoices } from "./character-species-choices-renderer";
+import { renderSpeciesChoices as renderSpeciesChoicesRuntime } from "./character-species-choices-renderer";
 import type { CatalogEntitySummary, ChoiceDefinitionType } from "@obsidian-dnd/catalog-contract";
 import {
   createCatalogEntitySummary,
@@ -19,6 +20,7 @@ import {
   createChoiceDefinitionId,
   createCatalogRevision,
   type RuleEntityKind,
+  type Ruleset,
 } from "@obsidian-dnd/domain";
 
 const rev = createCatalogRevision("rev-001");
@@ -115,6 +117,7 @@ function createSpecies(
   id: ReturnType<typeof createEntityId> = humanId,
   name = "Human",
   choiceDef?: { defId: string; label: string; type: ChoiceDefinitionType; min: number; max: number; queryKind: RuleEntityKind },
+  ruleset: Ruleset = "2024",
 ): ReturnType<typeof createSpeciesRule> {
   const choices = choiceDef
     ? [createChoiceDefinition(
@@ -124,10 +127,46 @@ function createSpecies(
       )]
     : [];
   return createSpeciesRule(
-    id, name, srcId, "2024", "core",
+    id, name, srcId, ruleset, "core",
     "Medium", 30, id === elfId,
     [], [], [], [], [], choices, [],
     false,
+  );
+}
+
+function createSpeciesSummary(
+  id: ReturnType<typeof createEntityId>,
+): CatalogEntitySummary {
+  return createCatalogEntitySummary({
+    id,
+    kind: "species",
+    name: id === elfId ? "Elf" : "Human",
+    sourceId: srcId,
+    ruleset: id.includes(":2014:") ? "2014" : "2024",
+    access: "core",
+    legacy: false,
+    tags: [],
+    detailPath: `entities/species/${id}.json`,
+  });
+}
+
+function renderSpeciesChoices(
+  container: HTMLElement,
+  draft: CharacterDraft,
+  catalog: CatalogService,
+  isEntityEligible: (sourceId: string, access: string) => boolean,
+  onChoicesResolved: (choices: Record<string, CharacterChoice>) => void,
+): Promise<void> {
+  const speciesId = draft.species.speciesId;
+  if (speciesId === null) {
+    return renderSpeciesChoicesRuntime(
+      container, draft, catalog, createSpeciesSummary(humanId),
+      isEntityEligible, onChoicesResolved,
+    );
+  }
+  return renderSpeciesChoicesRuntime(
+    container, draft, catalog, createSpeciesSummary(speciesId),
+    isEntityEligible, onChoicesResolved,
   );
 }
 

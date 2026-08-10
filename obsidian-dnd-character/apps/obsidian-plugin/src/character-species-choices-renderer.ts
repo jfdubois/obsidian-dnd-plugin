@@ -10,7 +10,7 @@ import type { CharacterChoice } from "@obsidian-dnd/character-contract";
 import { createCharacterChoice } from "@obsidian-dnd/character-contract";
 import type { EntityId, CatalogRevision } from "@obsidian-dnd/domain";
 import { createChoiceInstanceId } from "@obsidian-dnd/domain";
-import type { ChoiceDefinition } from "@obsidian-dnd/catalog-contract";
+import type { CatalogEntitySummary, ChoiceDefinition } from "@obsidian-dnd/catalog-contract";
 import { renderChoiceDefinition, type ChoiceDropdownState } from "./character-species-choice-renderers";
 
 /* ── Public API ────────────────────────────────────────────────── */
@@ -19,11 +19,14 @@ export async function renderSpeciesChoices(
   container: HTMLElement,
   draft: CharacterDraft,
   catalog: CatalogService,
+  selectedSpecies: Pick<CatalogEntitySummary, "id" | "detailPath">,
   isEntityEligible: (sourceId: string, access: string) => boolean,
   onChoicesResolved: (choices: Record<string, CharacterChoice>) => void,
+  onChoicesPresented?: () => void,
+  onEntityLoadError?: (message: string) => void,
 ): Promise<void> {
   const speciesId = draft.species.speciesId;
-  if (!speciesId) return;
+  if (!speciesId || speciesId !== selectedSpecies.id) return;
 
   const status = catalog.getRuntimeStatus();
   const revision = status.activeRevision;
@@ -37,13 +40,15 @@ export async function renderSpeciesChoices(
 
   try {
     const speciesResult = await catalog.fetchEntity(
-      revision, speciesId, getSpeciesDetailPath(speciesId),
+      revision, selectedSpecies.id, selectedSpecies.detailPath,
     );
     loadingEl.remove();
 
     const speciesData = speciesResult.data;
     if (speciesData.kind !== "species") {
-      container.createEl("p", { text: "Invalid species data." });
+      const message = `Selected catalog entity at ${selectedSpecies.detailPath} is not species data. Refresh the catalog and try again.`;
+      container.createEl("p", { text: message, cls: "dnd-creator-error" });
+      onEntityLoadError?.(message);
       return;
     }
 
@@ -61,12 +66,15 @@ export async function renderSpeciesChoices(
       container, draft, catalog, revision, speciesId,
       choices, isEntityEligible, onChoicesResolved,
     );
+    onChoicesPresented?.();
   } catch {
     loadingEl.remove();
+    const message = `Could not load the selected species entity at ${selectedSpecies.detailPath}. Refresh the catalog and try again.`;
     container.createEl("p", {
-      text: "Failed to load species choices.",
+      text: message,
       cls: "dnd-creator-error",
     });
+    onEntityLoadError?.(message);
   }
 }
 
@@ -147,17 +155,4 @@ export function buildChoices(
   }
 
   return choices;
-}
-
-/* ── Helpers ───────────────────────────────────────────────────── */
-
-function getSpeciesDetailPath(speciesId: string): string {
-  const parts = speciesId.split(":");
-  if (parts.length >= 4) {
-    const ruleset = parts[1];
-    const source = parts[2];
-    const name = parts.slice(3).join("-");
-    return `entities/species/${source}/${ruleset}/${name}.json`;
-  }
-  return `entities/species/${speciesId}.json`;
 }

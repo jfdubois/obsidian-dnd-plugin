@@ -95,6 +95,8 @@ export class CharacterCreatorModal extends ObsidianModal {
   private stepContentEl: HTMLElement | null = null;
   private progressBarEl: HTMLElement | null = null;
   private diagnosticsEl: HTMLElement | null = null;
+  private speciesChoicesPending = false;
+  private speciesChoiceLoadError: string | null = null;
 
   constructor(
     app: App,
@@ -241,9 +243,21 @@ export class CharacterCreatorModal extends ObsidianModal {
     if (!this.diagnosticsEl) return;
     this.diagnosticsEl.empty();
 
-    const diagnostics = this.controller.draft.diagnostics.filter(
-      (d) => d.message != null && d.message.trim().length > 0,
-    );
+    const diagnostics = this.controller.draft.diagnostics.filter((d) => {
+      const isPendingSpeciesChoiceDiagnostic = this.speciesChoicesPending
+        && d.step === "species-choices"
+        && d.message === "Species choices not yet resolved";
+      return !isPendingSpeciesChoiceDiagnostic
+        && d.message != null
+        && d.message.trim().length > 0;
+    });
+    if (this.speciesChoiceLoadError !== null) {
+      diagnostics.push({
+        step: "species-choices",
+        message: this.speciesChoiceLoadError,
+        severity: "error",
+      });
+    }
     if (diagnostics.length === 0) return;
 
     const errors = diagnostics.filter((d) => d.severity === "error");
@@ -305,6 +319,13 @@ export class CharacterCreatorModal extends ObsidianModal {
     this.stepContentEl.empty();
 
     const currentStep = this.controller.currentStep;
+
+    if (currentStep === "species"
+      && this.controller.draft.species.speciesId !== null
+      && this.controller.draft.stepStatuses.get("species-choices") !== "resolved"
+      && this.speciesChoiceLoadError === null) {
+      this.speciesChoicesPending = true;
+    }
 
     this.renderProgressBar();
     this.renderDiagnosticsBanner();
@@ -639,6 +660,8 @@ export class CharacterCreatorModal extends ObsidianModal {
           .setValue(currentId)
           .onChange((value) => {
             if (value !== "" && selectSpecies(draft, value)) {
+              this.speciesChoicesPending = true;
+              this.speciesChoiceLoadError = null;
               this.renderCurrentStep();
             }
           });
@@ -646,15 +669,33 @@ export class CharacterCreatorModal extends ObsidianModal {
 
       // Render species choices section after species is selected
       if (draft.species.speciesId) {
+        const selectedSpecies = sorted.find((entry) => entry.id === draft.species.speciesId);
+        if (selectedSpecies === undefined) return;
         await renderSpeciesChoices(
           container,
           draft,
           catalog,
+          selectedSpecies,
           (sourceId, access) => this.isEntityEligible(sourceId, access),
           (choices) => {
+            this.speciesChoicesPending = false;
+            this.speciesChoiceLoadError = null;
             if (selectSpeciesChoices(draft, choices)) {
               this.renderCurrentStep();
+            } else {
+              this.renderDiagnosticsBanner();
             }
+          },
+          () => {
+            this.speciesChoicesPending = false;
+            this.renderDiagnosticsBanner();
+            this.updateNavigationButtons();
+          },
+          (message) => {
+            this.speciesChoicesPending = false;
+            this.speciesChoiceLoadError = message;
+            this.renderDiagnosticsBanner();
+            this.updateNavigationButtons();
           },
         );
       }
