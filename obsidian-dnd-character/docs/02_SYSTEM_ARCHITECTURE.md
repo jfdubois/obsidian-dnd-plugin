@@ -242,6 +242,8 @@ The boundary has two non-interchangeable modes. A **canonical-reference-required
 
 Equipment-category choices use catalog-owned `EquipmentGroup` constraints. The builder maps supported raw source `equipmentType` tokens to those finite semantic groups and independently assigns the groups to normalized `ItemRule` entities from structured item-source classification. Query evaluation combines ordinary query restrictions with group intersection; candidate lists remain derived and disposable. Unsupported raw tokens, malformed source equipment, broken authoritative references, or unavailable structured item classification produce source-path diagnostics rather than an unrestricted query or raw-data leakage.
 
+Class proficiency semantics are likewise catalog-owned and origin-owned. Exact proficiencies retain `ProficiencyRef`; fixed broad weapon proficiencies retain a normalized category/filter scope, never a snapshot of current weapon IDs. Catalog-aware matching derives category and all-required-property matches from current normalized ItemRule classification for display, weapon-use checks, and projections. Source-authored skill allowlists are canonical-ID eligibility constraints, not evaluated candidate caches. Tool-proficiency group choices query distinct catalog-owned `ProficiencyGroup` classifications on the canonical ItemRule target; `EquipmentQuery` and `EquipmentGroup` remain inventory-only and never grant a proficiency.
+
 The persistence boundary is explicit:
 
 - **Catalog authority, never copied to a character:** descriptions, traits, effect/grant definitions, choice definitions, candidate lists, equipment-package definitions, eligible abilities, source metadata, render content, dependencies, and provenance.

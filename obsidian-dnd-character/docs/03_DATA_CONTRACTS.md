@@ -305,6 +305,65 @@ Before publication, the catalog builder may hold a transient internal equipment-
 
 The modes are exact: `canonical-reference-required` means resolve an actual `ItemRule` or fail, with no named-item fallback; `physical-name-with-fallback` means resolve through a deterministic governed mapping if one exists, otherwise publish a valid named-item. Both reject fuzzy matching and metadata invention. Diagnostics distinguish unsupported raw equipment type, broken authoritative canonical reference, malformed physical named item, unavailable item-classification mapping, and unsupported equipment-query shape. Successfully consumed supported equipment must not also emit a generic unmapped-equipment warning.
 
+### Constrained proficiency scopes and queries
+
+H6 extends, rather than replaces, the exact `ProficiencyRef` vocabulary. Existing exact skill, tool, weapon, armor, saving-throw, and initiative forms remain exact canonical references or their existing finite forms. The extension is only for Class source semantics that cannot truthfully be represented by a specific weapon `EntityId` or a kind-only query.
+
+`WeaponCategory` is a finite normalized vocabulary for the verified Class source universe: `"simple" | "martial"`. It is not a raw 5eTools string. `WeaponPropertyRef` reuses the normalized ItemRule weapon-property classification (the ItemRule property vocabulary is refined to this typed value for weapon properties; no second property list is introduced). H6 requires only `"light"` and `"finesse"`, the values observed in the structured XPHB Class filters. Unknown categories or properties diagnose.
+
+```ts
+type WeaponProficiencyScope =
+  | { type: "weapon-category"; category: WeaponCategory }
+  | {
+      type: "weapon-filter";
+      category: WeaponCategory;
+      requiredProperties: WeaponPropertyRef[];
+    };
+
+type AddProficiencyTarget = ProficiencyRef | WeaponProficiencyScope;
+
+interface ProficiencyQuery {
+  type: "proficiency";
+  kind: ProficiencyQueryKind;
+  constraint?:
+    | { type: "exact-eligible-ids"; eligibleIds: EntityId[] }
+    | { type: "proficiency-groups"; groups: ProficiencyGroup[] };
+}
+
+type ProficiencyGroup = "artisan-tool" | "musical-instrument";
+
+interface ItemRule {
+  // Existing fields omitted.
+  weaponCategory?: WeaponCategory;
+  properties: WeaponPropertyRef[];
+  proficiencyGroups: ProficiencyGroup[];
+}
+```
+
+`add-proficiency` accepts `AddProficiencyTarget` through a strict discriminated union. A category scope matches every canonical weapon whose `ItemRule.weaponCategory` equals the scope category. A filter scope additionally requires **all** `requiredProperties`. Matching IDs are derived from the current normalized catalog for display, weapon-use checks, and projections; they are never expanded into an authoritative effect or character-state array. The XPHB Rogue structured `Finesse or Light` source is represented by separate fixed scopes for `martial + finesse` and `martial + light` (plus its simple-category scope), preserving its union without adding OR trees or a predicate language. Structured source may create scopes only in catalog-builder; narrative text remains contextual.
+
+The `constraint` is a strict one-of: absent means the existing kind-only query; `exact-eligible-ids` means a candidate has the requested kind **and** a canonical ID in the source-authored allowlist; `proficiency-groups` means a candidate has the requested kind **and** its `proficiencyGroups` intersects the requested groups. Empty, duplicate, malformed, or mixed constraints are invalid. H6 source inventory requires no exact-ID-plus-group combination. The source allowlist is authoritative catalog rule data, not an evaluated candidate cache: every included ID resolves under normal reference-integrity rules or the builder emits an unresolved-reference failure, and names, definitions, candidate results, and raw tokens are never copied into the query.
+
+`ProficiencyGroup` is catalog-owned and semantically separate from `EquipmentGroup`, even where the labels coincide. The canonical selectable target for verified tool proficiency is the existing `ItemRule`; catalog-builder may derive both classifications once from authoritative structured item fields, but `proficiencyGroups` is used only by `ProficiencyQuery` and `equipmentGroups` only by `EquipmentQuery`. Multiple proficiency groups have OR/intersection semantics inside the group constraint. Equipment ownership and tool-proficiency mechanics remain distinct.
+
+Pinned PHB/XPHB Class inventory for this contract is bounded to the following creator-relevant shapes:
+
+| Raw source shape | Ruleset/Class examples | Semantic meaning | Proposed normalized representation |
+| --- | --- | --- | --- |
+| `startingProficiencies.weapons: ["simple"]` | PHB/XPHB Barbarian, Bard, Cleric, Fighter, Monk, Paladin, Ranger, Sorcerer, Warlock; XPHB Druid/Wizard | Fixed category proficiency | `weapon-category { category: "simple" }` |
+| `startingProficiencies.weapons: ["martial"]` | PHB/XPHB Barbarian, Fighter, Paladin, Ranger | Fixed category proficiency | `weapon-category { category: "martial" }` |
+| `weaponProficiencies.all.fromFilter: type=martial weapon|property=light` | XPHB Monk | Fixed martial weapon proficiency with Light | `weapon-filter { category: "martial", requiredProperties: ["light"] }` |
+| `weaponProficiencies.all.fromFilter: type=martial weapon|property=light;finesse` | XPHB Rogue | Fixed martial weapon proficiency with Finesse **or** Light | Two fixed filter scopes, one for `finesse`, one for `light`; no candidate expansion or generic OR query |
+| `startingProficiencies.skills[].choose.from` plus `count` | PHB/XPHB Barbarian, Cleric, Druid, Fighter, Monk, Paladin, Ranger, Rogue, Sorcerer, Warlock, Wizard | Choose the stated count from the exact source-authored skill list | skill `ProficiencyQuery` with `exact-eligible-ids`; ChoiceDefinition preserves count |
+| `startingProficiencies.skills[].any` | PHB/XPHB Bard | Choose from the existing kind-wide skill universe | existing kind-only skill `ProficiencyQuery`; ChoiceDefinition preserves count |
+| `toolProficiencies.anyArtisansTool` | PHB/XPHB Monk | Choose stated number of artisan-tool proficiencies | tool `ProficiencyQuery` with `proficiency-groups: ["artisan-tool"]` |
+| `toolProficiencies.anyMusicalInstrument` | PHB/XPHB Bard and Monk | Choose stated number of musical-instrument proficiencies | tool `ProficiencyQuery` with `proficiency-groups: ["musical-instrument"]` |
+| exact weapon/tool/armor/save fields and exact named tool keys | PHB Bard/Druid/Monk/Rogue and both rulesets generally | Specific canonical proficiency or existing finite form | existing exact `ProficiencyRef` |
+
+Other inventoried Class proficiency fields (`armor`, saving-throw `proficiency`, exact named tools, and narrative display arrays) use existing exact/finite contracts or remain contextual; none requires another H6 query constraint. The builder maps raw category, property, group, and skill-name/reference forms to normalized values only. It diagnoses unknown weapon category, unsupported structured weapon filter, unknown weapon property, unresolved exact skill eligibility reference, unknown tool proficiency group, malformed proficiency-group choice, and unsupported structured proficiency source shape; successfully consumed structures do not also emit generic unmapped diagnostics.
+
+Character persistence remains unchanged by H6: `CharacterChoice.selectedValue` stores only the selected canonical EntityIds for Class skill/tool choices. Eligible IDs, proficiency groups, scope matches, evaluated candidates, and copied ItemRule/SkillRule definitions remain catalog-owned. Catalog schema stays in the pending v2 increment and now includes scoped proficiency targets, constrained `ProficiencyQuery`, and ItemRule proficiency-group/weapon classification; character schema stays in its pending v2 increment with no additional H6 version.
+
 ## 9. Effects and projections
 
 ```ts

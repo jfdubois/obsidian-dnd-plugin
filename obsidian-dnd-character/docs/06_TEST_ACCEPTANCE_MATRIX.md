@@ -39,6 +39,13 @@
 | CAT-031 | Authoritative canonical equipment reference | Actual ItemRule resolution publishes an item grant; a broken reference fails/diagnoses and never becomes named-item |
 | CAT-032 | Explicit physical named equipment | Governed canonical resolution takes precedence; otherwise valid physical name publishes named-item; fuzzy display-name matching is absent |
 | CAT-033 | Deferred equipment-resolution boundary | Transient intent never reaches publication; RuleGrantId remains stable whether a physical intent resolves to item or named-item |
+| CAT-034 | Exact weapon proficiency compatibility | Existing skill, tool, weapon, armor, and saving-throw ProficiencyRef forms remain valid exact/finite representations |
+| CAT-035 | Fixed weapon category scope | PHB/XPHB simple and martial structures normalize to finite scoped proficiencies; raw categories and matching ID arrays do not publish; unknown category diagnoses |
+| CAT-036 | Structured weapon filters | XPHB Monk martial+Light and Rogue martial+(Finesse or Light) normalize to bounded scopes using canonical property values; unknown property/filter diagnoses; no generic predicate or candidate expansion |
+| CAT-037 | Exact skill allowlist query | Every `choose.from` skill resolves to canonical eligible IDs; count is preserved; evaluation returns only allowed skills; malformed lists or unresolved included references fail rather than partially narrow the choice |
+| CAT-038 | Tool proficiency-group query | `anyArtisansTool` and `anyMusicalInstrument` map to finite ProficiencyGroup values on canonical ItemRule candidates; count is preserved; group query evaluates by intersection and stores no candidates |
+| CAT-039 | Proficiency-query constraints | Kind-only, exact-eligible-ID, and group forms validate; mixed exact-ID/group constraints are rejected; source-owned allowlists remain catalog data rather than candidate caches |
+| CAT-040 | Equipment/proficiency domain separation | Selecting artisan-tool equipment does not grant artisan-tool proficiency; EquipmentQuery/EquipmentGroup are rejected where ProficiencyQuery/ProficiencyGroup are required, even when the ItemRule has both classifications |
 
 ## 2. Catalog client/cache
 
