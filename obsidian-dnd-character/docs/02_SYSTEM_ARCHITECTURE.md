@@ -234,6 +234,14 @@ Changing Species, Background, or Class invalidates that origin's selections and 
 
 The existing global creator capabilities—base ability generation, proficiency/language controls, equipment controls, and spell controls—remain reusable capabilities. They are not a claim of global data ownership.
 
+### Deferred equipment resolution boundary
+
+The catalog builder owns a deferred equipment-resolution boundary between entity normalizers and published catalog validation. A normalizer may emit ordinary normalized effects, grants, and choices immediately, but it records structured equipment as a transient resolution intent whenever final item-versus-named-item publication depends on the normalized item/reference context. After `ItemRule` entities and canonical references are available, the builder resolves each intent to exactly one published outcome: a canonical `RuleGrant` item, a valid `RuleGrant` named-item, or an actionable diagnostic/failure. No transient intent, raw source equipment token, fallback payload, or raw package object may survive the publication boundary.
+
+The boundary has two non-interchangeable modes. A **canonical-reference-required** intent represents an authoritative source item reference and must resolve to an existing `ItemRule` or fail; a constructible canonical-looking ID is not evidence that the entity exists, and this mode never falls back to a named item. A **physical-name-with-fallback** intent represents a concrete physical object without an authoritative canonical item reference. It first attempts only a deterministic governed mapping to an existing `ItemRule`; if no such item exists, it publishes the validated physical name as a named-item. Neither mode permits fuzzy display-name matching, synthetic items, or inferred mechanics.
+
+Equipment-category choices use catalog-owned `EquipmentGroup` constraints. The builder maps supported raw source `equipmentType` tokens to those finite semantic groups and independently assigns the groups to normalized `ItemRule` entities from structured item-source classification. Query evaluation combines ordinary query restrictions with group intersection; candidate lists remain derived and disposable. Unsupported raw tokens, malformed source equipment, broken authoritative references, or unavailable structured item classification produce source-path diagnostics rather than an unrestricted query or raw-data leakage.
+
 The persistence boundary is explicit:
 
 - **Catalog authority, never copied to a character:** descriptions, traits, effect/grant definitions, choice definitions, candidate lists, equipment-package definitions, eligible abilities, source metadata, render content, dependencies, and provenance.

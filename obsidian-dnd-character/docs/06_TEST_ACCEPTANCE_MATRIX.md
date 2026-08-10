@@ -32,6 +32,13 @@
 | CAT-024 | 5d4 × 10-style starting currency | Normalizes structurally as `dice` count/die sides/multiplier; no source dice tag leaks into catalog |
 | CAT-025 | Unsupported creator currency formula | Actionable coverage diagnostic identifies available entity/ruleset/source/path/normalizer and expression shape; no average, raw formula, or omission |
 | CAT-026 | Same normalized grant source/configuration | Deterministic, scope-unique `RuleGrantId`, not based only on display text |
+| CAT-027 | Phase-10 creator equipment types | Inventory covers Background and Class `equipmentType`/`equipmentTypes`; every supported raw type maps only to a finite normalized EquipmentGroup |
+| CAT-028 | Item equipment-group classification | Published ItemRule has runtime-valid `equipmentGroups`, structurally derived from item source; unknown/missing required classification diagnoses |
+| CAT-029 | Equipment-group query | Group restriction uses any-group intersection and remains conjunctive with category/source/access/etc.; candidate lists and raw tokens are not published |
+| CAT-030 | Unknown or unsupported equipment type | Actionable source-path coverage diagnostic; no unrestricted query or generic unmapped warning for consumed supported equipment |
+| CAT-031 | Authoritative canonical equipment reference | Actual ItemRule resolution publishes an item grant; a broken reference fails/diagnoses and never becomes named-item |
+| CAT-032 | Explicit physical named equipment | Governed canonical resolution takes precedence; otherwise valid physical name publishes named-item; fuzzy display-name matching is absent |
+| CAT-033 | Deferred equipment-resolution boundary | Transient intent never reaches publication; RuleGrantId remains stable whether a physical intent resolves to item or named-item |
 
 ## 2. Catalog client/cache
 

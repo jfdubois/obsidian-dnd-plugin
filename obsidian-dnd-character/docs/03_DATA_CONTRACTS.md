@@ -198,7 +198,7 @@ Ability allocation is not an `EntityId` query and does not replace global base a
 
 `ChoiceOptionId` is a project-owned branded identifier, distinct from `EntityId`, that is deterministic, runtime-validated, catalog-owned, unique within its containing definition, and stable enough to identify a closed option without copying its definition to character state. The builder owns generation and must not derive it from display text alone; it may use its definition identity with a deterministic source-local key, path, or digest consistent with project ID conventions.
 
-`RuleGrant` is the one strict vocabulary for automatic entity consequences and selected closed-option consequences; `ChoiceOptionGrant` is a compatibility alias, not a second union. Every published grant carries a runtime-validated, catalog-owned `RuleGrantId`, distinct from `EntityId`. The builder deterministically generates it from the owning normalized consequence scope plus a normalized source/path key: `BackgroundRule.grants` uses background origin plus grant path; `ClassRule.startingGrants` uses class origin plus starting-grant path; `ChoiceOption.grants` uses owning definition and option plus grant path; other entity grants use owning entity plus grant path. It is stable for the same normalized source/configuration and unique within its owner, but never derives solely from display text such as a label, item name, or formula. The exact generation helper belongs to I; canonical `EntityId` construction is unchanged.
+`RuleGrant` is the one strict vocabulary for automatic entity consequences and selected closed-option consequences; `ChoiceOptionGrant` is a compatibility alias, not a second union. Every published grant carries a runtime-validated, catalog-owned `RuleGrantId`, distinct from `EntityId`. The builder deterministically generates it from the owning normalized consequence scope plus a normalized source/path key: `BackgroundRule.grants` uses background origin plus grant path; `ClassRule.startingGrants` uses class origin plus starting-grant path; `ChoiceOption.grants` uses owning definition and option plus grant path; other entity grants use owning entity plus grant path. It is stable for the same normalized source/configuration and unique within its owner, but never derives solely from display text such as a label, item name, or formula. Deferred equipment resolution preserves the same ID whether the stable source/path intent later publishes an `item` or a `named-item`; it must not derive the ID from the final item ID or fallback name alone. The exact generation helper belongs to I; canonical `EntityId` construction is unchanged.
 
 `CurrencyGrantAmount` is the sole authoritative currency amount representation. A `fixed` amount has exactly an integer `value > 0`; a `dice` amount has positive-integer `count`, integer `dieSides >= 2`, and positive-integer `multiplier` (including `1` for an unmultiplied dice amount). No zero/no-op or fractional amount is valid. The nested discriminant deliberately permits only verified fixed, `NdM`, and `NdM × K` structures: it has no modifier, operator, expression, formula, raw, text, AST, or generic-record escape hatch.
 
@@ -217,7 +217,7 @@ Pinned-source inventory for this boundary is intentionally limited to the suppor
 
 A `named-item` is a concrete mundane/non-catalog inventory object. It is valid only when an authoritative structured source explicitly grants a physical equipment item, canonical `ItemRule` resolution was attempted and did not resolve it, and no additional mechanics must be invented. Runtime validation requires `type === "named-item"`, a string `name` that is trimmed and non-empty, and a positive-integer `quantity`. It rejects empty or whitespace-only names, zero, negative, or fractional quantities, arbitrary raw source objects, HTML, and free-form mechanical metadata. A named-item has exactly `type`, `name`, and `quantity`; it must not carry cost, weight, rarity, category, body slot, attunement, effects, raw source, `special`, or generic metadata.
 
-The builder must attempt existing canonical item resolution first: a structured source item that resolves to a canonical `ItemRule` emits the existing `item` grant; only an unresolved structured physical item with a usable normalized name emits `named-item`; all other cases emit an actionable normalization-coverage diagnostic. `named-item` is never a substitute for skipping canonical resolution and no entity-name exceptions are allowed. The builder translates the verified source value into normalized name and quantity only; raw 5eTools field names (including `special`) and raw DTOs remain builder-only and may appear only in internal diagnostics under existing diagnostic rules.
+The builder resolves equipment at its builder-owned deferred resolution boundary, after normalized item/reference context is available. An authoritative canonical source reference is **canonical-reference-required**: it must resolve to an existing `ItemRule` and publish `item`, or emit an unresolved-reference failure/diagnostic; it never becomes a named item merely because a display name is available. An explicit structured physical object without such a reference is **physical-name-with-fallback**: the builder attempts only a deterministic governed mapping to an existing `ItemRule`, publishing `item` if it resolves and otherwise publishing a valid named-item. A constructible canonical ID is not proof that the target entity exists. `named-item` is never a substitute for skipping canonical resolution and no entity-name exceptions or fuzzy display-name matching are allowed. The builder translates the verified source value into normalized name and quantity only; raw 5eTools field names (including `special`) and raw DTOs remain builder-only and may appear only in internal diagnostics under existing diagnostic rules.
 
 `named-item` carries no mechanical behavior and is not a narrative-mechanics escape hatch. It never produces AC, attack, damage, proficiency, attunement, charges, resources, ability effects, or rule effects. Mechanics must not be inferred from its name: for example, `vestments` has no implied armor, clothing mechanics, body slot, AC, weight, or value. A future explicit catalog resolution or replacement operation may convert a materialized inventory entry to a canonical catalog item; until then it remains non-mechanical. Synthetic `ItemRule` entities are prohibited for these source-named items because unavailable category, rarity, cost, weight, properties, attunement, or body-slot data would require guessed mechanics.
 
@@ -243,6 +243,67 @@ interface QueryContext {
 ```
 
 Query evaluation must be deterministic for a given catalog revision and input.
+
+### Equipment groups
+
+`EquipmentGroup` is a finite, catalog-owned, runtime-validated classification used only for the creator-relevant item groups inventoried from pinned 2014/2024 Background and Class starting equipment. It is not a raw 5eTools token and unknown values are rejected:
+
+```ts
+type EquipmentGroup =
+  | "artisan-tool"
+  | "musical-instrument"
+  | "gaming-set"
+  | "simple-weapon"
+  | "simple-melee-weapon"
+  | "martial-weapon"
+  | "martial-melee-weapon"
+  | "arcane-spellcasting-focus"
+  | "holy-spellcasting-focus"
+  | "druidic-spellcasting-focus";
+
+interface ItemRule {
+  kind: "item";
+  // Existing ItemRule fields omitted.
+  equipmentGroups: EquipmentGroup[];
+}
+
+interface EquipmentQuery {
+  type: "equipment";
+  category?: EquipmentCategory;
+  rarity?: EquipmentRarity;
+  bodySlot?: EquipmentBodySlot;
+  sourceId?: SourceId;
+  access?: ContentAccess;
+  equipmentGroups?: EquipmentGroup[];
+}
+```
+
+`ItemRule.equipmentGroups` is required and is `[]` when no inventoried group applies. An item may have multiple groups. If `EquipmentQuery.equipmentGroups` is absent, it imposes no group restriction. If present, a candidate must belong to at least one requested group; every other query restriction remains conjunctive. Query-backed choice definitions retain only this normalized query, never its candidate list or raw source `equipmentType`/`equipmentTypes` values.
+
+The catalog builder maps raw source values only through a governed mapping and classifies items only from structured item-source fields (not display names): the source item type/classification distinguishes artisan tools, musical instruments, gaming sets, and spellcasting foci; structured weapon category/range classification distinguishes simple, simple-melee, martial, and martial-melee weapons; structured focus classification distinguishes arcane, holy, and druidic foci. Unsupported raw equipment-type values, malformed group structures, and a required group that cannot be derived from structured item data produce actionable normalization-coverage diagnostics.
+
+Pinned creator-equipment inventory establishes the complete H5 set:
+
+| Raw source type | Ruleset/origin examples | Normalized group | Structured item classification source |
+| --- | --- | --- | --- |
+| `toolArtisan` | 2014 Background Folk Hero/Guild Artisan; 2024 Background Artisan; 2024 Monk alternative | `artisan-tool` | item type/classification for artisan tools |
+| `instrumentMusical` | 2014/2024 Background Entertainer; 2014 Bard; 2024 Bard/Monk alternative | `musical-instrument` | item type/classification for musical instruments |
+| `setGaming` | 2014 Backgrounds and 2024 Guard/Noble/Soldier/Wayfarer | `gaming-set` | item type/classification for gaming sets |
+| `weaponSimple` | 2014 Artificer/Barbarian/Bard/Cleric/Druid/Monk/Sorcerer/Warlock | `simple-weapon` | structured weapon category/classification |
+| `weaponSimpleMelee` | 2014 Druid/Paladin/Ranger | `simple-melee-weapon` | structured weapon category plus melee classification |
+| `weaponMartial` | 2014 Fighter/Paladin | `martial-weapon` | structured weapon category/classification |
+| `weaponMartialMelee` | 2014 Barbarian | `martial-melee-weapon` | structured weapon category plus melee classification |
+| `focusSpellcastingArcane` | 2014 Sorcerer/Warlock/Wizard | `arcane-spellcasting-focus` | structured spellcasting-focus classification |
+| `focusSpellcastingHoly` | 2014 Cleric/Paladin | `holy-spellcasting-focus` | structured spellcasting-focus classification |
+| `focusSpellcastingDruidic` | 2014 Druid | `druidic-spellcasting-focus` | structured spellcasting-focus classification |
+
+The verified 2024 Monk `equipmentTypes: ["instrumentMusical", "toolArtisan"]` shape is one query containing both normalized groups, with ordinary restrictions still conjunctive. It is not a raw array persisted to the catalog and does not require a generalized logical-query language.
+
+### Deferred equipment-resolution intent
+
+Before publication, the catalog builder may hold a transient internal equipment-resolution intent containing only the finalization inputs: deterministic `RuleGrantId`, positive quantity, resolution mode, authoritative canonical reference or governed candidate when applicable, validated fallback physical name only when fallback is permitted, owning scope, and source path/provenance for diagnostics. It is builder-only, not a catalog-contract type, not persisted to character data, and must be fully resolved or diagnosed before published catalog-contract validation.
+
+The modes are exact: `canonical-reference-required` means resolve an actual `ItemRule` or fail, with no named-item fallback; `physical-name-with-fallback` means resolve through a deterministic governed mapping if one exists, otherwise publish a valid named-item. Both reject fuzzy matching and metadata invention. Diagnostics distinguish unsupported raw equipment type, broken authoritative canonical reference, malformed physical named item, unavailable item-classification mapping, and unsupported equipment-query shape. Successfully consumed supported equipment must not also emit a generic unmapped-equipment warning.
 
 ## 9. Effects and projections
 
