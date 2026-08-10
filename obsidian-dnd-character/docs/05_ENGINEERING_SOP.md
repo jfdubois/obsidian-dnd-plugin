@@ -281,7 +281,7 @@ For each entity type:
 
 ### 8.0 Creator-origin normalization coverage
 
-For Species, Background, and starting Class, classify every verified structured creator-relevant field as an automatic grant, a selectable normalized choice, display/context information, or an unsupported-mechanic diagnostic. Preserve its normalized origin, prerequisites, dependencies, provenance, and ruleset. Do not relocate ownership to a global creator page, infer it from narrative text, or add entity-name exceptions. Missing structured coverage is an actionable normalization defect and must not be silently published as creator-ready.
+For Species, Background, and starting Class, classify every verified structured creator-relevant field as a direct effect, an automatic RuleGrant, a selectable normalized choice, display/context information, or an unsupported-mechanic diagnostic. Put unconditional mechanics in entity effects, non-choice entity/item/named-item/currency consequences in entity grants, starting-Class-only consequences in starting grants/choices, and selected package consequences in the same RuleGrant vocabulary. Do not relocate ownership to a global creator page, infer narrative mechanics, add entity-name exceptions, create fake one-option choices, or silently publish missing coverage as creator-ready.
 
 ### 8.1 Rule semantics and character-sheet projection SOP
 

@@ -84,6 +84,7 @@ interface RuleEntity {
   content: RenderNode[]; 
   prerequisites: RulePrerequisite[]; 
   effects: RuleEffect[]; 
+  grants: RuleGrant[];
   choices: ChoiceDefinition[]; 
   dependencies: EntityId[];
 
@@ -165,11 +166,11 @@ type ChoiceDefinition =
 interface ChoiceOption {
   id: ChoiceOptionId;
   label: string;
-  grants: ChoiceOptionGrant[];
+  grants: RuleGrant[];
   choices: ChoiceDefinition[];
 }
 
-type ChoiceOptionGrant =
+type RuleGrant =
   | { type: "entity"; entityId: EntityId }
   | { type: "effect"; effect: RuleEffect }
   | { type: "item"; itemId: EntityId; quantity: number }
@@ -181,6 +182,8 @@ type ChoiceOptionGrant =
     };
 
 type CurrencyDenomination = "cp" | "sp" | "ep" | "gp" | "pp";
+
+type ChoiceOptionGrant = RuleGrant;
 ```
 
 Query-backed choices select canonical `EntityId` values. Their semantic meaning comes from `ChoiceDefinition.type`, never from the creator page where they render. They retain `minimum`, `maximum`, `repeatable`, `optionQuery`, and prerequisites; their selections later use the `entity-ids` selected-value variant.
@@ -189,7 +192,9 @@ Ability allocation is not an `EntityId` query and does not replace global base a
 
 `ChoiceOptionId` is a project-owned branded identifier, distinct from `EntityId`, that is deterministic, runtime-validated, catalog-owned, unique within its containing definition, and stable enough to identify a closed option without copying its definition to character state. The builder owns generation and must not derive it from display text alone; it may use its definition identity with a deterministic source-local key, path, or digest consistent with project ID conventions.
 
-Closed options are catalog authority. Their grants are deliberately limited to normalized entity, effect, item, named-item, and currency consequences. `entity` references must resolve; `item.quantity` is a positive integer and its item reference resolves; `currency.amount` is a non-negative integer with a supported denomination. `effect` is one already-supported normalized `RuleEffect` retaining normal automation metadata and provenance, not an escape hatch for unsupported narrative mechanics.
+`RuleGrant` is the one strict vocabulary for automatic entity consequences and selected closed-option consequences; `ChoiceOptionGrant` is a compatibility alias, not a second union. Its variants are limited to normalized entity, effect, item, named-item, and currency consequences. `entity` references resolve; item and named-item quantities are positive integers; currency amount is a positive integer in a supported denomination, rejecting no-op grants. No raw, generic, or free-form mechanical payload is valid.
+
+`RuleEntity.effects` holds direct automatic mechanics while an entity is active, such as a fixed proficiency where an existing RuleEffect faithfully represents it, movement, senses, ability modifiers, resistances, or capabilities. `RuleEntity.grants` holds automatic non-choice consequences that are not direct effects: granted entities, canonical items, named items, and currency. Do not encode an automatic grant as a fake one-option choice or convert an item/currency grant into an effect. The effect grant variant remains for an effect conditional on a selected option or other grant container; unconditional entity-wide effects belong in `RuleEntity.effects`.
 
 A `named-item` is a concrete mundane/non-catalog inventory object. It is valid only when an authoritative structured source explicitly grants a physical equipment item, canonical `ItemRule` resolution was attempted and did not resolve it, and no additional mechanics must be invented. Runtime validation requires `type === "named-item"`, a string `name` that is trimmed and non-empty, and a positive-integer `quantity`. It rejects empty or whitespace-only names, zero, negative, or fractional quantities, arbitrary raw source objects, HTML, and free-form mechanical metadata. A named-item has exactly `type`, `name`, and `quantity`; it must not carry cost, weight, rarity, category, body slot, attunement, effects, raw source, `special`, or generic metadata.
 
@@ -199,7 +204,7 @@ The builder must attempt existing canonical item resolution first: a structured 
 
 No raw, generic JSON, string-valued special-equipment, or text mechanical payload is published. Source equipment that cannot normalize as an entity, effect, item, named-item, currency, or nested normalized choice produces an actionable coverage/unsupported diagnostic; narrative may remain normalized `RenderNode` content.
 
-`ChoiceOption.choices` intentionally permits a catalog-owned package to combine fixed grants with subordinate player decisions. Every nested definition has its own `ChoiceDefinitionId` and normal origin/provenance rules; character state never copies its definition. Automatic normalized consequences instead use existing normalized effects, grants, or dependencies when they faithfully represent the mechanic. A fixed proficiency, language, or entity/feature grant is not represented as a fake one-option choice; genuine player selections use the applicable query, allocation, or closed-option definition.
+`ChoiceOption.choices` intentionally permits a catalog-owned package to combine fixed grants with subordinate player decisions. Every nested definition has its own `ChoiceDefinitionId` and normal origin/provenance rules; character state never copies its definition. A RuleEntity owns automatic effects/grants; a ChoiceOption owns grants conditional on selection; genuine player selections use query, allocation, or closed-option definitions.
 
 ## 8. Catalog queries
 
@@ -408,6 +413,7 @@ interface ClassRule extends RuleEntity {
   hitDie: number;
   primaryAbilities: Ability[];
   savingThrowProficiencies: Ability[];
+  startingGrants: RuleGrant[];
   startingChoices: ChoiceDefinition[];
   levels: Record<number, LevelDefinition>;
   subclassIds: EntityId[];
@@ -428,9 +434,11 @@ type LevelGrant =
   | { type: "resource-progression"; resourceId: ResourceId; maximum: ValueFormula };
 ```
 
-Creator correctness requires usable normalized starting-class coverage in both supported rulesets. A level-one starting class must expose applicable starting proficiencies, saving throws, starting choices, starting-equipment choices, level-one grants/features, and spellcasting/progression data where applicable. A build supporting both rulesets must not silently publish zero usable starting classes for either ruleset; missing coverage is a publication diagnostic. The builder work belongs to P10-CORRECTIVE-I.
+`ClassRule.effects` and inherited RuleEntity grants use normal class-active semantics. `startingGrants` and `startingChoices` apply only when `CharacterClassState.isStartingClass === true`; they must not activate merely because a later multiclass level is present. `levels[n].grants` remain progression activations triggered by reaching level n. `LevelGrant` is intentionally separate from RuleGrant: it identifies feature/choice/subclass/ASI/spell/resource activation, not concrete item/entity/currency consequences.
 
-The same source-driven rule applies to Species and Background: each selected entity must distinguish automatic consequence, required or optional player choice, display/context information, and unsupported-mechanic diagnostic. The normalized source—not the entity kind or a visual page—decides ownership.
+Creator correctness requires usable normalized starting-class coverage in both supported rulesets. A level-one starting class must expose applicable starting proficiencies, saves, starting grants, starting choices, starting-equipment choices, level-one grants/features, and spellcasting/progression data where applicable. A build supporting both rulesets must not silently publish zero usable starting classes for either ruleset; missing coverage is a publication diagnostic. The builder work belongs to P10-CORRECTIVE-I.
+
+The same source-driven rule applies to Species and Background: each selected entity may use direct effects, automatic grants, and choices according to source semantics. Fixed mechanics use effects where supported; fixed entities/items/named physical objects/currency use grants; player selections use choices. The normalized source—not the entity kind or a visual page—decides ownership.
 
 ## 11. Character source policy
 
@@ -614,7 +622,9 @@ interface CharacterCurrencyState {
 }
 ```
 
-`currency` is authoritative character state near inventory/resources, not a mixed inventory entry. Every denomination is a non-negative integer; a new character and deterministic migration from the current schema initialize all balances to zero. Later package materialization adds its currency grants to this state without persisting the package definition; that mutation belongs to P10-CORRECTIVE-J or its assigned corrective task.
+`currency` is authoritative character state near inventory/resources, not a mixed inventory entry. Every balance denomination is a non-negative integer; a new character and deterministic migration initialize balances to zero. A positive catalog RuleGrant currency amount defines an automatic or selected consequence; a later transaction adds it without persisting the grant/package definition.
+
+RuleGrant ownership comes from its normalized container: entity grants from the entity, starting grants from the starting Class, and option grants from choice/option plus parent origin. Entity/effect grants remain catalog-derived; item/named-item/currency grants materialize only in a validated atomic transaction. Rerendering/recalculation is disposable and must never duplicate mutable materialization; this is future J/M work. H3 defines fields only: I performs the already-required catalog schema increment, and character migration remains H1/H2 work.
 
 ## 17. Mutable resources
 

@@ -25,6 +25,9 @@
 | CAT-017 | 2014 starting Class | Applicable level-one proficiencies, saves, grants, choices, equipment choices, and spellcasting/progression normalize |
 | CAT-018 | 2024 starting Class | At least one usable starting Class exists and applicable level-one data normalizes |
 | CAT-019 | Structured source field lacks a supported normalization | Actionable normalization-coverage diagnostic; it is not silently represented as creator-ready |
+| CAT-020 | Automatic entity equipment/named-item/currency | Uses RuleEntity grants without a fake choice; named item has no mechanics |
+| CAT-021 | Closed package consequence | Uses the same RuleGrant vocabulary and retains nested choices |
+| CAT-022 | Starting-Class-only consequence | Uses ClassRule startingGrants; it does not activate for a non-starting multiclass instance |
 
 ## 2. Catalog client/cache
 
@@ -53,6 +56,7 @@
 | PER-008 | Legacy entity-ID choice | Deterministically migrates to the typed `entity-ids` selected value without loss or candidate lists |
 | PER-009 | Ability allocation choice | Exact selected distribution, definition ID, and origin identity persist; eligible abilities/candidates do not |
 | PER-010 | Closed/package choice | Selected normalized option identity persists without copying its package definition; inventory/resources persist separately when materialized |
+| PER-011 | Automatic mutable materialization | Item, named-item, and currency materialize only in an atomic transaction; rerender/recalculation cannot duplicate them |
 
 ## 4. Character creation
 
