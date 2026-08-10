@@ -279,6 +279,10 @@ For each entity type:
    - malformed/unresolved fixture.
 10. Fail publication if included references remain unresolved.
 
+### 8.0 Creator-origin normalization coverage
+
+For Species, Background, and starting Class, classify every verified structured creator-relevant field as an automatic grant, a selectable normalized choice, display/context information, or an unsupported-mechanic diagnostic. Preserve its normalized origin, prerequisites, dependencies, provenance, and ruleset. Do not relocate ownership to a global creator page, infer it from narrative text, or add entity-name exceptions. Missing structured coverage is an actionable normalization defect and must not be silently published as creator-ready.
+
 ### 8.1 Rule semantics and character-sheet projection SOP
 
 For every normalized rule-bearing entity:
@@ -462,4 +466,3 @@ For successful commands, retain the command, exit code, test count when availabl
 ### 14.4 Context reserve
 
 For models with an 81,920-token context, reserve at least 20 percent for review, repair, validation, documentation, and final reporting. Compact closed task context before selecting another task when approximately 60 percent has been consumed.
-

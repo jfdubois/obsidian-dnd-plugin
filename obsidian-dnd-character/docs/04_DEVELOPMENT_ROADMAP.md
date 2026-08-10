@@ -482,12 +482,27 @@ Create valid level-one characters through a dependency-aware modal.
 - [x] **P10-T019 — Add creator state-machine tests**
 - [x] **P10-T020 — Complete desktop/mobile manual scenarios**
 
+## Corrective sequence
+
+- [x] **P10-CORRECTIVE-H — Accept creator consequence and typed-choice contract architecture**
+  - Record accepted origin-owned consequence, typed selected-value, persistence, migration, normalization-coverage, and base-versus-origin ability architecture.
+- [ ] **P10-CORRECTIVE-I — Normalize major-origin grants and choices**
+  - Normalize usable 2014 and 2024 Species, Background, and starting-Class grants, choices, diagnostics, and level-one coverage.
+- [ ] **P10-CORRECTIVE-J — Build origin-owned creator consequence service and draft integration**
+- [ ] **P10-CORRECTIVE-K — Render consequence panels and normalized details**
+- [ ] **P10-CORRECTIVE-L — Add supplemental 5eTools external-reference support**
+- [ ] **P10-CORRECTIVE-M — Rebaseline Phase 10 state-machine and manual validation**
+
+Dependencies: H → I → J → K; K → L; I/J/K/L as applicable → M. Existing stable correctness blockers remain valid and must be re-evaluated in the applicable corrective task. Capability tasks such as ability generation and equipment, proficiency/language, and spell selection remain reusable capabilities; they do not prescribe permanent visual pages or data ownership.
+
 ### Phase 10 gate
 
-- [x] Complete valid level-one character for each ruleset.
-- [x] Core content always appears.
-- [x] Non-selected source content does not appear.
-- [x] Upstream changes invalidate dependent selections explicitly.
+- [ ] Corrective sequence through P10-CORRECTIVE-M passes and a new completion review confirms valid level-one creation for both rulesets.
+- [ ] Core content appears and non-selected source content remains ineligible under the revalidated source policy.
+- [ ] Normalized origin ownership and dependency invalidation are proven without global-step or display-name assumptions.
+- [ ] Species, Background, and starting-Class details actions use normalized catalog content only.
+
+Historical Phase 10 gate evidence is retained, but it is superseded as the current release gate by this corrective sequence. Phase 11 must not be considered permanently unblocked until the new completion review passes.
 
 ---
 

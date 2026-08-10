@@ -18,6 +18,13 @@
 | CAT-010 | Book categorized core but record not free | Entity classified `source` |
 | CAT-011 | New class uses supported normalized structures | Appears in class index without plugin rebuild |
 | CAT-012 | New class requires unknown mechanic | Build reports unsupported mechanic; publication policy decides exclusion/failure |
+| CAT-013 | 2014 Species has automatic grants or choices | Normalized output retains origin, provenance, and required/optional status |
+| CAT-014 | 2024 Species has automatic grants or choices | Normalized output retains origin, provenance, and required/optional status |
+| CAT-015 | 2014 Background has automatic grants or choices | Normalized output retains origin, provenance, and required/optional status |
+| CAT-016 | 2024 Background has automatic grants or choices | Normalized output retains origin, provenance, and required/optional status |
+| CAT-017 | 2014 starting Class | Applicable level-one proficiencies, saves, grants, choices, equipment choices, and spellcasting/progression normalize |
+| CAT-018 | 2024 starting Class | At least one usable starting Class exists and applicable level-one data normalizes |
+| CAT-019 | Structured source field lacks a supported normalization | Actionable normalization-coverage diagnostic; it is not silently represented as creator-ready |
 
 ## 2. Catalog client/cache
 
@@ -43,6 +50,9 @@
 | PER-005 | Concurrent mutation simulation | Atomic update prevents silent lost update according to repository design |
 | PER-006 | External file modification | Character index and active view refresh |
 | PER-007 | Delete all caches | Character data remains intact |
+| PER-008 | Legacy entity-ID choice | Deterministically migrates to the typed `entity-ids` selected value without loss or candidate lists |
+| PER-009 | Ability allocation choice | Exact selected distribution, definition ID, and origin identity persist; eligible abilities/candidates do not |
+| PER-010 | Closed/package choice | Selected normalized option identity persists without copying its package definition; inventory/resources persist separately when materialized |
 
 ## 4. Character creation
 
@@ -54,10 +64,14 @@
 | CRE-004 | Unselected source | Its non-core entities remain hidden |
 | CRE-005 | Change ruleset | Incompatible selections cleared/invalidated explicitly |
 | CRE-006 | Change species | Species-origin choices invalidated and regenerated |
+| CRE-006A | Change background | Background-origin dependent choices invalidate; independent selections remain |
 | CRE-007 | Change class | Class/subclass/spell choices invalidated and regenerated |
+| CRE-007A | Change source policy | Selections that become ineligible invalidate; eligible independent selections remain |
 | CRE-008 | Required choice unresolved | Save blocked |
 | CRE-009 | Review | Derived snapshot matches selected inputs |
 | CRE-010 | Save succeeds | Character file contains selections, not candidate lists/catalog copies |
+| CRE-011 | Base score method plus origin ability adjustment | Base standard-array/point-buy/manual/entered-roll state remains distinct and calculation applies normalized origin effect |
+| CRE-012 | Selected Species, Background, or Class | `(?)` details action renders normalized summary/content, features, grants, choices, automation, provenance, source, ruleset, and page where available; no raw-source access |
 
 ## 5. Rules engine
 

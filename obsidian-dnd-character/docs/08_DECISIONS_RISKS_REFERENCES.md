@@ -139,6 +139,31 @@ Narrative mechanics without a reviewed mapping shall remain visible as safe rend
 
 **Affected roadmap tasks:** P4-T005 (species normalizer), P4-T018 (canonical ID generator).
 
+### ADR-013 — Origin-owned creator consequences and typed choices
+
+**Status:** accepted
+**Date:** 2026-08-10
+
+**Context:** The creator requires source-driven handling for 2014 and 2024 Species, Background, and starting Class mechanics. Current normalized coverage does not yet supply meaningful Species/Background choices or usable starting-class progression, and the persisted `selectedOptionIds: EntityId[]` shape cannot represent ability allocations or closed packages. Global creator pages are useful presentation capabilities but cannot own choices simply by their page location.
+
+**Decision:** The normalized catalog remains authoritative for descriptions, traits/features, automatic grants, structured choices, mechanics, prerequisites, dependencies, provenance, and safe render content. Raw 5eTools structures remain builder-only. Missing structured source normalization is an actionable coverage defect; the plugin must not parse raw data, infer mechanics from narrative, branch on display names, or encode entity-specific exceptions.
+
+The plugin/application service derives a disposable, origin-owned Selection Consequence Model from normalized catalog data and creator draft state. It reconstructs automatic grants, choices, resolved/unresolved selections, candidates, diagnostics, dependencies, contextual content, and provenance. It is neither a catalog authority nor a persisted character structure. Generic controls consume the normalized choice supplied by that model, regardless of visual placement.
+
+Choice definitions become a strictly runtime-validated discriminated contract for entity-query, ability-allocation, and source-defined closed-option selection. A deterministic, branded, runtime-validated `ChoiceOptionId` identifies a closed option within its `ChoiceDefinition`; it is distinct from `EntityId` and permits a character to retain only the selected option identity. This is the smallest additional identifier required by verified closed options/packages.
+
+Persisted `CharacterChoice` retains instance ID, definition ID, origin grant/entity ID, and a discriminated typed selected value: entity IDs, actual ability increases, or a closed option ID. Catalog definitions, candidate lists, eligible abilities, package contents, and render/provenance data are never copied into character JSON. If package application materializes inventory, currency, or another mutable resource, that resulting authoritative state is persisted separately in a typed contract; an absent currency contract is a documented follow-up gap, not a generic choice payload.
+
+Base ability generation (standard array, point buy, manual values, entered rolls) remains authoritative global player state. Origin-derived ability increases or allocations are separately normalized effects/selections and are combined only in deterministic calculation.
+
+Changing an origin invalidates selections owned by that origin and actual downstream dependents; ruleset and source-policy changes invalidate incompatible/ineligible selections. Independent choices remain. Both supported rulesets require usable starting-Class level-one coverage; Species and Background must classify automatic consequences, choices, context, and unsupported diagnostics according to normalized source data.
+
+When implemented, the character schema version increments. A deterministic validated migration maps old valid `selectedOptionIds` arrays to the entity-ID selected-value variant without replacement, candidate lists, or copied catalog definitions. An incompatible catalog-contract change increments the catalog schema version.
+
+**Out of scope:** External 5eTools URL routing is out of scope and governed separately. A configurable 5eTools Web Base URL remains a future product setting, but external target identity and routing are supplemental architecture for P10-CORRECTIVE-L and must not block creator correctness.
+
+**Consequences:** P10-CORRECTIVE-I normalizes the coverage, P10-CORRECTIVE-J integrates the consequence service and invalidation, P10-CORRECTIVE-K renders panels/details, P10-CORRECTIVE-L handles supplemental external references, and P10-CORRECTIVE-M rebaselines validation. The prior Phase 10 gate evidence remains historical but is no longer the active release gate.
+
 ## Principal risks
 
 | ID | Risk | Impact | Mitigation |

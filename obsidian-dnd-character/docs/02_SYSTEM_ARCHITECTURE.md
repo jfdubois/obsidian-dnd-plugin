@@ -222,6 +222,26 @@ Sidebar view
 
 The derived snapshot must be reproducible and contain diagnostics and contribution traces.
 
+## 8.0 Creator consequence architecture
+
+The plugin/application service derives a disposable **Selection Consequence Model** from normalized catalog entities and the current creator draft. It is not a published catalog entity and is not persisted character state. For each selected origin it may expose the selected origin, automatic grants, choice definitions, resolved and unresolved selections, candidate results, diagnostics, dependencies, contextual render content, and provenance.
+
+The normalized catalog remains authoritative for descriptions, traits/features, grants, choices, mechanics, prerequisites, dependencies, and provenance. The consequence model resolves and groups that data for creator use; it neither parses raw 5eTools data nor infers mechanics from narrative text. A missing normalized structured field is a catalog-normalization coverage defect with an actionable diagnostic, not a reason for a plugin exception or a global-step assumption.
+
+Choice ownership follows the normalized entity, grant, and choice definition that originated it. Reusable controls render the supplied normalized choice type; they do not branch on entity names or assume that ability, language, skill, equipment, spell, or feat choices always belong to one visual step or one kind of origin. Species, Background, and starting Class may therefore produce different 2014 and 2024 consequence structures.
+
+Changing Species, Background, or Class invalidates that origin's selections and downstream dependents; changing ruleset invalidates all incompatible selections; changing source policy invalidates selections that are no longer eligible. Independent selections remain intact. Exact dependency evaluation and transactional behavior are implementation and test responsibilities of P10-CORRECTIVE-J and P10-CORRECTIVE-M.
+
+The existing global creator capabilities—base ability generation, proficiency/language controls, equipment controls, and spell controls—remain reusable capabilities. They are not a claim of global data ownership.
+
+The persistence boundary is explicit:
+
+- **Catalog authority, never copied to a character:** descriptions, traits, grant definitions, choice definitions, candidate lists, equipment-package definitions, eligible abilities, source metadata, render content, dependencies, and provenance.
+- **Derived/disposable creator state:** consequence view models, candidate results, unresolved-choice summaries, UI grouping, review presentation, and consequence panels.
+- **Authoritative persisted character state:** selected Species and Background IDs, selected Class state, base ability state, typed resolved choices with origin identity, materialized inventory/resources where applicable, mutable character state, and catalog compatibility metadata.
+
+Species, Background, and Class details actions use normalized summary, safe content/render nodes, traits/features, effects/grants, choices, automation status, provenance, source, ruleset, and page where available. They do not require raw-source access. External 5eTools target identity/routing remains a separate supplemental architecture decision.
+
 ## 8.1 Semantic rule and character-sheet projection flow
 
 Resolved source record

@@ -84,10 +84,13 @@ The creation workflow shall use modal steps:
 The modal shall:
 
 - filter options by ruleset and character source policy;
-- generate controls from normalized choices;
-- invalidate dependent choices when upstream values change;
+- generate reusable controls from normalized, origin-owned choices and grants, rather than from step position or entity display-name exceptions;
+- expose a visible `(?)` details action for each selected Species, Background, and starting Class using normalized catalog content only;
+- invalidate only the changed origin's selections and their actual downstream dependents when upstream values change;
 - prevent save while required choices are unresolved;
 - preview derived values before save.
+
+The visual flow may present an origin-owned choice next to its Species, Background, or Class, in a consolidated capability page, or in both places. Visual placement does not change the normalized origin, persistence identity, or invalidation behavior. External 5eTools links are supplemental and are not required for creator correctness.
 
 ### FR-005 Ability generation
 
@@ -99,6 +102,8 @@ Support:
 - rolled values entered by the user.
 
 Validation rules shall be explicit and ruleset-aware.
+
+Base ability generation is distinct from normalized origin-derived ability effects. A player's standard-array, point-buy, manual, or entered rolled values establish authoritative base scores. A Species, Background, Class, Feat, or other normalized origin may separately grant fixed increases or an allocation choice; the derived character calculation combines the two without treating an origin allocation as another base-generation method.
 
 ### FR-006 Character persistence
 
