@@ -498,8 +498,8 @@ Create valid level-one characters through a dependency-aware modal.
   - Publish finite catalog-owned EquipmentGroup constraints, item-side structured classification, and builder-only deferred canonical-item versus named-physical resolution without raw source leakage or fuzzy matching.
 - [x] **P10-CORRECTIVE-H6 — Define constrained proficiency scopes and queries**
   - Publish finite weapon scopes, source-owned exact proficiency eligibility constraints, and catalog-owned tool-proficiency groups without candidate expansion or EquipmentQuery coupling.
-- [ ] **P10-CORRECTIVE-I — Normalize major-origin grants and choices**
-  - Partial; ready to resume Slice D after H6: normalize usable 2014 and 2024 Species, Background, and starting-Class grants, choices, diagnostics, and level-one coverage.
+- [x] **P10-CORRECTIVE-I — Normalize major-origin grants and choices**
+  - Complete: normalized usable 2014 and 2024 Species, Background, and starting-Class grants, choices, diagnostics, and level-one coverage.
 - [ ] **P10-CORRECTIVE-J — Build origin-owned creator consequence service and draft integration**
 - [ ] **P10-CORRECTIVE-K — Render consequence panels and normalized details**
 - [ ] **P10-CORRECTIVE-L — Add supplemental 5eTools external-reference support**
