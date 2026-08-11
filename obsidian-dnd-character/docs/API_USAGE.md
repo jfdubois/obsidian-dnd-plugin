@@ -20,6 +20,11 @@ Every Obsidian API member used in this project must have an entry before it appe
 | `PluginSettingTab` | `abstract class PluginSettingTab extends SettingTab { constructor(app: App, plugin: Plugin); display(): void; }` | 0.9.7 | `settings-tab.ts` | custom settings tab base class | tab renders with all settings |
 | `PluginSettingTab.display` | `display(): void` | 0.9.7 (deprecated since 1.13.0, legacy imperative fallback) | `settings-tab.ts` | render settings UI imperatively | settings fields appear on tab open |
 | `Setting` | `class Setting { constructor(containerEl: HTMLElement); }` | 0.9.7 | `settings-tab.ts` | setting row container | rows render in tab |
+| `Setting.addDropdown` | `addDropdown(cb: (component: DropdownComponent) => any): this` | 0.9.7 | `creator-active-choice-renderer.ts` | render normalized creator choice slots | slot candidates update after sibling changes |
+| `DropdownComponent.selectEl` | `selectEl: HTMLSelectElement` | 0.9.7 | `creator-active-choice-renderer.ts` | replace stale slot alternatives before adding current eligible alternatives | selected sibling candidates are excluded and restored when changed |
+| `DropdownComponent.addOptions` | `addOptions(options: Record<string, string>): this` | 0.9.7 | `creator-active-choice-renderer.ts` | populate each creator choice slot | eligible candidates and placeholder are visible |
+| `DropdownComponent.setValue` | `setValue(value: string): this` | 0.9.7 | `creator-active-choice-renderer.ts` | retain each slot's current choice during option refresh | selected slot value remains visible |
+| `DropdownComponent.onChange` | `onChange(callback: (value: string) => any): this` | 0.9.7 | `creator-active-choice-renderer.ts` | stage a slot selection before governed confirmation | changing a slot updates sibling alternatives |
 | `Setting.setName` | `setName(name: string): this` | 0.9.7 | `settings-tab.ts` | label for setting row | label text visible |
 | `Setting.setDesc` | `setDesc(desc: string \| DocumentFragment): this` | 0.9.7 | `settings-tab.ts` | description for setting row | description text visible |
 | `Setting.addText` | `addText(cb: (component: TextComponent) => any): this` | 0.9.7 | `settings-tab.ts` | editable text input for setting | input renders and persists on change |

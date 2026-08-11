@@ -1,12 +1,14 @@
-import { Setting } from "obsidian";
+import { Setting, type DropdownComponent } from "obsidian";
 import type { CharacterChoice } from "@obsidian-dnd/character-contract";
+import type { ChoiceDefinition } from "@obsidian-dnd/catalog-contract";
 import type { Ability, EntityId } from "@obsidian-dnd/domain";
 import type { ChoiceConsequence } from "./creator-consequence-service";
 
 export type SubmitCreatorChoice = (instanceId: ChoiceConsequence["instanceId"], value: CharacterChoice["selectedValue"]) => void;
 export type ClearCreatorChoice = (instanceId: ChoiceConsequence["instanceId"]) => void;
 
-interface ChoiceState { choice: ChoiceConsequence; selectedIds: Set<string>; allocations: Map<string, number>; }
+interface ChoiceState { choice: ChoiceConsequence; slots: Array<string | undefined>; allocations: Map<string, number>; }
+type IdChoiceDefinition = Exclude<ChoiceDefinition, { type: "ability-allocation" }>;
 
 /** Presentation-only renderer for already-derived active creator choices. */
 export function renderActiveCreatorChoices(container: HTMLElement, heading: string, choices: readonly ChoiceConsequence[], submit: SubmitCreatorChoice, clear?: ClearCreatorChoice): void {
@@ -32,7 +34,10 @@ export function renderActiveCreatorChoices(container: HTMLElement, heading: stri
 function renderChoice(container: HTMLElement, choice: ChoiceConsequence): ChoiceState {
   const state: ChoiceState = {
     choice,
-    selectedIds: new Set<string>(choice.selectedValue?.type === "entity-ids" ? choice.selectedValue.entityIds : choice.selectedValue?.type === "option-ids" ? choice.selectedValue.optionIds : []),
+    slots: choice.definition.type === "ability-allocation" ? [] : Array.from({ length: choice.definition.maximum }, (_, index) => {
+      const values = choice.selectedValue?.type === "entity-ids" ? choice.selectedValue.entityIds : choice.selectedValue?.type === "option-ids" ? choice.selectedValue.optionIds : [];
+      return values[index] === undefined ? undefined : String(values[index]);
+    }),
     allocations: new Map(choice.selectedValue?.type === "ability-allocation" ? choice.selectedValue.allocations.map((entry) => [entry.ability, entry.bonus]) : []),
   };
   const wrapper = container.createDiv({ cls: `dnd-choice-wrapper dnd-choice-${choice.definition.id}` });
@@ -45,7 +50,7 @@ function renderChoice(container: HTMLElement, choice: ChoiceConsequence): Choice
 }
 
 function renderIds(container: HTMLElement, state: ChoiceState): void {
-  const { choice, selectedIds } = state;
+  const { choice } = state;
   const definition = choice.definition;
   if (definition.type === "ability-allocation") return;
   const values = definition.type === "closed-option"
@@ -55,18 +60,45 @@ function renderIds(container: HTMLElement, state: ChoiceState): void {
     container.createEl("p", { text: `No candidates available for "${choice.definition.label}".`, cls: "dnd-creator-error" });
     return;
   }
-  if (definition.maximum > 1) for (const value of [...values].sort((a, b) => a.name.localeCompare(b.name))) {
-    const setting = new Setting(container);
-    setting.setName(value.name).addToggle((toggle) => toggle.setValue(selectedIds.has(value.id)).onChange((checked) => {
-      if (checked && (definition.repeatable || selectedIds.size < definition.maximum)) selectedIds.add(value.id);
-      if (!checked) selectedIds.delete(value.id);
-    }));
-  } else new Setting(container).addDropdown((dropdown) => {
-    const options: Record<string, string> = { "": "— Select —" };
-    for (const value of [...values].sort((a, b) => a.name.localeCompare(b.name))) options[value.id] = value.name;
-    dropdown.addOptions(options).setValue([...selectedIds][0] ?? "").onChange((value) => { selectedIds.clear(); if (value !== "") selectedIds.add(value); });
-  });
+  renderSelectionSlots(container, state, definition, values);
 }
+
+function renderSelectionSlots(container: HTMLElement, state: ChoiceState, definition: IdChoiceDefinition, values: readonly { id: string; name: string }[]): void {
+  const dropdowns: DropdownComponent[] = [];
+  const sortedValues = [...values].sort((a, b) => a.name.localeCompare(b.name));
+  const singular = definition.maximum === 1;
+  const placeholder = `— Select ${choiceSlotLabel(definition).toLowerCase()} —`;
+  for (let index = 0; index < state.slots.length; index += 1) {
+    const required = index < definition.minimum;
+    new Setting(container).setName(singular ? definition.label : `${choiceSlotLabel(definition)} ${index + 1}${required ? "" : " (optional)"}`).addDropdown((dropdown) => {
+      dropdowns.push(dropdown);
+      dropdown.onChange((value) => {
+        state.slots[index] = value === "" ? undefined : value;
+        refreshSlotOptions(dropdowns, state, sortedValues, placeholder);
+      });
+    });
+  }
+  refreshSlotOptions(dropdowns, state, sortedValues, placeholder);
+}
+
+function refreshSlotOptions(dropdowns: readonly DropdownComponent[], state: ChoiceState, values: readonly { id: string; name: string }[], placeholder: string): void {
+  for (const [index, dropdown] of dropdowns.entries()) {
+    const siblingIds = new Set(state.slots.filter((value, siblingIndex) => siblingIndex !== index && value !== undefined));
+    const options: Record<string, string> = { "": placeholder };
+    for (const value of values) if (state.choice.definition.type === "ability-allocation" || state.choice.definition.repeatable || !siblingIds.has(value.id)) options[value.id] = value.name;
+    dropdown.selectEl.replaceChildren();
+    dropdown.addOptions(options).setValue(state.slots[index] ?? "");
+  }
+}
+
+function choiceSlotLabel(definition: IdChoiceDefinition): string {
+  if (definition.type === "closed-option") return definition.label;
+  if (definition.optionQuery.type === "entity") return titleCase(definition.optionQuery.kind);
+  if (definition.optionQuery.type === "proficiency") return titleCase(definition.optionQuery.kind);
+  return titleCase(definition.type.replace(/-proficiency$/, ""));
+}
+
+function titleCase(value: string): string { return value.split("-").map((part) => part[0]?.toUpperCase() + part.slice(1)).join(" "); }
 
 function renderAbilityAllocation(container: HTMLElement, state: ChoiceState): void {
   const definition = state.choice.definition;
@@ -89,8 +121,9 @@ function selectedValue(state: ChoiceState): CharacterChoice["selectedValue"] | u
     if (!definition.distributions.some((entry) => entry.bonuses.slice().sort((a, b) => b - a).join(",") === bonuses)) return undefined;
     return { type: "ability-allocation", allocations };
   }
-  if (state.selectedIds.size < definition.minimum || state.selectedIds.size > definition.maximum) return undefined;
+  const ids = state.slots.filter((value): value is string => value !== undefined);
+  if (ids.length < definition.minimum || ids.length > definition.maximum) return undefined;
   return definition.type === "closed-option"
-    ? { type: "option-ids", optionIds: [...state.selectedIds] as never }
-    : { type: "entity-ids", entityIds: [...state.selectedIds] as EntityId[] };
+    ? { type: "option-ids", optionIds: ids as never }
+    : { type: "entity-ids", entityIds: ids as EntityId[] };
 }

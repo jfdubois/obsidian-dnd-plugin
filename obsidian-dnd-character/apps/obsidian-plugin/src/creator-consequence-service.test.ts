@@ -95,7 +95,7 @@ describe("resolveRandomCurrencyGrant", () => {
 });
 
 describe("creator draft authority", () => {
-  it("derives the representative 2014 Acolyte two-language choice and resolves only after two valid languages", () => {
+  it("derives the representative 2014 Acolyte language slots and package, completing Background only after every required choice resolves", () => {
     const acolyteId = createEntityId("background:2014:phb:acolyte");
     const commonId = createEntityId("language:2014:phb:common");
     const elvishId = createEntityId("language:2014:phb:elvish");
@@ -104,8 +104,13 @@ describe("creator draft authority", () => {
       label: "Choose languages", type: "language", minimum: 2, maximum: 2,
       repeatable: false, optionQuery: { type: "entity", kind: "language" }, prerequisites: [],
     };
+    const packageOptionId = createChoiceOptionId("option:background:2014:phb:acolyte:equipment:0");
+    const equipmentChoice: ChoiceDefinition = {
+      id: createChoiceDefinitionId("choice:background:2014:phb:acolyte:equipment:0"), label: "Starting equipment", type: "closed-option", minimum: 1, maximum: 1,
+      repeatable: false, prerequisites: [], options: [{ id: packageOptionId, label: "Acolyte package", grants: [], choices: [] }],
+    };
     const acolyte: BackgroundRule = {
-      ...background([languageChoice]), id: acolyteId, name: "Acolyte", ruleset: "2014",
+      ...background([languageChoice, equipmentChoice]), id: acolyteId, name: "Acolyte", ruleset: "2014",
     };
     const languages = [
       createLanguageRule(commonId, "Common", createSourceId("phb"), "2014", "core", [], "language"),
@@ -118,11 +123,22 @@ describe("creator draft authority", () => {
 
     const unresolved = deriveDraftConsequences(draft, entities);
     const active = unresolved.origins[0]?.choices[0];
+    const activePackage = unresolved.origins[0]?.choices[1];
     expect(active?.definition).toMatchObject({ label: "Choose languages", minimum: 2, maximum: 2 });
+    expect(activePackage?.definition).toMatchObject({ label: "Starting equipment", minimum: 1, maximum: 1 });
     expect(active?.candidates.map((candidate) => candidate.id)).toEqual([commonId, elvishId]);
     expect(isOriginConsequenceComplete(unresolved, acolyteId)).toBe(false);
 
+    const oneLanguage = { instanceId: active!.instanceId, definitionId: active!.definition.id, originGrantId: acolyteId, selectedValue: { type: "entity-ids" as const, entityIds: [commonId] } };
+    expect(deriveDraftConsequences({ ...draft, selections: { [active!.instanceId]: oneLanguage } }, entities).origins[0]?.choices[0]?.status).toBe("unresolved");
+    expect(() => setCreatorChoice(draft, entities, active!.instanceId, { type: "entity-ids", entityIds: [commonId, commonId] })).toThrow("selection constraints");
     setCreatorChoice(draft, entities, active!.instanceId, { type: "entity-ids", entityIds: [commonId, elvishId] });
+    expect(draft.selections[active!.instanceId]).toMatchObject({
+      selectedValue: { type: "entity-ids", entityIds: [commonId, elvishId] },
+    });
+    expect(draft.selections[active!.instanceId]).not.toHaveProperty("candidates");
+    expect(isOriginConsequenceComplete(deriveDraftConsequences(draft, entities), acolyteId)).toBe(false);
+    setCreatorChoice(draft, entities, activePackage!.instanceId, { type: "option-ids", optionIds: [packageOptionId] });
     expect(isOriginConsequenceComplete(deriveDraftConsequences(draft, entities), acolyteId)).toBe(true);
   });
 
