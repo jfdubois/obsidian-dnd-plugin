@@ -1,5 +1,5 @@
 import type { IndexedClassEntry } from "./class-index-types";
-import { isAbility, createEntityId, createSourceId, createRuleGrantId, createChoiceDefinitionId, createChoiceOptionId, isWeaponCategory, isWeaponPropertyRef, type Ability, type WeaponCategory, type WeaponPropertyRef } from "@obsidian-dnd/domain";
+import { isAbility, createEntityId, createSourceId, createRuleGrantId, createChoiceDefinitionId, createChoiceOptionId, isWeaponCategory, isWeaponPropertyRef, type Ability, type WeaponPropertyRef } from "@obsidian-dnd/domain";
 import {
   createClassRule,
   createChoiceDefinition,
@@ -9,6 +9,7 @@ import {
   createLevelDefinition,
   createFeatureGrant,
   type ClassRule,
+  type LevelDefinition,
   type RenderNode,
   type RuleEffect,
   type RuleGrant,
@@ -24,7 +25,6 @@ import {
   createWeaponFilterScope,
   createProficiencyToolRef,
   createProficiencyArmorRef,
-  createProficiencySkillRef,
 } from "@obsidian-dnd/catalog-contract";
 
 /* ── Diagnostic types ──────────────────────────────────────────── */
@@ -417,7 +417,7 @@ function buildStartingChoices(
  *
  * Level-one features become FeatureGrants at level 1.
  */
-function buildLevelOne(entry: IndexedClassEntry): Record<number, import("@obsidian-dnd/catalog-contract").LevelDefinition> {
+function buildLevelOne(entry: IndexedClassEntry): Record<number, LevelDefinition> {
   if (entry.levelOneFeatures.length === 0) return {};
 
   const grants = entry.levelOneFeatures.map((feature, index) => {

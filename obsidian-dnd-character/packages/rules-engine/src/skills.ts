@@ -4,7 +4,6 @@ import type {
   AddProficiencyEffect,
   AddExpertiseEffect,
   ConditionalRollModeEffect,
-  ProficiencyRef,
   ProficiencySkillRef,
   AddProficiencyTarget,
   RollPredicate,

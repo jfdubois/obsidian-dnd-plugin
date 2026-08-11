@@ -18,6 +18,7 @@ import { publishCatalogRelease } from "./catalog-publisher.js";
 import { createCatalogRevision } from "@obsidian-dnd/domain";
 import { CATALOG_SCHEMA_VERSION } from "@obsidian-dnd/catalog-contract";
 import { resolveEntityKind, RAW_RECORD_KINDS, COPY_MOD_KINDS, collectKnownSources } from "./catalog-build-helpers.js";
+import type { DeferredEquipmentIntent } from "./deferred-equipment-resolution.js";
 import {
   normalizeRawRecordKind,
   normalizeCopyModKind,
@@ -92,7 +93,7 @@ export function buildCatalog(
 
   /* Step 5: Normalize each entity kind */
   let allEntities: CatalogableEntity[] = [];
-  const deferredEquipment = [] as import("./deferred-equipment-resolution.js").DeferredEquipmentIntent[];
+  const deferredEquipment = [] as DeferredEquipmentIntent[];
   const normalizedKinds = new Set<string>();
 
   // 5a: RawRecord path (species, backgrounds)
