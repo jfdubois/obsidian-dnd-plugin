@@ -10,6 +10,8 @@ import type { ChoiceConsequence } from "./creator-consequence-service";
 import type { EntityDetailResponse } from "@obsidian-dnd/catalog-contract";
 import type { RuleGrantId } from "@obsidian-dnd/domain";
 import { renderOriginConsequences } from "./creator-origin-consequence-renderer";
+import { isOriginConsequenceComplete } from "./creator-origin-completion";
+import { originConsequenceLoadDiagnostic, originEntityLoadDiagnostic } from "./creator-consequence-load-diagnostic";
 
 export async function renderBackgroundChoices(
   container: HTMLElement,
@@ -23,35 +25,43 @@ export async function renderBackgroundChoices(
   onChoiceSubmitted?: (instanceId: ChoiceConsequence["instanceId"], value: CharacterChoice["selectedValue"], entities: readonly EntityDetailResponse[]) => void,
   onChoiceCleared?: (instanceId: ChoiceConsequence["instanceId"]) => void,
   onRandomGrantResolution?: (grantId: RuleGrantId, entities: readonly EntityDetailResponse[]) => void,
+  onConsequenceCompletion?: (complete: boolean) => void,
 ): Promise<void> {
   if (draft.background.backgroundId !== selected.id) return;
   const revision = catalog.getRuntimeStatus().activeRevision;
   if (revision === undefined) return;
   const loading = container.createDiv({ cls: "dnd-creator-loading" });
   loading.createEl("p", { text: "Loading background choices..." });
+  let data: EntityDetailResponse;
   try {
-    const result = await catalog.fetchEntity(revision, selected.id, selected.detailPath);
+    data = (await catalog.fetchEntity(revision, selected.id, selected.detailPath)).data;
+  } catch (error) {
     loading.remove();
-    if (result.data.kind !== "background") {
+    onLoadError(originEntityLoadDiagnostic("background", selected.detailPath, error));
+    return;
+  }
+  loading.remove();
+  try {
+    if (data.kind !== "background") {
       onLoadError(`Selected catalog entity at ${selected.detailPath} is not background data. Refresh the catalog and try again.`);
       return;
     }
-    const legacyModel = onChoiceSubmitted === undefined ? deriveDraftConsequences(draft, [result.data]) : undefined;
-    const readModel = onChoiceSubmitted === undefined ? undefined : await loadCreatorConsequenceReadModel(draft, catalog, revision, [result.data]);
+    const legacyModel = onChoiceSubmitted === undefined ? deriveDraftConsequences(draft, [data]) : undefined;
+    const readModel = onChoiceSubmitted === undefined ? undefined : await loadCreatorConsequenceReadModel(draft, catalog, revision, [data]);
     const model = readModel?.model ?? legacyModel!;
     const origin = model.origins.find((entry) => entry.origin.id === selected.id);
     const choices = origin?.choices ?? [];
-    renderOriginConsequences(container, origin, model.diagnostics, onRandomGrantResolution === undefined ? undefined : (grantId) => onRandomGrantResolution(grantId, readModel?.entities ?? [result.data]));
+    onConsequenceCompletion?.(isOriginConsequenceComplete(model, selected.id));
+    renderOriginConsequences(container, origin, model.diagnostics, onRandomGrantResolution === undefined ? undefined : (grantId) => onRandomGrantResolution(grantId, readModel?.entities ?? [data]));
     if (choices.length === 0) {
       container.createEl("p", { text: "No additional choices for this background.", cls: "dnd-creator-info" });
-      onResolved({});
+      if (onChoiceSubmitted === undefined) onResolved({});
       return;
     }
     if (onChoiceSubmitted !== undefined) renderActiveCreatorChoices(container, "Background Choices", choices, (instanceId, value) => onChoiceSubmitted(instanceId, value, readModel!.entities), onChoiceCleared);
     else await renderInternalChoices(container, "Background Choices", draft, catalog, revision, choices, isEntityEligible, onResolved);
     onChoicesPresented();
-  } catch {
-    loading.remove();
-    onLoadError(`Could not load the selected background entity at ${selected.detailPath}. Refresh the catalog and try again.`);
+  } catch (error) {
+    onLoadError(originConsequenceLoadDiagnostic("background", error));
   }
 }

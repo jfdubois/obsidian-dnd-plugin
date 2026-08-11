@@ -101,6 +101,7 @@ export interface ReviewState {
 export class StepController {
   private _draft: CharacterDraft;
   private _currentIndex: number;
+  private readonly originConsequenceCompletion = new Map<"species" | "background" | "class", boolean>();
 
   constructor(draft: CharacterDraft) {
     this._draft = draft;
@@ -185,12 +186,31 @@ export class StepController {
 
   /* ── Step resolution ───────────────────────────────────────── */
 
-  /** Returns true if all underlying draft steps are resolved. */
+  /**
+   * Origin tabs use the loaded active consequence model. The legacy internal
+   * DraftStep remains useful for dependency compatibility, but is not catalog
+   * choice authority once an origin has been selected.
+   */
   isStepResolved(step: CreatorStep): boolean {
+    const origin = step === "species" || step === "background" || step === "class" ? step : undefined;
+    if (origin !== undefined) {
+      const selected = origin === "species" ? this.draft.species.speciesId
+        : origin === "background" ? this.draft.background.backgroundId
+          : this.draft.class.classId;
+      if (selected !== null) {
+        return getStepState(this.draft, origin) === "resolved"
+          && this.originConsequenceCompletion.get(origin) === true;
+      }
+    }
     const draftSteps = getDraftStepsForCreatorStep(step);
     return draftSteps.every(
       (ds) => getStepState(this.draft, ds) === "resolved",
     );
+  }
+
+  /** Records the disposable completion projection for a loaded origin model. */
+  setOriginConsequenceCompletion(origin: "species" | "background" | "class", complete: boolean): void {
+    this.originConsequenceCompletion.set(origin, complete);
   }
 
   /** Marks all underlying draft steps for this modal step as resolved. */
@@ -215,6 +235,9 @@ export class StepController {
       for (const invalidatedStep of invalidated) {
         allInvalidated.add(invalidatedStep);
       }
+    }
+    for (const origin of ["species", "background", "class"] as const) {
+      this.originConsequenceCompletion.set(origin, false);
     }
     return [...allInvalidated];
   }

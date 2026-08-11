@@ -117,6 +117,12 @@ function extractLanguageType(remaining: Record<string, unknown>): LanguageType |
     return langType;
   }
 
+  // 5eTools distinguishes language categories (standard, exotic, rare, and
+  // secret), while the normalized catalog distinguishes language from script.
+  if (langType === "standard" || langType === "exotic" || langType === "rare" || langType === "secret") {
+    return "language";
+  }
+
   return undefined;
 }
 

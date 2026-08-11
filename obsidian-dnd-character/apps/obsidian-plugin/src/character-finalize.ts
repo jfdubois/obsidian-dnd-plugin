@@ -5,7 +5,7 @@
    grants — never candidate lists or catalog copies.              */
 
 import type { CharacterDraft } from "./character-draft";
-import { isDraftComplete } from "./character-draft";
+import { isDraftComplete, isDraftCompleteWithoutCatalogOriginChoices } from "./character-draft";
 
 import type {
   Character,
@@ -45,6 +45,11 @@ export function finalizeCharacter(draft: CharacterDraft): Character | null {
     return null;
   }
 
+  return finalizeResolvedDraft(draft);
+}
+
+function finalizeResolvedDraft(draft: CharacterDraft): Character | null {
+
   /* Gate: required entity selections must be populated */
   if (draft.ruleset.ruleset === null) return null;
   if (draft.species.speciesId === null) return null;
@@ -81,6 +86,7 @@ export function finalizeCharacterWithCatalog(draft: CharacterDraft, entities: re
   const model = deriveDraftConsequences(draft, entities);
   // Stale draft history is intentionally retained, but is not final state.
   if (model.diagnostics.some((diagnostic) => diagnostic.code !== "stale-choice")) return null;
+  if (!isDraftCompleteWithoutCatalogOriginChoices(draft)) return null;
   const grants = model.origins.flatMap((origin) => origin.grants);
   const grantIds = new Set<string>();
   for (const consequence of grants) {
@@ -88,7 +94,7 @@ export function finalizeCharacterWithCatalog(draft: CharacterDraft, entities: re
     grantIds.add(String(consequence.grant.id));
   }
 
-  const base = finalizeCharacter(draft);
+  const base = finalizeResolvedDraft(draft);
   if (base === null) return null;
   const inventory = [...base.inventory];
   const currency = { ...base.currency };

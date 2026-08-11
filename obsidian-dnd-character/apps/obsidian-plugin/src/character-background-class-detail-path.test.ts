@@ -143,6 +143,22 @@ describe("background and class authoritative detail loading", () => {
     expect(error).toHaveBeenCalledWith(expect.stringContaining(selected.detailPath));
   });
 
+  it("reports a consequence-data failure without blaming an already loaded background", async () => {
+    selectBackground(draft, backgroundId);
+    const service = catalog(background([createChoiceDefinition(
+      createChoiceDefinitionId("background-language"), "Choose languages", "language", 2, 2,
+      false, createEntityQuery("language"), [],
+    )]));
+    vi.mocked(service.fetchIndex).mockRejectedValueOnce(new Error("languages index unavailable"));
+    const error = vi.fn();
+    await renderBackgroundChoices(
+      container(), draft, service, summary(backgroundId, "background"), () => true,
+      vi.fn(), vi.fn(), error, vi.fn(),
+    );
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("catalog consequence data"));
+    expect(error).not.toHaveBeenCalledWith(expect.stringContaining("selected background entity"));
+  });
+
   it("surfaces class authoritative-path load errors", async () => {
     selectClass(draft, classId);
     const service = catalog(classRule());

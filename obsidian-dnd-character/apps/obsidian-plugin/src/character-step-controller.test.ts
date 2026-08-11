@@ -5,6 +5,10 @@ import {
   getDraftStepsForCreatorStep,
 } from "./character-step-controller";
 import { createEmptyCharacterDraft } from "./character-draft";
+import { selectRuleset } from "./character-ruleset-step";
+import { selectSources } from "./character-source-step";
+import { selectSpecies } from "./character-species-step";
+import { createEntityId } from "@obsidian-dnd/domain";
 
 /* ── Step enumeration ─────────────────────────────────────────── */
 
@@ -189,6 +193,20 @@ describe("StepController step resolution", () => {
     expect(ctrl.isStepResolved("species")).toBe(false);
 
     draft.stepStatuses.set("species-choices", "resolved");
+    expect(ctrl.isStepResolved("species")).toBe(true);
+  });
+
+  it("uses the active consequence projection for a selected zero-choice species", () => {
+    const ctrl = new StepController(createEmptyCharacterDraft());
+    selectRuleset(ctrl.draft, "2014");
+    selectSources(ctrl.draft, []);
+    selectSpecies(ctrl.draft, createEntityId("species:2014:phb:elf"));
+
+    expect(ctrl.draft.selections).toEqual({});
+    expect(ctrl.draft.stepStatuses.get("species-choices")).not.toBe("resolved");
+    expect(ctrl.isStepResolved("species")).toBe(false);
+
+    ctrl.setOriginConsequenceCompletion("species", true);
     expect(ctrl.isStepResolved("species")).toBe(true);
   });
 

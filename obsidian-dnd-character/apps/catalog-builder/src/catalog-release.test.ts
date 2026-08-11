@@ -9,6 +9,15 @@ let root: string;
 beforeEach(() => { root = fs.mkdtempSync(path.join(os.tmpdir(), "catalog-release-")); });
 afterEach(() => { fs.rmSync(root, { recursive: true, force: true }); });
 
+function withPublicationTimes(manifestGeneratedAt: string, inventoryGeneratedAt: string) {
+  const input = createSmokeCatalogInput(root, "release-a");
+  return {
+    ...input,
+    manifest: { ...input.manifest, generatedAt: manifestGeneratedAt },
+    inventoryReport: { ...input.inventoryReport, generatedAt: inventoryGeneratedAt },
+  };
+}
+
 describe("catalog release pointer publication", () => {
   it("publishes a complete revision and exact current pointer", () => {
     const result = publishCatalogRelease(createSmokeCatalogInput(root, "release-a"));
@@ -44,6 +53,23 @@ describe("catalog release pointer publication", () => {
     expect(result.active).toBe(true);
   });
 
+  it.each([
+    ["manifest timestamp", "2026-01-02T00:00:00.000Z", "2026-01-01T00:00:00.000Z"],
+    ["inventory timestamp", "2026-01-01T00:00:00.000Z", "2026-01-02T00:00:00.000Z"],
+    ["both timestamps", "2026-01-02T00:00:00.000Z", "2026-01-03T00:00:00.000Z"],
+  ])("reactivates an immutable revision when only the %s differs", (_name, manifestTime, inventoryTime) => {
+    const original = createSmokeCatalogInput(root, "release-a");
+    const first = publishCatalogRelease(original);
+    const revision = first.revisionPath;
+    const manifestBefore = fs.readFileSync(path.join(revision, "manifest.json"), "utf8");
+    const inventoryBefore = fs.readFileSync(path.join(revision, "reports", "inventory.json"), "utf8");
+
+    const second = publishCatalogRelease(withPublicationTimes(manifestTime, inventoryTime));
+    expect(second.success).toBe(true);
+    expect(fs.readFileSync(path.join(revision, "manifest.json"), "utf8")).toBe(manifestBefore);
+    expect(fs.readFileSync(path.join(revision, "reports", "inventory.json"), "utf8")).toBe(inventoryBefore);
+  });
+
   it("rejects a valid but different request for an existing immutable revision", () => {
     const original = createSmokeCatalogInput(root, "release-a");
     publishCatalogRelease(original);
@@ -55,6 +81,37 @@ describe("catalog release pointer publication", () => {
     expect(result.errors[0]).toContain("Immutable revision conflict");
     expect(fs.readFileSync(manifestPath, "utf8")).toBe(before);
     expect(JSON.parse(fs.readFileSync(path.join(root, "catalog", "v1", "current.json"), "utf8"))).toEqual({ currentRevision: "release-a" });
+  });
+
+  it("rejects semantic inventory, entity, and malformed timestamp-bearing differences", () => {
+    const original = createSmokeCatalogInput(root, "release-a");
+    const first = publishCatalogRelease(original);
+    const changedInventory = publishCatalogRelease({
+      ...original,
+      inventoryReport: { ...original.inventoryReport, totalEntities: 999 },
+    });
+    expect(changedInventory.errors[0]).toContain("reports/inventory.json");
+
+    const [detailPath, detail] = Object.entries(original.entities)[0]!;
+    const changedEntity = publishCatalogRelease({
+      ...original, entities: { ...original.entities, [detailPath]: `${detail} ` },
+    });
+    expect(changedEntity.errors[0]).toContain(detailPath);
+
+    const firstSummary = original.summaries[0]!;
+    const changedIndex = publishCatalogRelease({
+      ...original, summaries: [{ ...firstSummary, name: "Different index entry" }, ...original.summaries.slice(1)],
+    });
+    expect(changedIndex.errors[0]).toContain("indexes/");
+
+    fs.writeFileSync(path.join(first.revisionPath, "reports", "inventory.json"), "{", "utf8");
+    const malformed = publishCatalogRelease(original);
+    expect(malformed.errors[0]).toContain("reports/inventory.json");
+
+    fs.writeFileSync(path.join(first.revisionPath, "manifest.json"), "{", "utf8");
+    const malformedManifest = publishCatalogRelease(original);
+    expect(malformedManifest.success).toBe(false);
+    expect(malformedManifest.errors.join(" ")).toContain("manifest.json");
   });
 
   it("does not advance the pointer when immutable publication fails", () => {

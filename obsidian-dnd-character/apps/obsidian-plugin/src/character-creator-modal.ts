@@ -14,7 +14,7 @@ import {
 import type { Character, CharacterChoice } from "@obsidian-dnd/character-contract";
 import type { CatalogEntitySummary, EntityDetailResponse } from "@obsidian-dnd/catalog-contract";
 import type { CharacterDraft } from "./character-draft";
-import { isDraftComplete, hasErrors, invalidateDependentSteps, markStepResolved } from "./character-draft";
+import { hasErrors } from "./character-draft";
 import type { CreatorStep } from "./character-step-controller";
 import { StepController, CREATOR_STEPS } from "./character-step-controller";
 import type { ReviewSnapshot } from "./character-review-snapshot";
@@ -381,8 +381,6 @@ export class CharacterCreatorModal extends ObsidianModal {
   private resolveCatalogChoiceSubstep(step: "species-choices" | "background-choices" | "class-starting-grants"): void {
     this.internalSubstepsPending.delete(step as InternalSubstep);
     this.internalSubstepLoadErrors.delete(step as InternalSubstep);
-    markStepResolved(this.controller.draft, step);
-    invalidateDependentSteps(this.controller.draft, step);
     this.renderCurrentStep();
   }
 
@@ -416,17 +414,17 @@ export class CharacterCreatorModal extends ObsidianModal {
 
     if (currentStep === "species"
       && this.controller.draft.species.speciesId !== null
-      && this.controller.draft.stepStatuses.get("species-choices") !== "resolved"
+      && !this.controller.isStepResolved("species")
       && this.speciesChoiceLoadError === null) {
       this.speciesChoicesPending = true;
     }
     if (currentStep === "background" && this.controller.draft.background.backgroundId !== null
-      && this.controller.draft.stepStatuses.get("background-choices") !== "resolved"
+      && !this.controller.isStepResolved("background")
       && !this.internalSubstepLoadErrors.has("background-choices")) {
       this.internalSubstepsPending.add("background-choices");
     }
     if (currentStep === "class" && this.controller.draft.class.classId !== null
-      && this.controller.draft.stepStatuses.get("class-starting-grants") !== "resolved"
+      && !this.controller.isStepResolved("class")
       && !this.internalSubstepLoadErrors.has("class-starting-grants")) {
       this.internalSubstepsPending.add("class-starting-grants");
     }
@@ -764,6 +762,7 @@ export class CharacterCreatorModal extends ObsidianModal {
           .setValue(currentId)
           .onChange((value) => {
             if (value !== "" && selectSpecies(draft, value)) {
+              this.controller.setOriginConsequenceCompletion("species", false);
               this.speciesChoicesPending = true;
               this.speciesChoiceLoadError = null;
               this.renderCurrentStep();
@@ -789,6 +788,7 @@ export class CharacterCreatorModal extends ObsidianModal {
             this.updateNavigationButtons();
           },
           (message) => {
+            this.controller.setOriginConsequenceCompletion("species", false);
             this.speciesChoicesPending = false;
             this.speciesChoiceLoadError = message;
             this.renderDiagnosticsBanner();
@@ -802,6 +802,14 @@ export class CharacterCreatorModal extends ObsidianModal {
           },
           (instanceId) => { clearCreatorChoice(draft, instanceId); this.renderCurrentStep(); },
           (grantId, entities) => this.resolveOriginRandomGrant(entities, grantId),
+          (complete) => {
+            this.controller.setOriginConsequenceCompletion("species", complete);
+            this.speciesChoicesPending = false;
+            this.speciesChoiceLoadError = null;
+            this.renderProgressBar();
+            this.renderDiagnosticsBanner();
+            this.updateNavigationButtons();
+          },
         );
       }
     } catch {
@@ -875,6 +883,7 @@ export class CharacterCreatorModal extends ObsidianModal {
           .setValue(currentId)
           .onChange((value) => {
             if (value !== "" && selectBackground(draft, value)) {
+              this.controller.setOriginConsequenceCompletion("background", false);
               this.beginInternalSubstep("background-choices");
               this.renderCurrentStep();
             }
@@ -890,13 +899,20 @@ export class CharacterCreatorModal extends ObsidianModal {
           (sourceId, access) => this.isEntityEligible(sourceId, access),
           () => undefined,
           () => this.presentInternalSubstep("background-choices"),
-          (message) => this.failInternalSubstep("background-choices", message),
+          (message) => {
+            this.controller.setOriginConsequenceCompletion("background", false);
+            this.failInternalSubstep("background-choices", message);
+          },
           (instanceId, value, entities) => {
             setCreatorChoice(draft, entities, instanceId, value);
             this.resolveCatalogChoiceSubstep("background-choices");
           },
           (instanceId) => { clearCreatorChoice(draft, instanceId); this.renderCurrentStep(); },
           (grantId, entities) => this.resolveOriginRandomGrant(entities, grantId),
+          (complete) => {
+            this.controller.setOriginConsequenceCompletion("background", complete);
+            this.presentInternalSubstep("background-choices");
+          },
         );
       }
     } catch {
@@ -970,6 +986,7 @@ export class CharacterCreatorModal extends ObsidianModal {
           .setValue(currentId)
           .onChange((value) => {
             if (value !== "" && selectClass(draft, value)) {
+              this.controller.setOriginConsequenceCompletion("class", false);
               this.beginInternalSubstep("class-starting-grants");
               this.renderCurrentStep();
             }
@@ -985,13 +1002,20 @@ export class CharacterCreatorModal extends ObsidianModal {
           (sourceId, access) => this.isEntityEligible(sourceId, access),
           () => undefined,
           () => this.presentInternalSubstep("class-starting-grants"),
-          (message) => this.failInternalSubstep("class-starting-grants", message),
+          (message) => {
+            this.controller.setOriginConsequenceCompletion("class", false);
+            this.failInternalSubstep("class-starting-grants", message);
+          },
           (instanceId, value, entities) => {
             setCreatorChoice(draft, entities, instanceId, value);
             this.resolveCatalogChoiceSubstep("class-starting-grants");
           },
           (instanceId) => { clearCreatorChoice(draft, instanceId); this.renderCurrentStep(); },
           (grantId, entities) => this.resolveOriginRandomGrant(entities, grantId),
+          (complete) => {
+            this.controller.setOriginConsequenceCompletion("class", complete);
+            this.presentInternalSubstep("class-starting-grants");
+          },
         );
       }
     } catch {
@@ -1650,7 +1674,7 @@ export class CharacterCreatorModal extends ObsidianModal {
     if (this.saveButton) {
       const canSave =
         currentStep === "review" &&
-        isDraftComplete(this.controller.draft) &&
+        this.controller.canSave() &&
         !hasErrors(this.controller.draft);
       this.saveButton.setDisabled(!canSave);
     }
@@ -1662,7 +1686,7 @@ export class CharacterCreatorModal extends ObsidianModal {
     const draft = this.controller.draft;
 
     // Gate: draft must be complete
-    if (!isDraftComplete(draft)) {
+    if (!this.controller.canSave()) {
       return;
     }
 

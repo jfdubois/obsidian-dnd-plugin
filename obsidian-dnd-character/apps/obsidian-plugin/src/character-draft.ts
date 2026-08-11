@@ -227,45 +227,10 @@ export function getStepStatuses(draft: CharacterDraft): ReadonlyArray<DraftStepS
 export function buildUnresolvedChoiceDiagnostics(
   draft: CharacterDraft,
 ): DraftDiagnostic[] {
-  const diagnostics: DraftDiagnostic[] = [];
-
-  // Check species choices: if species is selected, species-choices must be resolved
-  if (draft.species.speciesId !== null) {
-    const speciesChoicesState = draft.stepStatuses.get("species-choices");
-    if (speciesChoicesState !== "resolved") {
-      diagnostics.push({
-        step: "species-choices",
-        message: "Species choices not yet resolved",
-        severity: "error",
-      });
-    }
-  }
-
-  // Check background choices: if background is selected, background-choices must be resolved
-  if (draft.background.backgroundId !== null) {
-    const backgroundChoicesState = draft.stepStatuses.get("background-choices");
-    if (backgroundChoicesState !== "resolved") {
-      diagnostics.push({
-        step: "background-choices",
-        message: "Background choices not yet resolved",
-        severity: "error",
-      });
-    }
-  }
-
-  // Check class starting grants: if class is selected, class-starting-grants must be resolved
-  if (draft.class.classId !== null) {
-    const classGrantsState = draft.stepStatuses.get("class-starting-grants");
-    if (classGrantsState !== "resolved") {
-      diagnostics.push({
-        step: "class-starting-grants",
-        message: "Class starting grants not yet resolved",
-        severity: "error",
-      });
-    }
-  }
-
-  return diagnostics;
+  void draft;
+  // Catalog-owned choices are diagnosed only after their active consequence
+  // model is loaded. A selected origin alone does not establish a choice.
+  return [];
 }
 
 function refreshDiagnostics(draft: CharacterDraft): void {
@@ -280,6 +245,16 @@ function refreshDiagnostics(draft: CharacterDraft): void {
 export function isDraftComplete(draft: CharacterDraft): boolean {
   return ALL_DRAFT_STEPS.every(
     (step) => draft.stepStatuses.get(step) === "resolved",
+  );
+}
+
+/** Legacy-free base completion used with an authoritative consequence model. */
+export function isDraftCompleteWithoutCatalogOriginChoices(draft: CharacterDraft): boolean {
+  const catalogChoiceSteps = new Set<DraftStep>([
+    "species-choices", "background-choices", "class-starting-grants",
+  ]);
+  return ALL_DRAFT_STEPS.every(
+    (step) => catalogChoiceSteps.has(step) || draft.stepStatuses.get(step) === "resolved",
   );
 }
 

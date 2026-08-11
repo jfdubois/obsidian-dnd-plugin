@@ -6,6 +6,7 @@ import { deriveSelectionConsequences } from "./creator-consequence-service";
 import { resolveRandomCurrencyGrant } from "./creator-random-grant-resolution";
 import { createEmptyCharacterDraft } from "./character-draft";
 import { deriveDraftConsequences, setCreatorChoice, setCreatorOrigin } from "./creator-draft-commands";
+import { isOriginConsequenceComplete } from "./creator-origin-completion";
 
 const speciesId = createEntityId("species:2024:test:origin");
 const candidateId = createEntityId("species:2024:test:candidate");
@@ -94,6 +95,37 @@ describe("resolveRandomCurrencyGrant", () => {
 });
 
 describe("creator draft authority", () => {
+  it("derives the representative 2014 Acolyte two-language choice and resolves only after two valid languages", () => {
+    const acolyteId = createEntityId("background:2014:phb:acolyte");
+    const commonId = createEntityId("language:2014:phb:common");
+    const elvishId = createEntityId("language:2014:phb:elvish");
+    const languageChoice: ChoiceDefinition = {
+      id: createChoiceDefinitionId("background:2014:phb:acolyte:language:0"),
+      label: "Choose languages", type: "language", minimum: 2, maximum: 2,
+      repeatable: false, optionQuery: { type: "entity", kind: "language" }, prerequisites: [],
+    };
+    const acolyte: BackgroundRule = {
+      ...background([languageChoice]), id: acolyteId, name: "Acolyte", ruleset: "2014",
+    };
+    const languages = [
+      createLanguageRule(commonId, "Common", createSourceId("phb"), "2014", "core", [], "language"),
+      createLanguageRule(elvishId, "Elvish", createSourceId("phb"), "2014", "core", [], "language"),
+    ];
+    const draft = createEmptyCharacterDraft();
+    draft.ruleset.ruleset = "2014";
+    draft.background.backgroundId = acolyteId;
+    const entities = [acolyte, ...languages];
+
+    const unresolved = deriveDraftConsequences(draft, entities);
+    const active = unresolved.origins[0]?.choices[0];
+    expect(active?.definition).toMatchObject({ label: "Choose languages", minimum: 2, maximum: 2 });
+    expect(active?.candidates.map((candidate) => candidate.id)).toEqual([commonId, elvishId]);
+    expect(isOriginConsequenceComplete(unresolved, acolyteId)).toBe(false);
+
+    setCreatorChoice(draft, entities, active!.instanceId, { type: "entity-ids", entityIds: [commonId, elvishId] });
+    expect(isOriginConsequenceComplete(deriveDraftConsequences(draft, entities), acolyteId)).toBe(true);
+  });
+
   it("stores a validated choice once, preserves it as inactive across an origin change, and leaves base abilities alone", () => {
     const draft = createEmptyCharacterDraft();
     draft.species.speciesId = speciesId;

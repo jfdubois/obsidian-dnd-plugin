@@ -69,9 +69,7 @@ describe("catalog build — real 5eTools pipeline", () => {
     });
 
     const result = buildCatalog(config, sourceManifest);
-    expect(result.catalogRevision).toContain(`-${BUILDER_VERSION}`);
-    // Verify full format: 5etools-{shortHash}-{builderVersion}
-    expect(result.catalogRevision).toMatch(/^5etools-[0-9a-f]{7}-b1$/);
+    expect(result.catalogRevision).toBe(`5etools-${sourceManifest.shortHash}-${BUILDER_VERSION}`);
   });
 
   it("publishes manifest.json with correct metadata", () => {
@@ -257,5 +255,36 @@ describe("catalog build — real 5eTools pipeline", () => {
     expect(fs.existsSync(currentPath)).toBe(true);
     const current = JSON.parse(fs.readFileSync(currentPath, "utf8"));
     expect(current.currentRevision).toBe(result.catalogRevision);
+  });
+
+  it("publishes b2 beside the legacy b1 revision for the same pinned source", () => {
+    const sourceManifest = readSourceManifest(CLONE_PATH);
+    const b1Revision = `5etools-${sourceManifest.shortHash}-b1`;
+    const b1Source = path.resolve(
+      process.cwd(), "apps/catalog-server/catalog/v1/revisions", b1Revision,
+    );
+    const b1Destination = path.join(
+      tempRoot, "catalog", "v1", "revisions", b1Revision,
+    );
+    expect(fs.existsSync(b1Source)).toBe(true);
+    fs.mkdirSync(path.dirname(b1Destination), { recursive: true });
+    fs.cpSync(b1Source, b1Destination, { recursive: true });
+    const b1ManifestBefore = fs.readFileSync(path.join(b1Destination, "manifest.json"), "utf8");
+
+    const result = buildCatalog(createBuilderConfig({
+      clonePath: CLONE_PATH,
+      outputPath: tempRoot,
+      includedRulesets: ["2014", "2024"],
+      contentPolicy: { enabledSourceIds: [], includeCore: true },
+      buildMode: "full",
+    }), sourceManifest);
+
+    const b2Revision = `5etools-${sourceManifest.shortHash}-${BUILDER_VERSION}`;
+    expect(result.catalogRevision).toBe(b2Revision);
+    expect(result.publishResult.success).toBe(true);
+    expect(fs.existsSync(path.join(tempRoot, "catalog", "v1", "revisions", b2Revision))).toBe(true);
+    expect(JSON.parse(fs.readFileSync(path.join(tempRoot, "catalog", "v1", "current.json"), "utf8")))
+      .toEqual({ currentRevision: b2Revision });
+    expect(fs.readFileSync(path.join(b1Destination, "manifest.json"), "utf8")).toBe(b1ManifestBefore);
   });
 });

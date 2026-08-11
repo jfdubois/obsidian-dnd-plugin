@@ -143,7 +143,7 @@ describe("selectAbilityScores with valid input", () => {
     expect(draft.abilities.scores?.INT).toBe(15);
   });
 
-  it("updates diagnostics after selection (CRE-008: unresolved species choices)", () => {
+  it("does not invent an unresolved choice diagnostic before catalog consequences load", () => {
     const draft = createEmptyCharacterDraft();
     selectRuleset(draft, "2024");
     selectSources(draft, []);
@@ -152,11 +152,10 @@ describe("selectAbilityScores with valid input", () => {
     const scores = { STR: 15, DEX: 14, CON: 13, INT: 10, WIS: 10, CHA: 8 };
     selectAbilityScores(draft, scores);
 
-    // CRE-008: species selected but species-choices not resolved → error
     const hasUnresolvedChoiceError = draft.diagnostics.some(
       (d) => d.severity === "error" && d.step === "species-choices",
     );
-    expect(hasUnresolvedChoiceError).toBe(true);
+    expect(hasUnresolvedChoiceError).toBe(false);
   });
 
   it("creates a shallow copy of scores (does not mutate input)", () => {

@@ -186,7 +186,7 @@ describe("selectProficiencies with valid input", () => {
     expect(getStepState(draft, "proficiencies")).toBe("resolved");
   });
 
-  it("updates diagnostics after selection (CRE-008: unresolved species choices)", () => {
+  it("does not invent an unresolved choice diagnostic before catalog consequences load", () => {
     const draft = setupDraft();
     const profs = {
       skillProficiencies: [createEntityId("athletics")],
@@ -194,12 +194,10 @@ describe("selectProficiencies with valid input", () => {
     };
     selectProficiencies(draft, profs);
 
-    // CRE-008: species selected but species-choices not resolved → error
     const hasUnresolvedChoiceError = draft.diagnostics.some(
       (d) => d.severity === "error" && d.step === "species-choices",
     );
-    expect(hasUnresolvedChoiceError).toBe(true);
+    expect(hasUnresolvedChoiceError).toBe(false);
   });
 });
-
 

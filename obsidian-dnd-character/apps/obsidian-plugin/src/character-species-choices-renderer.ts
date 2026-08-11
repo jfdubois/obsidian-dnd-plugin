@@ -17,6 +17,8 @@ import { loadCreatorConsequenceReadModel } from "./creator-consequence-read-mode
 import { renderActiveCreatorChoices } from "./creator-active-choice-renderer";
 import type { EntityDetailResponse } from "@obsidian-dnd/catalog-contract";
 import { renderOriginConsequences } from "./creator-origin-consequence-renderer";
+import { isOriginConsequenceComplete } from "./creator-origin-completion";
+import { originConsequenceLoadDiagnostic, originEntityLoadDiagnostic } from "./creator-consequence-load-diagnostic";
 
 /* ── Public API ────────────────────────────────────────────────── */
 
@@ -32,6 +34,7 @@ export async function renderSpeciesChoices(
   onChoiceSubmitted?: (instanceId: ChoiceConsequence["instanceId"], value: CharacterChoice["selectedValue"], entities: readonly EntityDetailResponse[]) => void,
   onChoiceCleared?: (instanceId: ChoiceConsequence["instanceId"]) => void,
   onRandomGrantResolution?: (grantId: RuleGrantId, entities: readonly EntityDetailResponse[]) => void,
+  onConsequenceCompletion?: (complete: boolean) => void,
 ): Promise<void> {
   const speciesId = draft.species.speciesId;
   if (!speciesId || speciesId !== selectedSpecies.id) return;
@@ -46,13 +49,21 @@ export async function renderSpeciesChoices(
   const loadingEl = container.createDiv({ cls: "dnd-creator-loading" });
   loadingEl.createEl("p", { text: "Loading species choices..." });
 
+  let speciesData: EntityDetailResponse;
   try {
-    const speciesResult = await catalog.fetchEntity(
+    speciesData = (await catalog.fetchEntity(
       revision, selectedSpecies.id, selectedSpecies.detailPath,
-    );
+    )).data;
+  } catch (error) {
     loadingEl.remove();
+    const message = originEntityLoadDiagnostic("species", selectedSpecies.detailPath, error);
+    container.createEl("p", { text: message, cls: "dnd-creator-error" });
+    onEntityLoadError?.(message);
+    return;
+  }
+  loadingEl.remove();
 
-    const speciesData = speciesResult.data;
+  try {
     if (speciesData.kind !== "species") {
       const message = `Selected catalog entity at ${selectedSpecies.detailPath} is not species data. Refresh the catalog and try again.`;
       container.createEl("p", { text: message, cls: "dnd-creator-error" });
@@ -65,22 +76,22 @@ export async function renderSpeciesChoices(
     const model = readModel?.model ?? legacyModel!;
     const origin = model.origins.find((entry) => entry.origin.id === speciesId);
     const choices = origin?.choices ?? [];
+    onConsequenceCompletion?.(isOriginConsequenceComplete(model, speciesId));
     renderOriginConsequences(container, origin, model.diagnostics, onRandomGrantResolution === undefined ? undefined : (grantId) => onRandomGrantResolution(grantId, readModel?.entities ?? [speciesData]));
     if (choices.length === 0) {
       container.createEl("p", {
         text: "No additional choices for this species.",
         cls: "dnd-creator-info",
       });
-      onChoicesResolved({});
+      if (onChoiceSubmitted === undefined) onChoicesResolved({});
       return;
     }
 
     if (onChoiceSubmitted !== undefined) renderActiveCreatorChoices(container, "Species Choices", choices, (instanceId, value) => onChoiceSubmitted(instanceId, value, readModel!.entities), onChoiceCleared);
     else await renderChoicesSection(container, draft, catalog, revision, choices, isEntityEligible, onChoicesResolved);
     onChoicesPresented?.();
-  } catch {
-    loadingEl.remove();
-    const message = `Could not load the selected species entity at ${selectedSpecies.detailPath}. Refresh the catalog and try again.`;
+  } catch (error) {
+    const message = originConsequenceLoadDiagnostic("species", error);
     container.createEl("p", {
       text: message,
       cls: "dnd-creator-error",

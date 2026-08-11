@@ -8,10 +8,10 @@ import { selectRuleset } from "./character-ruleset-step";
 import { selectSources } from "./character-source-step";
 import { selectSpecies } from "./character-species-step";
 
-/* ── Unresolved-choice diagnostics (CRE-008) ────────────────────
-   Tests for buildUnresolvedChoiceDiagnostics which detects when
-   an entity (species/background/class) has been selected but the
-   corresponding choice step remains incomplete.                  */
+/* ── Origin choice diagnostic boundary ──────────────────────────
+   A selection alone does not prove that an active catalog choice exists.
+   Catalog-derived diagnostics are rendered only after the consequence model
+   has loaded.                                                     */
 
 describe("Unresolved choice diagnostics", () => {
   function setupDraft() {
@@ -21,20 +21,20 @@ describe("Unresolved choice diagnostics", () => {
     return draft;
   }
 
-  /* ── Positive tests: unresolved choice errors ──────────────── */
+  /* ── No premature choice errors ────────────────────────────── */
 
-  describe("Positive: unresolved choice errors", () => {
-    it("species selected, species-choices not resolved → error diagnostic for species-choices", () => {
+  describe("Catalog consequence loading boundary", () => {
+    it("does not emit a species unresolved-choice error before a consequence model exists", () => {
       const draft = setupDraft();
       selectSpecies(draft, createEntityId("human"));
 
       const hasError = draft.diagnostics.some(
         (d) => d.severity === "error" && d.step === "species-choices",
       );
-      expect(hasError).toBe(true);
+      expect(hasError).toBe(false);
     });
 
-    it("background selected, background-choices not resolved → error diagnostic for background-choices", () => {
+    it("does not emit a background unresolved-choice error before a consequence model exists", () => {
       const draft = setupDraft();
       draft.background.backgroundId = createEntityId("sage");
       markStepResolved(draft, "background");
@@ -42,10 +42,10 @@ describe("Unresolved choice diagnostics", () => {
       const hasError = draft.diagnostics.some(
         (d) => d.severity === "error" && d.step === "background-choices",
       );
-      expect(hasError).toBe(true);
+      expect(hasError).toBe(false);
     });
 
-    it("class selected, class-starting-grants not resolved → error diagnostic for class-starting-grants", () => {
+    it("does not emit a class unresolved-choice error before a consequence model exists", () => {
       const draft = setupDraft();
       draft.class.classId = createEntityId("fighter");
       markStepResolved(draft, "class");
@@ -53,7 +53,7 @@ describe("Unresolved choice diagnostics", () => {
       const hasError = draft.diagnostics.some(
         (d) => d.severity === "error" && d.step === "class-starting-grants",
       );
-      expect(hasError).toBe(true);
+      expect(hasError).toBe(false);
     });
   });
 

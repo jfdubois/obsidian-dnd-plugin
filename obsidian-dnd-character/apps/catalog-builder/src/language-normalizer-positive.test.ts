@@ -41,6 +41,14 @@ describe("normalizeLanguages", () => {
       expect(result.diagnostics.length).toBe(0);
     });
 
+    it("normalizes the raw PHB standard language category as a catalog language", () => {
+      const record = makeCopyModRawRecord({ type: "standard" });
+      const result = normalizeLanguages({ records: [record], context: ctx });
+
+      expect(result.languages[0]).toMatchObject({ name: "Common", type: "language", ruleset: "2014" });
+      expect(result.diagnostics).toEqual([]);
+    });
+
     it("normalizes a valid XPHB language", () => {
       const record = makeCopyModRawRecord({
         name: "Common",

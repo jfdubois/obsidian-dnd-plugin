@@ -132,17 +132,17 @@ describe("Creator state-machine (CRE-011)", () => {
     });
   });
 
-  /* ── 3. Unresolved-choice diagnostics ───────────────────────── */
+  /* ── 3. Catalog-owned choice diagnostics ────────────────────── */
 
-  describe("Unresolved-choice diagnostics", () => {
-    it("species selected but species-choices unresolved produces error diagnostic", () => {
+  describe("Catalog-owned choice diagnostics", () => {
+    it("does not produce an unresolved-choice error before an active choice is derived", () => {
       const draft = createEmptyCharacterDraft();
       draft.species.speciesId = createEntityId("human");
       markStepResolved(draft, "species");
       const hasError = draft.diagnostics.some(
         (d) => d.severity === "error" && d.step === "species-choices",
       );
-      expect(hasError).toBe(true);
+      expect(hasError).toBe(false);
     });
 
     it("species selected and species-choices resolved produces no unresolved-choice error", () => {

@@ -131,13 +131,67 @@ function readPublishedFileMap(targetDir: string): Map<string, string> {
   return files;
 }
 
+function isInventoryReport(value: unknown): value is InventoryReport {
+  if (typeof value !== "object" || value === null) return false;
+  const report = value as Record<string, unknown>;
+  const isCount = (entry: unknown, key: string): boolean => typeof entry === "object" && entry !== null
+    && typeof (entry as Record<string, unknown>)[key] === "string"
+    && typeof (entry as Record<string, unknown>).count === "number";
+  return typeof report.totalEntities === "number"
+    && Array.isArray(report.byKind) && report.byKind.every((entry) => isCount(entry, "kind"))
+    && Array.isArray(report.byRuleset) && report.byRuleset.every((entry) => isCount(entry, "ruleset"))
+    && Array.isArray(report.byAccess) && report.byAccess.every((entry) => isCount(entry, "access"))
+    && Array.isArray(report.sourcesUsed) && report.sourcesUsed.every((entry) => typeof entry === "string")
+    && typeof report.generatedAt === "string";
+}
+
+function parseTimestampTolerantJson(
+  content: string,
+  path: "manifest.json" | "reports/inventory.json",
+): Record<string, unknown> | undefined {
+  try {
+    const value: unknown = JSON.parse(content);
+    if (path === "manifest.json" ? !isCatalogManifest(value) : !isInventoryReport(value)) return undefined;
+    return value as Record<string, unknown>;
+  } catch {
+    return undefined;
+  }
+}
+
+function stableJson(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  if (typeof value === "object" && value !== null) {
+    const record = value as Record<string, unknown>;
+    return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+/** Only these two declared publication timestamps are non-semantic. */
+function timestampTolerantEqual(
+  path: "manifest.json" | "reports/inventory.json",
+  expected: string,
+  actual: string,
+): boolean {
+  const expectedJson = parseTimestampTolerantJson(expected, path);
+  const actualJson = parseTimestampTolerantJson(actual, path);
+  if (expectedJson === undefined || actualJson === undefined) return false;
+  const { generatedAt: _expectedGeneratedAt, ...expectedWithoutTimestamp } = expectedJson;
+  const { generatedAt: _actualGeneratedAt, ...actualWithoutTimestamp } = actualJson;
+  return stableJson(expectedWithoutTimestamp) === stableJson(actualWithoutTimestamp);
+}
+
 /** Existing immutable revisions may only be reactivated when all bytes match. */
 function comparePublishedRevision(input: CatalogPublisherInput, revisionPath: string): string | null {
   const expected = buildFileMap(input);
   const actual = readPublishedFileMap(revisionPath);
   for (const [relativePath, content] of expected) {
     if (!actual.has(relativePath)) return `Immutable revision conflict: missing ${relativePath}.`;
-    if (actual.get(relativePath) !== content) return `Immutable revision conflict: content differs for ${relativePath}.`;
+    const existing = actual.get(relativePath)!;
+    const timestampPath = relativePath === "manifest.json" || relativePath === "reports/inventory.json";
+    if (existing !== content && (!timestampPath || !timestampTolerantEqual(relativePath, content, existing))) {
+      return `Immutable revision conflict: content differs for ${relativePath}.`;
+    }
   }
   for (const relativePath of actual.keys()) {
     if (!expected.has(relativePath)) return `Immutable revision conflict: unexpected ${relativePath}.`;

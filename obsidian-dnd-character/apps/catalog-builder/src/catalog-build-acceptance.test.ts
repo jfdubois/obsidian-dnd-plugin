@@ -110,10 +110,7 @@ describe("catalog build — additional required acceptance tests", () => {
     const result = buildCatalog(config, sourceManifest);
     expect(result.publishResult.success).toBe(true);
 
-    // Verify builder version suffix is present
-    expect(result.catalogRevision).toContain(`-${BUILDER_VERSION}`);
-    // Verify full format: 5etools-{shortHash}-{builderVersion}
-    expect(result.catalogRevision).toMatch(/^5etools-[0-9a-f]{7}-b1$/);
+    expect(result.catalogRevision).toBe(`5etools-${sourceManifest.shortHash}-${BUILDER_VERSION}`);
 
     // Verify manifest also includes the builder version in the revision
     const manifestPath = path.join(
