@@ -1,9 +1,10 @@
-import type { EntityId, SourceId, RuleEntityKind, ContentAccess } from "@obsidian-dnd/domain";
+import type { EntityId, SourceId, RuleEntityKind, ContentAccess, ProficiencyGroup } from "@obsidian-dnd/domain";
 import {
   isEntityId,
   isSourceId,
   isRuleEntityKind,
   isContentAccess,
+  isProficiencyGroup,
 } from "@obsidian-dnd/domain";
 
 /* ── Query enums ───────────────────────────────────────────────── */
@@ -99,6 +100,28 @@ export function isEquipmentBodySlot(value: unknown): value is EquipmentBodySlot 
   return EQUIPMENT_BODY_SLOTS.includes(value as EquipmentBodySlot);
 }
 
+export type EquipmentGroup =
+  | "artisan-tool"
+  | "musical-instrument"
+  | "gaming-set"
+  | "simple-weapon"
+  | "simple-melee-weapon"
+  | "martial-weapon"
+  | "martial-melee-weapon"
+  | "arcane-spellcasting-focus"
+  | "holy-spellcasting-focus"
+  | "druidic-spellcasting-focus";
+
+export const EQUIPMENT_GROUPS: readonly EquipmentGroup[] = [
+  "artisan-tool", "musical-instrument", "gaming-set", "simple-weapon", "simple-melee-weapon",
+  "martial-weapon", "martial-melee-weapon", "arcane-spellcasting-focus", "holy-spellcasting-focus",
+  "druidic-spellcasting-focus",
+];
+
+export function isEquipmentGroup(value: unknown): value is EquipmentGroup {
+  return EQUIPMENT_GROUPS.includes(value as EquipmentGroup);
+}
+
 /* ── Catalog queries ─────────────────────────────────────────────
    Discriminated union of query types used by choice definitions
    to filter candidate entities. Each query is evaluated against
@@ -128,9 +151,14 @@ export interface SpellQuery {
   excludeKnown?: EntityId[];
 }
 
+export type ProficiencyQueryConstraint =
+  | { type: "exact-eligible-ids"; eligibleIds: EntityId[] }
+  | { type: "proficiency-groups"; groups: ProficiencyGroup[] };
+
 export interface ProficiencyQuery {
   type: "proficiency";
   kind: ProficiencyQueryKind;
+  constraint?: ProficiencyQueryConstraint;
 }
 
 export interface EquipmentQuery {
@@ -140,6 +168,7 @@ export interface EquipmentQuery {
   bodySlot?: EquipmentBodySlot;
   sourceId?: SourceId;
   access?: ContentAccess;
+  equipmentGroups?: EquipmentGroup[];
 }
 
 /* ── Validator ─────────────────────────────────────────────────── */
@@ -180,6 +209,24 @@ export function isCatalogQuery(value: unknown): value is CatalogQuery {
     }
     case "proficiency": {
       if (!isProficiencyQueryKind(obj.kind)) return false;
+      if (obj.constraint !== undefined) {
+        const c = obj.constraint as Record<string, unknown>;
+        const cType = c.type;
+        if (typeof cType !== "string") return false;
+        if (cType === "exact-eligible-ids") {
+          if (!Array.isArray(c.eligibleIds) || c.eligibleIds.length === 0) return false;
+          if (!c.eligibleIds.every((id: unknown) => isEntityId(id))) return false;
+          // Reject duplicates
+          if (new Set(c.eligibleIds).size !== c.eligibleIds.length) return false;
+        } else if (cType === "proficiency-groups") {
+          if (!Array.isArray(c.groups) || c.groups.length === 0) return false;
+          if (!c.groups.every((g: unknown) => isProficiencyGroup(g))) return false;
+          // Reject duplicates
+          if (new Set(c.groups).size !== c.groups.length) return false;
+        } else {
+          return false;
+        }
+      }
       return true;
     }
     case "equipment": {
@@ -188,6 +235,8 @@ export function isCatalogQuery(value: unknown): value is CatalogQuery {
       if (obj.bodySlot !== undefined && !isEquipmentBodySlot(obj.bodySlot)) return false;
       if (obj.sourceId !== undefined && !isSourceId(obj.sourceId)) return false;
       if (obj.access !== undefined && !isContentAccess(obj.access)) return false;
+      if (obj.equipmentGroups !== undefined && (!Array.isArray(obj.equipmentGroups)
+        || obj.equipmentGroups.length === 0 || !obj.equipmentGroups.every(isEquipmentGroup))) return false;
       return true;
     }
     default: {
@@ -236,8 +285,11 @@ export function createSpellQuery(
   };
 }
 
-export function createProficiencyQuery(kind: ProficiencyQueryKind): ProficiencyQuery {
-  return { type: "proficiency", kind };
+export function createProficiencyQuery(
+  kind: ProficiencyQueryKind,
+  constraint?: ProficiencyQueryConstraint,
+): ProficiencyQuery {
+  return { type: "proficiency", kind, constraint };
 }
 
 export function createEquipmentQuery(
@@ -247,6 +299,7 @@ export function createEquipmentQuery(
     bodySlot?: EquipmentBodySlot;
     sourceId?: SourceId;
     access?: ContentAccess;
+    equipmentGroups?: EquipmentGroup[];
   },
 ): EquipmentQuery {
   return {
@@ -256,5 +309,6 @@ export function createEquipmentQuery(
     bodySlot: options?.bodySlot,
     sourceId: options?.sourceId,
     access: options?.access,
+    equipmentGroups: options?.equipmentGroups ? [...options.equipmentGroups] : undefined,
   };
 }

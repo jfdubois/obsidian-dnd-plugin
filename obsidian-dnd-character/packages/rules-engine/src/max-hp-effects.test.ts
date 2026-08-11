@@ -56,7 +56,7 @@ describe("calculateMaxHp - effects", () => {
           instanceId: cii("choice-1"),
           definitionId: cdi("def-1"),
           originGrantId: eid("grant-1"),
-          selectedOptionIds: [featId],
+          selectedValue: { type: "entity-ids", entityIds: [featId] },
         },
       },
     });
@@ -85,13 +85,13 @@ describe("calculateMaxHp - effects", () => {
           instanceId: cii("choice-1"),
           definitionId: cdi("def-1"),
           originGrantId: eid("grant-1"),
-          selectedOptionIds: [feat1Id],
+          selectedValue: { type: "entity-ids", entityIds: [feat1Id] },
         },
         [cii("choice-2")]: {
           instanceId: cii("choice-2"),
           definitionId: cdi("def-2"),
           originGrantId: eid("grant-2"),
-          selectedOptionIds: [feat2Id],
+          selectedValue: { type: "entity-ids", entityIds: [feat2Id] },
         },
       },
     });
@@ -123,7 +123,7 @@ describe("calculateMaxHp - effects", () => {
           instanceId: cii("choice-1"),
           definitionId: cdi("def-1"),
           originGrantId: eid("grant-1"),
-          selectedOptionIds: [featId],
+          selectedValue: { type: "entity-ids", entityIds: [featId] },
         },
       },
     });
@@ -153,13 +153,13 @@ describe("calculateMaxHp - effects", () => {
           instanceId: cii("choice-1"),
           definitionId: cdi("def-1"),
           originGrantId: eid("grant-1"),
-          selectedOptionIds: [conFeatId],
+          selectedValue: { type: "entity-ids", entityIds: [conFeatId] },
         },
         [cii("choice-2")]: {
           instanceId: cii("choice-2"),
           definitionId: cdi("def-2"),
           originGrantId: eid("grant-2"),
-          selectedOptionIds: [hpFeatId],
+          selectedValue: { type: "entity-ids", entityIds: [hpFeatId] },
         },
       },
     });

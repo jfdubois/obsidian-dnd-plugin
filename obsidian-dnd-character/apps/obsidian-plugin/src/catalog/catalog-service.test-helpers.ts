@@ -68,7 +68,7 @@ export function createBackingPlugin(backing: Backing): Plugin {
 
 export function createManifest(sourceRevision = srcRevision) {
   return createCatalogManifest({
-    schemaVersion: 1,
+    schemaVersion: 2,
     catalogRevision: rev,
     sourceRevision,
     builderVersion: "0.1.0",

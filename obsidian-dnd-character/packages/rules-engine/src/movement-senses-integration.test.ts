@@ -36,7 +36,7 @@ describe("calculateMovementSenses - add-sense", () => {
           instanceId: eid("choice-feat-1") as never,
           definitionId: eid("def-feat-1") as never,
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-true-seeing")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-true-seeing")] },
         },
       },
     });
@@ -94,7 +94,7 @@ describe("calculateMovementSenses - add-sense", () => {
           instanceId: eid("choice-feat-1") as never,
           definitionId: eid("def-feat-1") as never,
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-keen-senses")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-keen-senses")] },
         },
       },
     });
@@ -123,7 +123,7 @@ describe("calculateMovementSenses - add-sense", () => {
           instanceId: eid("choice-feat-1") as never,
           definitionId: eid("def-feat-1") as never,
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-eaveshear")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-eaveshear")] },
         },
       },
     });
@@ -158,7 +158,7 @@ describe("calculateMovementSenses - movement edge cases", () => {
           instanceId: eid("choice-feat-1") as never,
           definitionId: eid("def-feat-1") as never,
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-mole")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-mole")] },
         },
       },
     });
@@ -224,7 +224,7 @@ describe("calculateMovementSenses - combined", () => {
           instanceId: eid("choice-feat-1") as never,
           definitionId: eid("def-feat-1") as never,
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-aerial")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-aerial")] },
         },
       },
     });

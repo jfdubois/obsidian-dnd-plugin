@@ -33,7 +33,10 @@ export {
 /* Choice state */
 export {
   type CharacterChoice,
+  type CharacterChoiceSelectedValue,
+  type AbilityAllocationSelection,
   isCharacterChoice,
+  isCharacterChoiceSelectedValue,
   createCharacterChoice,
 } from "./character-choice";
 
@@ -50,8 +53,16 @@ export {
 export {
   type ItemInstanceOverrides,
   type InventoryItemInstance,
+  type CatalogInventoryItemInstance,
+  type NamedInventoryItemInstance,
   isInventoryItemInstance,
 } from "./character-inventory";
+
+export {
+  type CharacterCurrencyState,
+  EMPTY_CHARACTER_CURRENCY,
+  isCharacterCurrencyState,
+} from "./character-currency";
 
 /* Resource, ability, and override state */
 export {

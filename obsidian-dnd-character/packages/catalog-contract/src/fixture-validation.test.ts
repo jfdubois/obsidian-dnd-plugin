@@ -28,7 +28,7 @@ describe("Normalized catalog fixture - manifest", () => {
 
   it("manifest has correct schemaVersion", () => {
     const m = (catalog as Record<string, unknown>).manifest as Record<string, unknown>;
-    expect(m.schemaVersion).toBe(1);
+    expect(m.schemaVersion).toBe(2);
   });
 
   it("manifest has correct revision", () => {

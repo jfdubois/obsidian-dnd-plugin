@@ -23,6 +23,8 @@ import type { RuleEffect, ValueFormula } from "./effect";
 import { isRuleEffect, isValueFormula } from "./effect";
 import type { RenderNode } from "./render-node";
 import { isRenderNode } from "./render-node";
+import type { RuleGrant } from "./rule-grant";
+import { isRuleGrant } from "./rule-grant";
 
 /* ── LevelGrant discriminated union ──────────────────────────────
    Describes what a class grants at a given level. Each variant
@@ -111,12 +113,14 @@ export interface ClassRule {
   content: RenderNode[];
   prerequisites: RulePrerequisite[];
   effects: RuleEffect[];
+  grants: RuleGrant[];
   choices: ChoiceDefinition[];
   dependencies: EntityId[];
   hitDie: number;
   primaryAbilities: Ability[];
   savingThrowProficiencies: Ability[];
   startingChoices: ChoiceDefinition[];
+  startingGrants: RuleGrant[];
   levels: Record<number, LevelDefinition>;
   subclassIds: EntityId[];
   spellcasting?: SpellcastingProgression;
@@ -256,6 +260,8 @@ export function isClassRule(value: unknown): value is ClassRule {
   if (!Array.isArray(obj.effects)) return false;
   if (!obj.effects.every((e: unknown) => isRuleEffect(e))) return false;
 
+  if (!Array.isArray(obj.grants) || !obj.grants.every((grant: unknown) => isRuleGrant(grant))) return false;
+
   if (!Array.isArray(obj.choices)) return false;
   if (!obj.choices.every((c: unknown) => isChoiceDefinition(c))) return false;
 
@@ -274,6 +280,8 @@ export function isClassRule(value: unknown): value is ClassRule {
 
   if (!Array.isArray(obj.startingChoices)) return false;
   if (!obj.startingChoices.every((c: unknown) => isChoiceDefinition(c))) return false;
+
+  if (!Array.isArray(obj.startingGrants) || !obj.startingGrants.every((grant: unknown) => isRuleGrant(grant))) return false;
 
   if (typeof obj.levels !== "object" || obj.levels === null || Array.isArray(obj.levels)) return false;
   const levels = obj.levels as Record<string, unknown>;
@@ -360,6 +368,8 @@ export function createClassRule(
   page?: number,
   summary?: string,
   spellcasting?: SpellcastingProgression,
+  grants: RuleGrant[] = [],
+  startingGrants: RuleGrant[] = [],
 ): ClassRule {
   return {
     id,
@@ -374,12 +384,14 @@ export function createClassRule(
     content: [...content],
     prerequisites: [...prerequisites],
     effects: [...effects],
+    grants: [...grants],
     choices: [...choices],
     dependencies: [...dependencies],
     hitDie,
     primaryAbilities: [...primaryAbilities],
     savingThrowProficiencies: [...savingThrowProficiencies],
     startingChoices: [...startingChoices],
+    startingGrants: [...startingGrants],
     levels,
     subclassIds: [...subclassIds],
     spellcasting,

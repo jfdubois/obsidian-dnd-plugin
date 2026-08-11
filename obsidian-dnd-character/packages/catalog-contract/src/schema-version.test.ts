@@ -16,8 +16,8 @@ describe("schema version constants", () => {
     expect(CATALOG_API_VERSION).toBe(1);
   });
 
-  it("CATALOG_SCHEMA_VERSION equals 1", () => {
-    expect(CATALOG_SCHEMA_VERSION).toBe(1);
+  it("CATALOG_SCHEMA_VERSION equals 2", () => {
+    expect(CATALOG_SCHEMA_VERSION).toBe(2);
   });
 });
 
@@ -56,16 +56,16 @@ describe("isSupportedApiVersion", () => {
 });
 
 describe("isSupportedSchemaVersion", () => {
-  it("returns true for 1", () => {
-    expect(isSupportedSchemaVersion(1)).toBe(true);
+  it("returns true for 2", () => {
+    expect(isSupportedSchemaVersion(2)).toBe(true);
   });
 
   it("returns false for 0", () => {
     expect(isSupportedSchemaVersion(0)).toBe(false);
   });
 
-  it("returns false for 2", () => {
-    expect(isSupportedSchemaVersion(2)).toBe(false);
+  it("returns false for 1", () => {
+    expect(isSupportedSchemaVersion(1)).toBe(false);
   });
 
   it('returns false for "1"', () => {
@@ -92,7 +92,7 @@ describe("isSupportedSchemaVersion", () => {
 describe("CatalogManifest with schema version constant", () => {
   it("validates manifest with current API version", () => {
     const manifest = createCatalogManifest({
-      schemaVersion: 1,
+      schemaVersion: 2,
       catalogRevision: createCatalogRevision("rev-001"),
       sourceRevision: "abc",
       builderVersion: "0.1.0",
@@ -108,7 +108,7 @@ describe("CatalogManifest with schema version constant", () => {
   it("rejects manifest with wrong API version", () => {
     const invalid = {
       apiVersion: 2,
-      schemaVersion: 1,
+      schemaVersion: 2,
       catalogRevision: "rev-bad",
       sourceRevision: "abc",
       builderVersion: "0.1.0",

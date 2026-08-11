@@ -2,7 +2,7 @@
    Bump this constant when the character persistence schema changes.
    The runtime validator rejects unsupported versions.              */
 
-export const CHARACTER_SCHEMA_VERSION = 1 as const;
+export const CHARACTER_SCHEMA_VERSION = 2 as const;
 
 export type CharacterSchemaVersion = typeof CHARACTER_SCHEMA_VERSION;
 

@@ -54,6 +54,7 @@ export function makeSpecies(id: EntityId, effects: RuleEffect[] = []): SpeciesRu
     content: [],
     prerequisites: [],
     effects,
+    grants: [],
     choices: [],
     dependencies: [],
     size: "medium",
@@ -76,6 +77,7 @@ export function makeBackground(id: EntityId, effects: RuleEffect[] = []): Backgr
     content: [],
     prerequisites: [],
     effects,
+    grants: [],
     choices: [],
     dependencies: [],
     skillProficiencies: [],
@@ -94,12 +96,14 @@ export function makeClass(id: EntityId, effects: RuleEffect[] = [], extra: Parti
     content: [],
     prerequisites: [],
     effects,
+    grants: [],
     choices: [],
     dependencies: [],
     hitDie: 8,
     primaryAbilities: ["DEX"],
     savingThrowProficiencies: ["DEX", "INT"],
     startingChoices: [],
+    startingGrants: [],
     levels: {},
     subclassIds: [],
     ...extra,
@@ -227,6 +231,8 @@ export function makeItem(id: EntityId, effects: RuleEffect[] = [], extra: Partia
     weight: 1,
     cost: { amount: 10, unit: "gp" },
     properties: [],
+    equipmentGroups: [],
+    proficiencyGroups: [],
     ...extra,
   };
 }
@@ -235,7 +241,7 @@ export function makeItem(id: EntityId, effects: RuleEffect[] = [], extra: Partia
 
 export function makeCharacter(overrides: Partial<Character>): Character {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     id: "char-1" as Character["id"],
     catalog: { catalogSchemaVersion: 1, createdWithRevision: "rev-1" as CatalogRevision, lastValidatedRevision: "rev-1" as CatalogRevision },
     contentPolicy: { ruleset: "2024" as Character["contentPolicy"]["ruleset"], enabledSourceIds: [] as SourceId[], mode: "snapshot" },
@@ -246,6 +252,7 @@ export function makeCharacter(overrides: Partial<Character>): Character {
     abilities: { scores: { STR: 10, DEX: 10, CON: 10, INT: 10, WIS: 10, CHA: 10 } },
     spells: { selections: [], spellSlotsUsed: {} },
     inventory: [],
+    currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
     resources: { currentHp: 10, temporaryHp: 0, deathSaves: { successes: 0, failures: 0 }, hitDiceUsed: {}, featureUses: {}, conditions: [] },
     overrides: {},
     metadata: { createdAt: "2024-01-01T00:00:00Z", updatedAt: "2024-01-01T00:00:00Z" },

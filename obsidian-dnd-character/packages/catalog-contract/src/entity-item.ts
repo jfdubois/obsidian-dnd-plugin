@@ -3,11 +3,15 @@ import type {
   Ruleset,
   SourceId,
   ContentAccess,
+  WeaponCategory,
+  ProficiencyGroup,
 } from "@obsidian-dnd/domain";
 import {
   isEntityId,
   isRuleset,
   isContentAccess,
+  isWeaponCategory,
+  isProficiencyGroup,
 } from "@obsidian-dnd/domain";
 import type { ChoiceDefinition } from "./choice-definition";
 import { isChoiceDefinition } from "./choice-definition";
@@ -17,8 +21,8 @@ import type { RuleEffect } from "./effect";
 import { isRuleEffect } from "./effect";
 import type { RenderNode } from "./render-node";
 import { isRenderNode } from "./render-node";
-import type { EquipmentCategory, EquipmentRarity, EquipmentBodySlot } from "./query";
-import { isEquipmentCategory, isEquipmentRarity, isEquipmentBodySlot } from "./query";
+import type { EquipmentCategory, EquipmentRarity, EquipmentBodySlot, EquipmentGroup } from "./query";
+import { isEquipmentCategory, isEquipmentRarity, isEquipmentBodySlot, isEquipmentGroup } from "./query";
 
 /* ── ItemCost ─────────────────────────────────────────────────────
     Represents the monetary cost of an item.                      */
@@ -55,6 +59,9 @@ export interface ItemRule {
   bodySlot?: EquipmentBodySlot;
   properties: string[];
   requiresAttunement: boolean;
+  equipmentGroups: EquipmentGroup[];
+  weaponCategory?: WeaponCategory;
+  proficiencyGroups: ProficiencyGroup[];
 }
 
 /* ── ItemCost validator ────────────────────────────────────────── */
@@ -125,6 +132,10 @@ export function isItemRule(value: unknown): value is ItemRule {
   if (!obj.properties.every((p: unknown) => typeof p === "string")) return false;
 
   if (typeof obj.requiresAttunement !== "boolean") return false;
+  if (!Array.isArray(obj.equipmentGroups) || !obj.equipmentGroups.every(isEquipmentGroup)) return false;
+
+  if (obj.weaponCategory !== undefined && !isWeaponCategory(obj.weaponCategory)) return false;
+  if (!Array.isArray(obj.proficiencyGroups) || !obj.proficiencyGroups.every(isProficiencyGroup)) return false;
 
   return true;
 }
@@ -156,6 +167,9 @@ export function createItemRule(
   cost?: ItemCost,
   weight?: number,
   bodySlot?: EquipmentBodySlot,
+  equipmentGroups: EquipmentGroup[] = [],
+  weaponCategory?: WeaponCategory,
+  proficiencyGroups: ProficiencyGroup[] = [],
 ): ItemRule {
   return {
     id,
@@ -179,5 +193,8 @@ export function createItemRule(
     bodySlot,
     properties: [...properties],
     requiresAttunement,
+    equipmentGroups: [...equipmentGroups],
+    weaponCategory,
+    proficiencyGroups: [...proficiencyGroups],
   };
 }

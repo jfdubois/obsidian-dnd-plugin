@@ -45,6 +45,7 @@ export function buildInternalChoices(
 ): Record<string, CharacterChoice> | null {
   const choices: Record<string, CharacterChoice> = {};
   for (const state of states) {
+    if (state.definition.type === "ability-allocation") return null;
     if (state.selectedIds.size < state.definition.minimum
       || state.selectedIds.size > state.definition.maximum) return null;
     const instanceId = createChoiceInstanceId(
@@ -54,7 +55,7 @@ export function buildInternalChoices(
       instanceId,
       definitionId: state.definition.id,
       originGrantId,
-      selectedOptionIds: [...state.selectedIds] as EntityId[],
+      selectedValue: { type: "entity-ids", entityIds: [...state.selectedIds] as EntityId[] },
     });
   }
   return choices;

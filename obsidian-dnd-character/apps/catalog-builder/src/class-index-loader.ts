@@ -28,6 +28,13 @@ import {
   extractSavingThrows2024,
   extractAbilityArray,
   collectClassRecords,
+  extractStartingArmorProficiencies,
+  extractStartingWeaponProficiencies,
+  extractStartingToolProficiencies,
+  extractStartingSkillChoices,
+  extractStartingEquipment,
+  extractStartingGold,
+  extractLevelOneFeatures,
 } from "./class-index-helpers";
 
 /* ── Single record indexer ─────────────────────────────────────── */
@@ -194,7 +201,22 @@ function indexSingleClass(
     ));
   }
 
-  // 6. Build indexed entry
+  // 6. Extract starting proficiencies
+  const startingArmorProficiencies = extractStartingArmorProficiencies(remaining);
+  const startingWeaponProficiencies = extractStartingWeaponProficiencies(remaining);
+  const startingToolProficiencies = extractStartingToolProficiencies(remaining);
+  const startingSkillChoices = extractStartingSkillChoices(remaining);
+
+  // 7. Extract starting equipment
+  const { grants: startingEquipmentGrants, choices: startingEquipmentChoices } = extractStartingEquipment(remaining);
+
+  // 8. Extract starting gold
+  const startingGold = extractStartingGold(remaining);
+
+  // 9. Extract level-one features
+  const levelOneFeatures = extractLevelOneFeatures(remaining);
+
+  // 10. Build indexed entry
   const entry: IndexedClassEntry = Object.freeze({
     id: idResult.id,
     sourceId: idResult.sourceId,
@@ -207,6 +229,14 @@ function indexSingleClass(
     hitDie,
     primaryAbilities,
     savingThrowProficiencies,
+    startingArmorProficiencies,
+    startingWeaponProficiencies,
+    startingToolProficiencies,
+    startingSkillChoices,
+    startingEquipmentGrants,
+    startingEquipmentChoices,
+    startingGold,
+    levelOneFeatures,
     diagnostics: Object.freeze(diagnostics),
   });
 

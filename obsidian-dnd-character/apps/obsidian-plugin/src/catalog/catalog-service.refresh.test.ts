@@ -8,7 +8,7 @@ vi.mock("obsidian", () => ({ requestUrl: vi.fn() }));
 
 const revisionB = createCatalogRevision("rev-002");
 function manifest(revision = revisionB, sourceRevision = "src-002") {
-  return createCatalogManifest({ schemaVersion: 1, catalogRevision: revision, sourceRevision, builderVersion: "test", generatedAt: "2026-08-03T00:00:00Z", rulesets: ["2024"], entityKinds: ["species", "background", "class", "feat", "spell", "item"], checksums: { "manifest.json": "sha256-test" } });
+  return createCatalogManifest({ schemaVersion: 2, catalogRevision: revision, sourceRevision, builderVersion: "test", generatedAt: "2026-08-03T00:00:00Z", rulesets: ["2024"], entityKinds: ["species", "background", "class", "feat", "spell", "item"], checksums: { "manifest.json": "sha256-test" } });
 }
 function runtime(active = false) {
   return {

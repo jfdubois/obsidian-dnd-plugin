@@ -140,7 +140,7 @@ describe("calculateMovementSenses - add-movement", () => {
           instanceId: eid("choice-feat-1") as never,
           definitionId: eid("def-feat-1") as never,
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-mobile")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-mobile")] },
         },
       },
     });
@@ -200,7 +200,7 @@ describe("calculateMovementSenses - add-movement", () => {
           instanceId: eid("choice-feat-1") as never,
           definitionId: eid("def-feat-1") as never,
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-haste")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-haste")] },
         },
       },
       spells: {
@@ -239,7 +239,7 @@ describe("calculateMovementSenses - set-movement", () => {
           instanceId: eid("choice-feat-1") as never,
           definitionId: eid("def-feat-1") as never,
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-slow")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-slow")] },
         },
       },
     });

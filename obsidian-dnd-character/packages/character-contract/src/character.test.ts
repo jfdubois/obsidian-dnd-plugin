@@ -89,7 +89,7 @@ describe("Character", () => {
       instanceId: createChoiceInstanceId("choice-1"),
       definitionId: createChoiceDefinitionId("choice-def-1"),
       originGrantId: createEntityId("class:2024:xphb:fighter"),
-      selectedOptionIds: [createEntityId("feat:2024:xphb:tough")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("feat:2024:xphb:tough")] },
     });
     expect(isCharacter(char)).toBe(true);
   });
@@ -98,6 +98,7 @@ describe("Character", () => {
     const char = makeMinimalCharacter();
     char.inventory.push({
       instanceId: createItemInstanceId("item-1"),
+      type: "catalog-item",
       itemId: createEntityId("item:2024:xphb:longsword"),
       quantity: 1,
       equipped: false,

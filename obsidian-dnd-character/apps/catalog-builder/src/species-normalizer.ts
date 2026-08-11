@@ -1,12 +1,14 @@
 import type { RawRecord } from "./raw-boundary";
 import { classifySpeciesSourceScope, type SpeciesSourceScopeContext } from "./species-source-scope";
-import { createCanonicalEntityId } from "@obsidian-dnd/domain";
-import { createSpeciesRule, type SpeciesRule } from "@obsidian-dnd/catalog-contract";
+import { createCanonicalEntityId, createChoiceDefinitionId } from "@obsidian-dnd/domain";
+import { createSpeciesRule, createChoiceDefinition, createAbilityAllocationChoiceDefinition, createEntityQuery, type ChoiceDefinition, type SpeciesRule } from "@obsidian-dnd/catalog-contract";
 import {
   createRuleEffectMetadata,
   createAddAbilityEffect,
   createSetMovementEffect,
   createAddSenseEffect,
+  createAddLanguageEffect,
+  createAddProficiencyEffect,
   createEffectPresentation,
   createEffectOrigin,
   type RuleEffect,
@@ -74,6 +76,10 @@ function makeDiagnostic(
 function extractSize(remaining: Record<string, unknown>): string | undefined {
   const size = remaining.size;
   if (typeof size === "string" && size.length > 0) return size;
+  if (Array.isArray(size) && size.length === 1 && typeof size[0] === "string") {
+    const names: Record<string, string> = { T: "Tiny", S: "Small", M: "Medium", L: "Large", H: "Huge", G: "Gargantuan" };
+    return names[size[0]];
+  }
   return undefined;
 }
 
@@ -95,6 +101,7 @@ interface DarkvisionExtract {
 function extractDarkvision(remaining: Record<string, unknown>): DarkvisionExtract {
   const dv = remaining.darkvision;
   if (dv === true) return { darkvision: true };
+  if (typeof dv === "number" && Number.isInteger(dv) && dv > 0) return { darkvision: true, darkvisionRange: dv };
   if (typeof dv === "string" && dv.length > 0) {
     const match = dv.match(/(\d+)/);
     if (match && match[1]) return { darkvision: true, darkvisionRange: parseInt(match[1], 10) };
@@ -149,6 +156,16 @@ function extractAbilityEffects(
         effects.push(createAddAbilityEffect(metadata, key, value));
       }
     }
+  } else if (Array.isArray(ability)) {
+    for (const entry of ability) {
+      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) continue;
+      for (const [key, value] of Object.entries(entry as Record<string, unknown>)) {
+        const normalized = key.toUpperCase() as Ability;
+        if (isAbility(normalized) && typeof value === "number" && Number.isInteger(value) && value !== 0) {
+          effects.push(createAddAbilityEffect(metadata, normalized, value));
+        }
+      }
+    }
   } else if (typeof ability === "object" && ability !== null && !Array.isArray(ability)) {
     const abilityMap = ability as Record<string, unknown>;
     for (const [key, value] of Object.entries(abilityMap)) {
@@ -162,6 +179,84 @@ function extractAbilityEffects(
   }
 
   return effects;
+}
+
+function canonicalId(kind: "skill" | "language", name: string, ruleset: "2014" | "2024", source: "PHB" | "XPHB") {
+  return createCanonicalEntityId({ kind, ruleset, source, name });
+}
+
+function extractFixedLanguageEffects(remaining: Record<string, unknown>, ruleset: "2014" | "2024", source: "PHB" | "XPHB", metadata: ReturnType<typeof createRuleEffectMetadata>): { effects: RuleEffect[]; invalid: boolean } {
+  const effects: RuleEffect[] = [];
+  let invalid = false;
+  const entries = remaining.languageProficiencies;
+  if (entries === undefined) return { effects, invalid };
+  if (!Array.isArray(entries)) return { effects, invalid: true };
+  for (const entry of entries) {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) { invalid = true; continue; }
+    for (const [name, value] of Object.entries(entry as Record<string, unknown>)) {
+      if (name === "choose") continue;
+      if (value !== true && value !== 1) { invalid = true; continue; }
+      const result = canonicalId("language", name, ruleset, source);
+      if (!result.ok) { invalid = true; continue; }
+      effects.push(createAddLanguageEffect(metadata, result.id));
+    }
+  }
+  return { effects, invalid };
+}
+
+function extractFixedSkillEffects(remaining: Record<string, unknown>, ruleset: "2014" | "2024", source: "PHB" | "XPHB", metadata: ReturnType<typeof createRuleEffectMetadata>): { effects: RuleEffect[]; invalid: boolean } {
+  const effects: RuleEffect[] = [];
+  let invalid = false;
+  const entries = remaining.skillProficiencies;
+  if (entries === undefined) return { effects, invalid };
+  if (!Array.isArray(entries)) return { effects, invalid: true };
+  for (const entry of entries) {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) { invalid = true; continue; }
+    for (const [name, value] of Object.entries(entry as Record<string, unknown>)) {
+      if (name === "choose") continue;
+      if (value !== true && value !== 1) { invalid = true; continue; }
+      const result = canonicalId("skill", name, ruleset, source);
+      if (!result.ok) { invalid = true; continue; }
+      effects.push(createAddProficiencyEffect(metadata, { kind: "skill", entityId: result.id }));
+    }
+  }
+  return { effects, invalid };
+}
+
+function extractChoices(remaining: Record<string, unknown>, id: string): ChoiceDefinition[] {
+  const choices: ChoiceDefinition[] = [];
+  const choiceFields: Array<["languageProficiencies" | "skillProficiencies", "language" | "skill"]> = [["languageProficiencies", "language"], ["skillProficiencies", "skill"]];
+  for (const [field, kind] of choiceFields) {
+    const entries = remaining[field];
+    if (!Array.isArray(entries)) continue;
+    for (let index = 0; index < entries.length; index++) {
+      const entry = entries[index];
+      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) continue;
+      const choose = (entry as Record<string, unknown>).choose;
+      if (typeof choose !== "object" || choose === null || Array.isArray(choose)) continue;
+      const choice = choose as Record<string, unknown>;
+      const count = choice.count ?? choice.amount;
+      if (typeof count !== "number" || !Number.isInteger(count) || count < 1) continue;
+      choices.push(createChoiceDefinition(createChoiceDefinitionId(`${id}:choice:${field}:${index}`), `Choose ${count} ${kind}${count === 1 ? "" : "s"}`, kind === "language" ? "language" : "skill-proficiency", count, count, false, createEntityQuery(kind), []));
+    }
+  }
+  const ability = remaining.ability;
+  if (Array.isArray(ability)) {
+    for (let index = 0; index < ability.length; index++) {
+      const entry = ability[index];
+      if (typeof entry !== "object" || entry === null || Array.isArray(entry)) continue;
+      const choose = (entry as Record<string, unknown>).choose;
+      if (typeof choose !== "object" || choose === null || Array.isArray(choose)) continue;
+      const raw = choose as Record<string, unknown>;
+      const from = raw.from;
+      const amount = raw.amount;
+      if (!Array.isArray(from) || from.length === 0 || typeof amount !== "number" || !Number.isInteger(amount) || amount < 1) continue;
+      const eligible = from.map((value) => typeof value === "string" ? value.toUpperCase() : "").filter(isAbility);
+      if (eligible.length === 0 || new Set(eligible).size !== eligible.length) continue;
+      choices.push(createAbilityAllocationChoiceDefinition(createChoiceDefinitionId(`${id}:choice:ability:${index}`), "Choose ability increase", eligible, [{ bonuses: [amount] }], []));
+    }
+  }
+  return choices;
 }
 
 type SingleResult =
@@ -226,6 +321,11 @@ function normalizeSingleSpecies(record: RawRecord, opts: NormalizerOptions): Sin
   // Ability score effects
   effects.push(...extractAbilityEffects(remaining, metadata));
 
+  const languages = extractFixedLanguageEffects(remaining, scopeResult.ruleset, scopeResult.source, metadata);
+  effects.push(...languages.effects);
+  const skills = extractFixedSkillEffects(remaining, scopeResult.ruleset, scopeResult.source, metadata);
+  effects.push(...skills.effects);
+
   // Movement (walk speed)
   if (speed !== undefined && speed > 0) {
     effects.push(createSetMovementEffect(metadata, "walk", speed));
@@ -240,13 +340,11 @@ function normalizeSingleSpecies(record: RawRecord, opts: NormalizerOptions): Sin
   const content = extractContent(remaining);
 
   // 8. Log unmapped fields as diagnostics
-  const unmappedLang = remaining.languageProficiencies;
-  if (Array.isArray(unmappedLang) && unmappedLang.length > 0) {
+  if (languages.invalid) {
     diagnostics.push(makeDiagnostic("UNMAPPED_LANGUAGE", `Species "${record.name}" has unmapped language proficiencies.`, record.name, opts));
   }
 
-  const unmappedProf = remaining.proficiency ?? remaining.startingProficiencies;
-  if (Array.isArray(unmappedProf) && unmappedProf.length > 0) {
+  if (skills.invalid || Array.isArray(remaining.proficiency) || Array.isArray(remaining.startingProficiencies)) {
     diagnostics.push(makeDiagnostic("UNMAPPED_PROFICIENCY", `Species "${record.name}" has unmapped proficiencies.`, record.name, opts));
   }
 
@@ -265,7 +363,7 @@ function normalizeSingleSpecies(record: RawRecord, opts: NormalizerOptions): Sin
     content,
     [], // prerequisites (deferred)
     effects,
-    [], // choices (subraces handled separately)
+    extractChoices(remaining, idResult.id),
     [], // dependencies
     false, // legacy
   );

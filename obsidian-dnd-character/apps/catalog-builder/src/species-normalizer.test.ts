@@ -168,6 +168,47 @@ describe("normalizeSpecies", () => {
     expect(result.species[0]!.ruleset).toBe("2024");
   });
 
+  it("normalizes fixed 2014 language and skill structures as automatic effects", () => {
+    const record = makeRecord({
+      name: "Generic heritage",
+      remaining: {
+        size: "Medium", speed: { walk: 30 }, ability: [{ str: 2 }], darkvision: 60,
+        languageProficiencies: [{ common: true }], skillProficiencies: [{ perception: true }],
+        entries: [{ type: "paragraph", text: "Context remains visible." }],
+      },
+    });
+    const result = normalizeSpecies(makeInput([record]));
+    expect(result.species[0]!.size).toBe("Medium");
+    expect(result.species[0]!.effects.some((effect) => effect.type === "add-sense" && effect.sense.type === "darkvision" && effect.sense.range === 60)).toBe(true);
+    expect(result.species[0]!.effects.some((effect) => effect.type === "add-language")).toBe(true);
+    expect(result.species[0]!.effects.some((effect) => effect.type === "add-proficiency" && "kind" in effect.proficiency && effect.proficiency.kind === "skill")).toBe(true);
+    expect(result.species[0]!.choices).toEqual([]);
+    expect(result.species[0]!.content).toEqual([{ type: "paragraph", text: "Context remains visible." }]);
+  });
+
+  it("normalizes structured 2014 and 2024 choices with deterministic identities", () => {
+    const base = {
+      size: "Medium", speed: 30, darkvision: false,
+      languageProficiencies: [{ choose: { count: 1 } }],
+      skillProficiencies: [{ choose: { count: 2 } }],
+      ability: [{ choose: { from: ["str", "dex"], amount: 1 } }],
+    };
+    const legacy = normalizeSpecies(makeInput([makeRecord({ name: "A", remaining: base })])).species[0]!;
+    const modern = normalizeSpecies(makeInput([makeRecord({ name: "A", source: "XPHB", remaining: base })])).species[0]!;
+    expect(legacy.choices.map((choice) => choice.type)).toEqual(["language", "skill-proficiency", "ability-allocation"]);
+    expect(legacy.choices.map((choice) => choice.id)).toEqual(normalizeSpecies(makeInput([makeRecord({ name: "A", remaining: base })])).species[0]!.choices.map((choice) => choice.id));
+    expect(modern.ruleset).toBe("2024");
+    expect(modern.choices).toHaveLength(3);
+  });
+
+  it("diagnoses malformed structured language and skill forms without mutating raw input", () => {
+    const remaining = { size: "Medium", speed: 30, ability: [], darkvision: false, languageProficiencies: ["Common"], skillProficiencies: [{ perception: "yes" }] };
+    const record = makeRecord({ remaining });
+    const result = normalizeSpecies(makeInput([record]));
+    expect(result.diagnostics.map((diagnostic) => diagnostic.code)).toEqual(expect.arrayContaining(["UNMAPPED_LANGUAGE", "UNMAPPED_PROFICIENCY"]));
+    expect(remaining.languageProficiencies).toEqual(["Common"]);
+  });
+
   it("handles speed object shape with walk key", () => {
     const record = makeRecord({
       remaining: { size: "Medium", speed: { walk: 25 }, ability: [0, 0, 0, 0, 0, 0], darkvision: false },

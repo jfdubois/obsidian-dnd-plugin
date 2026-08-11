@@ -8,7 +8,7 @@ import { createCatalogRevision } from "@obsidian-dnd/domain";
 
 describe("CatalogManifest", () => {
   const validManifest: CatalogManifest = createCatalogManifest({
-    schemaVersion: 1,
+    schemaVersion: 2,
     catalogRevision: createCatalogRevision("rev-001"),
     sourceRevision: "3c5d9d3",
     builderVersion: "0.1.0",
@@ -30,7 +30,7 @@ describe("CatalogManifest", () => {
     const rulesets: ("2014" | "2024")[] = ["2014"];
     const kinds: ("species" | "background")[] = ["species"];
     const manifest = createCatalogManifest({
-      schemaVersion: 1,
+      schemaVersion: 2,
       catalogRevision: createCatalogRevision("rev-002"),
       sourceRevision: "abc",
       builderVersion: "0.1.0",
@@ -48,7 +48,7 @@ describe("CatalogManifest", () => {
   it("creates immutable copy of checksums", () => {
     const checksums: Record<string, string> = { "manifest.json": "abc" };
     const manifest = createCatalogManifest({
-      schemaVersion: 1,
+      schemaVersion: 2,
       catalogRevision: createCatalogRevision("rev-003"),
       sourceRevision: "abc",
       builderVersion: "0.1.0",
@@ -64,7 +64,7 @@ describe("CatalogManifest", () => {
   it("validator accepts minimal valid manifest", () => {
     const minimal: unknown = {
       apiVersion: 1,
-      schemaVersion: 1,
+      schemaVersion: 2,
       catalogRevision: "rev-minimal",
       sourceRevision: "abc",
       builderVersion: "0.0.1",
@@ -294,7 +294,7 @@ describe("CatalogManifest", () => {
 describe("round-trip", () => {
   it("factory + validator round-trips", () => {
     const manifest = createCatalogManifest({
-      schemaVersion: 1,
+      schemaVersion: 2,
       catalogRevision: createCatalogRevision("rev-rt"),
       sourceRevision: "abc123",
       builderVersion: "0.1.0",
@@ -305,7 +305,7 @@ describe("round-trip", () => {
     });
     expect(isCatalogManifest(manifest)).toBe(true);
     expect(manifest.apiVersion).toBe(1);
-    expect(manifest.schemaVersion).toBe(1);
+    expect(manifest.schemaVersion).toBe(2);
     expect(manifest.rulesets).toEqual(["2014", "2024"]);
     expect(Object.keys(manifest.checksums)).toHaveLength(2);
   });

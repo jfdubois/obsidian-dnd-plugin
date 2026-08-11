@@ -208,6 +208,7 @@ function renderDropdown(
   kind: string,
 ): void {
   const { definition, candidates } = state;
+  if (definition.type === "ability-allocation") return;
   const isMulti = definition.maximum > 1;
 
   const wrapper = container.createDiv({

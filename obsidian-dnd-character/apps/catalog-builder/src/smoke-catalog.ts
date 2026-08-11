@@ -5,7 +5,7 @@ import { computeChecksums } from "./checksum.js";
 import { buildInventoryReport } from "./inventory-report.js";
 import { buildValidationReport } from "./validation-report.js";
 import { createGoldenEntities, createGoldenSummary } from "./golden-catalog-data.js";
-import { createCatalogManifest, createCatalogSource } from "@obsidian-dnd/catalog-contract";
+import { CATALOG_SCHEMA_VERSION, createCatalogManifest, createCatalogSource } from "@obsidian-dnd/catalog-contract";
 import { createCatalogRevision, createSourceId } from "@obsidian-dnd/domain";
 
 export const SMOKE_SOURCE_REVISION = "manual-smoke-source-001";
@@ -22,7 +22,7 @@ export function createSmokeCatalogInput(outputDir: string, revision: string): Ca
   const detailFiles: Record<string, string> = {};
   for (const entity of entities) detailFiles[buildDetailPath(entity.kind, entity.id)] = JSON.stringify(entity, null, 2);
   const manifest = createCatalogManifest({
-    schemaVersion: 1,
+    schemaVersion: CATALOG_SCHEMA_VERSION,
     catalogRevision,
     sourceRevision: SMOKE_SOURCE_REVISION,
     builderVersion: "manual-smoke",

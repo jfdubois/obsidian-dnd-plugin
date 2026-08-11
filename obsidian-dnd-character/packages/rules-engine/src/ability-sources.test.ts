@@ -29,7 +29,7 @@ describe("calculateAbilityScores - feat effects", () => {
           instanceId: cii("choice-1"),
           definitionId: cdi("def-1"),
           originGrantId: eid("grant-1"),
-          selectedOptionIds: [eid("feat-tough")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-tough")] },
         },
       },
     });
@@ -57,6 +57,7 @@ describe("calculateAbilityScores - item effects", () => {
       inventory: [
         {
           instanceId: iid("amulet-1"),
+          type: "catalog-item",
           itemId: eid("item-amulet"),
           quantity: 1,
           equipped: true,
@@ -86,6 +87,7 @@ describe("calculateAbilityScores - item effects", () => {
       inventory: [
         {
           instanceId: iid("ring-1"),
+          type: "catalog-item",
           itemId: eid("item-ring"),
           quantity: 1,
           equipped: false,

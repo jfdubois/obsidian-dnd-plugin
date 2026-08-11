@@ -36,7 +36,7 @@ describe("collectEffects - feats", () => {
           instanceId: cii("choice-1"),
           definitionId: cdi("def-1"),
           originGrantId: eid("grant-1"),
-          selectedOptionIds: [eid("feat-tough")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-tough")] },
         },
       },
     });
@@ -97,8 +97,8 @@ describe("collectEffects - items", () => {
 
     const character = makeCharacter({
       inventory: [
-        { instanceId: iid("inv-1"), itemId: eid("item-armor"), quantity: 1, equipped: true, attuned: false },
-        { instanceId: iid("inv-2"), itemId: eid("item-amulet"), quantity: 1, equipped: false, attuned: true },
+        { instanceId: iid("inv-1"), type: "catalog-item", itemId: eid("item-armor"), quantity: 1, equipped: true, attuned: false },
+        { instanceId: iid("inv-2"), type: "catalog-item", itemId: eid("item-amulet"), quantity: 1, equipped: false, attuned: true },
       ],
     });
 
@@ -122,7 +122,7 @@ describe("collectEffects - items", () => {
 
     const character = makeCharacter({
       inventory: [
-        { instanceId: iid("inv-1"), itemId: eid("item-ring"), quantity: 1, equipped: true, attuned: true },
+        { instanceId: iid("inv-1"), type: "catalog-item", itemId: eid("item-ring"), quantity: 1, equipped: true, attuned: true },
       ],
     });
 

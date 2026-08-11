@@ -112,8 +112,8 @@ describe("buildChoices min/max enforcement", () => {
     expect(result).not.toBeNull();
     const choice = Object.values(result!)[0];
     expect(choice).toBeDefined();
-    expect(choice!.selectedOptionIds).toContain("feat-a");
-    expect(choice!.selectedOptionIds).toContain("feat-b");
+    expect(choice!.selectedValue.type === "entity-ids" ? choice!.selectedValue.entityIds : []).toContain("feat-a");
+    expect(choice!.selectedValue.type === "entity-ids" ? choice!.selectedValue.entityIds : []).toContain("feat-b");
   });
 
   it("handles multiple dropdown states", () => {

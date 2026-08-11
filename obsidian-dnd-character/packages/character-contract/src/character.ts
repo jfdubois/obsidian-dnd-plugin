@@ -36,6 +36,9 @@ import { isCharacterSpellState } from "./character-spell";
 import type { InventoryItemInstance } from "./character-inventory";
 import { isInventoryItemInstance } from "./character-inventory";
 
+import type { CharacterCurrencyState } from "./character-currency";
+import { EMPTY_CHARACTER_CURRENCY, isCharacterCurrencyState } from "./character-currency";
+
 import type { CharacterResourceState } from "./character-resource";
 import { isCharacterResourceState } from "./character-resource";
 
@@ -64,6 +67,7 @@ export interface Character {
   abilities: CharacterAbilityState;
   spells: CharacterSpellState;
   inventory: InventoryItemInstance[];
+  currency: CharacterCurrencyState;
   resources: CharacterResourceState;
   overrides: CharacterOverrides;
   metadata: {
@@ -110,6 +114,7 @@ export function isCharacter(value: unknown): value is Character {
   if (!isCharacterSpellState(obj.spells)) return false;
   if (!Array.isArray(obj.inventory)) return false;
   if (!obj.inventory.every((i: unknown) => isInventoryItemInstance(i))) return false;
+  if (!isCharacterCurrencyState(obj.currency)) return false;
   if (!isCharacterResourceState(obj.resources)) return false;
   if (!isCharacterOverrides(obj.overrides)) return false;
 
@@ -142,6 +147,7 @@ export function createCharacter(
     abilities: CharacterAbilityState;
     spells: CharacterSpellState;
     inventory: InventoryItemInstance[];
+    currency?: CharacterCurrencyState;
     resources: CharacterResourceState;
     overrides: CharacterOverrides;
     metadata: {
@@ -165,6 +171,7 @@ export function createCharacter(
     abilities: props.abilities,
     spells: props.spells,
     inventory: [...props.inventory],
+    currency: props.currency ? { ...props.currency } : { ...EMPTY_CHARACTER_CURRENCY },
     resources: props.resources,
     overrides: props.overrides,
     metadata: { ...props.metadata },

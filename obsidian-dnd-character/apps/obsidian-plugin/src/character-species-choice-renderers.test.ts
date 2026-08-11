@@ -6,7 +6,7 @@ import { selectRuleset } from "./character-ruleset-step";
 import { selectSources } from "./character-source-step";
 import { selectSpecies } from "./character-species-step";
 import { renderChoiceDefinition } from "./character-species-choice-renderers";
-import type { CatalogEntitySummary, ChoiceDefinitionType } from "@obsidian-dnd/catalog-contract";
+import type { CatalogEntitySummary, QueryChoiceDefinitionType } from "@obsidian-dnd/catalog-contract";
 import {
   createCatalogEntitySummary,
   createChoiceDefinition,
@@ -96,14 +96,14 @@ function createEntitySummary(
 }
 
 function createChoiceDef(
-  type: ChoiceDefinitionType,
+  type: QueryChoiceDefinitionType,
   label: string,
   min: number,
   max: number,
   queryKind?: RuleEntityKind,
 ) {
   let optionQuery;
-  if (type === "ability") {
+  if (type === "entity") {
     optionQuery = createEntityQuery("feat");
   } else if (type === "skill-proficiency") {
     optionQuery = createProficiencyQuery("skill");
@@ -148,19 +148,12 @@ describe("renderChoiceDefinition — production data types", () => {
     expect(state!.candidates.map(c => c.name)).toContain("Fey Ancestry");
   });
 
-  it("ability type returns all six abilities", async () => {
+  it("does not treat an entity query as an ability allocation", async () => {
     const catalog = createMockCatalogService({});
-    const def = createChoiceDef("ability", "Ability Score Increase", 1, 1);
+    const def = createChoiceDef("entity", "Ability Score Increase", 1, 1);
     const state = await renderChoiceDefinition(container, draft, catalog, rev, def, isEntityEligible);
     expect(state).not.toBeNull();
-    expect(state!.candidates.length).toBe(6);
-    const names = state!.candidates.map(c => c.name);
-    expect(names).toContain("Strength");
-    expect(names).toContain("Dexterity");
-    expect(names).toContain("Constitution");
-    expect(names).toContain("Intelligence");
-    expect(names).toContain("Wisdom");
-    expect(names).toContain("Charisma");
+    expect(state!.candidates).toEqual([]);
   });
 
   it("skill-proficiency type returns skill candidates", async () => {

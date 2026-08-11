@@ -51,7 +51,7 @@ function assembleGoldenInput(
   const checksums = computeChecksums(entitiesMap);
 
   const manifest = generateManifest({
-    schemaVersion: 1,
+    schemaVersion: 2,
     catalogRevision: createCatalogRevision("golden-test-001"),
     sourceRevision: "golden-pinned-src",
     builderVersion: "0.1.0",
@@ -100,7 +100,7 @@ describe("golden catalog build — full pipeline", () => {
     expect(fs.existsSync(manifestPath)).toBe(true);
 
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-    expect(manifest.schemaVersion).toBe(1);
+    expect(manifest.schemaVersion).toBe(2);
     expect(manifest.catalogRevision).toBe("golden-test-001");
     expect(manifest.sourceRevision).toBe("golden-pinned-src");
     expect(manifest.rulesets).toContain("2014");

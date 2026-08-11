@@ -93,7 +93,7 @@ describe("calculateProficiencies - expertise from feat", () => {
           instanceId: cii("choice-feat-1"),
           definitionId: cdi("def-feat-1"),
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-skilled")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-skilled")] },
         },
       },
     });
@@ -174,7 +174,7 @@ describe("calculateProficiencies - expertise without proficiency", () => {
           instanceId: cii("choice-feat-1"),
           definitionId: cdi("def-feat-1"),
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-skilled")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-skilled")] },
         },
       },
     });
@@ -219,7 +219,7 @@ describe("calculateProficiencies - multiple expertise sources", () => {
           instanceId: cii("choice-feat-1"),
           definitionId: cdi("def-feat-1"),
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-skilled")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-skilled")] },
         },
       },
     });

@@ -136,7 +136,7 @@ describe("calculateSavingThrows - conditionals", () => {
           instanceId: cii("choice-feat-1"),
           definitionId: cdi("def-feat-1"),
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-lucky")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-lucky")] },
         },
       },
       abilities: { scores: { STR: 10, DEX: 16, CON: 10, INT: 10, WIS: 10, CHA: 10 } },
@@ -202,7 +202,7 @@ describe("calculateSavingThrows - conditionals", () => {
           instanceId: cii("choice-feat-1"),
           definitionId: cdi("def-feat-1"),
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-skilled")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-skilled")] },
         },
       },
     });
@@ -239,7 +239,7 @@ describe("calculateSavingThrows - conditionals", () => {
           instanceId: cii("choice-feat-1"),
           definitionId: cdi("def-feat-1"),
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-tough")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-tough")] },
         },
       },
       spells: {

@@ -130,7 +130,7 @@ describe("calculateSkills - proficiency", () => {
           instanceId: cii("choice-feat-1"),
           definitionId: cdi("def-feat-1"),
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-skilled")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-skilled")] },
         },
       },
       abilities: { scores: { STR: 16, DEX: 10, CON: 10, INT: 10, WIS: 10, CHA: 10 } },

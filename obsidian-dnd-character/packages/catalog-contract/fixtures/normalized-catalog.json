@@ -1,7 +1,7 @@
 {
   "manifest": {
     "apiVersion": 1,
-    "schemaVersion": 1,
+    "schemaVersion": 2,
     "catalogRevision": "test-001",
     "sourceRevision": "5etools-2024-01-15",
     "builderVersion": "0.1.0-test",
@@ -120,6 +120,7 @@
             }
           }
         ],
+        "grants": [],
         "choices": [
           {
             "id": "choice:species:2024:core:elf:subrace",
@@ -227,6 +228,7 @@
             }
           }
         ],
+        "grants": [],
         "choices": [
           {
             "id": "choice:background:2024:core:soldier:skills",
@@ -483,7 +485,9 @@
         "properties": [
           "versatile"
         ],
-        "requiresAttunement": false
+        "requiresAttunement": false,
+        "equipmentGroups": [],
+        "proficiencyGroups": []
       }
     ],
     "classes": [
@@ -606,6 +610,7 @@
             }
           }
         ],
+        "grants": [],
         "choices": [
           {
             "id": "choice:class:2024:core:fighter:fighting-style",
@@ -628,6 +633,7 @@
         "hitDie": 10,
         "primaryAbilities": ["STR", "DEX"],
         "savingThrowProficiencies": ["STR", "CON"],
+        "startingGrants": [],
         "startingChoices": [
           {
             "id": "choice:class:2024:core:fighter:starting-equipment",

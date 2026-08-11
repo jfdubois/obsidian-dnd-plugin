@@ -7,8 +7,11 @@ import {
   extractPage,
   extractSummary,
 } from "./background-field-extractors";
-import { createCanonicalEntityId } from "@obsidian-dnd/domain";
-import { createBackgroundRule, type BackgroundRule } from "@obsidian-dnd/catalog-contract";
+import { createCanonicalEntityId, createChoiceDefinitionId, createChoiceOptionId, type Ability, type EntityId } from "@obsidian-dnd/domain";
+import { createBackgroundRule, createAbilityAllocationChoiceDefinition, createChoiceDefinition, createClosedOptionChoiceDefinition, createEntityQuery, createEquipmentQuery, createRuleEffectMetadata, createEffectPresentation, createEffectOrigin, createAddLanguageEffect, createAddProficiencyEffect, type ChoiceDefinition, type RuleEffect, type RuleGrant, type BackgroundRule } from "@obsidian-dnd/catalog-contract";
+import { createDeterministicRuleGrantId } from "./rule-grant-id";
+import { mapRawEquipmentType, mapRawEquipmentTypes } from "./equipment-group-mapping";
+import type { DeferredEquipmentDestination, DeferredEquipmentIntent } from "./deferred-equipment-resolution";
 
 export type BackgroundNormalizerDiagnosticCode =
   | "EXCLUDED_SOURCE"
@@ -41,6 +44,7 @@ export interface BackgroundNormalizerInput {
 export interface BackgroundNormalizerResult {
   readonly backgrounds: readonly BackgroundRule[];
   readonly diagnostics: readonly BackgroundNormalizerDiagnostic[];
+  readonly deferredEquipment: readonly DeferredEquipmentIntent[];
 }
 
 interface NormalizerOptions {
@@ -70,8 +74,146 @@ function makeDiagnostic(
 }
 
 type SingleResult =
-  | { readonly ok: true; readonly background: BackgroundRule; readonly diagnostics: readonly BackgroundNormalizerDiagnostic[] }
+  | { readonly ok: true; readonly background: BackgroundRule; readonly diagnostics: readonly BackgroundNormalizerDiagnostic[]; readonly deferredEquipment: readonly DeferredEquipmentIntent[] }
   | { readonly ok: false; readonly diagnostics: readonly BackgroundNormalizerDiagnostic[] };
+
+function itemId(reference: string, ruleset: "2014" | "2024", source: "PHB" | "XPHB") {
+  const [name, itemSource] = reference.split("|");
+  return name === undefined ? undefined : createCanonicalEntityId({ kind: "item", ruleset, source: (itemSource?.toUpperCase() === "PHB" ? "PHB" : itemSource?.toUpperCase() === "XPHB" ? "XPHB" : source), name });
+}
+
+function packageGrants(
+  items: unknown[], owner: string, path: string, ruleset: "2014" | "2024", source: "PHB" | "XPHB", destination: DeferredEquipmentDestination,
+): { grants: RuleGrant[]; deferredEquipment: DeferredEquipmentIntent[] } {
+  const grants: RuleGrant[] = [];
+  const deferredEquipment: DeferredEquipmentIntent[] = [];
+  for (let index = 0; index < items.length; index++) {
+    const value = items[index];
+    const grantPath = `${path}:${index}`;
+    if (typeof value === "string") {
+      const resolved = itemId(value, ruleset, source);
+      if (resolved?.ok) deferredEquipment.push({ mode: "canonical-reference-required", id: createDeterministicRuleGrantId(owner, grantPath), itemId: resolved.id, quantity: 1, destination, sourcePath: grantPath });
+      continue;
+    }
+    if (typeof value !== "object" || value === null || Array.isArray(value)) continue;
+    const entry = value as Record<string, unknown>;
+    if (typeof entry.item === "string") {
+      const resolved = itemId(entry.item, ruleset, source);
+      const quantity = typeof entry.quantity === "number" && Number.isInteger(entry.quantity) && entry.quantity > 0 ? entry.quantity : 1;
+      if (resolved?.ok) deferredEquipment.push({ mode: "canonical-reference-required", id: createDeterministicRuleGrantId(owner, grantPath), itemId: resolved.id, quantity, destination, sourcePath: grantPath });
+      if (typeof entry.containsValue === "number" && Number.isInteger(entry.containsValue) && entry.containsValue > 0) {
+        grants.push({ id: createDeterministicRuleGrantId(owner, `${grantPath}:containsValue`), type: "currency", denomination: "cp", amount: { type: "fixed", value: entry.containsValue } });
+      }
+    } else if (typeof entry.special === "string" && entry.special.trim().length > 0) {
+      const quantity = typeof entry.quantity === "number" && Number.isInteger(entry.quantity) && entry.quantity > 0 ? entry.quantity : 1;
+      grants.push({ id: createDeterministicRuleGrantId(owner, grantPath), type: "named-item", name: entry.special.trim(), quantity });
+    } else if (typeof entry.value === "number" && Number.isInteger(entry.value) && entry.value > 0) {
+      grants.push({ id: createDeterministicRuleGrantId(owner, grantPath), type: "currency", denomination: "cp", amount: { type: "fixed", value: entry.value } });
+    } else if (typeof entry.containsValue === "number" && Number.isInteger(entry.containsValue) && entry.containsValue > 0) {
+      grants.push({ id: createDeterministicRuleGrantId(owner, grantPath), type: "currency", denomination: "cp", amount: { type: "fixed", value: entry.containsValue } });
+    }
+  }
+  return { grants, deferredEquipment };
+}
+
+function packageChoices(items: unknown[], owner: string, path: string): ChoiceDefinition[] {
+  const choices: ChoiceDefinition[] = [];
+  for (let index = 0; index < items.length; index++) {
+    const entry = items[index];
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) continue;
+    const raw = entry as Record<string, unknown>;
+    const groups = raw.equipmentType === undefined ? mapRawEquipmentTypes(raw.equipmentTypes) : (() => {
+      const group = mapRawEquipmentType(raw.equipmentType);
+      return group === undefined ? undefined : [group];
+    })();
+    if (groups === undefined) continue;
+    choices.push(createChoiceDefinition(
+      createChoiceDefinitionId(`${owner}:${path}:${index}:equipment-group`),
+      "Choose starting equipment",
+      "equipment",
+      1,
+      1,
+      false,
+      createEquipmentQuery({ equipmentGroups: groups }),
+      [],
+    ));
+  }
+  return choices;
+}
+
+function isSupportedEquipmentEntry(value: unknown): boolean {
+  if (typeof value === "string") return value.includes("|");
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const entry = value as Record<string, unknown>;
+  const validQuantity = entry.quantity === undefined || (typeof entry.quantity === "number" && Number.isInteger(entry.quantity) && entry.quantity > 0);
+  if (typeof entry.item === "string") return validQuantity;
+  if (typeof entry.special === "string") return validQuantity && entry.special.trim().length > 0;
+  if (typeof entry.value === "number") return Number.isInteger(entry.value) && entry.value > 0;
+  if (entry.equipmentType !== undefined) return entry.quantity === undefined && mapRawEquipmentType(entry.equipmentType) !== undefined;
+  return entry.quantity === undefined && entry.equipmentTypes !== undefined && mapRawEquipmentTypes(entry.equipmentTypes) !== undefined;
+}
+
+function isSupportedEquipment(value: unknown): boolean {
+  if (!Array.isArray(value)) return false;
+  return value.every((container) => typeof container === "object" && container !== null && !Array.isArray(container)
+    && Object.values(container as Record<string, unknown>).every((items) => Array.isArray(items) && items.every(isSupportedEquipmentEntry)));
+}
+
+function isValidWeightedAbility(value: unknown): boolean {
+  if (!Array.isArray(value) || value.length === 0) return false;
+  return value.every((entry) => {
+    const weighted = typeof entry === "object" && entry !== null && !Array.isArray(entry)
+      ? (entry as { choose?: { weighted?: { from?: unknown; weights?: unknown } } }).choose?.weighted
+      : undefined;
+    if (weighted === undefined || !Array.isArray(weighted.from) || weighted.from.length === 0 || !Array.isArray(weighted.weights) || weighted.weights.length === 0) return false;
+    const abilities = weighted.from.map((ability) => typeof ability === "string" ? ability.toUpperCase() : "");
+    return abilities.every((ability) => ["STR", "DEX", "CON", "INT", "WIS", "CHA"].includes(ability))
+      && new Set(abilities).size === abilities.length
+      && weighted.weights.every((weight) => typeof weight === "number" && Number.isInteger(weight) && weight > 0);
+  });
+}
+
+function extractBackgroundChoices(
+  remaining: Record<string, unknown>, owner: EntityId, ruleset: "2014" | "2024", source: "PHB" | "XPHB", includeAbility: boolean, includeEquipment: boolean,
+): { choices: ChoiceDefinition[]; deferredEquipment: DeferredEquipmentIntent[] } {
+  const choices: ChoiceDefinition[] = [];
+  const deferredEquipment: DeferredEquipmentIntent[] = [];
+  const languages = remaining.languageProficiencies;
+  if (Array.isArray(languages)) languages.forEach((entry, index) => {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return;
+    const count = (entry as Record<string, unknown>).anyStandard;
+    if (typeof count === "number" && Number.isInteger(count) && count > 0) choices.push(createChoiceDefinition(createChoiceDefinitionId(`${owner}:language:${index}`), "Choose languages", "language", count, count, false, createEntityQuery("language"), []));
+  });
+  const ability = includeAbility ? remaining.ability : undefined;
+  if (Array.isArray(ability)) {
+    const distributions: number[][] = [];
+    let eligible: Ability[] = [];
+    for (const entry of ability) {
+      const weighted = typeof entry === "object" && entry !== null ? (entry as { choose?: { weighted?: { from?: unknown; weights?: unknown } } }).choose?.weighted : undefined;
+      if (!weighted || !Array.isArray(weighted.from) || !Array.isArray(weighted.weights)) continue;
+      const values = weighted.from.map((item) => typeof item === "string" ? item.toUpperCase() : "").filter((item): item is Ability => ["STR", "DEX", "CON", "INT", "WIS", "CHA"].includes(item));
+      if (values.length === 0 || weighted.weights.some((weight) => typeof weight !== "number" || !Number.isInteger(weight) || weight <= 0)) continue;
+      eligible = values; distributions.push(weighted.weights as number[]);
+    }
+    if (eligible.length > 0 && distributions.length > 0) choices.push(createAbilityAllocationChoiceDefinition(createChoiceDefinitionId(`${owner}:ability:0`), "Choose ability increases", eligible, distributions.map((bonuses) => ({ bonuses })), []));
+  }
+  const equipment = includeEquipment ? remaining.startingEquipment : undefined;
+  if (Array.isArray(equipment)) equipment.forEach((entry, index) => {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return;
+    const defaultPackage = (entry as Record<string, unknown>)._;
+    if (Array.isArray(defaultPackage)) choices.push(...packageChoices(defaultPackage, owner, `startingEquipment:${index}:_`));
+    const options = Object.entries(entry as Record<string, unknown>).filter(([key, value]) => key !== "_" && Array.isArray(value));
+    if (options.length < 2) return;
+    const choiceId = createChoiceDefinitionId(`${owner}:equipment:${index}`);
+    choices.push(createClosedOptionChoiceDefinition(choiceId, "Choose starting equipment", 1, 1, false, options.map(([key, value]) => {
+      const optionId = createChoiceOptionId(`${owner}:equipment:${index}:${key}`);
+      const packageResult = packageGrants(value as unknown[], owner, `startingEquipment:${index}:${key}`, ruleset, source, { scope: "choice-option-grants", ownerId: owner, choiceId, optionId });
+      deferredEquipment.push(...packageResult.deferredEquipment);
+      return { id: optionId, label: `Package ${key}`, grants: packageResult.grants, choices: packageChoices(value as unknown[], owner, `startingEquipment:${index}:${key}`) };
+    }), []));
+  });
+  return { choices, deferredEquipment };
+}
 
 function normalizeSingleBackground(record: RawRecord, opts: NormalizerOptions): SingleResult {
   const diagnostics: BackgroundNormalizerDiagnostic[] = [];
@@ -139,6 +281,59 @@ function normalizeSingleBackground(record: RawRecord, opts: NormalizerOptions): 
   // 5. Extract page
   const page = extractPage(remaining);
 
+  const metadata = createRuleEffectMetadata("full", createEffectPresentation("proficiencies", []), createEffectOrigin(idResult.id, idResult.sourceId, "structured"));
+  const effects: RuleEffect[] = skillIds.map((entityId) => createAddProficiencyEffect(metadata, { kind: "skill", entityId }));
+  const languages = remaining.languageProficiencies;
+  if (Array.isArray(languages)) for (const entry of languages) {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) continue;
+    for (const [name, value] of Object.entries(entry as Record<string, unknown>)) {
+      if (name === "anyStandard" || value !== true) continue;
+      const language = createCanonicalEntityId({ kind: "language", ruleset: scopeResult.ruleset, source: scopeResult.source, name });
+      if (language.ok) effects.push(createAddLanguageEffect(metadata, language.id));
+    }
+  }
+  const tools = remaining.toolProficiencies;
+  if (Array.isArray(tools)) for (const entry of tools) {
+    if (typeof entry !== "object" || entry === null || Array.isArray(entry)) continue;
+    for (const [name, value] of Object.entries(entry as Record<string, unknown>)) {
+      if (value !== true) continue;
+      const tool = createCanonicalEntityId({ kind: "item", ruleset: scopeResult.ruleset, source: scopeResult.source, name });
+      if (tool.ok) effects.push(createAddProficiencyEffect(metadata, { kind: "tool", toolId: tool.id }));
+    }
+  }
+
+  const owner = idResult.id;
+  const equipmentIsValid = remaining.startingEquipment === undefined || isSupportedEquipment(remaining.startingEquipment);
+  const abilityIsValid = remaining.ability === undefined || isValidWeightedAbility(remaining.ability);
+  if (!equipmentIsValid) {
+    diagnostics.push(makeDiagnostic(
+      "UNMAPPED_MECHANIC",
+      `Background "${record.name}" has malformed or unsupported starting equipment.`,
+      record.name,
+      opts,
+    ));
+  }
+  if (!abilityIsValid) {
+    diagnostics.push(makeDiagnostic(
+      "UNMAPPED_MECHANIC",
+      `Background "${record.name}" has malformed weighted ability allocation.`,
+      record.name,
+      opts,
+    ));
+  }
+  const equipment = equipmentIsValid && Array.isArray(remaining.startingEquipment) ? remaining.startingEquipment : [];
+  const baseEquipment = equipment.map((entry, index) => typeof entry === "object" && entry !== null && !Array.isArray(entry) && Array.isArray((entry as Record<string, unknown>)._)
+    ? packageGrants((entry as Record<string, unknown>)._ as unknown[], owner, `startingEquipment:${index}:_`, scopeResult.ruleset, scopeResult.source, { scope: "entity-grants", ownerId: owner }) : undefined).filter((result): result is { grants: RuleGrant[]; deferredEquipment: DeferredEquipmentIntent[] } => result !== undefined);
+  const grants = baseEquipment.flatMap((result) => result.grants);
+  const deferredEquipment = baseEquipment.flatMap((result) => result.deferredEquipment);
+  const featGrants: RuleGrant[] = Array.isArray(remaining.feats) ? remaining.feats.flatMap((entry, index) => typeof entry === "object" && entry !== null && !Array.isArray(entry)
+    ? Object.entries(entry as Record<string, unknown>).flatMap(([name, value]) => {
+      if (value !== true) return [];
+      const [featName, featSource] = name.split("|");
+      const feat = featName === undefined ? undefined : createCanonicalEntityId({ kind: "feat", ruleset: scopeResult.ruleset, source: featSource?.toUpperCase() === "XPHB" ? "XPHB" : scopeResult.source, name: featName });
+      return feat?.ok ? [{ id: createDeterministicRuleGrantId(owner, `feats:${index}:${name}`), type: "entity" as const, entityId: feat.id }] : [];
+    }) : []) : [];
+
   // 6. Extract summary
   const summary = extractSummary(remaining);
 
@@ -166,17 +361,9 @@ function normalizeSingleBackground(record: RawRecord, opts: NormalizerOptions): 
     ));
   }
 
-  const unmappedEquipment = remaining.startingEquipment;
-  if (Array.isArray(unmappedEquipment) && unmappedEquipment.length > 0) {
-    diagnostics.push(makeDiagnostic(
-      "UNMAPPED_MECHANIC",
-      `Background "${record.name}" has unmapped starting equipment.`,
-      record.name,
-      opts,
-    ));
-  }
-
   // 9. Assemble BackgroundRule
+  const choiceResult = extractBackgroundChoices(remaining, owner, scopeResult.ruleset, scopeResult.source, abilityIsValid, equipmentIsValid);
+  deferredEquipment.push(...choiceResult.deferredEquipment);
   const background = createBackgroundRule(
     idResult.id,
     record.name,
@@ -186,21 +373,23 @@ function normalizeSingleBackground(record: RawRecord, opts: NormalizerOptions): 
     skillIds,
     content,
     [], // prerequisites (deferred)
-    [], // effects (deferred for tool/language/equipment)
-    [], // choices (deferred)
+    effects,
+    choiceResult.choices,
     [], // dependencies
     false, // legacy
     page,
     summary,
     featureId,
+    [...grants, ...featGrants],
   );
 
-  return { ok: true, background, diagnostics: Object.freeze(diagnostics) };
+  return { ok: true, background, diagnostics: Object.freeze(diagnostics), deferredEquipment: Object.freeze(deferredEquipment) };
 }
 
 export function normalizeBackgrounds(input: BackgroundNormalizerInput): BackgroundNormalizerResult {
   const backgrounds: BackgroundRule[] = [];
   const diagnostics: BackgroundNormalizerDiagnostic[] = [];
+  const deferredEquipment: DeferredEquipmentIntent[] = [];
 
   for (let i = 0; i < input.records.length; i++) {
     const record = input.records[i];
@@ -214,6 +403,7 @@ export function normalizeBackgrounds(input: BackgroundNormalizerInput): Backgrou
 
     if (result.ok) {
       backgrounds.push(result.background);
+      deferredEquipment.push(...result.deferredEquipment);
     }
     diagnostics.push(...result.diagnostics);
   }
@@ -221,5 +411,6 @@ export function normalizeBackgrounds(input: BackgroundNormalizerInput): Backgrou
   return Object.freeze({
     backgrounds: Object.freeze(backgrounds),
     diagnostics: Object.freeze(diagnostics),
+    deferredEquipment: Object.freeze(deferredEquipment),
   });
 }

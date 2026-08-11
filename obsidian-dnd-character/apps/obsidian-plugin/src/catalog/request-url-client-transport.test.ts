@@ -32,7 +32,7 @@ vi.mock("obsidian", () => ({
 
 function createMockManifest(catalogRevision: CatalogRevision): CatalogManifest {
   return createCatalogManifest({
-    schemaVersion: 1,
+    schemaVersion: 2,
     catalogRevision,
     sourceRevision: "src-001",
     builderVersion: "0.1.0",

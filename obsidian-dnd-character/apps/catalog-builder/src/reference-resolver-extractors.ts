@@ -7,6 +7,7 @@ import type {
   ClassFeatureRule,
   SubclassFeatureRule,
 } from "@obsidian-dnd/catalog-contract";
+import type { RuleGrant, ChoiceDefinition } from "@obsidian-dnd/catalog-contract";
 import type { NormalizedEntity } from "./reference-resolver";
 
 /* ── Entity type guards ────────────────────────────────────────── */
@@ -60,7 +61,21 @@ export function extractBackgroundReferences(
   if (entity.featureId !== undefined) {
     refs.push({ field: "featureId", targetId: entity.featureId });
   }
+  collectGrantReferences(entity.grants, "grants", refs);
+  for (const choice of entity.choices) collectChoiceReferences(choice, "choices", refs);
   return refs;
+}
+
+function collectGrantReferences(grants: readonly RuleGrant[], field: string, refs: { field: string; targetId: EntityId }[]): void {
+  for (const grant of grants) if (grant.type === "item" || grant.type === "entity") refs.push({ field, targetId: grant.type === "item" ? grant.itemId : grant.entityId });
+}
+
+function collectChoiceReferences(choice: ChoiceDefinition, field: string, refs: { field: string; targetId: EntityId }[]): void {
+  if (choice.type !== "closed-option") return;
+  for (const option of choice.options) {
+    collectGrantReferences(option.grants, `${field}.options[].grants`, refs);
+    for (const nested of option.choices) collectChoiceReferences(nested, `${field}.options[].choices`, refs);
+  }
 }
 
 export function extractClassReferences(

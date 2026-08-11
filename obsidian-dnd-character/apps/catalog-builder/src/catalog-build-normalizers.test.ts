@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizeCopyModKind } from "./catalog-build-normalizers";
+import { normalizeCopyModKind, normalizeRawRecordKind } from "./catalog-build-normalizers";
 import { resolveCopyWithMods } from "./mod-copy-resolver";
 import { toCopyModRecord } from "./catalog-build-helpers";
 import type { ValidatedFileEnvelope, RawRecord, ValidatedCollection } from "./raw-boundary";
@@ -207,5 +207,21 @@ describe("normalizeCopyModKind — input immutability", () => {
     expect(featRecord.name).toBe(originalName);
     expect(featRecord.source).toBe(originalSource);
     expect(featRecord.remaining.entries).toBe(originalEntries);
+  });
+});
+
+describe("normalizeRawRecordKind — deferred equipment transport", () => {
+  it("carries Background canonical-equipment intents through the shared result envelope", () => {
+    const background = makeRawRecord("Acolyte", "PHB", {
+      skillProficiencies: [{ insight: true }],
+      startingEquipment: [{ _: [{ item: "book|phb", quantity: 1 }] }],
+      entries: [],
+    });
+    const result = normalizeRawRecordKind("background", [background], "background.json");
+    expect(result.entities).toHaveLength(1);
+    expect(result.deferredEquipment).toEqual([expect.objectContaining({
+      mode: "canonical-reference-required", sourcePath: "startingEquipment:0:_:0",
+      destination: expect.objectContaining({ scope: "entity-grants", ownerId: result.entities[0]?.id }),
+    })]);
   });
 });

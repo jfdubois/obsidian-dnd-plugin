@@ -27,7 +27,7 @@ describe("validateSpeciesChoices accepts valid input", () => {
       instanceId: createChoiceInstanceId("darkvision"),
       definitionId: createChoiceDefinitionId("darkvision_def"),
       originGrantId: createEntityId("human"),
-      selectedOptionIds: [createEntityId("darkvision_60ft")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("darkvision_60ft")] },
     });
     expect(validateSpeciesChoices({ darkvision: choice })).toBe(true);
   });
@@ -37,13 +37,13 @@ describe("validateSpeciesChoices accepts valid input", () => {
       instanceId: createChoiceInstanceId("darkvision"),
       definitionId: createChoiceDefinitionId("darkvision_def"),
       originGrantId: createEntityId("elf"),
-      selectedOptionIds: [createEntityId("darkvision_60ft")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("darkvision_60ft")] },
     });
     const feyAncestry = createCharacterChoice({
       instanceId: createChoiceInstanceId("fey_ancestry"),
       definitionId: createChoiceDefinitionId("fey_ancestry_def"),
       originGrantId: createEntityId("elf"),
-      selectedOptionIds: [],
+      selectedValue: { type: "entity-ids", entityIds: [] },
     });
     expect(
       validateSpeciesChoices({ darkvision, feyAncestry }),
@@ -55,7 +55,7 @@ describe("validateSpeciesChoices accepts valid input", () => {
       instanceId: createChoiceInstanceId("trait"),
       definitionId: createChoiceDefinitionId("trait_def"),
       originGrantId: createEntityId("dwarf"),
-      selectedOptionIds: [],
+      selectedValue: { type: "entity-ids", entityIds: [] },
     });
     const choices = { trait: choice };
     if (validateSpeciesChoices(choices)) {
@@ -78,7 +78,7 @@ describe("selectSpeciesChoices with valid input", () => {
       instanceId: createChoiceInstanceId("darkvision"),
       definitionId: createChoiceDefinitionId("darkvision_def"),
       originGrantId: createEntityId("elf"),
-      selectedOptionIds: [createEntityId("darkvision_60ft")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("darkvision_60ft")] },
     });
 
     const result = selectSpeciesChoices(draft, { darkvision });
@@ -98,7 +98,7 @@ describe("selectSpeciesChoices with valid input", () => {
       instanceId: createChoiceInstanceId("trait"),
       definitionId: createChoiceDefinitionId("trait_def"),
       originGrantId: createEntityId("elf"),
-      selectedOptionIds: [],
+      selectedValue: { type: "entity-ids", entityIds: [] },
     });
 
     selectSpeciesChoices(draft, { trait: choice });
@@ -116,7 +116,7 @@ describe("selectSpeciesChoices with valid input", () => {
       instanceId: createChoiceInstanceId("trait"),
       definitionId: createChoiceDefinitionId("trait_def"),
       originGrantId: createEntityId("elf"),
-      selectedOptionIds: [],
+      selectedValue: { type: "entity-ids", entityIds: [] },
     });
 
     selectSpeciesChoices(draft, { trait: choice });
@@ -150,7 +150,7 @@ describe("selectSpeciesChoices with valid input", () => {
       instanceId: createChoiceInstanceId("darkvision"),
       definitionId: createChoiceDefinitionId("darkvision_def"),
       originGrantId: createEntityId("elf"),
-      selectedOptionIds: [createEntityId("darkvision_60ft")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("darkvision_60ft")] },
     });
 
     selectSpeciesChoices(draft, { darkvision: choice1 });
@@ -160,7 +160,7 @@ describe("selectSpeciesChoices with valid input", () => {
       instanceId: createChoiceInstanceId("fey_ancestry"),
       definitionId: createChoiceDefinitionId("fey_ancestry_def"),
       originGrantId: createEntityId("elf"),
-      selectedOptionIds: [],
+      selectedValue: { type: "entity-ids", entityIds: [] },
     });
 
     selectSpeciesChoices(draft, { feyAncestry: choice2 });
@@ -179,7 +179,7 @@ describe("selectSpeciesChoices with valid input", () => {
       instanceId: createChoiceInstanceId("darkvision"),
       definitionId: createChoiceDefinitionId("darkvision_def"),
       originGrantId: createEntityId("dwarf"),
-      selectedOptionIds: [createEntityId("darkvision_60ft")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("darkvision_60ft")] },
     });
 
     const result = selectSpeciesChoices(draft, { darkvision: choice });
@@ -197,7 +197,7 @@ describe("selectSpeciesChoices with valid input", () => {
       instanceId: createChoiceInstanceId("fey_ancestry"),
       definitionId: createChoiceDefinitionId("fey_ancestry_def"),
       originGrantId: createEntityId("elf"),
-      selectedOptionIds: [],
+      selectedValue: { type: "entity-ids", entityIds: [] },
     });
 
     const result = selectSpeciesChoices(draft, { feyAncestry: choice });
@@ -215,7 +215,7 @@ describe("selectSpeciesChoices with valid input", () => {
       instanceId: createChoiceInstanceId("darkvision"),
       definitionId: createChoiceDefinitionId("darkvision_def"),
       originGrantId: createEntityId("gnome"),
-      selectedOptionIds: [createEntityId("darkvision_60ft")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("darkvision_60ft")] },
     });
 
     const result = selectSpeciesChoices(draft, { darkvision: choice });
@@ -232,7 +232,7 @@ describe("selectSpeciesChoices with valid input", () => {
       instanceId: createChoiceInstanceId("trait"),
       definitionId: createChoiceDefinitionId("trait_def"),
       originGrantId: createEntityId("elf"),
-      selectedOptionIds: [],
+      selectedValue: { type: "entity-ids", entityIds: [] },
     });
 
     selectSpeciesChoices(draft, { trait: choice });
@@ -250,7 +250,7 @@ describe("selectSpeciesChoices with valid input", () => {
       instanceId: createChoiceInstanceId("trait"),
       definitionId: createChoiceDefinitionId("trait_def"),
       originGrantId: createEntityId("elf"),
-      selectedOptionIds: [],
+      selectedValue: { type: "entity-ids", entityIds: [] },
     });
     const input = { trait: choice };
 

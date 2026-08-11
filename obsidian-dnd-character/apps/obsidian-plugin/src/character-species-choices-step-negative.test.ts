@@ -46,7 +46,7 @@ describe("validateSpeciesChoices rejects invalid input", () => {
       instanceId: createChoiceInstanceId("trait"),
       definitionId: createChoiceDefinitionId("trait_def"),
       originGrantId: createEntityId("human"),
-      selectedOptionIds: [],
+      selectedValue: { type: "entity-ids", entityIds: [] },
     });
     expect(validateSpeciesChoices([choice])).toBe(false);
   });
@@ -79,7 +79,7 @@ describe("validateSpeciesChoices rejects invalid input", () => {
       instanceId: createChoiceInstanceId("trait"),
       definitionId: createChoiceDefinitionId("trait_def"),
       originGrantId: createEntityId("human"),
-      selectedOptionIds: [],
+      selectedValue: { type: "entity-ids", entityIds: [] },
     });
     expect(
       validateSpeciesChoices({ valid, invalid: null }),
@@ -97,7 +97,7 @@ describe("selectSpeciesChoices rejects when species not resolved", () => {
       instanceId: createChoiceInstanceId("trait"),
       definitionId: createChoiceDefinitionId("trait_def"),
       originGrantId: createEntityId("human"),
-      selectedOptionIds: [],
+      selectedValue: { type: "entity-ids", entityIds: [] },
     });
 
     const result = selectSpeciesChoices(draft, { trait: choice });
@@ -116,7 +116,7 @@ describe("selectSpeciesChoices rejects when species not resolved", () => {
       instanceId: createChoiceInstanceId("trait"),
       definitionId: createChoiceDefinitionId("trait_def"),
       originGrantId: createEntityId("human"),
-      selectedOptionIds: [],
+      selectedValue: { type: "entity-ids", entityIds: [] },
     });
 
     const result = selectSpeciesChoices(draft, { trait: choice });
@@ -133,7 +133,7 @@ describe("selectSpeciesChoices rejects when species not resolved", () => {
       instanceId: createChoiceInstanceId("trait"),
       definitionId: createChoiceDefinitionId("trait_def"),
       originGrantId: createEntityId("human"),
-      selectedOptionIds: [],
+      selectedValue: { type: "entity-ids", entityIds: [] },
     });
 
     const result = selectSpeciesChoices(draft, { trait: choice });
@@ -190,7 +190,7 @@ describe("selectSpeciesChoices rejects invalid choices", () => {
       instanceId: createChoiceInstanceId("trait"),
       definitionId: createChoiceDefinitionId("trait_def"),
       originGrantId: createEntityId("human"),
-      selectedOptionIds: [],
+      selectedValue: { type: "entity-ids", entityIds: [] },
     });
 
     expect(selectSpeciesChoices(draft, [choice])).toBe(false);
@@ -233,7 +233,7 @@ describe("selectSpeciesChoices does not mutate draft on rejection", () => {
       instanceId: createChoiceInstanceId("trait"),
       definitionId: createChoiceDefinitionId("trait_def"),
       originGrantId: createEntityId("human"),
-      selectedOptionIds: [],
+      selectedValue: { type: "entity-ids", entityIds: [] },
     });
 
     selectSpeciesChoices(draft, { trait: choice });
@@ -250,7 +250,7 @@ describe("selectSpeciesChoices does not mutate draft on rejection", () => {
       instanceId: createChoiceInstanceId("darkvision"),
       definitionId: createChoiceDefinitionId("darkvision_def"),
       originGrantId: createEntityId("elf"),
-      selectedOptionIds: [createEntityId("darkvision_60ft")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("darkvision_60ft")] },
     });
 
     selectSpeciesChoices(draft, { darkvision: choice });
@@ -270,7 +270,7 @@ describe("selectSpeciesChoices does not mutate draft on rejection", () => {
       instanceId: createChoiceInstanceId("trait"),
       definitionId: createChoiceDefinitionId("trait_def"),
       originGrantId: createEntityId("human"),
-      selectedOptionIds: [],
+      selectedValue: { type: "entity-ids", entityIds: [] },
     });
 
     selectSpeciesChoices(draft, { trait: choice });
@@ -332,7 +332,7 @@ describe("selectSpeciesChoices zero-choice recursion guard", () => {
       instanceId: createChoiceInstanceId("fey_ancestry"),
       definitionId: createChoiceDefinitionId("fey_ancestry_def"),
       originGrantId: createEntityId("elf"),
-      selectedOptionIds: [createEntityId("fey_ancestry_feat")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("fey_ancestry_feat")] },
     });
     expect(selectSpeciesChoices(draft, { feyAncestry: choice })).toBe(true);
     expect(draft.speciesChoices.choices).toHaveProperty("feyAncestry");

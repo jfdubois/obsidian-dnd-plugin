@@ -44,7 +44,7 @@ describe("selectProficiencyChoices with valid input", () => {
       instanceId: createChoiceInstanceId("athletics"),
       definitionId: createChoiceDefinitionId("athletics_def"),
       originGrantId: createEntityId("soldier"),
-      selectedOptionIds: [createEntityId("skill_athletics")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("skill_athletics")] },
     });
 
     const result = selectProficiencyChoices(draft, { athletics });
@@ -62,7 +62,7 @@ describe("selectProficiencyChoices with valid input", () => {
       instanceId: createChoiceInstanceId("athletics"),
       definitionId: createChoiceDefinitionId("athletics_def"),
       originGrantId: createEntityId("soldier"),
-      selectedOptionIds: [createEntityId("skill_athletics")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("skill_athletics")] },
     });
 
     selectProficiencyChoices(draft, { athletics: choice });
@@ -89,7 +89,7 @@ describe("selectProficiencyChoices with valid input", () => {
       instanceId: createChoiceInstanceId("athletics"),
       definitionId: createChoiceDefinitionId("athletics_def"),
       originGrantId: createEntityId("soldier"),
-      selectedOptionIds: [createEntityId("skill_athletics")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("skill_athletics")] },
     });
 
     selectProficiencyChoices(draft, { athletics: choice1 });
@@ -99,7 +99,7 @@ describe("selectProficiencyChoices with valid input", () => {
       instanceId: createChoiceInstanceId("stealth"),
       definitionId: createChoiceDefinitionId("stealth_def"),
       originGrantId: createEntityId("rogue"),
-      selectedOptionIds: [createEntityId("skill_stealth")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("skill_stealth")] },
     });
 
     selectProficiencyChoices(draft, { stealth: choice2 });
@@ -116,7 +116,7 @@ describe("selectProficiencyChoices with valid input", () => {
       instanceId: createChoiceInstanceId("athletics"),
       definitionId: createChoiceDefinitionId("athletics_def"),
       originGrantId: createEntityId("soldier"),
-      selectedOptionIds: [createEntityId("skill_athletics")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("skill_athletics")] },
     });
 
     const result = selectProficiencyChoices(draft, { athletics: choice });
@@ -132,7 +132,7 @@ describe("selectProficiencyChoices with valid input", () => {
       instanceId: createChoiceInstanceId("stealth"),
       definitionId: createChoiceDefinitionId("stealth_def"),
       originGrantId: createEntityId("rogue"),
-      selectedOptionIds: [createEntityId("skill_stealth")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("skill_stealth")] },
     });
 
     const result = selectProficiencyChoices(draft, { stealth: choice });
@@ -148,7 +148,7 @@ describe("selectProficiencyChoices with valid input", () => {
       instanceId: createChoiceInstanceId("athletics"),
       definitionId: createChoiceDefinitionId("athletics_def"),
       originGrantId: createEntityId("soldier"),
-      selectedOptionIds: [createEntityId("skill_athletics")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("skill_athletics")] },
     });
     const input = { athletics: choice };
 
@@ -169,7 +169,7 @@ describe("selectLanguageChoices with valid input", () => {
       instanceId: createChoiceInstanceId("common"),
       definitionId: createChoiceDefinitionId("common_def"),
       originGrantId: createEntityId("human"),
-      selectedOptionIds: [createEntityId("language_common")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("language_common")] },
     });
 
     const result = selectLanguageChoices(draft, { common });
@@ -187,7 +187,7 @@ describe("selectLanguageChoices with valid input", () => {
       instanceId: createChoiceInstanceId("common"),
       definitionId: createChoiceDefinitionId("common_def"),
       originGrantId: createEntityId("human"),
-      selectedOptionIds: [createEntityId("language_common")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("language_common")] },
     });
 
     selectLanguageChoices(draft, { common: choice });
@@ -214,7 +214,7 @@ describe("selectLanguageChoices with valid input", () => {
       instanceId: createChoiceInstanceId("common"),
       definitionId: createChoiceDefinitionId("common_def"),
       originGrantId: createEntityId("human"),
-      selectedOptionIds: [createEntityId("language_common")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("language_common")] },
     });
 
     selectLanguageChoices(draft, { common: choice1 });
@@ -224,7 +224,7 @@ describe("selectLanguageChoices with valid input", () => {
       instanceId: createChoiceInstanceId("dwarvish"),
       definitionId: createChoiceDefinitionId("dwarvish_def"),
       originGrantId: createEntityId("dwarf"),
-      selectedOptionIds: [createEntityId("language_dwarvish")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("language_dwarvish")] },
     });
 
     selectLanguageChoices(draft, { dwarvish: choice2 });
@@ -241,7 +241,7 @@ describe("selectLanguageChoices with valid input", () => {
       instanceId: createChoiceInstanceId("common"),
       definitionId: createChoiceDefinitionId("common_def"),
       originGrantId: createEntityId("human"),
-      selectedOptionIds: [createEntityId("language_common")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("language_common")] },
     });
 
     const result = selectLanguageChoices(draft, { common: choice });
@@ -257,7 +257,7 @@ describe("selectLanguageChoices with valid input", () => {
       instanceId: createChoiceInstanceId("elvish"),
       definitionId: createChoiceDefinitionId("elvish_def"),
       originGrantId: createEntityId("elf"),
-      selectedOptionIds: [createEntityId("language_elvish")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("language_elvish")] },
     });
 
     const result = selectLanguageChoices(draft, { elvish: choice });
@@ -273,7 +273,7 @@ describe("selectLanguageChoices with valid input", () => {
       instanceId: createChoiceInstanceId("common"),
       definitionId: createChoiceDefinitionId("common_def"),
       originGrantId: createEntityId("human"),
-      selectedOptionIds: [createEntityId("language_common")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("language_common")] },
     });
     const input = { common: choice };
 

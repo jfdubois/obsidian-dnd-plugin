@@ -70,6 +70,8 @@ function isConditionalRollModeEffect(
 function isSavingThrowProficiencyRef(
   prof: AddProficiencyEffect["proficiency"],
 ): prof is ProficiencySavingThrowRef {
+  // WeaponProficiencyScope has "type", ProficiencyRef has "kind"
+  if ("type" in prof) return false;
   return prof.kind === "saving-throw";
 }
 

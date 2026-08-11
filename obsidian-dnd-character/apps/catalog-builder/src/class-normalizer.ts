@@ -1,9 +1,18 @@
 import type { IndexedClassEntry } from "./class-index-types";
-import { isAbility, createEntityId, createSourceId, type Ability } from "@obsidian-dnd/domain";
+import { isAbility, createEntityId, createSourceId, createRuleGrantId, createChoiceDefinitionId, createChoiceOptionId, isWeaponCategory, isWeaponPropertyRef, type Ability, type WeaponCategory, type WeaponPropertyRef } from "@obsidian-dnd/domain";
 import {
   createClassRule,
+  createChoiceDefinition,
+  createClosedOptionChoiceDefinition,
+  createProficiencyQuery,
+  createEntityQuery,
+  createLevelDefinition,
+  createFeatureGrant,
   type ClassRule,
   type RenderNode,
+  type RuleEffect,
+  type RuleGrant,
+  type ChoiceDefinition,
 } from "@obsidian-dnd/catalog-contract";
 import {
   createRuleEffectMetadata,
@@ -11,7 +20,11 @@ import {
   createProficiencySavingThrowRef,
   createEffectPresentation,
   createEffectOrigin,
-  type RuleEffect,
+  createWeaponCategoryScope,
+  createWeaponFilterScope,
+  createProficiencyToolRef,
+  createProficiencyArmorRef,
+  createProficiencySkillRef,
 } from "@obsidian-dnd/catalog-contract";
 
 /* ── Diagnostic types ──────────────────────────────────────────── */
@@ -170,6 +183,251 @@ function createSavingThrowEffects(
   return effects;
 }
 
+/* ── Armor normalization helper ─────────────────────────────────── */
+
+const ARMOR_CATEGORY_MAP: Record<string, "light" | "medium" | "heavy" | "shield"> = {
+  "light armor": "light",
+  "medium armor": "medium",
+  "heavy armor": "heavy",
+  "shield": "shield",
+};
+
+function normalizeArmorCategory(raw: string): "light" | "medium" | "heavy" | "shield" | null {
+  const key = raw.toLowerCase().trim();
+  return ARMOR_CATEGORY_MAP[key] ?? null;
+}
+
+/* ── Starting grants builder ───────────────────────────────────── */
+
+/**
+ * Builds starting grants (RuleGrant[]) from indexed class entry data.
+ *
+ * Includes:
+ * - Armor proficiency grants (effect type)
+ * - Weapon proficiency grants (effect type, category or filter)
+ * - Tool proficiency grants (effect type, fixed only; choices go to startingChoices)
+ * - Equipment grants (item, named-item, currency)
+ * - Starting gold (currency)
+ */
+function buildStartingGrants(
+  entry: IndexedClassEntry,
+): RuleGrant[] {
+  const grants: RuleGrant[] = [];
+  const entityId = entry.id;
+  const metadata = createRuleEffectMetadata(
+    "full",
+    createEffectPresentation("proficiencies", []),
+    createEffectOrigin(createEntityId(entityId), createSourceId(entry.sourceId), "structured"),
+  );
+
+  // Armor proficiency grants
+  for (let i = 0; i < entry.startingArmorProficiencies.length; i++) {
+    const rawArmor = entry.startingArmorProficiencies[i]!;
+    const armor = normalizeArmorCategory(rawArmor);
+    if (armor === null) continue;
+    grants.push({
+      id: createRuleGrantId(`${entityId}:starting:armor:${i}`),
+      type: "effect",
+      effect: createAddProficiencyEffect(metadata, createProficiencyArmorRef(armor)),
+    });
+  }
+
+  // Weapon proficiency grants
+  for (let i = 0; i < entry.startingWeaponProficiencies.length; i++) {
+    const wp = entry.startingWeaponProficiencies[i]!;
+    let effect: RuleEffect;
+    if (wp.type === "category") {
+      const category = wp.category;
+      if (!isWeaponCategory(category)) continue;
+      effect = createAddProficiencyEffect(metadata, createWeaponCategoryScope(category));
+    } else {
+      const category = wp.category;
+      if (!isWeaponCategory(category)) continue;
+      const props: WeaponPropertyRef[] = [];
+      for (const prop of wp.requiredProperties) {
+        if (isWeaponPropertyRef(prop)) {
+          props.push(prop);
+        }
+      }
+      if (props.length === 0) continue;
+      effect = createAddProficiencyEffect(metadata, createWeaponFilterScope(category, props));
+    }
+    grants.push({
+      id: createRuleGrantId(`${entityId}:starting:weapon:${i}`),
+      type: "effect",
+      effect,
+    });
+  }
+
+  // Tool proficiency grants (fixed only; choices handled separately)
+  for (let i = 0; i < entry.startingToolProficiencies.length; i++) {
+    const tp = entry.startingToolProficiencies[i]!;
+    if (tp.type === "fixed") {
+      grants.push({
+        id: createRuleGrantId(`${entityId}:starting:tool:${i}`),
+        type: "effect",
+        effect: createAddProficiencyEffect(metadata, createProficiencyToolRef(createEntityId(tp.toolRef))),
+      });
+    }
+  }
+
+  // Equipment grants
+  for (let i = 0; i < entry.startingEquipmentGrants.length; i++) {
+    const eg = entry.startingEquipmentGrants[i]!;
+    const grantId = createRuleGrantId(`${entityId}:starting:equipment:${i}`);
+    if (eg.type === "item" && eg.itemId) {
+      const quantity = eg.quantity ?? 1;
+      grants.push({ id: grantId, type: "item", itemId: createEntityId(eg.itemId), quantity });
+    } else if (eg.type === "named-item" && eg.name) {
+      const quantity = eg.quantity ?? 1;
+      grants.push({ id: grantId, type: "named-item", name: eg.name, quantity });
+    } else if (eg.type === "currency" && eg.denomination) {
+      const denomination = eg.denomination as "cp" | "sp" | "ep" | "gp" | "pp";
+      let amount: { type: "fixed"; value: number } | { type: "dice"; count: number; dieSides: number; multiplier: number };
+      if (eg.fixedValue !== undefined) {
+        amount = { type: "fixed", value: eg.fixedValue };
+      } else if (eg.diceCount !== undefined && eg.diceSides !== undefined) {
+        amount = { type: "dice", count: eg.diceCount, dieSides: eg.diceSides, multiplier: eg.diceMultiplier ?? 1 };
+      } else {
+        continue;
+      }
+      grants.push({ id: grantId, type: "currency", denomination, amount });
+    }
+  }
+
+  // Starting gold
+  for (let i = 0; i < entry.startingGold.length; i++) {
+    const gold = entry.startingGold[i]!;
+    const grantId = createRuleGrantId(`${entityId}:starting:gold:${i}`);
+    const denomination = gold.denomination as "cp" | "sp" | "ep" | "gp" | "pp";
+    let amount: { type: "fixed"; value: number } | { type: "dice"; count: number; dieSides: number; multiplier: number };
+    if (gold.fixedValue !== undefined) {
+      amount = { type: "fixed", value: gold.fixedValue };
+    } else if (gold.diceCount !== undefined && gold.diceSides !== undefined) {
+      amount = { type: "dice", count: gold.diceCount, dieSides: gold.diceSides, multiplier: gold.diceMultiplier ?? 1 };
+    } else {
+      continue;
+    }
+    grants.push({ id: grantId, type: "currency", denomination, amount });
+  }
+
+  return grants;
+}
+
+/* ── Starting choices builder ──────────────────────────────────── */
+
+/**
+ * Builds starting choices (ChoiceDefinition[]) from indexed class entry data.
+ *
+ * Includes:
+ * - Skill proficiency choices (pick N from list or any)
+ * - Tool proficiency choices (pick N from group)
+ * - Equipment choices (closed-option packages)
+ */
+function buildStartingChoices(
+  entry: IndexedClassEntry,
+): ChoiceDefinition[] {
+  const choices: ChoiceDefinition[] = [];
+  const entityId = entry.id;
+
+  // Skill proficiency choices
+  for (let i = 0; i < entry.startingSkillChoices.length; i++) {
+    const sc = entry.startingSkillChoices[i]!;
+    choices.push(createChoiceDefinition(
+      createChoiceDefinitionId(`${entityId}:starting:skill:${i}`),
+      `Choose ${sc.count} skill${sc.count > 1 ? "s" : ""}`,
+      "skill-proficiency",
+      sc.count,
+      sc.count,
+      false,
+      sc.isAny ? createEntityQuery("skill") : createProficiencyQuery("skill"),
+      [],
+    ));
+  }
+
+  // Tool proficiency choices
+  for (let i = 0; i < entry.startingToolProficiencies.length; i++) {
+    const tp = entry.startingToolProficiencies[i]!;
+    if (tp.type === "choice") {
+      choices.push(createChoiceDefinition(
+        createChoiceDefinitionId(`${entityId}:starting:tool:${i}`),
+        `Choose ${tp.count} tool${tp.count > 1 ? "s" : ""} proficiencies`,
+        "tool-proficiency",
+        tp.count,
+        tp.count,
+        false,
+        createProficiencyQuery("tool"),
+        [],
+      ));
+    }
+  }
+
+  // Equipment choices (closed-option packages)
+  for (let i = 0; i < entry.startingEquipmentChoices.length; i++) {
+    const ec = entry.startingEquipmentChoices[i]!;
+    const options = ec.options.map((opt, optIndex) => {
+      const optGrants: RuleGrant[] = [];
+      for (let gIndex = 0; gIndex < opt.grants.length; gIndex++) {
+        const g = opt.grants[gIndex]!;
+        const grantId = createRuleGrantId(`${entityId}:starting:choice:${i}:option:${optIndex}:grant:${gIndex}`);
+        if (g.type === "item" && g.itemId) {
+          optGrants.push({ id: grantId, type: "item", itemId: createEntityId(g.itemId), quantity: g.quantity ?? 1 } as RuleGrant);
+        } else if (g.type === "named-item" && g.name) {
+          optGrants.push({ id: grantId, type: "named-item", name: g.name, quantity: g.quantity ?? 1 } as RuleGrant);
+        } else if (g.type === "currency" && g.denomination) {
+          const denomination = g.denomination as "cp" | "sp" | "ep" | "gp" | "pp";
+          let amount: { type: "fixed"; value: number } | { type: "dice"; count: number; dieSides: number; multiplier: number };
+          if (g.fixedValue !== undefined) {
+            amount = { type: "fixed", value: g.fixedValue };
+          } else if (g.diceCount !== undefined && g.diceSides !== undefined) {
+            amount = { type: "dice", count: g.diceCount, dieSides: g.diceSides, multiplier: g.diceMultiplier ?? 1 };
+          } else {
+            continue;
+          }
+          optGrants.push({ id: grantId, type: "currency", denomination, amount } as RuleGrant);
+        }
+      }
+
+      return {
+        id: createChoiceOptionId(`${entityId}:starting:choice:${i}:option:${optIndex}`),
+        label: opt.label,
+        grants: optGrants,
+        choices: [],
+      };
+    });
+
+    choices.push(createClosedOptionChoiceDefinition(
+      createChoiceDefinitionId(`${entityId}:starting:choice:${i}`),
+      "Choose starting equipment",
+      ec.count,
+      ec.count,
+      false,
+      options,
+      [],
+    ));
+  }
+
+  return choices;
+}
+
+/* ── Level-one features builder ────────────────────────────────── */
+
+/**
+ * Builds level-one features as a LevelDefinition record.
+ *
+ * Level-one features become FeatureGrants at level 1.
+ */
+function buildLevelOne(entry: IndexedClassEntry): Record<number, import("@obsidian-dnd/catalog-contract").LevelDefinition> {
+  if (entry.levelOneFeatures.length === 0) return {};
+
+  const grants = entry.levelOneFeatures.map((feature, index) => {
+    const featureId = feature.featureRef ? createEntityId(feature.featureRef) : createEntityId(`${entry.id}:feature:${index}`);
+    return createFeatureGrant(featureId);
+  });
+
+  return { 1: createLevelDefinition(1, grants) };
+}
+
 type SingleResult =
   | { readonly ok: true; readonly classRule: ClassRule; readonly diagnostics: readonly ClassNormalizerDiagnostic[] }
   | { readonly ok: false; readonly diagnostics: readonly ClassNormalizerDiagnostic[] };
@@ -285,7 +543,16 @@ function normalizeSingleClass(
     entry.sourceId,
   );
 
-  // 8. Assemble ClassRule
+  // 8. Build starting grants (armor, weapon, tool proficiencies, equipment, gold)
+  const startingGrants = buildStartingGrants(entry);
+
+  // 9. Build starting choices (skill, tool, equipment choices)
+  const startingChoices = buildStartingChoices(entry);
+
+  // 10. Build level-one features
+  const levels = buildLevelOne(entry);
+
+  // 11. Assemble ClassRule
   const classRule = Object.freeze(createClassRule(
     createEntityId(entry.id),
     entry.name,
@@ -295,8 +562,8 @@ function normalizeSingleClass(
     hitDie,
     primaryAbilities,
     savingThrowAbilities,
-    [], // startingChoices (deferred to P4-T010)
-    {}, // levels (deferred to P4-T010)
+    startingChoices,
+    levels,
     [], // subclassIds (populated after subclass normalization)
     content,
     [], // prerequisites (deferred)
@@ -304,6 +571,11 @@ function normalizeSingleClass(
     [], // choices (deferred)
     [], // dependencies (deferred)
     false, // legacy
+    undefined, // page
+    undefined, // summary
+    undefined, // spellcasting
+    [], // grants
+    startingGrants,
   ));
 
   return { ok: true, classRule, diagnostics: Object.freeze(diagnostics) };

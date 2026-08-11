@@ -49,7 +49,7 @@ vi.mock("obsidian", () => ({
 
 function createMockManifest(catalogRevision: CatalogRevision): CatalogManifest {
   return createCatalogManifest({
-    schemaVersion: 1,
+    schemaVersion: 2,
     catalogRevision,
     sourceRevision: "src-001",
     builderVersion: "0.1.0",
@@ -462,21 +462,21 @@ describe("RequestUrlCatalogClient", () => {
   /* ── negotiateSchema ─────────────────────────────────────────── */
 
   it("negotiateSchema returns compatible when versions match", () => {
-    const result = client.negotiateSchema(1);
+    const result = client.negotiateSchema(2);
 
     expect(result.compatible).toBe(true);
-    expect(result.serverSchemaVersion).toBe(1);
-    expect(result.pluginSchemaVersion).toBe(1);
+    expect(result.serverSchemaVersion).toBe(2);
+    expect(result.pluginSchemaVersion).toBe(2);
     expect(result.reason).toBeUndefined();
   });
 
   it("negotiateSchema returns incompatible when versions differ", () => {
-    const result = client.negotiateSchema(2);
+    const result = client.negotiateSchema(1);
 
     expect(result.compatible).toBe(false);
-    expect(result.serverSchemaVersion).toBe(2);
-    expect(result.pluginSchemaVersion).toBe(1);
-    expect(result.reason).toContain("2");
+    expect(result.serverSchemaVersion).toBe(1);
+    expect(result.pluginSchemaVersion).toBe(2);
+    expect(result.reason).toContain("1");
   });
 
   /* ── URL construction ────────────────────────────────────────── */

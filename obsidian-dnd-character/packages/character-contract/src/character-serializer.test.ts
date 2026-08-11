@@ -136,7 +136,7 @@ describe("Character serializer", () => {
         instanceId: createChoiceInstanceId("choice-1"),
         definitionId: createChoiceDefinitionId("choice-def-1"),
         originGrantId: createEntityId("class:2024:xphb:fighter"),
-        selectedOptionIds: [createEntityId("feat:2024:xphb:tough")],
+        selectedValue: { type: "entity-ids", entityIds: [createEntityId("feat:2024:xphb:tough")] },
       });
       const json = serializeCharacter(char);
       const restored = deserializeCharacter(json);
@@ -147,6 +147,7 @@ describe("Character serializer", () => {
       const char = makeMinimalCharacter();
       char.inventory.push({
         instanceId: createItemInstanceId("item-1"),
+        type: "catalog-item",
         itemId: createEntityId("item:2024:xphb:longsword"),
         quantity: 1,
         equipped: false,
@@ -251,7 +252,7 @@ describe("Character serializer", () => {
         parsed.schemaVersion = 0;
 
         const restored = deserializeCharacter(JSON.stringify(parsed));
-        expect(restored.schemaVersion).toBe(1);
+        expect(restored.schemaVersion).toBe(CHARACTER_SCHEMA_VERSION);
         expect(restored.id).toBe(char.id);
         expect(restored.identity.name).toBe(char.identity.name);
       } finally {

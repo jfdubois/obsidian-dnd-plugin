@@ -31,6 +31,8 @@ export function createFrozenReadonlySet<T>(values: readonly T[]): FrozenReadonly
 export const ET_TOOLS_KIND_MAP: ReadonlyMap<string, string> = new Map([
   ["race", "species"],
   ["subrace", "species"],
+  ["baseitem", "item"],
+  ["itemGroup", "item"],
   ["classFeature", "class-feature"],
   ["subclassFeature", "subclass-feature"],
 ]);

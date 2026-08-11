@@ -48,6 +48,8 @@ function isAddInitiativeEffect(
 function isInitiativeProficiency(
   prof: AddProficiencyEffect["proficiency"],
 ): boolean {
+  // WeaponProficiencyScope has "type", ProficiencyRef has "kind"
+  if ("type" in prof) return false;
   return prof.kind === "initiative";
 }
 

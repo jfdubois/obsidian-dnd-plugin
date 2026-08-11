@@ -26,11 +26,11 @@ function withTestMigration(
   // We push to the actual array since MIGRATION_REGISTRY is a ReadonlyArray
   // but the underlying array is mutable. We clean up after.
   const arr = MIGRATION_REGISTRY as unknown as Array<CharacterSchemaMigration>;
-  arr.push(migration);
+  arr.unshift(migration);
   try {
     fn();
   } finally {
-    arr.pop();
+    arr.shift();
   }
 }
 
@@ -276,8 +276,9 @@ describe("Character Migration Framework", () => {
   });
 
   describe("MIGRATION_REGISTRY", () => {
-    it("is initially empty", () => {
-      expect(MIGRATION_REGISTRY.length).toBe(0);
+    it("registers the required v1 to v2 migration", () => {
+      expect(MIGRATION_REGISTRY).toHaveLength(1);
+      expect(MIGRATION_REGISTRY[0]).toMatchObject({ fromVersion: 1, toVersion: 2 });
     });
 
     it("is a ReadonlyArray", () => {

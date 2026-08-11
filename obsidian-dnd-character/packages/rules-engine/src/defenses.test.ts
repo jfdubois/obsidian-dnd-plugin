@@ -98,7 +98,7 @@ describe("calculateDefenses - resistances", () => {
           instanceId: cii("choice-feat-1"),
           definitionId: cdi("def-feat-1"),
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-fire-lore")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-fire-lore")] },
         },
       },
     });

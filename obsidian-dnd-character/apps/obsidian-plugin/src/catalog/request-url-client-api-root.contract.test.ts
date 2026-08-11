@@ -24,7 +24,7 @@ function response(json: unknown, status = 200) {
 
 function manifest() {
   return createCatalogManifest({
-    schemaVersion: 1,
+    schemaVersion: 2,
     catalogRevision: revision,
     sourceRevision: "source-a",
     builderVersion: "test",

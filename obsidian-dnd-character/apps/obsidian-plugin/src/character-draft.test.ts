@@ -199,6 +199,7 @@ describe("Step data validators", () => {
   it("accepts draft equipment data with valid items", () => {
     const item = {
       instanceId: createItemInstanceId("weapon-1"),
+      type: "catalog-item",
       itemId: createEntityId("longsword"),
       quantity: 1,
       equipped: true,

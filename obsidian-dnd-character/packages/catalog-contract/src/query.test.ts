@@ -6,6 +6,7 @@ import {
   isEquipmentCategory,
   isEquipmentRarity,
   isEquipmentBodySlot,
+  isEquipmentGroup,
   createEntityQuery,
   createSpellQuery,
   createProficiencyQuery,
@@ -89,6 +90,14 @@ describe("EquipmentBodySlot", () => {
 
   it("guard rejects unknown slot", () => {
     expect(isEquipmentBodySlot("neck")).toBe(false);
+  });
+});
+
+describe("EquipmentGroup", () => {
+  it("accepts the finite normalized values and rejects raw source tokens", () => {
+    expect(isEquipmentGroup("artisan-tool")).toBe(true);
+    expect(isEquipmentGroup("druidic-spellcasting-focus")).toBe(true);
+    expect(isEquipmentGroup("toolArtisan")).toBe(false);
   });
 });
 
@@ -446,6 +455,15 @@ describe("factories", () => {
     expect(isCatalogQuery(query)).toBe(true);
     expect(query.category).toBe("weapon");
     expect(query.rarity).toBe("rare");
+  });
+
+  it("validates and clones equipment group filters", () => {
+    const groups = ["musical-instrument", "artisan-tool"] as const;
+    const query = createEquipmentQuery({ equipmentGroups: [...groups] });
+    expect(isCatalogQuery(query)).toBe(true);
+    expect(query.equipmentGroups).toEqual(groups);
+    expect(isCatalogQuery({ type: "equipment", equipmentGroups: ["toolArtisan"] })).toBe(false);
+    expect(isCatalogQuery({ type: "equipment", equipmentGroups: [] })).toBe(false);
   });
 });
 

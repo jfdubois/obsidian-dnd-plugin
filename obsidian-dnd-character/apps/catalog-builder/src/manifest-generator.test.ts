@@ -6,7 +6,7 @@ import { isCatalogManifest } from "@obsidian-dnd/catalog-contract";
 
 describe("generateManifest", () => {
   const baseInput = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     catalogRevision: createCatalogRevision("rev-001"),
     sourceRevision: "3c5d9d3",
     builderVersion: "0.1.0",
@@ -27,7 +27,7 @@ describe("generateManifest", () => {
 
   it("preserves input fields", () => {
     const manifest = generateManifest(baseInput);
-    expect(manifest.schemaVersion).toBe(1);
+    expect(manifest.schemaVersion).toBe(2);
     expect(manifest.catalogRevision).toBe("rev-001");
     expect(manifest.sourceRevision).toBe("3c5d9d3");
     expect(manifest.builderVersion).toBe("0.1.0");

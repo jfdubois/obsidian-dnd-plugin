@@ -91,9 +91,29 @@ export {
 } from "./prerequisite";
 
 export {
+  /* Rule grant types */
+  type CurrencyDenomination,
+  type CurrencyGrantAmount,
+  type RuleGrant,
+  type ChoiceOptionGrant,
+  /* Rule grant validators */
+  isCurrencyGrantAmount,
+  isRuleGrant,
+  /* Rule grant factories */
+  createFixedCurrencyGrantAmount,
+  createDiceCurrencyGrantAmount,
+} from "./rule-grant";
+
+export {
   /* Choice-definition types */
   type ChoiceDefinition,
   type ChoiceDefinitionType,
+  type QueryChoiceDefinitionType,
+  type QueryChoiceDefinition,
+  type AbilityAllocationChoiceDefinition,
+  type AbilityAllocationDistribution,
+  type ClosedOptionChoiceDefinition,
+  type ChoiceOption,
   /* Choice-definition constants */
   CHOICE_DEFINITION_TYPES,
   /* Choice-definition guard */
@@ -102,6 +122,8 @@ export {
   isChoiceDefinition,
   /* Choice-definition factory */
   createChoiceDefinition,
+  createAbilityAllocationChoiceDefinition,
+  createClosedOptionChoiceDefinition,
 } from "./choice-definition";
 
 export {
@@ -110,6 +132,7 @@ export {
   type EntityQuery,
   type SpellQuery,
   type ProficiencyQuery,
+  type ProficiencyQueryConstraint,
   type EquipmentQuery,
   /* Query enums */
   type SpellAcquisitionMode,
@@ -117,6 +140,7 @@ export {
   type EquipmentCategory,
   type EquipmentRarity,
   type EquipmentBodySlot,
+  type EquipmentGroup,
   /* Query enum constants */
   SPELL_ACQUISITION_MODES,
   PROFICIENCY_QUERY_KINDS,
@@ -129,6 +153,7 @@ export {
   isEquipmentCategory,
   isEquipmentRarity,
   isEquipmentBodySlot,
+  isEquipmentGroup,
   /* Query validator */
   isCatalogQuery,
   /* Query factories */
@@ -136,7 +161,10 @@ export {
   createSpellQuery,
   createProficiencyQuery,
   createEquipmentQuery,
+  EQUIPMENT_GROUPS,
 } from "./query";
+
+export { evaluateEquipmentQuery } from "./equipment-query-evaluator";
 
 export {
   /* Effect types */
@@ -178,6 +206,8 @@ export {
   type CapabilityDefinition,
   /* Supporting effect types */
   type ProficiencyRef,
+  type WeaponProficiencyScope,
+  type AddProficiencyTarget,
   type ProficiencySkillRef,
   type ProficiencyToolRef,
   type ProficiencyArmorRef,
@@ -260,6 +290,8 @@ export {
   isCapabilityDefinition,
   /* Supporting validators */
   isProficiencyRef,
+  isWeaponProficiencyScope,
+  isAddProficiencyTarget,
   isSenseDefinition,
   isArmorClassFormula,
   isEffectCondition,
@@ -324,6 +356,8 @@ export {
   createProficiencySavingThrowRef,
   createProficiencyWeaponRef,
   createProficiencyInitiativeRef,
+  createWeaponCategoryScope,
+  createWeaponFilterScope,
   createDarkvisionSense,
   createBlindsenseSense,
   createTremorsenseSense,

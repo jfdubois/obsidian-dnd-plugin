@@ -294,7 +294,7 @@ describe("PersistentCatalogCacheStore", () => {
       catalogServerUrl: "https://catalog.example.com/catalog/v1",
       catalogRevision: "rev-001",
       charactersVaultPath: "dnd-characters",
-      schemaVersion: 1,
+      schemaVersion: 2,
     };
 
     // Clear cache.
@@ -306,7 +306,7 @@ describe("PersistentCatalogCacheStore", () => {
     expect(latestSave.catalogServerUrl).toBe("https://catalog.example.com/catalog/v1");
     expect(latestSave.catalogRevision).toBe("rev-001");
     expect(latestSave.charactersVaultPath).toBe("dnd-characters");
-    expect(latestSave.schemaVersion).toBe(1);
+    expect(latestSave.schemaVersion).toBe(2);
   });
 
   /* ── Write-failure preservation ─────────────────────────────── */
@@ -407,7 +407,7 @@ describe("PersistentCatalogCacheStore", () => {
   it("handles missing catalogCache key in loadData", async () => {
     mockData.loadDataResolve = {
       catalogServerUrl: "https://example.com",
-      schemaVersion: 1,
+      schemaVersion: 2,
     };
     await store.initialize();
     expect(store.size()).toBe(0);

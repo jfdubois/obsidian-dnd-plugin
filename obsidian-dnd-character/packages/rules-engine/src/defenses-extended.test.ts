@@ -35,7 +35,7 @@ describe("calculateDefenses - condition immunities", () => {
           instanceId: cii("choice-feat-1"),
           definitionId: cdi("def-feat-1"),
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-poison-resilience")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-poison-resilience")] },
         },
       },
     });
@@ -59,7 +59,7 @@ describe("calculateDefenses - condition immunities", () => {
           instanceId: cii("choice-feat-1"),
           definitionId: cdi("def-feat-1"),
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-anti-charm")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-anti-charm")] },
         },
       },
     });
@@ -149,7 +149,7 @@ describe("calculateDefenses - combined", () => {
           instanceId: cii("choice-feat-1"),
           definitionId: cdi("def-feat-1"),
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-dark-delve")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-dark-delve")] },
         },
       },
     });
@@ -180,7 +180,7 @@ describe("calculateDefenses - combined", () => {
           instanceId: cii("choice-feat-1"),
           definitionId: cdi("def-feat-1"),
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-anti-charm")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-anti-charm")] },
         },
       },
     });

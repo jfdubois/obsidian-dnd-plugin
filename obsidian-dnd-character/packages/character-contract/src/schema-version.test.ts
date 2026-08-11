@@ -5,20 +5,20 @@ import {
 } from "./schema-version";
 
 describe("Schema Version", () => {
-  it("exports schema version 1", () => {
-    expect(CHARACTER_SCHEMA_VERSION).toBe(1);
+  it("exports schema version 2", () => {
+    expect(CHARACTER_SCHEMA_VERSION).toBe(2);
   });
 
-  it("accepts version 1", () => {
-    expect(isSupportedCharacterSchemaVersion(1)).toBe(true);
+  it("accepts version 2", () => {
+    expect(isSupportedCharacterSchemaVersion(2)).toBe(true);
   });
 
   it("rejects version 0", () => {
     expect(isSupportedCharacterSchemaVersion(0)).toBe(false);
   });
 
-  it("rejects version 2 (future)", () => {
-    expect(isSupportedCharacterSchemaVersion(2)).toBe(false);
+  it("rejects version 3 (future)", () => {
+    expect(isSupportedCharacterSchemaVersion(3)).toBe(false);
   });
 
   it("rejects negative version", () => {

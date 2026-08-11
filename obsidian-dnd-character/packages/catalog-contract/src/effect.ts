@@ -1,5 +1,5 @@
-import type { Ability, EntityId, SourceId } from "@obsidian-dnd/domain";
-import { isAbility, isEntityId, isSourceId } from "@obsidian-dnd/domain";
+import type { Ability, EntityId, SourceId, WeaponCategory, WeaponPropertyRef } from "@obsidian-dnd/domain";
+import { isAbility, isEntityId, isSourceId, isWeaponCategory, isWeaponPropertyRef } from "@obsidian-dnd/domain";
 
 /* ── Automation status ─────────────────────────────────────────── */
 
@@ -301,7 +301,7 @@ export interface SetAbilityEffect {
 
 export interface AddProficiencyEffect {
   type: "add-proficiency";
-  proficiency: ProficiencyRef;
+  proficiency: AddProficiencyTarget;
 }
 
 export interface AddExpertiseEffect {
@@ -435,6 +435,24 @@ export interface ProficiencyWeaponRef {
 export interface ProficiencyInitiativeRef {
   kind: "initiative";
 }
+
+/* ── Weapon Proficiency Scope ─────────────────────────────────────
+   H6 extension: scoped weapon proficiency that does not expand into
+   an authoritative EntityId array. Category scope matches every
+   canonical weapon with the matching ItemRule.weaponCategory.
+   Filter scope requires all listed properties.                     */
+
+export type WeaponProficiencyScope =
+  | { type: "weapon-category"; category: WeaponCategory }
+  | {
+      type: "weapon-filter";
+      category: WeaponCategory;
+      requiredProperties: WeaponPropertyRef[];
+    };
+
+export type AddProficiencyTarget = ProficiencyRef | WeaponProficiencyScope;
+
+/* ── Movement Mode ─────────────────────────────────────────────── */
 
 export type MovementMode = "walk" | "fly" | "swim" | "climb" | "burrow";
 
@@ -728,7 +746,7 @@ export function isRuleEffect(value: unknown): value is RuleEffect {
       return true;
     }
     case "add-proficiency": {
-      if (!isProficiencyRef(obj.proficiency)) return false;
+      if (!isAddProficiencyTarget(obj.proficiency)) return false;
       return true;
     }
     case "add-expertise": {
@@ -843,6 +861,31 @@ export function isProficiencyRef(value: unknown): value is ProficiencyRef {
       return false;
     }
   }
+}
+
+export function isWeaponProficiencyScope(value: unknown): value is WeaponProficiencyScope {
+  if (typeof value !== "object" || value === null) return false;
+  const obj = value as Record<string, unknown>;
+  const type = obj.type;
+
+  if (typeof type !== "string") return false;
+
+  if (type === "weapon-category") {
+    return isWeaponCategory(obj.category);
+  }
+
+  if (type === "weapon-filter") {
+    if (!isWeaponCategory(obj.category)) return false;
+    if (!Array.isArray(obj.requiredProperties) || obj.requiredProperties.length === 0) return false;
+    if (!obj.requiredProperties.every((p: unknown) => isWeaponPropertyRef(p))) return false;
+    return true;
+  }
+
+  return false;
+}
+
+export function isAddProficiencyTarget(value: unknown): value is AddProficiencyTarget {
+  return isProficiencyRef(value) || isWeaponProficiencyScope(value);
 }
 
 export function isSenseDefinition(value: unknown): value is SenseDefinition {
@@ -1132,7 +1175,7 @@ export function createSetAbilityEffect(
 
 export function createAddProficiencyEffect(
   metadata: RuleEffectMetadata,
-  proficiency: ProficiencyRef,
+  proficiency: AddProficiencyTarget,
 ): RuleEffectMetadata & AddProficiencyEffect {
   return { ...metadata, type: "add-proficiency", proficiency };
 }
@@ -1286,6 +1329,19 @@ export function createProficiencyWeaponRef(weaponId: EntityId): ProficiencyWeapo
 
 export function createProficiencyInitiativeRef(): ProficiencyInitiativeRef {
   return { kind: "initiative" };
+}
+
+/* ── Weapon Proficiency Scope factories ─────────────────────────── */
+
+export function createWeaponCategoryScope(category: WeaponCategory): WeaponProficiencyScope {
+  return { type: "weapon-category", category };
+}
+
+export function createWeaponFilterScope(
+  category: WeaponCategory,
+  requiredProperties: WeaponPropertyRef[],
+): WeaponProficiencyScope {
+  return { type: "weapon-filter", category, requiredProperties: [...requiredProperties] };
 }
 
 export function createDarkvisionSense(range: number): DarkvisionSense {

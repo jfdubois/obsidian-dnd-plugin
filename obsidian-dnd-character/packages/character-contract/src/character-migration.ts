@@ -12,6 +12,7 @@
  */
 
 import { CHARACTER_SCHEMA_VERSION } from "./schema-version";
+import { isChoiceDefinitionId, isChoiceInstanceId, isEntityId, isItemInstanceId } from "@obsidian-dnd/domain";
 
 /* ── Migration step type ───────────────────────────────────────── */
 
@@ -40,11 +41,51 @@ export interface CharacterSchemaMigration {
  * Migrations must be listed in ascending fromVersion order.
  * Each migration transforms exactly one version step (N -> N+1).
  *
- * Currently empty because CHARACTER_SCHEMA_VERSION is 1,
- * so no migrations from a hypothetical version 0 exist yet.
- * New migrations are appended as the schema evolves.
+ * The v1 to v2 migration introduces typed choice selections,
+ * discriminated inventory, and currency balances.
  */
-export const MIGRATION_REGISTRY: ReadonlyArray<CharacterSchemaMigration> = [];
+function migrateLegacyChoice(value: unknown): unknown {
+  if (typeof value !== "object" || value === null) throw new Error("legacy choice must be an object");
+  const choice = value as Record<string, unknown>;
+  if (!isChoiceInstanceId(choice.instanceId) || !isChoiceDefinitionId(choice.definitionId) || !isEntityId(choice.originGrantId)
+    || !Array.isArray(choice.selectedOptionIds) || !choice.selectedOptionIds.every(isEntityId)) {
+    throw new Error("legacy choice has invalid identity or selectedOptionIds");
+  }
+  return { instanceId: choice.instanceId, definitionId: choice.definitionId, originGrantId: choice.originGrantId,
+    selectedValue: { type: "entity-ids", entityIds: [...choice.selectedOptionIds] } };
+}
+
+function migrateLegacyInventoryItem(value: unknown): unknown {
+  if (typeof value !== "object" || value === null) throw new Error("legacy inventory item must be an object");
+  const item = value as Record<string, unknown>;
+  if (!isItemInstanceId(item.instanceId) || !isEntityId(item.itemId) || typeof item.quantity !== "number" || !Number.isInteger(item.quantity) || item.quantity < 0
+    || typeof item.equipped !== "boolean" || typeof item.attuned !== "boolean") throw new Error("legacy inventory item is invalid");
+  return { ...item, type: "catalog-item" };
+}
+
+export const MIGRATION_REGISTRY: ReadonlyArray<CharacterSchemaMigration> = [{
+  fromVersion: 1,
+  toVersion: 2,
+  migrate: (data: unknown): unknown => {
+    if (typeof data !== "object" || data === null) throw new Error("legacy character must be an object");
+    const character = data as Record<string, unknown>;
+    let selections = character.selections;
+    if (selections !== undefined) {
+      if (typeof selections !== "object" || selections === null || Array.isArray(selections)) throw new Error("legacy selections must be a record");
+      selections = Object.fromEntries(Object.entries(selections).map(([id, choice]) => {
+        if (!isChoiceInstanceId(id)) throw new Error("legacy selection key is invalid");
+        return [id, migrateLegacyChoice(choice)];
+      }));
+    }
+    let inventory = character.inventory;
+    if (inventory !== undefined) {
+      if (!Array.isArray(inventory)) throw new Error("legacy inventory must be an array");
+      inventory = inventory.map(migrateLegacyInventoryItem);
+    }
+    return { ...character, schemaVersion: 2, ...(selections === undefined ? {} : { selections }),
+      ...(inventory === undefined ? {} : { inventory }), currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 } };
+  },
+}];
 
 /* ── Migration errors ──────────────────────────────────────────── */
 

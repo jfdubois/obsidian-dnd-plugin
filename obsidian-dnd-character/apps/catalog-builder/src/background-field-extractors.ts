@@ -82,34 +82,13 @@ export function extractSkillProficiencies(
 
     const entryObj = entry as Record<string, unknown>;
     const keys = Object.keys(entryObj);
-    if (keys.length !== 1) {
-      unmapped.push(JSON.stringify(entryObj));
-      continue;
-    }
-
-    const skillName = keys[0];
-    if (skillName === undefined) {
-      unmapped.push(JSON.stringify(entryObj));
-      continue;
-    }
-    const value = entryObj[skillName];
-    if (value !== true && value !== 1) {
-      unmapped.push(`${skillName}=${String(value)}`);
-      continue;
-    }
-
-    // Attempt to create canonical entity ID for the skill
-    const idResult = createCanonicalEntityId({
-      kind: "skill",
-      ruleset: ruleset as "2014" | "2024",
-      source,
-      name: skillName,
-    });
-
-    if (idResult.ok) {
-      skillIds.push(idResult.id);
-    } else {
-      unmapped.push(skillName);
+    if (keys.length === 0) { unmapped.push(JSON.stringify(entryObj)); continue; }
+    for (const skillName of keys) {
+      const value = entryObj[skillName];
+      if (value !== true && value !== 1) { unmapped.push(`${skillName}=${String(value)}`); continue; }
+      const idResult = createCanonicalEntityId({ kind: "skill", ruleset: ruleset as "2014" | "2024", source, name: skillName });
+      if (idResult.ok) skillIds.push(idResult.id);
+      else unmapped.push(skillName);
     }
   }
 

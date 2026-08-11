@@ -137,6 +137,7 @@ export function buildChoices(
 
   for (const state of states) {
     const { definition, selectedIds } = state;
+    if (definition.type === "ability-allocation") return null;
     if (selectedIds.size < definition.minimum || selectedIds.size > definition.maximum) {
       return null;
     }
@@ -149,7 +150,7 @@ export function buildChoices(
       instanceId,
       definitionId: definition.id,
       originGrantId: originGrantId as EntityId,
-      selectedOptionIds: [...selectedIds] as EntityId[],
+      selectedValue: { type: "entity-ids", entityIds: [...selectedIds] as EntityId[] },
     });
     choices[instanceId] = choice;
   }

@@ -102,7 +102,7 @@ describe("background and class authoritative detail loading", () => {
   it("does not auto-resolve a class with a real starting choice", async () => {
     selectClass(draft, classId);
     const choice = createChoiceDefinition(
-      createChoiceDefinitionId("class-starting-choice"), "Starting Choice", "ability", 1, 1,
+      createChoiceDefinitionId("class-starting-choice"), "Starting Choice", "entity", 1, 1,
       false, createEntityQuery("feat"), [],
     );
     const resolve = vi.fn();
@@ -119,7 +119,7 @@ describe("background and class authoritative detail loading", () => {
   it("renders non-empty normalized background choices without auto-resolving", async () => {
     selectBackground(draft, backgroundId);
     const choice = createChoiceDefinition(
-      createChoiceDefinitionId("background-choice"), "Background Choice", "ability", 1, 1,
+      createChoiceDefinitionId("background-choice"), "Background Choice", "entity", 1, 1,
       false, createEntityQuery("feat"), [],
     );
     const resolve = vi.fn();

@@ -269,7 +269,7 @@ describe('CatalogRuntimeService — restoreFromCache (negative)', () => {
     // Object missing required fields (entityKinds, rulesets) — fails isCatalogManifest
     const malformedManifest = {
       apiVersion: 1,
-      schemaVersion: 1,
+      schemaVersion: 2,
       catalogRevision: REV_A,
       sourceRevision: 'abc123',
       builderVersion: '0.1.0',

@@ -31,7 +31,7 @@ describe("calculateAbilityScores - multi-source accumulation", () => {
           instanceId: cii("choice-1"),
           definitionId: cdi("def-1"),
           originGrantId: eid("grant-1"),
-          selectedOptionIds: [eid("feat-tough")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-tough")] },
         },
       },
     });

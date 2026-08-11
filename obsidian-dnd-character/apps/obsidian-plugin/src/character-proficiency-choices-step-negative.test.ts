@@ -44,7 +44,7 @@ describe("selectProficiencyChoices rejects when deps not resolved", () => {
       instanceId: createChoiceInstanceId("athletics"),
       definitionId: createChoiceDefinitionId("athletics_def"),
       originGrantId: createEntityId("soldier"),
-      selectedOptionIds: [createEntityId("skill_athletics")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("skill_athletics")] },
     });
 
     const result = selectProficiencyChoices(draft, { athletics: choice });
@@ -63,7 +63,7 @@ describe("selectProficiencyChoices rejects when deps not resolved", () => {
       instanceId: createChoiceInstanceId("athletics"),
       definitionId: createChoiceDefinitionId("athletics_def"),
       originGrantId: createEntityId("soldier"),
-      selectedOptionIds: [createEntityId("skill_athletics")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("skill_athletics")] },
     });
 
     const result = selectProficiencyChoices(draft, { athletics: choice });
@@ -82,7 +82,7 @@ describe("selectProficiencyChoices rejects when deps not resolved", () => {
       instanceId: createChoiceInstanceId("athletics"),
       definitionId: createChoiceDefinitionId("athletics_def"),
       originGrantId: createEntityId("soldier"),
-      selectedOptionIds: [createEntityId("skill_athletics")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("skill_athletics")] },
     });
 
     const result = selectProficiencyChoices(draft, { athletics: choice });
@@ -96,7 +96,7 @@ describe("selectProficiencyChoices rejects when deps not resolved", () => {
       instanceId: createChoiceInstanceId("athletics"),
       definitionId: createChoiceDefinitionId("athletics_def"),
       originGrantId: createEntityId("soldier"),
-      selectedOptionIds: [createEntityId("skill_athletics")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("skill_athletics")] },
     });
 
     const result = selectProficiencyChoices(draft, { athletics: choice });
@@ -119,7 +119,7 @@ describe("selectLanguageChoices rejects when deps not resolved", () => {
       instanceId: createChoiceInstanceId("common"),
       definitionId: createChoiceDefinitionId("common_def"),
       originGrantId: createEntityId("human"),
-      selectedOptionIds: [createEntityId("language_common")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("language_common")] },
     });
 
     const result = selectLanguageChoices(draft, { common: choice });
@@ -138,7 +138,7 @@ describe("selectLanguageChoices rejects when deps not resolved", () => {
       instanceId: createChoiceInstanceId("common"),
       definitionId: createChoiceDefinitionId("common_def"),
       originGrantId: createEntityId("human"),
-      selectedOptionIds: [createEntityId("language_common")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("language_common")] },
     });
 
     const result = selectLanguageChoices(draft, { common: choice });
@@ -157,7 +157,7 @@ describe("selectLanguageChoices rejects when deps not resolved", () => {
       instanceId: createChoiceInstanceId("common"),
       definitionId: createChoiceDefinitionId("common_def"),
       originGrantId: createEntityId("human"),
-      selectedOptionIds: [createEntityId("language_common")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("language_common")] },
     });
 
     const result = selectLanguageChoices(draft, { common: choice });
@@ -171,7 +171,7 @@ describe("selectLanguageChoices rejects when deps not resolved", () => {
       instanceId: createChoiceInstanceId("common"),
       definitionId: createChoiceDefinitionId("common_def"),
       originGrantId: createEntityId("human"),
-      selectedOptionIds: [createEntityId("language_common")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("language_common")] },
     });
 
     const result = selectLanguageChoices(draft, { common: choice });
@@ -218,7 +218,7 @@ describe("selectProficiencyChoices rejects invalid choices", () => {
       instanceId: createChoiceInstanceId("athletics"),
       definitionId: createChoiceDefinitionId("athletics_def"),
       originGrantId: createEntityId("soldier"),
-      selectedOptionIds: [createEntityId("skill_athletics")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("skill_athletics")] },
     });
 
     expect(selectProficiencyChoices(draft, [choice])).toBe(false);
@@ -264,7 +264,7 @@ describe("selectLanguageChoices rejects invalid choices", () => {
       instanceId: createChoiceInstanceId("common"),
       definitionId: createChoiceDefinitionId("common_def"),
       originGrantId: createEntityId("human"),
-      selectedOptionIds: [createEntityId("language_common")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("language_common")] },
     });
 
     expect(selectLanguageChoices(draft, [choice])).toBe(false);
@@ -301,7 +301,7 @@ describe("selectProficiencyChoices does not mutate draft on rejection", () => {
       instanceId: createChoiceInstanceId("athletics"),
       definitionId: createChoiceDefinitionId("athletics_def"),
       originGrantId: createEntityId("soldier"),
-      selectedOptionIds: [createEntityId("skill_athletics")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("skill_athletics")] },
     });
 
     selectProficiencyChoices(draft, { athletics: choice });
@@ -316,7 +316,7 @@ describe("selectProficiencyChoices does not mutate draft on rejection", () => {
       instanceId: createChoiceInstanceId("athletics"),
       definitionId: createChoiceDefinitionId("athletics_def"),
       originGrantId: createEntityId("soldier"),
-      selectedOptionIds: [createEntityId("skill_athletics")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("skill_athletics")] },
     });
 
     selectProficiencyChoices(draft, { athletics: choice });
@@ -358,7 +358,7 @@ describe("selectLanguageChoices does not mutate draft on rejection", () => {
       instanceId: createChoiceInstanceId("common"),
       definitionId: createChoiceDefinitionId("common_def"),
       originGrantId: createEntityId("human"),
-      selectedOptionIds: [createEntityId("language_common")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("language_common")] },
     });
 
     selectLanguageChoices(draft, { common: choice });
@@ -373,7 +373,7 @@ describe("selectLanguageChoices does not mutate draft on rejection", () => {
       instanceId: createChoiceInstanceId("common"),
       definitionId: createChoiceDefinitionId("common_def"),
       originGrantId: createEntityId("human"),
-      selectedOptionIds: [createEntityId("language_common")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("language_common")] },
     });
 
     selectLanguageChoices(draft, { common: choice });

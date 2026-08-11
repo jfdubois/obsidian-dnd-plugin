@@ -14,6 +14,7 @@ import {
   extractItemProperties,
   extractRequiresAttunement,
 } from "./item-normalizer-extractors";
+import { extractItemEquipmentGroups } from "./item-equipment-groups";
 
 export type ItemNormalizerDiagnosticCode =
   | "EXCLUDED_SOURCE"
@@ -142,6 +143,7 @@ function normalizeSingleItem(
   const bodySlot = extractItemBodySlot(remaining);
   const properties = extractItemProperties(remaining);
   const requiresAttunement = extractRequiresAttunement(remaining);
+  const equipmentGroups = extractItemEquipmentGroups(remaining);
 
   // 5. Build the item rule
   const item = createItemRule(
@@ -165,6 +167,7 @@ function normalizeSingleItem(
     cost,
     weight,
     bodySlot,
+    equipmentGroups,
   );
 
   return { ok: true, item, diagnostics: Object.freeze(diagnostics) };

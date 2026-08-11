@@ -149,7 +149,8 @@ export function collectFeatEffects(
   collected: CollectedEffect[],
 ): void {
   for (const choice of Object.values(character.selections)) {
-    for (const optionId of choice.selectedOptionIds) {
+    if (choice.selectedValue.type !== "entity-ids") continue;
+    for (const optionId of choice.selectedValue.entityIds) {
       const feat = catalog.getFeat(optionId);
       if (!feat) continue;
       addEffectsFrom(feat.effects, createProvenance("feat", feat.id), collected);
@@ -176,7 +177,7 @@ export function collectItemEffects(
 ): void {
   // Equipped items first (in inventory order)
   for (const itemInstance of character.inventory) {
-    if (!itemInstance.equipped) continue;
+    if (itemInstance.type !== "catalog-item" || !itemInstance.equipped) continue;
     const item = catalog.getItem(itemInstance.itemId);
     if (!item) continue;
     addEffectsFrom(item.effects, createProvenance("item-equipped", item.id), collected);
@@ -185,13 +186,13 @@ export function collectItemEffects(
   // Attuned items second; skip items already processed as equipped
   const equippedIds = new Set<EntityId>();
   for (const itemInstance of character.inventory) {
-    if (itemInstance.equipped) {
+    if (itemInstance.type === "catalog-item" && itemInstance.equipped) {
       equippedIds.add(itemInstance.itemId);
     }
   }
 
   for (const itemInstance of character.inventory) {
-    if (!itemInstance.attuned || equippedIds.has(itemInstance.itemId)) continue;
+    if (itemInstance.type !== "catalog-item" || !itemInstance.attuned || equippedIds.has(itemInstance.itemId)) continue;
     const item = catalog.getItem(itemInstance.itemId);
     if (!item) continue;
     addEffectsFrom(item.effects, createProvenance("item-attuned", item.id), collected);
@@ -204,7 +205,8 @@ export function collectOptionalFeatureEffects(
   collected: CollectedEffect[],
 ): void {
   for (const choice of Object.values(character.selections)) {
-    for (const optionId of choice.selectedOptionIds) {
+    if (choice.selectedValue.type !== "entity-ids") continue;
+    for (const optionId of choice.selectedValue.entityIds) {
       const optFeature = catalog.getOptionalFeature(optionId);
       if (!optFeature) continue;
       addEffectsFrom(optFeature.effects, createProvenance("optional-feature", optFeature.id), collected);

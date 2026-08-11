@@ -76,7 +76,7 @@ const humanDetailPath = "species/human.json";
 
 function mockManifest() {
   mockResponse(createCatalogManifest({
-    schemaVersion: 1,
+    schemaVersion: 2,
     catalogRevision: rev,
     sourceRevision: "src-001",
     builderVersion: "0.1.0",

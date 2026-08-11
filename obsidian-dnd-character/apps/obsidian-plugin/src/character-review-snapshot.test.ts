@@ -41,7 +41,7 @@ describe("buildReviewSnapshot — positive", () => {
         instanceId: createChoiceInstanceId("species-trait-1"),
         definitionId: createChoiceDefinitionId("ability-increase"),
         originGrantId: createEntityId("wizard"),
-        selectedOptionIds: [createEntityId("int-increase")],
+        selectedValue: { type: "entity-ids", entityIds: [createEntityId("int-increase")] },
       }),
     };
     draft.background.backgroundId = createEntityId("sage");
@@ -50,7 +50,7 @@ describe("buildReviewSnapshot — positive", () => {
         instanceId: createChoiceInstanceId("bg-skill-1"),
         definitionId: createChoiceDefinitionId("skill-choices"),
         originGrantId: createEntityId("sage"),
-        selectedOptionIds: [createEntityId("arcana"), createEntityId("history")],
+        selectedValue: { type: "entity-ids", entityIds: [createEntityId("arcana"), createEntityId("history")] },
       }),
     };
     draft.class.classId = createEntityId("wizard");
@@ -60,7 +60,7 @@ describe("buildReviewSnapshot — positive", () => {
         instanceId: createChoiceInstanceId("class-starting-equip"),
         definitionId: createChoiceDefinitionId("starting-equipment"),
         originGrantId: createEntityId("wizard"),
-        selectedOptionIds: [createEntityId("quarterstaff")],
+        selectedValue: { type: "entity-ids", entityIds: [createEntityId("quarterstaff")] },
       }),
     };
     draft.abilities.method = "standard-array";
@@ -87,6 +87,7 @@ describe("buildReviewSnapshot — positive", () => {
     draft.equipment.items = [
       {
         instanceId: createItemInstanceId("weapon-1"),
+        type: "catalog-item",
         itemId: createEntityId("quarterstaff"),
         quantity: 1,
         equipped: true,

@@ -30,7 +30,7 @@ export function createValidInput(
   extraSummaries?: CatalogEntitySummary[],
 ): CatalogPublisherInput {
   const manifest = generateManifest({
-    schemaVersion: 1,
+    schemaVersion: 2,
     catalogRevision: createCatalogRevision("test-rev-001"),
     sourceRevision: "abc1234",
     builderVersion: "0.1.0",

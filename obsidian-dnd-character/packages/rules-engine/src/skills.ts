@@ -6,6 +6,7 @@ import type {
   ConditionalRollModeEffect,
   ProficiencyRef,
   ProficiencySkillRef,
+  AddProficiencyTarget,
   RollPredicate,
   RollMode,
   RuleEffect,
@@ -90,8 +91,10 @@ function isConditionalRollModeEffect(
 }
 
 function isProficiencySkillRef(
-  prof: ProficiencyRef,
+  prof: AddProficiencyTarget,
 ): prof is ProficiencySkillRef {
+  // WeaponProficiencyScope has "type", ProficiencyRef has "kind"
+  if ("type" in prof) return false;
   return prof.kind === "skill";
 }
 

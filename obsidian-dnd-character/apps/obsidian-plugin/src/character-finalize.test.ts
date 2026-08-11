@@ -49,7 +49,7 @@ function makeCompleteDraft(): ReturnType<typeof createEmptyCharacterDraft> {
       instanceId: createChoiceInstanceId("feat-1"),
       definitionId: createChoiceDefinitionId("feat-choice-1"),
       originGrantId: createEntityId("species:2024:xphb:human"),
-      selectedOptionIds: [createEntityId("feat:2024:xphb:tough")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("feat:2024:xphb:tough")] },
     } as CharacterChoice,
   };
 
@@ -57,6 +57,7 @@ function makeCompleteDraft(): ReturnType<typeof createEmptyCharacterDraft> {
   draft.equipment.items = [
     {
       instanceId: createItemInstanceId("item-1"),
+      type: "catalog-item",
       itemId: createEntityId("item:2024:xphb:longsword"),
       quantity: 1,
       equipped: false,
@@ -149,7 +150,7 @@ describe("finalizeCharacter", () => {
         instanceId: createChoiceInstanceId("feat-1"),
         definitionId: createChoiceDefinitionId("feat-choice-1"),
         originGrantId: createEntityId("species:2024:xphb:human"),
-        selectedOptionIds: [createEntityId("feat:2024:xphb:tough")],
+        selectedValue: { type: "entity-ids", entityIds: [createEntityId("feat:2024:xphb:tough")] },
       } as CharacterChoice,
     };
 
@@ -159,7 +160,7 @@ describe("finalizeCharacter", () => {
         instanceId: createChoiceInstanceId("bg-feat"),
         definitionId: createChoiceDefinitionId("bg-feat-def"),
         originGrantId: createEntityId("background:2024:xphb:soldier"),
-        selectedOptionIds: [createEntityId("feat:2024:xphb:observant")],
+        selectedValue: { type: "entity-ids", entityIds: [createEntityId("feat:2024:xphb:observant")] },
       } as CharacterChoice,
     };
 
@@ -193,7 +194,7 @@ describe("finalizeCharacter", () => {
 
     expect(result).not.toBeNull();
     expect(result!.inventory).toHaveLength(1);
-    expect(result!.inventory[0]!.itemId).toBe(createEntityId("item:2024:xphb:longsword"));
+    expect(result!.inventory[0]).toMatchObject({ type: "catalog-item", itemId: createEntityId("item:2024:xphb:longsword") });
   });
 
   it("does not persist candidate lists or catalog copies", () => {
@@ -292,6 +293,6 @@ describe("finalizeCharacter", () => {
     const result = finalizeCharacter(draft);
 
     expect(result).not.toBeNull();
-    expect(result!.schemaVersion).toBe(1);
+    expect(result!.schemaVersion).toBe(2);
   });
 });

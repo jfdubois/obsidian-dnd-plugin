@@ -17,6 +17,8 @@ import type { RuleEffect } from "./effect";
 import { isRuleEffect } from "./effect";
 import type { RenderNode } from "./render-node";
 import { isRenderNode } from "./render-node";
+import type { RuleGrant } from "./rule-grant";
+import { isRuleGrant } from "./rule-grant";
 
 /* ── BackgroundRule ──────────────────────────────────────────────
     Complete background definition extending RuleEntity fields with
@@ -36,6 +38,7 @@ export interface BackgroundRule {
   content: RenderNode[];
   prerequisites: RulePrerequisite[];
   effects: RuleEffect[];
+  grants: RuleGrant[];
   choices: ChoiceDefinition[];
   dependencies: EntityId[];
   skillProficiencies: EntityId[];
@@ -73,6 +76,8 @@ export function isBackgroundRule(value: unknown): value is BackgroundRule {
   if (!Array.isArray(obj.effects)) return false;
   if (!obj.effects.every((e: unknown) => isRuleEffect(e))) return false;
 
+  if (!Array.isArray(obj.grants) || !obj.grants.every((grant: unknown) => isRuleGrant(grant))) return false;
+
   if (!Array.isArray(obj.choices)) return false;
   if (!obj.choices.every((c: unknown) => isChoiceDefinition(c))) return false;
 
@@ -105,6 +110,7 @@ export function createBackgroundRule(
   page?: number,
   summary?: string,
   featureId?: EntityId,
+  grants: RuleGrant[] = [],
 ): BackgroundRule {
   return {
     id,
@@ -119,6 +125,7 @@ export function createBackgroundRule(
     content: [...content],
     prerequisites: [...prerequisites],
     effects: [...effects],
+    grants: [...grants],
     choices: [...choices],
     dependencies: [...dependencies],
     skillProficiencies: [...skillProficiencies],

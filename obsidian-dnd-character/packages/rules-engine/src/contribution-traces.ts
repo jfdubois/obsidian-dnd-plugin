@@ -83,6 +83,18 @@ export function detailForProficiencyEffect(
   provenance: EffectProvenance,
 ): string {
   const prof = effect.proficiency;
+
+  // Handle WeaponProficiencyScope (has "type" instead of "kind")
+  if ("type" in prof) {
+    if (prof.type === "weapon-category") {
+      return `weapon proficiency: ${prof.category} weapons from ${provenanceLabel(provenance)}`;
+    }
+    if (prof.type === "weapon-filter") {
+      const props = prof.requiredProperties.join("+");
+      return `weapon proficiency: ${prof.category} (${props}) from ${provenanceLabel(provenance)}`;
+    }
+  }
+
   switch (prof.kind) {
     case "skill": {
       const skillId = prof.entityId as unknown as string;

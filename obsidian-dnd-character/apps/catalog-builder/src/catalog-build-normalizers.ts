@@ -24,6 +24,7 @@ import { normalizeItems } from "./item-normalizer.js";
 import { normalizeOptionalFeatures } from "./optional-feature-normalizer.js";
 import { normalizeSkills } from "./skill-normalizer.js";
 import { normalizeLanguages } from "./language-normalizer.js";
+import type { DeferredEquipmentIntent } from "./deferred-equipment-resolution.js";
 import { loadClassIndex } from "./class-index-loader.js";
 import { resolveCopyWithMods } from "./mod-copy-resolver.js";
 import {
@@ -35,6 +36,7 @@ import {
 export interface NormalizerResult {
   entities: CatalogableEntity[];
   diagnostics: readonly unknown[];
+  deferredEquipment: readonly DeferredEquipmentIntent[];
 }
 
 /* ── RawRecord normalizers (species, backgrounds) ──────────────── */
@@ -50,7 +52,7 @@ function normalizeSpeciesDirect(
     sourcePath,
     entityKind: "species",
   });
-  return { entities: result.species as unknown as CatalogableEntity[], diagnostics: result.diagnostics };
+  return { entities: result.species as unknown as CatalogableEntity[], diagnostics: result.diagnostics, deferredEquipment: [] };
 }
 
 function normalizeBackgroundDirect(
@@ -64,7 +66,7 @@ function normalizeBackgroundDirect(
     sourcePath,
     entityKind: "background",
   });
-  return { entities: result.backgrounds as unknown as CatalogableEntity[], diagnostics: result.diagnostics };
+  return { entities: result.backgrounds as unknown as CatalogableEntity[], diagnostics: result.diagnostics, deferredEquipment: result.deferredEquipment };
 }
 
 export function normalizeRawRecordKind(
@@ -80,7 +82,7 @@ export function normalizeRawRecordKind(
     case "background":
       return normalizeBackgroundDirect(records, context, sourcePath);
     default:
-      return { entities: [], diagnostics: [] };
+      return { entities: [], diagnostics: [], deferredEquipment: [] };
   }
 }
 
@@ -91,7 +93,7 @@ function normalizeFeatDirect(
   context: { knownPinnedSources: FrozenReadonlySet<string> },
 ): NormalizerResult {
   const result = normalizeFeats({ records, context: context as FeatSourceScopeContext });
-  return { entities: result.feats as unknown as CatalogableEntity[], diagnostics: result.diagnostics };
+  return { entities: result.feats as unknown as CatalogableEntity[], diagnostics: result.diagnostics, deferredEquipment: [] };
 }
 
 function normalizeSpellDirect(
@@ -99,7 +101,7 @@ function normalizeSpellDirect(
   context: { knownPinnedSources: FrozenReadonlySet<string> },
 ): NormalizerResult {
   const result = normalizeSpells({ records, context: context as SpellSourceScopeContext });
-  return { entities: result.spells as unknown as CatalogableEntity[], diagnostics: result.diagnostics };
+  return { entities: result.spells as unknown as CatalogableEntity[], diagnostics: result.diagnostics, deferredEquipment: [] };
 }
 
 function normalizeItemDirect(
@@ -107,7 +109,7 @@ function normalizeItemDirect(
   context: { knownPinnedSources: FrozenReadonlySet<string> },
 ): NormalizerResult {
   const result = normalizeItems({ records, context: context as ItemSourceScopeContext });
-  return { entities: result.items as unknown as CatalogableEntity[], diagnostics: result.diagnostics };
+  return { entities: result.items as unknown as CatalogableEntity[], diagnostics: result.diagnostics, deferredEquipment: [] };
 }
 
 function normalizeSkillDirect(
@@ -115,7 +117,7 @@ function normalizeSkillDirect(
   context: { knownPinnedSources: FrozenReadonlySet<string> },
 ): NormalizerResult {
   const result = normalizeSkills({ records, context: context as SkillSourceScopeContext });
-  return { entities: result.skills as unknown as CatalogableEntity[], diagnostics: result.diagnostics };
+  return { entities: result.skills as unknown as CatalogableEntity[], diagnostics: result.diagnostics, deferredEquipment: [] };
 }
 
 function normalizeLanguageDirect(
@@ -123,7 +125,7 @@ function normalizeLanguageDirect(
   context: { knownPinnedSources: FrozenReadonlySet<string> },
 ): NormalizerResult {
   const result = normalizeLanguages({ records, context: context as LanguageSourceScopeContext });
-  return { entities: result.languages as unknown as CatalogableEntity[], diagnostics: result.diagnostics };
+  return { entities: result.languages as unknown as CatalogableEntity[], diagnostics: result.diagnostics, deferredEquipment: [] };
 }
 
 function normalizeClassFeatureDirect(
@@ -131,7 +133,7 @@ function normalizeClassFeatureDirect(
   context: { knownPinnedSources: FrozenReadonlySet<string> },
 ): NormalizerResult {
   const result = normalizeClassFeatures({ records, context: context as ClassSourceScopeContext });
-  return { entities: result.features as unknown as CatalogableEntity[], diagnostics: result.diagnostics };
+  return { entities: result.features as unknown as CatalogableEntity[], diagnostics: result.diagnostics, deferredEquipment: [] };
 }
 
 function normalizeSubclassFeatureDirect(
@@ -139,7 +141,7 @@ function normalizeSubclassFeatureDirect(
   context: { knownPinnedSources: FrozenReadonlySet<string> },
 ): NormalizerResult {
   const result = normalizeSubclassFeatures({ records, context: context as ClassSourceScopeContext });
-  return { entities: result.features as unknown as CatalogableEntity[], diagnostics: result.diagnostics };
+  return { entities: result.features as unknown as CatalogableEntity[], diagnostics: result.diagnostics, deferredEquipment: [] };
 }
 
 function normalizeOptionalFeatureDirect(
@@ -147,7 +149,7 @@ function normalizeOptionalFeatureDirect(
   context: { knownPinnedSources: FrozenReadonlySet<string> },
 ): NormalizerResult {
   const result = normalizeOptionalFeatures({ records, context: context as OptionalFeatureSourceScopeContext });
-  return { entities: result.optionalFeatures as unknown as CatalogableEntity[], diagnostics: result.diagnostics };
+  return { entities: result.optionalFeatures as unknown as CatalogableEntity[], diagnostics: result.diagnostics, deferredEquipment: [] };
 }
 
 /** Resolve copy+mod inheritance for a batch of RawRecord records. */
@@ -211,7 +213,7 @@ export function normalizeCopyModKind(
     case "optional-feature":
       return normalizeOptionalFeatureDirect(resolved.resolved, context);
     default:
-      return { entities: [], diagnostics: resolved.diagnostics };
+      return { entities: [], diagnostics: resolved.diagnostics, deferredEquipment: [] };
   }
 }
 

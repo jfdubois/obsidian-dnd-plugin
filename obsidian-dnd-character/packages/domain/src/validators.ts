@@ -4,6 +4,8 @@ import type {
   CharacterId,
   CatalogRevision,
   ChoiceDefinitionId,
+  ChoiceOptionId,
+  RuleGrantId,
   ChoiceInstanceId,
   ClassInstanceId,
   ItemInstanceId,
@@ -35,6 +37,14 @@ export function isCatalogRevision(value: unknown): value is CatalogRevision {
 }
 
 export function isChoiceDefinitionId(value: unknown): value is ChoiceDefinitionId {
+  return isNonEmptyString(value);
+}
+
+export function isChoiceOptionId(value: unknown): value is ChoiceOptionId {
+  return isNonEmptyString(value);
+}
+
+export function isRuleGrantId(value: unknown): value is RuleGrantId {
   return isNonEmptyString(value);
 }
 
@@ -83,6 +93,18 @@ export function assertCatalogRevision(value: unknown, context?: string): asserts
 export function assertChoiceDefinitionId(value: unknown, context?: string): asserts value is ChoiceDefinitionId {
   if (!isChoiceDefinitionId(value)) {
     throw new Error(`Invalid ChoiceDefinitionId${context ? ` in ${context}` : ""}: expected non-empty string, got ${JSON.stringify(value)}`);
+  }
+}
+
+export function assertChoiceOptionId(value: unknown, context?: string): asserts value is ChoiceOptionId {
+  if (!isChoiceOptionId(value)) {
+    throw new Error(`Invalid ChoiceOptionId${context ? ` in ${context}` : ""}: expected non-empty string, got ${JSON.stringify(value)}`);
+  }
+}
+
+export function assertRuleGrantId(value: unknown, context?: string): asserts value is RuleGrantId {
+  if (!isRuleGrantId(value)) {
+    throw new Error(`Invalid RuleGrantId${context ? ` in ${context}` : ""}: expected non-empty string, got ${JSON.stringify(value)}`);
   }
 }
 

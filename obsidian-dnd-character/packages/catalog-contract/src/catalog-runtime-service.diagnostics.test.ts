@@ -15,7 +15,7 @@ const REVISION = createCatalogRevision('rev-test-001');
 
 const _makeManifest = () =>
   createCatalogManifest({
-    schemaVersion: 1,
+    schemaVersion: 2,
     catalogRevision: REVISION,
     sourceRevision: 'abc123',
     builderVersion: '0.1.0',

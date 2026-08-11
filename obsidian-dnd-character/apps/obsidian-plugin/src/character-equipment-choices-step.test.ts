@@ -41,7 +41,7 @@ describe("selectEquipmentChoices with valid input", () => {
       instanceId: createChoiceInstanceId("longsword"),
       definitionId: createChoiceDefinitionId("weapon_choice_def"),
       originGrantId: createEntityId("fighter"),
-      selectedOptionIds: [createEntityId("weapon_longsword")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("weapon_longsword")] },
     });
 
     const result = selectEquipmentChoices(draft, { longsword });
@@ -59,7 +59,7 @@ describe("selectEquipmentChoices with valid input", () => {
       instanceId: createChoiceInstanceId("shield"),
       definitionId: createChoiceDefinitionId("armor_choice_def"),
       originGrantId: createEntityId("fighter"),
-      selectedOptionIds: [createEntityId("armor_shield")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("armor_shield")] },
     });
 
     selectEquipmentChoices(draft, { shield: choice });
@@ -86,7 +86,7 @@ describe("selectEquipmentChoices with valid input", () => {
       instanceId: createChoiceInstanceId("longsword"),
       definitionId: createChoiceDefinitionId("weapon_choice_def"),
       originGrantId: createEntityId("fighter"),
-      selectedOptionIds: [createEntityId("weapon_longsword")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("weapon_longsword")] },
     });
 
     selectEquipmentChoices(draft, { longsword: choice1 });
@@ -96,7 +96,7 @@ describe("selectEquipmentChoices with valid input", () => {
       instanceId: createChoiceInstanceId("greatsword"),
       definitionId: createChoiceDefinitionId("weapon_choice_def"),
       originGrantId: createEntityId("fighter"),
-      selectedOptionIds: [createEntityId("weapon_greatsword")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("weapon_greatsword")] },
     });
 
     selectEquipmentChoices(draft, { greatsword: choice2 });
@@ -113,7 +113,7 @@ describe("selectEquipmentChoices with valid input", () => {
       instanceId: createChoiceInstanceId("longbow"),
       definitionId: createChoiceDefinitionId("weapon_choice_def"),
       originGrantId: createEntityId("ranger"),
-      selectedOptionIds: [createEntityId("weapon_longbow")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("weapon_longbow")] },
     });
 
     const result = selectEquipmentChoices(draft, { longbow: choice });
@@ -129,7 +129,7 @@ describe("selectEquipmentChoices with valid input", () => {
       instanceId: createChoiceInstanceId("rapier"),
       definitionId: createChoiceDefinitionId("weapon_choice_def"),
       originGrantId: createEntityId("rogue"),
-      selectedOptionIds: [createEntityId("weapon_rapier")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("weapon_rapier")] },
     });
 
     const result = selectEquipmentChoices(draft, { rapier: choice });
@@ -145,7 +145,7 @@ describe("selectEquipmentChoices with valid input", () => {
       instanceId: createChoiceInstanceId("shield"),
       definitionId: createChoiceDefinitionId("armor_choice_def"),
       originGrantId: createEntityId("fighter"),
-      selectedOptionIds: [createEntityId("armor_shield")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("armor_shield")] },
     });
     const input = { shield: choice };
 

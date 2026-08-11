@@ -218,7 +218,7 @@ describe("combined effects", () => {
           instanceId: cii("choice-feat-1"),
           definitionId: cdi("def-feat-1"),
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [featId],
+          selectedValue: { type: "entity-ids", entityIds: [featId] },
         },
       },
       abilities: { scores: { STR: 10, DEX: 14, CON: 10, INT: 10, WIS: 10, CHA: 10 } },

@@ -3,7 +3,7 @@
    Bump these values when the catalog contract changes.           */
 
 export const CATALOG_API_VERSION = 1 as const;
-export const CATALOG_SCHEMA_VERSION = 1 as const;
+export const CATALOG_SCHEMA_VERSION = 2 as const;
 
 export type CatalogApiVersion = typeof CATALOG_API_VERSION;
 

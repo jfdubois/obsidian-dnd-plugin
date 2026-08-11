@@ -7,7 +7,7 @@ import { selectRuleset } from "./character-ruleset-step";
 import { selectSources } from "./character-source-step";
 import { selectSpecies } from "./character-species-step";
 import { renderSpeciesChoices as renderSpeciesChoicesRuntime } from "./character-species-choices-renderer";
-import type { CatalogEntitySummary, ChoiceDefinitionType } from "@obsidian-dnd/catalog-contract";
+import type { CatalogEntitySummary, QueryChoiceDefinitionType } from "@obsidian-dnd/catalog-contract";
 import {
   createCatalogEntitySummary,
   createChoiceDefinition,
@@ -116,7 +116,7 @@ function createIsEntityEligible(): (sourceId: string, access: string) => boolean
 function createSpecies(
   id: ReturnType<typeof createEntityId> = humanId,
   name = "Human",
-  choiceDef?: { defId: string; label: string; type: ChoiceDefinitionType; min: number; max: number; queryKind: RuleEntityKind },
+  choiceDef?: { defId: string; label: string; type: QueryChoiceDefinitionType; min: number; max: number; queryKind: RuleEntityKind },
   ruleset: Ruleset = "2024",
 ): ReturnType<typeof createSpeciesRule> {
   const choices = choiceDef
@@ -232,8 +232,8 @@ describe("renderSpeciesChoices", () => {
     expect(container.textContent).toContain("Elven Traits");
     expect(container.textContent).toContain("1 required");
   });
-  it("renders ability choice dropdown", async () => {
-    const species = createSpecies(humanId, "Human", { defId: "species-human-ability", label: "Ability Score Increase", type: "ability", min: 1, max: 1, queryKind: "feat" });
+  it("renders an entity choice without inventing ability candidates", async () => {
+    const species = createSpecies(humanId, "Human", { defId: "species-human-ability", label: "Ability Score Increase", type: "entity", min: 1, max: 1, queryKind: "feat" });
     const catalog = createMockCatalogService(species);
     selectSpecies(draft, humanId);
     await renderSpeciesChoices(
@@ -241,12 +241,6 @@ describe("renderSpeciesChoices", () => {
       createIsEntityEligible(), onChoicesResolved,
     );
     expect(container.textContent).toContain("Ability Score Increase");
-    expect(container.textContent).toContain("Strength");
-    expect(container.textContent).toContain("Dexterity");
-    expect(container.textContent).toContain("Constitution");
-    expect(container.textContent).toContain("Intelligence");
-    expect(container.textContent).toContain("Wisdom");
-    expect(container.textContent).toContain("Charisma");
     expect(container.textContent).toContain("Confirm choices");
   });
   it("renders multi-select checkboxes for max > 1", async () => {

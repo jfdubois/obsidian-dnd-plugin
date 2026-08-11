@@ -40,7 +40,7 @@ describe("selectEquipmentChoices rejects when deps not resolved", () => {
       instanceId: createChoiceInstanceId("longsword"),
       definitionId: createChoiceDefinitionId("weapon_choice_def"),
       originGrantId: createEntityId("fighter"),
-      selectedOptionIds: [createEntityId("weapon_longsword")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("weapon_longsword")] },
     });
 
     const result = selectEquipmentChoices(draft, { longsword: choice });
@@ -58,7 +58,7 @@ describe("selectEquipmentChoices rejects when deps not resolved", () => {
       instanceId: createChoiceInstanceId("longsword"),
       definitionId: createChoiceDefinitionId("weapon_choice_def"),
       originGrantId: createEntityId("fighter"),
-      selectedOptionIds: [createEntityId("weapon_longsword")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("weapon_longsword")] },
     });
 
     const result = selectEquipmentChoices(draft, { longsword: choice });
@@ -72,7 +72,7 @@ describe("selectEquipmentChoices rejects when deps not resolved", () => {
       instanceId: createChoiceInstanceId("longsword"),
       definitionId: createChoiceDefinitionId("weapon_choice_def"),
       originGrantId: createEntityId("fighter"),
-      selectedOptionIds: [createEntityId("weapon_longsword")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("weapon_longsword")] },
     });
 
     const result = selectEquipmentChoices(draft, { longsword: choice });
@@ -119,7 +119,7 @@ describe("selectEquipmentChoices rejects invalid choices", () => {
       instanceId: createChoiceInstanceId("longsword"),
       definitionId: createChoiceDefinitionId("weapon_choice_def"),
       originGrantId: createEntityId("fighter"),
-      selectedOptionIds: [createEntityId("weapon_longsword")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("weapon_longsword")] },
     });
 
     expect(selectEquipmentChoices(draft, [choice])).toBe(false);
@@ -156,7 +156,7 @@ describe("selectEquipmentChoices does not mutate draft on rejection", () => {
       instanceId: createChoiceInstanceId("longsword"),
       definitionId: createChoiceDefinitionId("weapon_choice_def"),
       originGrantId: createEntityId("fighter"),
-      selectedOptionIds: [createEntityId("weapon_longsword")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("weapon_longsword")] },
     });
 
     selectEquipmentChoices(draft, { longsword: choice });
@@ -171,7 +171,7 @@ describe("selectEquipmentChoices does not mutate draft on rejection", () => {
       instanceId: createChoiceInstanceId("longsword"),
       definitionId: createChoiceDefinitionId("weapon_choice_def"),
       originGrantId: createEntityId("fighter"),
-      selectedOptionIds: [createEntityId("weapon_longsword")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("weapon_longsword")] },
     });
 
     selectEquipmentChoices(draft, { longsword: choice });

@@ -66,7 +66,7 @@ function createMockClient(): CatalogClient & { rejectNext: boolean } {
     negotiateSchema: vi.fn(),
     fetchManifest: vi.fn(async () =>
       createCatalogManifest({
-        schemaVersion: 1,
+        schemaVersion: 2,
         catalogRevision: rev,
         sourceRevision: srcRevision,
         builderVersion: "0.1.0",
@@ -125,7 +125,7 @@ function createActiveRuntime() {
   });
   runtime.revision = rev;
   runtime.manifest = createCatalogManifest({
-    schemaVersion: 1,
+    schemaVersion: 2,
     catalogRevision: rev,
     sourceRevision: srcRevision,
     builderVersion: "0.1.0",
@@ -165,7 +165,7 @@ describe("CatalogService production cache validation", () => {
   it("validates manifest cache with runtime validator", async () => {
     // Pre-populate cache with valid manifest
     const manifest = createCatalogManifest({
-      schemaVersion: 1,
+      schemaVersion: 2,
       catalogRevision: rev,
       sourceRevision: srcRevision,
       builderVersion: "0.1.0",

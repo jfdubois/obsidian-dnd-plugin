@@ -225,7 +225,7 @@ export function resolveReferences(
     }
     if (isBackgroundRule(entity)) {
       for (const ref of extractBackgroundReferences(entity)) {
-        const code = ref.field === "featureId" ? "BROKEN_BACKGROUND_FEATURE_REF" : "BROKEN_SKILL_REF";
+        const code = ref.field === "featureId" ? "BROKEN_BACKGROUND_FEATURE_REF" : ref.field === "skillProficiencies" ? "BROKEN_SKILL_REF" : "BROKEN_DEPENDENCY_REF";
         addLinkOrDiagnostic(sourceId, sourceKind, sourceName, ref.field, ref.targetId, code);
       }
     }

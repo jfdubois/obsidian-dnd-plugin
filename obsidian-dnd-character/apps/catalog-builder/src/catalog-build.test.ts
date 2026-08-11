@@ -5,6 +5,7 @@ import * as os from "node:os";
 import { buildCatalog } from "./catalog-build.js";
 import { readSourceManifest } from "./source-manifest.js";
 import { createBuilderConfig, BUILDER_VERSION } from "./config.js";
+import { CATALOG_SCHEMA_VERSION } from "@obsidian-dnd/catalog-contract";
 
 /* ── Temp directory helpers ────────────────────────────────────── */
 
@@ -96,7 +97,7 @@ describe("catalog build — real 5eTools pipeline", () => {
     expect(fs.existsSync(manifestPath)).toBe(true);
 
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
-    expect(manifest.schemaVersion).toBe(1);
+    expect(manifest.schemaVersion).toBe(CATALOG_SCHEMA_VERSION);
     expect(manifest.catalogRevision).toBe(result.catalogRevision);
     expect(manifest.sourceRevision).toBe(result.sourceRevision);
   });

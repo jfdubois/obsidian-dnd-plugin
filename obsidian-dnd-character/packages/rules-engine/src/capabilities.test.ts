@@ -76,7 +76,7 @@ describe("calculateCapabilities - no food required", () => {
           instanceId: cii("choice-feat-1"),
           definitionId: cdi("def-feat-1"),
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-ascetic")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-ascetic")] },
         },
       },
     });
@@ -161,7 +161,7 @@ describe("calculateCapabilities - combined", () => {
           instanceId: cii("choice-feat-1"),
           definitionId: cdi("def-feat-1"),
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-ascetic")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-ascetic")] },
         },
       },
     });
@@ -214,7 +214,7 @@ describe("calculateCapabilities - deduplication", () => {
           instanceId: cii("choice-feat-1"),
           definitionId: cdi("def-feat-1"),
           originGrantId: eid("grant-feat-1"),
-          selectedOptionIds: [eid("feat-ascetic")],
+          selectedValue: { type: "entity-ids", entityIds: [eid("feat-ascetic")] },
         },
       },
     });

@@ -1,65 +1,28 @@
 import { describe, it, expect } from "vitest";
-import {
-  createEntityId,
-  createChoiceInstanceId,
-  createChoiceDefinitionId,
-} from "@obsidian-dnd/domain";
-import {
-  isCharacterChoice,
-  createCharacterChoice,
-} from "./character-choice";
+import { createChoiceDefinitionId, createChoiceInstanceId, createChoiceOptionId, createEntityId } from "@obsidian-dnd/domain";
+import { createCharacterChoice, isCharacterChoice, isCharacterChoiceSelectedValue } from "./character-choice";
+
+const identity = { instanceId: createChoiceInstanceId("choice-1"), definitionId: createChoiceDefinitionId("choice-def-1"), originGrantId: createEntityId("class:2024:xphb:fighter") };
 
 describe("CharacterChoice", () => {
-  it("accepts valid choice", () => {
-    const choice = createCharacterChoice({
-      instanceId: createChoiceInstanceId("choice-1"),
-      definitionId: createChoiceDefinitionId("choice-def-1"),
-      originGrantId: createEntityId("class:2024:xphb:fighter"),
-      selectedOptionIds: [createEntityId("feat:2024:xphb:tough")],
-    });
-    expect(isCharacterChoice(choice)).toBe(true);
-    expect(choice.selectedOptionIds.length).toBe(1);
-  });
-
-  it("accepts choice with multiple selected options", () => {
-    const choice = createCharacterChoice({
-      instanceId: createChoiceInstanceId("choice-1"),
-      definitionId: createChoiceDefinitionId("choice-def-1"),
-      originGrantId: createEntityId("background:2024:xphb:soldier"),
-      selectedOptionIds: [
-        createEntityId("skill:2024:xphb:athletics"),
-        createEntityId("skill:2024:xphb:intimidation"),
-      ],
-    });
+  it("accepts entity selections including an empty legacy-permitted selection", () => {
+    const choice = createCharacterChoice({ ...identity, selectedValue: { type: "entity-ids", entityIds: [] } });
     expect(isCharacterChoice(choice)).toBe(true);
   });
-
-  it("rejects choice with invalid instanceId", () => {
-    expect(isCharacterChoice({
-      instanceId: null,
-      definitionId: createChoiceDefinitionId("choice-def-1"),
-      originGrantId: createEntityId("class:2024:xphb:fighter"),
-      selectedOptionIds: [],
-    })).toBe(false);
+  it("accepts entity, ability-allocation, and closed-option selected values", () => {
+    expect(isCharacterChoiceSelectedValue({ type: "entity-ids", entityIds: [createEntityId("feat:x")] })).toBe(true);
+    expect(isCharacterChoiceSelectedValue({ type: "ability-allocation", allocations: [{ ability: "STR", bonus: 2 }] })).toBe(true);
+    expect(isCharacterChoiceSelectedValue({ type: "option-ids", optionIds: [createChoiceOptionId("option:x")] })).toBe(true);
   });
-
-  it("rejects choice with non-entity selectedOptionIds", () => {
-    expect(isCharacterChoice({
-      instanceId: createChoiceInstanceId("choice-1"),
-      definitionId: createChoiceDefinitionId("choice-def-1"),
-      originGrantId: createEntityId("class:2024:xphb:fighter"),
-      selectedOptionIds: [123],
-    })).toBe(false);
+  it("rejects malformed selected values", () => {
+    expect(isCharacterChoiceSelectedValue({ type: "ability-allocation", allocations: [{ ability: "STR", bonus: 1 }, { ability: "STR", bonus: 1 }] })).toBe(false);
+    expect(isCharacterChoiceSelectedValue({ type: "option-ids", optionIds: [""] })).toBe(false);
+    expect(isCharacterChoice({ ...identity, selectedOptionIds: [] })).toBe(false);
   });
-
-  it("factory produces deep copy of selectedOptionIds", () => {
-    const options = [createEntityId("feat:2024:xphb:tough")];
-    const choice = createCharacterChoice({
-      instanceId: createChoiceInstanceId("choice-1"),
-      definitionId: createChoiceDefinitionId("choice-def-1"),
-      originGrantId: createEntityId("class:2024:xphb:fighter"),
-      selectedOptionIds: options,
-    });
-    expect(choice.selectedOptionIds).not.toBe(options);
+  it("copies nested selected values", () => {
+    const ids = [createEntityId("feat:x")];
+    const choice = createCharacterChoice({ ...identity, selectedValue: { type: "entity-ids", entityIds: ids } });
+    expect(choice.selectedValue.type).toBe("entity-ids");
+    if (choice.selectedValue.type === "entity-ids") expect(choice.selectedValue.entityIds).not.toBe(ids);
   });
 });

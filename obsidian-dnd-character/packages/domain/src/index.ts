@@ -5,6 +5,8 @@ export {
   type CharacterId,
   type CatalogRevision,
   type ChoiceDefinitionId,
+  type ChoiceOptionId,
+  type RuleGrantId,
   type ChoiceInstanceId,
   type ClassInstanceId,
   type ItemInstanceId,
@@ -15,6 +17,8 @@ export {
   createCharacterId,
   createCatalogRevision,
   createChoiceDefinitionId,
+  createChoiceOptionId,
+  createRuleGrantId,
   createChoiceInstanceId,
   createClassInstanceId,
   createItemInstanceId,
@@ -25,6 +29,8 @@ export {
   characterIdStr,
   catalogRevisionStr,
   choiceDefinitionIdStr,
+  choiceOptionIdStr,
+  ruleGrantIdStr,
   choiceInstanceIdStr,
   classInstanceIdStr,
   itemInstanceIdStr,
@@ -62,6 +68,8 @@ export {
   isCharacterId,
   isCatalogRevision,
   isChoiceDefinitionId,
+  isChoiceOptionId,
+  isRuleGrantId,
   isChoiceInstanceId,
   isClassInstanceId,
   isItemInstanceId,
@@ -72,6 +80,8 @@ export {
   assertCharacterId,
   assertCatalogRevision,
   assertChoiceDefinitionId,
+  assertChoiceOptionId,
+  assertRuleGrantId,
   assertChoiceInstanceId,
   assertClassInstanceId,
   assertItemInstanceId,
@@ -107,3 +117,18 @@ export {
   createCanonicalEntityId,
   createCanonicalEntityIds,
 } from "./canonical-entity-id";
+
+export {
+  /* Weapon proficiency types */
+  type WeaponCategory,
+  type WeaponPropertyRef,
+  type ProficiencyGroup,
+  /* Weapon proficiency constants */
+  WEAPON_CATEGORIES,
+  WEAPON_PROPERTY_REFS,
+  PROFICIENCY_GROUPS,
+  /* Weapon proficiency guards */
+  isWeaponCategory,
+  isWeaponPropertyRef,
+  isProficiencyGroup,
+} from "./weapon-proficiency";

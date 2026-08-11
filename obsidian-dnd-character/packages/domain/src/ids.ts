@@ -7,6 +7,8 @@ export type SourceId = Brand<string, "SourceId">;
 export type CharacterId = Brand<string, "CharacterId">;
 export type CatalogRevision = Brand<string, "CatalogRevision">;
 export type ChoiceDefinitionId = Brand<string, "ChoiceDefinitionId">;
+export type ChoiceOptionId = Brand<string, "ChoiceOptionId">;
+export type RuleGrantId = Brand<string, "RuleGrantId">;
 export type ChoiceInstanceId = Brand<string, "ChoiceInstanceId">;
 export type ClassInstanceId = Brand<string, "ClassInstanceId">;
 export type ItemInstanceId = Brand<string, "ItemInstanceId">;
@@ -32,6 +34,14 @@ export function createCatalogRevision(value: string): CatalogRevision {
 
 export function createChoiceDefinitionId(value: string): ChoiceDefinitionId {
   return value as ChoiceDefinitionId;
+}
+
+export function createChoiceOptionId(value: string): ChoiceOptionId {
+  return value as ChoiceOptionId;
+}
+
+export function createRuleGrantId(value: string): RuleGrantId {
+  return value as RuleGrantId;
 }
 
 export function createChoiceInstanceId(value: string): ChoiceInstanceId {
@@ -69,6 +79,14 @@ export function catalogRevisionStr(rev: CatalogRevision): string {
 }
 
 export function choiceDefinitionIdStr(id: ChoiceDefinitionId): string {
+  return id;
+}
+
+export function choiceOptionIdStr(id: ChoiceOptionId): string {
+  return id;
+}
+
+export function ruleGrantIdStr(id: RuleGrantId): string {
   return id;
 }
 

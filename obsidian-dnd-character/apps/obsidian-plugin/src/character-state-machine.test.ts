@@ -35,7 +35,7 @@ function buildCompleteDraft() {
       instanceId: createChoiceInstanceId("feat-1"),
       definitionId: createChoiceDefinitionId("feat-choice-1"),
       originGrantId: createEntityId("species:2024:xphb:human"),
-      selectedOptionIds: [createEntityId("feat:2024:xphb:tough")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("feat:2024:xphb:tough")] },
     } as CharacterChoice,
   };
   draft.background.backgroundId = createEntityId("background:2024:xphb:soldier");
@@ -44,7 +44,7 @@ function buildCompleteDraft() {
       instanceId: createChoiceInstanceId("bg-skill"),
       definitionId: createChoiceDefinitionId("skill-choices"),
       originGrantId: createEntityId("background:2024:xphb:soldier"),
-      selectedOptionIds: [createEntityId("skill:2024:xphb:athletics")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("skill:2024:xphb:athletics")] },
     } as CharacterChoice,
   };
   draft.class.classId = createEntityId("class:2024:xphb:fighter");
@@ -53,7 +53,7 @@ function buildCompleteDraft() {
       instanceId: createChoiceInstanceId("class-equip"),
       definitionId: createChoiceDefinitionId("starting-equipment"),
       originGrantId: createEntityId("class:2024:xphb:fighter"),
-      selectedOptionIds: [createEntityId("item:2024:xphb:longsword")],
+      selectedValue: { type: "entity-ids", entityIds: [createEntityId("item:2024:xphb:longsword")] },
     } as CharacterChoice,
   };
   draft.abilities.method = "standard-array";

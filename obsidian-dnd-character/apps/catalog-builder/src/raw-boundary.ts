@@ -54,6 +54,8 @@ const KNOWN_RAW_FIELDS_SET: ReadonlySet<string> = new Set([
   "startingEquipment",
   "equipment",
   "additionalEquipment",
+  "gold",
+  "goldAlternative",
 
   /* ── Spellcasting ──────────────────────────────────────────── */
   "spellcasting",

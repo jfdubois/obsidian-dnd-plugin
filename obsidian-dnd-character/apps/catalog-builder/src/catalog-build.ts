@@ -16,6 +16,7 @@ import { buildInventoryReport } from "./inventory-report.js";
 import { computeChecksums } from "./checksum.js";
 import { publishCatalogRelease } from "./catalog-publisher.js";
 import { createCatalogRevision } from "@obsidian-dnd/domain";
+import { CATALOG_SCHEMA_VERSION } from "@obsidian-dnd/catalog-contract";
 import { resolveEntityKind, RAW_RECORD_KINDS, COPY_MOD_KINDS, collectKnownSources } from "./catalog-build-helpers.js";
 import {
   normalizeRawRecordKind,
@@ -24,6 +25,7 @@ import {
 } from "./catalog-build-normalizers.js";
 import { loadSources } from "./catalog-build-sources.js";
 import { validateRequiredEntityKinds } from "./catalog-build-publication-guard.js";
+import { applyDeferredEquipmentIntents } from "./deferred-equipment-resolution.js";
 
 export interface CatalogBuildResult {
   readonly publishResult: PublishCatalogReleaseResult;
@@ -89,7 +91,8 @@ export function buildCatalog(
   };
 
   /* Step 5: Normalize each entity kind */
-  const allEntities: CatalogableEntity[] = [];
+  let allEntities: CatalogableEntity[] = [];
+  const deferredEquipment = [] as import("./deferred-equipment-resolution.js").DeferredEquipmentIntent[];
   const normalizedKinds = new Set<string>();
 
   // 5a: RawRecord path (species, backgrounds)
@@ -97,6 +100,7 @@ export function buildCatalog(
     if (!RAW_RECORD_KINDS.has(entityKind)) continue;
     const result = normalizeRawRecordKind(entityKind, group.records, group.sourcePath);
     allEntities.push(...result.entities);
+    deferredEquipment.push(...result.deferredEquipment);
     normalizedKinds.add(entityKind);
     if (result.diagnostics.length > 0) {
       diagnostics.push(`${entityKind}: ${result.diagnostics.length} normalization diagnostics`);
@@ -108,6 +112,7 @@ export function buildCatalog(
     if (!COPY_MOD_KINDS.has(entityKind)) continue;
     const result = normalizeCopyModKind(entityKind, group.records, boundaryResult.validatedFiles, group.sourcePath);
     allEntities.push(...result.entities);
+    deferredEquipment.push(...result.deferredEquipment);
     normalizedKinds.add(entityKind);
     if (result.diagnostics.length > 0) {
       diagnostics.push(`${entityKind}: ${result.diagnostics.length} normalization diagnostics`);
@@ -127,12 +132,19 @@ export function buildCatalog(
 
   diagnostics.push(`Normalized ${allEntities.length} entities across ${normalizedKinds.size} kinds`);
 
-  /* Step 6: Build compact index (summaries) */
+  /* Step 6: Resolve builder-only equipment after all ItemRules exist. */
+  const equipmentResolution = applyDeferredEquipmentIntents(allEntities, deferredEquipment);
+  if (!equipmentResolution.ok) return createFailureResult([...equipmentResolution.messages], sourceManifest.commitHash);
+  allEntities = [...equipmentResolution.entities];
+  deferredEquipment.length = 0;
+  if (deferredEquipment.length !== 0) return createFailureResult(["Deferred equipment intents remained after resolution."], sourceManifest.commitHash);
+
+  /* Step 7: Build compact index (summaries) */
   const indexResult = buildCompactIndex(allEntities);
   const summaries = indexResult.index.flatMap((idx) => idx.summaries);
   diagnostics.push(`Built index: ${indexResult.totalEntities} entities, ${indexResult.totalKinds} kinds`);
 
-  /* Step 7: Resolve references */
+  /* Step 8: Resolve references */
   const refResult = resolveReferences({ entities: allEntities });
   if (refResult.diagnostics.length > 0) {
     diagnostics.push(`Reference resolution: ${refResult.diagnostics.length} warnings`);
@@ -149,7 +161,7 @@ export function buildCatalog(
   /* Step 9: Generate manifest */
   const catalogRevision = createCatalogRevision(`5etools-${sourceManifest.shortHash}-${BUILDER_VERSION}`);
   const manifest = generateManifest({
-    schemaVersion: 1,
+    schemaVersion: CATALOG_SCHEMA_VERSION,
     catalogRevision,
     sourceRevision: sourceManifest.commitHash,
     builderVersion: "0.1.0",

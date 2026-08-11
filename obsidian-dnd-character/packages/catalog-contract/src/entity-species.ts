@@ -17,6 +17,8 @@ import type { RuleEffect } from "./effect";
 import { isRuleEffect } from "./effect";
 import type { RenderNode } from "./render-node";
 import { isRenderNode } from "./render-node";
+import type { RuleGrant } from "./rule-grant";
+import { isRuleGrant } from "./rule-grant";
 
 /* ── TraitDefinition ─────────────────────────────────────────────
     A named trait with renderable content. Used by SpeciesRule to
@@ -46,6 +48,7 @@ export interface SpeciesRule {
   content: RenderNode[];
   prerequisites: RulePrerequisite[];
   effects: RuleEffect[];
+  grants: RuleGrant[];
   choices: ChoiceDefinition[];
   dependencies: EntityId[];
   size: string;
@@ -100,6 +103,8 @@ export function isSpeciesRule(value: unknown): value is SpeciesRule {
 
   if (!Array.isArray(obj.effects)) return false;
   if (!obj.effects.every((e: unknown) => isRuleEffect(e))) return false;
+
+  if (!Array.isArray(obj.grants) || !obj.grants.every((grant: unknown) => isRuleGrant(grant))) return false;
 
   if (!Array.isArray(obj.choices)) return false;
   if (!obj.choices.every((c: unknown) => isChoiceDefinition(c))) return false;
@@ -157,6 +162,7 @@ export function createSpeciesRule(
   page?: number,
   summary?: string,
   darkvisionRange?: number,
+  grants: RuleGrant[] = [],
 ): SpeciesRule {
   return {
     id,
@@ -171,6 +177,7 @@ export function createSpeciesRule(
     content: [...content],
     prerequisites: [...prerequisites],
     effects: [...effects],
+    grants: [...grants],
     choices: [...choices],
     dependencies: [...dependencies],
     size,

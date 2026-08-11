@@ -8,6 +8,7 @@ import type {
   ProficiencyArmorRef,
   ProficiencySavingThrowRef,
   ProficiencyWeaponRef,
+  AddProficiencyTarget,
   RuleEffect,
 } from "@obsidian-dnd/catalog-contract";
 import type { EntityId } from "@obsidian-dnd/domain";
@@ -83,7 +84,18 @@ export interface ProficienciesResult {
 
 type ProficiencyKey = string;
 
-function proficiencyKeyForProf(ref: ProficiencyRef): ProficiencyKey {
+function proficiencyKeyForProf(ref: AddProficiencyTarget): ProficiencyKey {
+  // Handle WeaponProficiencyScope (has "type" instead of "kind")
+  if ("type" in ref) {
+    if (ref.type === "weapon-category") {
+      return `weapon-category:${ref.category}`;
+    }
+    if (ref.type === "weapon-filter") {
+      const props = ref.requiredProperties.sort().join(",");
+      return `weapon-filter:${ref.category}:${props}`;
+    }
+  }
+
   switch (ref.kind) {
     case "armor":
       return `armor:${ref.category}`;
@@ -187,7 +199,7 @@ export function calculateProficiencies(
 
   // Deduplicate proficiency refs by key
   const seenKeys = new Set<ProficiencyKey>();
-  const profRefs: ProficiencyRef[] = [];
+  const profRefs: AddProficiencyTarget[] = [];
 
   for (const ce of collected) {
     if (!isAddProficiencyEffect(ce.effect)) {
@@ -208,6 +220,10 @@ export function calculateProficiencies(
   const savingThrows: SavingThrowProficiencyEntry[] = [];
 
   for (const ref of profRefs) {
+    // Skip WeaponProficiencyScope entries—they require catalog-aware resolution
+    // that the rules-engine does not perform. They are display-only at this layer.
+    if ("type" in ref) continue;
+
     if (isProficiencyArmorRef(ref)) {
       armors.push({
         category: ref.category,

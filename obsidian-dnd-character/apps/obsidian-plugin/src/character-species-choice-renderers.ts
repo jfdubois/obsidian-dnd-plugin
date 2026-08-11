@@ -63,13 +63,15 @@ export async function renderChoiceDefinition(
     return null;
   }
 
+  if (definition.type === "ability-allocation" || definition.type === "closed-option") {
+    container.createEl("p", { text: `Choice type '${definition.type}' is not available in this legacy selector.`, cls: "dnd-creator-info dnd-choice-placeholder" });
+    return null;
+  }
   const query = definition.optionQuery;
 
   switch (definition.type) {
     case "entity":
       return renderEntityChoice(container, draft, catalog, revision, definition, query as EntityQuery, isEntityEligible);
-    case "ability":
-      return renderAbilityChoice(container, draft, definition);
     case "skill-proficiency":
       return renderProficiencyChoice(container, draft, catalog, revision, definition, query as ProficiencyQuery, isEntityEligible, "skill");
     case "tool-proficiency":
@@ -84,7 +86,7 @@ export async function renderChoiceDefinition(
       return renderFeatureChoice(container, draft, catalog, revision, definition, query as EntityQuery, isEntityEligible);
     default:
       container.createEl("p", {
-        text: `Choice type '${definition.type}' not yet implemented.`,
+        text: "Choice type is not implemented.",
         cls: "dnd-creator-info dnd-choice-placeholder",
       });
       return null;
@@ -217,6 +219,7 @@ function renderDropdown(
   kind: string,
 ): void {
   const { definition, candidates } = state;
+  if (definition.type === "ability-allocation") return;
   const isMulti = definition.maximum > 1;
 
   const wrapper = container.createDiv({

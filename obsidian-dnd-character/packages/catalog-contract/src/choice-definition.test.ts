@@ -23,8 +23,8 @@ import {
 } from "./prerequisite";
 
 describe("ChoiceDefinitionType", () => {
-  it("constant array contains 8 values", () => {
-    expect(CHOICE_DEFINITION_TYPES).toHaveLength(8);
+  it("constant array contains all three contract variants", () => {
+    expect(CHOICE_DEFINITION_TYPES).toHaveLength(9);
   });
 
   it("guard accepts every known type", () => {
@@ -66,7 +66,7 @@ describe("ChoiceDefinition", () => {
   });
 
   it("validator accepts each choice type", () => {
-    for (const type of CHOICE_DEFINITION_TYPES) {
+    for (const type of ["entity", "skill-proficiency", "tool-proficiency", "language", "equipment", "spell", "feature"] as const) {
       const choice: unknown = {
         id: validId,
         label: `Test ${type}`,
@@ -645,7 +645,7 @@ describe("factory", () => {
     const choice = createChoiceDefinition(
       createChoiceDefinitionId("choice:test:3"),
       "Test",
-      "ability",
+      "entity",
       0,
       3,
       false,
@@ -674,7 +674,7 @@ describe("round-trip", () => {
       createChoiceDefinition(
         createChoiceDefinitionId("choice:test:ability"),
         "Ability choice",
-        "ability",
+        "entity",
         0,
         3,
         false,
