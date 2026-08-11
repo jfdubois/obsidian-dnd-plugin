@@ -15,6 +15,7 @@ import {
   type RuleGrant,
   type ChoiceDefinition,
 } from "@obsidian-dnd/catalog-contract";
+import { createFiveEToolsExternalReference } from "./fiveetools-external-reference";
 import {
   createRuleEffectMetadata,
   createAddProficiencyEffect,
@@ -576,6 +577,7 @@ function normalizeSingleClass(
     undefined, // spellcasting
     [], // grants
     startingGrants,
+    [createFiveEToolsExternalReference("class", entry.name, entry.source)].filter((reference): reference is NonNullable<typeof reference> => reference !== undefined),
   ));
 
   return { ok: true, classRule, diagnostics: Object.freeze(diagnostics) };

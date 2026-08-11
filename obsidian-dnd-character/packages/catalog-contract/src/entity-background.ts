@@ -19,6 +19,8 @@ import type { RenderNode } from "./render-node";
 import { isRenderNode } from "./render-node";
 import type { RuleGrant } from "./rule-grant";
 import { isRuleGrant } from "./rule-grant";
+import type { ExternalReference } from "./external-reference";
+import { isExternalReferenceCollection } from "./external-reference";
 
 /* ── BackgroundRule ──────────────────────────────────────────────
     Complete background definition extending RuleEntity fields with
@@ -41,6 +43,7 @@ export interface BackgroundRule {
   grants: RuleGrant[];
   choices: ChoiceDefinition[];
   dependencies: EntityId[];
+  externalReferences?: ExternalReference[];
   skillProficiencies: EntityId[];
   featureId?: EntityId;
 }
@@ -83,6 +86,7 @@ export function isBackgroundRule(value: unknown): value is BackgroundRule {
 
   if (!Array.isArray(obj.dependencies)) return false;
   if (!obj.dependencies.every((d: unknown) => isEntityId(d))) return false;
+  if (obj.externalReferences !== undefined && !isExternalReferenceCollection(obj.externalReferences)) return false;
 
   if (!Array.isArray(obj.skillProficiencies)) return false;
   if (!obj.skillProficiencies.every((s: unknown) => isEntityId(s))) return false;
@@ -111,6 +115,7 @@ export function createBackgroundRule(
   summary?: string,
   featureId?: EntityId,
   grants: RuleGrant[] = [],
+  externalReferences?: ExternalReference[],
 ): BackgroundRule {
   return {
     id,
@@ -128,6 +133,7 @@ export function createBackgroundRule(
     grants: [...grants],
     choices: [...choices],
     dependencies: [...dependencies],
+    externalReferences: externalReferences === undefined ? undefined : [...externalReferences],
     skillProficiencies: [...skillProficiencies],
     featureId,
   };

@@ -252,6 +252,8 @@ The persistence boundary is explicit:
 
 Species, Background, and Class details actions use normalized summary, safe content/render nodes, traits/features, effects/grants, choices, automation status, provenance, source, ruleset, and page where available. They do not require raw-source access. External 5eTools target identity/routing remains a separate supplemental architecture decision.
 
+The authority chain is: pinned raw routing convention → catalog-builder route adapter → normalized `ExternalReference.relativeTarget` → catalog entity; a plugin-owned `fiveEToolsWebBaseUrl` and safe resolver compose this only for explicit navigation. The builder constructs routes, the catalog authorizes targets, settings own the base URL, and the plugin only validates/composes/opens. Navigation is non-mechanical and never required for normalized in-plugin details.
+
 ## 8.1 Semantic rule and character-sheet projection flow
 
 Resolved source record

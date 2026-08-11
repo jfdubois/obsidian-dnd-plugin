@@ -16,8 +16,8 @@ describe("schema version constants", () => {
     expect(CATALOG_API_VERSION).toBe(1);
   });
 
-  it("CATALOG_SCHEMA_VERSION equals 2", () => {
-    expect(CATALOG_SCHEMA_VERSION).toBe(2);
+  it("CATALOG_SCHEMA_VERSION equals 3", () => {
+    expect(CATALOG_SCHEMA_VERSION).toBe(3);
   });
 });
 

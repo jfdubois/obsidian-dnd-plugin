@@ -33,6 +33,7 @@ import {
   isCurrentRevision,
   isEntityDetailResponse,
   CATALOG_SCHEMA_VERSION,
+  isSupportedSchemaVersion,
   KIND_INDEX_FILENAME,
   validateArtifactPath,
   buildCatalogArtifactUrl,
@@ -187,7 +188,7 @@ export class RequestUrlCatalogClient implements CatalogClient {
   negotiateSchema(serverSchemaVersion: number): SchemaNegotiationResult {
     const pluginSchemaVersion = CATALOG_SCHEMA_VERSION;
 
-    if (serverSchemaVersion === pluginSchemaVersion) {
+    if (isSupportedSchemaVersion(serverSchemaVersion)) {
       return {
         compatible: true,
         serverSchemaVersion,

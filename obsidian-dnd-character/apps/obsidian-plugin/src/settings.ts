@@ -5,6 +5,8 @@ export interface DndCharacterPluginSettings {
 	catalogServerUrl: string;
 	/** Active catalog revision ID (empty string means not set). */
 	catalogRevision: string;
+	/** Optional 5eTools web UI base URL; empty means external links are disabled. */
+	fiveEToolsWebBaseUrl?: string;
 	/** Vault-relative path to characters folder. */
 	charactersVaultPath: string;
 	/** Settings schema version for migrations. */
@@ -15,7 +17,8 @@ export const DEFAULT_SETTINGS: DndCharacterPluginSettings = {
 	catalogServerUrl: '',
 	catalogRevision: '',
 	charactersVaultPath: 'dnd-characters',
-	schemaVersion: 1,
+	fiveEToolsWebBaseUrl: '',
+	schemaVersion: 2,
 };
 
 /**
@@ -29,6 +32,9 @@ export function normalizeSettings(raw: unknown): DndCharacterPluginSettings {
 		return { ...DEFAULT_SETTINGS };
 	}
 
+	const fiveEToolsWebBaseUrl = typeof (raw as Record<string, unknown>).fiveEToolsWebBaseUrl === 'string'
+		? (raw as Record<string, unknown>).fiveEToolsWebBaseUrl as string
+		: DEFAULT_SETTINGS.fiveEToolsWebBaseUrl;
 	return {
 		catalogServerUrl:
 			typeof (raw as Record<string, unknown>).catalogServerUrl === 'string'
@@ -42,6 +48,7 @@ export function normalizeSettings(raw: unknown): DndCharacterPluginSettings {
 			typeof (raw as Record<string, unknown>).charactersVaultPath === 'string'
 				? (raw as Record<string, unknown>).charactersVaultPath as string
 				: DEFAULT_SETTINGS.charactersVaultPath,
+		fiveEToolsWebBaseUrl,
 		schemaVersion:
 			typeof (raw as Record<string, unknown>).schemaVersion === 'number'
 				? (raw as Record<string, unknown>).schemaVersion as number

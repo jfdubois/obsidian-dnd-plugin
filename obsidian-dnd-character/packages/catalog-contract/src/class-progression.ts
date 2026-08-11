@@ -25,6 +25,8 @@ import type { RenderNode } from "./render-node";
 import { isRenderNode } from "./render-node";
 import type { RuleGrant } from "./rule-grant";
 import { isRuleGrant } from "./rule-grant";
+import type { ExternalReference } from "./external-reference";
+import { isExternalReferenceCollection } from "./external-reference";
 
 /* ── LevelGrant discriminated union ──────────────────────────────
    Describes what a class grants at a given level. Each variant
@@ -116,6 +118,7 @@ export interface ClassRule {
   grants: RuleGrant[];
   choices: ChoiceDefinition[];
   dependencies: EntityId[];
+  externalReferences?: ExternalReference[];
   hitDie: number;
   primaryAbilities: Ability[];
   savingThrowProficiencies: Ability[];
@@ -267,6 +270,7 @@ export function isClassRule(value: unknown): value is ClassRule {
 
   if (!Array.isArray(obj.dependencies)) return false;
   if (!obj.dependencies.every((d: unknown) => isEntityId(d))) return false;
+  if (obj.externalReferences !== undefined && !isExternalReferenceCollection(obj.externalReferences)) return false;
 
   if (typeof obj.hitDie !== "number" || !Number.isInteger(obj.hitDie)) return false;
   if (obj.hitDie < 1) return false;
@@ -370,6 +374,7 @@ export function createClassRule(
   spellcasting?: SpellcastingProgression,
   grants: RuleGrant[] = [],
   startingGrants: RuleGrant[] = [],
+  externalReferences?: ExternalReference[],
 ): ClassRule {
   return {
     id,
@@ -387,6 +392,7 @@ export function createClassRule(
     grants: [...grants],
     choices: [...choices],
     dependencies: [...dependencies],
+    externalReferences: externalReferences === undefined ? undefined : [...externalReferences],
     hitDie,
     primaryAbilities: [...primaryAbilities],
     savingThrowProficiencies: [...savingThrowProficiencies],

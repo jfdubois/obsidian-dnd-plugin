@@ -6,6 +6,7 @@ import { PluginSettingTab, Setting } from 'obsidian';
 import { formatCatalogRuntimeStatus } from './catalog/catalog-runtime-status';
 import { SettingsCatalogController } from './settings-catalog-controller';
 import type { CatalogSettingsPlugin } from './settings-catalog-controller';
+import { normalizeFiveEToolsWebBaseUrl } from './fiveetools-external-url';
 
 export class DndCharacterPluginSettingTab extends PluginSettingTab {
 	private readonly settingsPlugin: CatalogSettingsPlugin;
@@ -70,6 +71,18 @@ export class DndCharacterPluginSettingTab extends PluginSettingTab {
 		});
 
 		new Setting(containerEl).setName('Characters').setHeading();
+		new Setting(containerEl)
+			.setName('5eTools web base URL')
+			.setDesc('Optional; used only for Open in 5eTools and does not change the catalog server.')
+			.addText((text) => text
+				.setPlaceholder('https://5e.tools/')
+				.setValue(this.settingsPlugin.settings.fiveEToolsWebBaseUrl ?? '')
+				.onChange(async (value) => {
+					const normalized = normalizeFiveEToolsWebBaseUrl(value);
+					if (value.trim().length > 0 && normalized === undefined) return;
+					this.settingsPlugin.settings.fiveEToolsWebBaseUrl = normalized ?? '';
+					await this.settingsPlugin.saveSettings();
+				}));
 		new Setting(containerEl)
 			.setName('Characters vault path')
 			.setDesc('Vault-relative folder path where character files are stored.')

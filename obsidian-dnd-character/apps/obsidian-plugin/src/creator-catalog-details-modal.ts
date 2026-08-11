@@ -1,15 +1,21 @@
 import { Modal } from "obsidian";
 import type { App } from "obsidian";
 import type { EntityDetailResponse, RenderNode } from "@obsidian-dnd/catalog-contract";
+import { findFiveEToolsExternalReference, resolveFiveEToolsExternalUrl } from "./fiveetools-external-url";
 
 /** Read-only normalized catalog context, reusable for every creator origin. */
 export class CreatorCatalogDetailsModal extends Modal {
-  constructor(app: App, private readonly entity: EntityDetailResponse) { super(app); }
+  constructor(app: App, private readonly entity: EntityDetailResponse, private readonly fiveEToolsWebBaseUrl = "") { super(app); }
 
   onOpen(): void {
     this.titleEl.setText(this.entity.name);
     this.contentEl.createEl("p", { text: `${this.entity.ruleset} • ${this.entity.sourceId}${this.entity.page === undefined ? "" : `, p. ${this.entity.page}`}`, cls: "dnd-creator-details-meta" });
     renderNodes(this.contentEl, this.entity.content);
+    const externalUrl = resolveFiveEToolsExternalUrl(this.fiveEToolsWebBaseUrl, findFiveEToolsExternalReference("externalReferences" in this.entity ? this.entity.externalReferences : undefined));
+    if (externalUrl !== undefined) {
+      const link = this.contentEl.createEl("a", { text: "Open in 5eTools", href: externalUrl, cls: "dnd-creator-external-link" });
+      link.setAttr("target", "_blank"); link.setAttr("rel", "noopener noreferrer");
+    }
     this.contentEl.createEl("h3", { text: "Automatic consequences" });
     const effects = "effects" in this.entity ? this.entity.effects.length : 0;
     const grants = "grants" in this.entity ? this.entity.grants.length : 0;
@@ -21,7 +27,7 @@ export class CreatorCatalogDetailsModal extends Modal {
   onClose(): void { this.contentEl.empty(); }
 }
 
-export function openCreatorCatalogDetails(app: App, entity: EntityDetailResponse): void { new CreatorCatalogDetailsModal(app, entity).open(); }
+export function openCreatorCatalogDetails(app: App, entity: EntityDetailResponse, fiveEToolsWebBaseUrl = ""): void { new CreatorCatalogDetailsModal(app, entity, fiveEToolsWebBaseUrl).open(); }
 
 function renderNodes(container: HTMLElement, nodes: readonly RenderNode[]): void {
   for (const node of nodes) {

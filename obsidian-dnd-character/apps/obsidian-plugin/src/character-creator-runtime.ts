@@ -25,15 +25,18 @@ export class CharacterCreatorRuntime {
   private readonly app: App;
   private readonly repository: CharacterRepository;
   private catalogService: CatalogService | null;
+  private readonly getFiveEToolsWebBaseUrl: () => string;
 
   constructor(
     app: App,
     repository: CharacterRepository,
     catalogService: CatalogService | null = null,
+    getFiveEToolsWebBaseUrl: () => string = () => "",
   ) {
     this.app = app;
     this.repository = repository;
     this.catalogService = catalogService;
+    this.getFiveEToolsWebBaseUrl = getFiveEToolsWebBaseUrl;
   }
 
   /**
@@ -145,12 +148,10 @@ export class CharacterCreatorRuntime {
     const persist = this.buildPersistenceCallback();
 
     // 4. Open modal with persistence and catalog wired in
-    const modal = new CharacterCreatorModal(
-      this.app,
-      draft,
-      persist,
-      this.catalogService,
-    );
+    const baseUrl = this.getFiveEToolsWebBaseUrl();
+    const modal = baseUrl.length === 0
+      ? new CharacterCreatorModal(this.app, draft, persist, this.catalogService)
+      : new CharacterCreatorModal(this.app, draft, persist, this.catalogService, undefined, baseUrl);
     modal.open();
 
     return modal;

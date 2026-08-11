@@ -502,7 +502,7 @@ Create valid level-one characters through a dependency-aware modal.
   - Complete: normalized usable 2014 and 2024 Species, Background, and starting-Class grants, choices, diagnostics, and level-one coverage.
 - [x] **P10-CORRECTIVE-J — Build origin-owned creator consequence service and draft integration**
 - [x] **P10-CORRECTIVE-K — Render consequence panels and normalized details**
-- [ ] **P10-CORRECTIVE-L — Add supplemental 5eTools external-reference support**
+- [x] **P10-CORRECTIVE-L — Add supplemental 5eTools external-reference support**
 - [ ] **P10-CORRECTIVE-M — Rebaseline Phase 10 state-machine and manual validation**
 
 Dependencies: H → H1 → H2 → H3 → H4 → H5 → H6 → I → J → K; K → L; I/J/K/L as applicable → M. Existing stable correctness blockers remain valid and must be re-evaluated in the applicable corrective task. Capability tasks such as ability generation and equipment, proficiency/language, and spell selection remain reusable capabilities; they do not prescribe permanent visual pages or data ownership.

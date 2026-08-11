@@ -3,6 +3,7 @@ import type { CharacterId } from '@obsidian-dnd/domain';
 
 import type { DndCharacterPluginSettings } from './settings';
 import { DEFAULT_SETTINGS, normalizeSettings } from './settings';
+import { normalizeFiveEToolsWebBaseUrl } from './fiveetools-external-url';
 import { DndCharacterPluginSettingTab } from './settings-tab';
 import {
 	CharacterSheetView,
@@ -104,6 +105,7 @@ export default class DndCharacterPlugin extends Plugin {
 			this.app,
 			this.characterRepository,
 			this.catalogService,
+			() => this.settings.fiveEToolsWebBaseUrl ?? '',
 		);
 
 		// Register command to create a new character (P10-T020)
@@ -134,6 +136,7 @@ export default class DndCharacterPlugin extends Plugin {
 		const raw = await this.loadData();
 		this.settings = normalizeSettings(raw);
 		this.settings.catalogServerUrl = normalizeCatalogServerUrl(this.settings.catalogServerUrl);
+		this.settings.fiveEToolsWebBaseUrl = normalizeFiveEToolsWebBaseUrl(this.settings.fiveEToolsWebBaseUrl) ?? '';
 	}
 
 	async saveSettings(): Promise<void> {

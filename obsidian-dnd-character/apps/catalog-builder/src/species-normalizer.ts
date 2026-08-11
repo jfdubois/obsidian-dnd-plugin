@@ -15,6 +15,7 @@ import {
 } from "@obsidian-dnd/catalog-contract";
 import type { RenderNode } from "@obsidian-dnd/catalog-contract";
 import { isAbility, type Ability } from "@obsidian-dnd/domain";
+import { createFiveEToolsExternalReference } from "./fiveetools-external-reference";
 
 export type SpeciesNormalizerDiagnosticCode =
   | "EXCLUDED_SOURCE" | "INVALID_SOURCE" | "INVALID_CANONICAL_ID"
@@ -366,6 +367,11 @@ function normalizeSingleSpecies(record: RawRecord, opts: NormalizerOptions): Sin
     extractChoices(remaining, idResult.id),
     [], // dependencies
     false, // legacy
+    undefined, // page
+    undefined, // summary
+    undefined, // darkvisionRange
+    [], // grants
+    [createFiveEToolsExternalReference("species", record.name, record.source)].filter((reference): reference is NonNullable<typeof reference> => reference !== undefined),
   );
 
   return { ok: true, species, diagnostics: Object.freeze(diagnostics) };

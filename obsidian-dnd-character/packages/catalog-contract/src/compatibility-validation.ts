@@ -5,7 +5,7 @@
 
 import type { CatalogManifest } from "./catalog-manifest";
 import type { RuleEntityKind } from "@obsidian-dnd/domain";
-import { CATALOG_SCHEMA_VERSION } from "./schema-version";
+import { CATALOG_SCHEMA_VERSION, isSupportedSchemaVersion } from "./schema-version";
 
 /* ── Required entity kinds ───────────────────────────────────────
    The minimum set of entity kinds a catalog must expose for the
@@ -33,7 +33,7 @@ export const REQUIRED_ENTITY_KINDS: ReadonlyArray<RuleEntityKind> = [
 export function validateSchemaVersion(
   manifest: CatalogManifest,
 ): string | null {
-  if (manifest.schemaVersion !== CATALOG_SCHEMA_VERSION) {
+  if (!isSupportedSchemaVersion(manifest.schemaVersion)) {
     return `Unsupported schema version: ${manifest.schemaVersion} (expected ${CATALOG_SCHEMA_VERSION})`;
   }
   return null;

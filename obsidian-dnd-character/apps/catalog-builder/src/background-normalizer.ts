@@ -12,6 +12,7 @@ import { createBackgroundRule, createAbilityAllocationChoiceDefinition, createCh
 import { createDeterministicRuleGrantId } from "./rule-grant-id";
 import { mapRawEquipmentType, mapRawEquipmentTypes } from "./equipment-group-mapping";
 import type { DeferredEquipmentDestination, DeferredEquipmentIntent } from "./deferred-equipment-resolution";
+import { createFiveEToolsExternalReference } from "./fiveetools-external-reference";
 
 export type BackgroundNormalizerDiagnosticCode =
   | "EXCLUDED_SOURCE"
@@ -381,6 +382,7 @@ function normalizeSingleBackground(record: RawRecord, opts: NormalizerOptions): 
     summary,
     featureId,
     [...grants, ...featGrants],
+    [createFiveEToolsExternalReference("background", record.name, record.source)].filter((reference): reference is NonNullable<typeof reference> => reference !== undefined),
   );
 
   return { ok: true, background, diagnostics: Object.freeze(diagnostics), deferredEquipment: Object.freeze(deferredEquipment) };

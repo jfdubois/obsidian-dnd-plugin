@@ -255,6 +255,17 @@ Relevant observed source characteristics include:
 
 The mirror is not an official Wizards of the Coast API. Pin the exact source commit and review content rights before deployment or redistribution.
 
+## ADR-010 — Supplemental 5eTools external references
+
+**Status:** accepted
+**Date:** 2026-08-11
+
+**Decision:** The catalog-builder alone reproduces the reviewed finite pinned 5eTools route subset and publishes optional validated `{ provider: "5etools", relativeTarget }` metadata. The plugin never derives routes from entity identity; it validates a user-owned HTTP(S) base URL and safely composes/opens the catalog target only after user activation. The metadata is supplemental, non-mechanical, and excluded from CharacterDocument/draft state.
+
+**Pinned route authority:** `external/5etools-src/js/utils.js`: `UrlUtil.PG_RACES`, `PG_BACKGROUNDS`, `PG_CLASSES`, `URL_TO_HASH_GENERIC`, `encodeArrayForHash`, and `String.prototype.toUrlified`.
+
+**Compatibility impact:** Catalog schema v3 adds the optional metadata; v2 remains readable during transition. Settings schema v2 adds disabled-by-default `fiveEToolsWebBaseUrl`.
+
 ## Decision change template
 
 ```text

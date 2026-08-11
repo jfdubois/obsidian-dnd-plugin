@@ -854,3 +854,7 @@ Project decision:
 - derive future grants from normalized class progression;
 - query or cache candidate IDs;
 - do not embed the complete catalog in character files.
+
+## External references
+
+Catalog schema v3 permits optional entity `externalReferences`. The implemented entry is `{ provider: "5etools", relativeTarget: string }`; targets are validated relative site paths, reject absolute/scheme/protocol-relative/traversal forms, and allow at most one provider entry. References are catalog metadata only: they are excluded from CharacterDraft and CharacterDocument. The plugin accepts catalog v2 during transition and emits v3 for current builds.

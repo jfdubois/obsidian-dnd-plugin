@@ -19,6 +19,8 @@ import type { RenderNode } from "./render-node";
 import { isRenderNode } from "./render-node";
 import type { RuleGrant } from "./rule-grant";
 import { isRuleGrant } from "./rule-grant";
+import type { ExternalReference } from "./external-reference";
+import { isExternalReferenceCollection } from "./external-reference";
 
 /* ── TraitDefinition ─────────────────────────────────────────────
     A named trait with renderable content. Used by SpeciesRule to
@@ -51,6 +53,7 @@ export interface SpeciesRule {
   grants: RuleGrant[];
   choices: ChoiceDefinition[];
   dependencies: EntityId[];
+  externalReferences?: ExternalReference[];
   size: string;
   speed: number;
   darkvision: boolean;
@@ -111,6 +114,7 @@ export function isSpeciesRule(value: unknown): value is SpeciesRule {
 
   if (!Array.isArray(obj.dependencies)) return false;
   if (!obj.dependencies.every((d: unknown) => isEntityId(d))) return false;
+  if (obj.externalReferences !== undefined && !isExternalReferenceCollection(obj.externalReferences)) return false;
 
   if (typeof obj.size !== "string" || obj.size.length === 0) return false;
 
@@ -163,6 +167,7 @@ export function createSpeciesRule(
   summary?: string,
   darkvisionRange?: number,
   grants: RuleGrant[] = [],
+  externalReferences?: ExternalReference[],
 ): SpeciesRule {
   return {
     id,
@@ -180,6 +185,7 @@ export function createSpeciesRule(
     grants: [...grants],
     choices: [...choices],
     dependencies: [...dependencies],
+    externalReferences: externalReferences === undefined ? undefined : [...externalReferences],
     size,
     speed,
     darkvision,

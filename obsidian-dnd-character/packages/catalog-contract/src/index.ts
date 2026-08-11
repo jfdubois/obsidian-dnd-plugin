@@ -1,4 +1,11 @@
 export {
+  type ExternalReference,
+  isExternalReference,
+  isExternalReferenceCollection,
+  isRelativeExternalTarget,
+} from "./external-reference";
+
+export {
   /* Catalog manifest types */
   type CatalogManifest,
   /* Catalog manifest factory */

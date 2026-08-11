@@ -2,7 +2,7 @@
 
 ## Current work
 
-Phase 10 corrective work — P10-CORRECTIVE-H through P10-CORRECTIVE-K complete; next is P10-CORRECTIVE-L
+Phase 10 corrective work — P10-CORRECTIVE-H through P10-CORRECTIVE-L complete; next is P10-CORRECTIVE-M
 
 ## PB8-004 automated gate
 
@@ -22,7 +22,7 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-P10-CORRECTIVE-L — Add supplemental 5eTools external-reference support
+P10-CORRECTIVE-M — Rebaseline Phase 10 state-machine and manual validation
 
 ## Branch baseline
 
@@ -91,6 +91,12 @@ None recorded.
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-11 — P10-CORRECTIVE-L — Add supplemental 5eTools external-reference support — complete
+Summary: Catalog schema v3 adds validated catalog-owned 5eTools relative references for Species, Background, and Class using the pinned builder route adapter. Settings schema v2 adds disabled-by-default `fiveEToolsWebBaseUrl`; the plugin safely composes an explicit generic details action with no external fetch, and creator/finalization state remains independent of the setting.
+Validation: focused external/settings/real-build tests PASS; typecheck PASS; lint baseline warnings only; full suite and build PASS; diff check PASS. Desktop external-link verification remains assigned to P10-CORRECTIVE-M.
+Compatibility notes: Catalog v2 remains transition-compatible; no CharacterDocument schema or external metadata persistence.
+Commit: see Git history for P10-CORRECTIVE-L.
 
 2026-08-11 — P10-CORRECTIVE-K — Render consequence panels and normalized details — complete
 Summary: Added reusable normalized-catalog origin details, shared Species/Background/Class consequence summaries, active-choice status presentation, explicit command-backed random starting currency display, and a read-only consequence-aware review section. Details are offline, catalog-backed, and accessible; final save remains catalog-aware finalization.

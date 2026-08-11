@@ -144,6 +144,18 @@
 | SRC-004 | Replace all dependencies transactionally | Source can be removed after final validation |
 | SRC-005 | Core records | Remain eligible regardless of optional source list |
 
+## 7.1 Supplemental external references
+
+| ID | Scenario | Expected result |
+|---|---|---|
+| EXT-001 | Official HTTPS, localhost HTTP, or subpath base | Canonical trailing slash and contained resolved target. |
+| EXT-002 | Missing/malformed base or unsafe catalog target | Link unavailable; normalized details remain usable. |
+| EXT-003 | Valid base plus catalog reference | Generic explicit action is available without a fetch. |
+| EXT-004 | Settings v1 migration | v2 adds disabled external base without changing catalog endpoint. |
+| EXT-005 | Catalog v2/v3 | v2 remains transition-compatible; v3 metadata validates. |
+| EXT-006 | 2014/2024 Species, Background, Class | Real build publishes pinned-route external target. |
+| EXT-007 | External setting changed | Creator/final CharacterDocument mechanics are unchanged. |
+
 ## 8. Release acceptance
 
 - [ ] All critical scenarios pass.

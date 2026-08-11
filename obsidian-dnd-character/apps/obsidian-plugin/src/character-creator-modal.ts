@@ -126,6 +126,7 @@ export class CharacterCreatorModal extends ObsidianModal {
     persist?: CharacterPersistenceCallback,
     catalogService: CatalogService | null = null,
     randomSource: RandomSource = createCreatorRandomSource(),
+    private readonly fiveEToolsWebBaseUrl = "",
   ) {
     super(app);
     this.controller = new StepController(draft);
@@ -391,7 +392,7 @@ export class CharacterCreatorModal extends ObsidianModal {
     if (catalog === null || revision === undefined) return;
     new Setting(container).setName(`${label} details`).addButton((button) => {
       button.setButtonText("(?)").setTooltip(`View ${label} details`).onClick(async () => {
-        try { openCreatorCatalogDetails(this.app, (await catalog.fetchEntity(revision, summary.id, summary.detailPath)).data); }
+        try { openCreatorCatalogDetails(this.app, (await catalog.fetchEntity(revision, summary.id, summary.detailPath)).data, this.fiveEToolsWebBaseUrl); }
         catch { /* The adjacent selector already reports catalog availability. */ }
       });
       button.buttonEl.setAttribute("aria-label", `View ${label} details`);

@@ -289,3 +289,7 @@ Narrative rules that are not mechanically normalized shall remain visible and sh
 ## 5. Product acceptance summary
 
 The product is acceptable for initial release when a user can create a valid 2014 or 2024 level-one character, reopen it, interact with it in the right sidebar, level it while seeing only eligible source-filtered choices, and continue using it after catalog refreshes without plugin rebuilds when schemas remain compatible.
+
+## Supplemental external-reference navigation
+
+Normalized catalog details may offer an optional **Open in 5eTools** action. The user separately configures a 5eTools web base URL; it is not the catalog API endpoint and is never used to fetch catalog or rules content. External navigation is supplemental: character creation, in-plugin details, rules, and finalization work without a configured or reachable website.
