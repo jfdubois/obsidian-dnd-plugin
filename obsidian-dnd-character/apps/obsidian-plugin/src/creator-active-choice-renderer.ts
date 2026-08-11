@@ -4,24 +4,27 @@ import type { ChoiceDefinition } from "@obsidian-dnd/catalog-contract";
 import type { Ability, EntityId } from "@obsidian-dnd/domain";
 import type { ChoiceConsequence } from "./creator-consequence-service";
 
-export type SubmitCreatorChoice = (instanceId: ChoiceConsequence["instanceId"], value: CharacterChoice["selectedValue"]) => void;
+export interface CreatorChoiceSubmission { instanceId: ChoiceConsequence["instanceId"]; value: CharacterChoice["selectedValue"]; }
+export type SubmitCreatorChoices = (submissions: readonly CreatorChoiceSubmission[]) => void;
 export type ClearCreatorChoice = (instanceId: ChoiceConsequence["instanceId"]) => void;
 
 interface ChoiceState { choice: ChoiceConsequence; slots: Array<string | undefined>; allocations: Map<string, number>; }
 type IdChoiceDefinition = Exclude<ChoiceDefinition, { type: "ability-allocation" }>;
 
 /** Presentation-only renderer for already-derived active creator choices. */
-export function renderActiveCreatorChoices(container: HTMLElement, heading: string, choices: readonly ChoiceConsequence[], submit: SubmitCreatorChoice, clear?: ClearCreatorChoice): void {
+export function renderActiveCreatorChoices(container: HTMLElement, heading: string, choices: readonly ChoiceConsequence[], submit: SubmitCreatorChoices, clear?: ClearCreatorChoice): void {
   const section = container.createDiv({ cls: "dnd-internal-choices" });
   section.createEl("h4", { text: heading });
   const states = choices.map((choice) => renderChoice(section, choice));
   new Setting(section.createDiv({ cls: "dnd-choice-actions" })).addButton((button) => button
     .setButtonText("Confirm choices").setCta().onClick(() => {
+      const submissions: CreatorChoiceSubmission[] = [];
       for (const state of states) {
         const value = selectedValue(state);
         if (value === undefined) return;
-        submit(state.choice.instanceId, value);
+        submissions.push({ instanceId: state.choice.instanceId, value });
       }
+      submit(submissions);
     }));
   if (clear !== undefined && choices.some((choice) => choice.selectedValue !== undefined)) {
     new Setting(section.createDiv({ cls: "dnd-choice-actions" })).addButton((button) => button

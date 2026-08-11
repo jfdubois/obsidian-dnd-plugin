@@ -25,6 +25,21 @@ export function setCreatorChoice(draft: CharacterDraft, entities: readonly Entit
   draft.selections[instanceId] = { instanceId, definitionId: active.definition.id, originGrantId: active.originId, selectedValue };
 }
 
+/** Validates and stages all visible choice commands before committing their selections together. */
+export function setCreatorChoices(draft: CharacterDraft, entities: readonly EntityDetailResponse[], choices: readonly { instanceId: ChoiceInstanceId; value: CharacterChoice["selectedValue"] }[]): void {
+  const activeChoices = new Map(deriveDraftConsequences(draft, entities).origins.flatMap((origin) => origin.choices).map((choice) => [choice.instanceId, choice]));
+  if (new Set(choices.map((choice) => choice.instanceId)).size !== choices.length) throw new Error("Choice batch contains duplicate instances");
+  for (const choice of choices) {
+    const active = activeChoices.get(choice.instanceId);
+    if (active === undefined) throw new Error("Choice instance is not active");
+    const validation = validateCreatorChoiceValue(active.definition, choice.value, active.candidates);
+    if (validation.status !== "resolved") throw new Error(validation.message);
+  }
+  const staged = structuredClone(draft) as CharacterDraft;
+  for (const choice of choices) setCreatorChoice(staged, entities, choice.instanceId, choice.value);
+  draft.selections = staged.selections;
+}
+
 export function clearCreatorChoice(draft: CharacterDraft, instanceId: ChoiceInstanceId): void { delete draft.selections[instanceId]; }
 
 /** Origin changes retain inactive historical choices; derivation controls reachability. */

@@ -4,8 +4,9 @@ import type { CharacterChoice } from "@obsidian-dnd/character-contract";
 import { createItemRule, createLanguageRule, createSkillRule, type BackgroundRule, type ChoiceDefinition, type ClassRule, type RuleGrant, type SpeciesRule } from "@obsidian-dnd/catalog-contract";
 import { deriveSelectionConsequences } from "./creator-consequence-service";
 import { resolveRandomCurrencyGrant } from "./creator-random-grant-resolution";
-import { createEmptyCharacterDraft } from "./character-draft";
-import { deriveDraftConsequences, setCreatorChoice, setCreatorOrigin } from "./creator-draft-commands";
+import { createEmptyCharacterDraft, markStepResolved } from "./character-draft";
+import { StepController } from "./character-step-controller";
+import { deriveDraftConsequences, setCreatorChoice, setCreatorChoices, setCreatorOrigin } from "./creator-draft-commands";
 import { isOriginConsequenceComplete } from "./creator-origin-completion";
 
 const speciesId = createEntityId("species:2024:test:origin");
@@ -132,14 +133,28 @@ describe("creator draft authority", () => {
     const oneLanguage = { instanceId: active!.instanceId, definitionId: active!.definition.id, originGrantId: acolyteId, selectedValue: { type: "entity-ids" as const, entityIds: [commonId] } };
     expect(deriveDraftConsequences({ ...draft, selections: { [active!.instanceId]: oneLanguage } }, entities).origins[0]?.choices[0]?.status).toBe("unresolved");
     expect(() => setCreatorChoice(draft, entities, active!.instanceId, { type: "entity-ids", entityIds: [commonId, commonId] })).toThrow("selection constraints");
-    setCreatorChoice(draft, entities, active!.instanceId, { type: "entity-ids", entityIds: [commonId, elvishId] });
+    expect(() => setCreatorChoices(draft, entities, [
+      { instanceId: active!.instanceId, value: { type: "entity-ids", entityIds: [commonId, commonId] } },
+      { instanceId: activePackage!.instanceId, value: { type: "option-ids", optionIds: [packageOptionId] } },
+    ])).toThrow("selection constraints");
+    expect(draft.selections).toEqual({});
+    setCreatorChoices(draft, entities, [
+      { instanceId: active!.instanceId, value: { type: "entity-ids", entityIds: [commonId, elvishId] } },
+      { instanceId: activePackage!.instanceId, value: { type: "option-ids", optionIds: [packageOptionId] } },
+    ]);
     expect(draft.selections[active!.instanceId]).toMatchObject({
       selectedValue: { type: "entity-ids", entityIds: [commonId, elvishId] },
     });
+    expect(draft.selections[activePackage!.instanceId]).toMatchObject({
+      selectedValue: { type: "option-ids", optionIds: [packageOptionId] },
+    });
     expect(draft.selections[active!.instanceId]).not.toHaveProperty("candidates");
-    expect(isOriginConsequenceComplete(deriveDraftConsequences(draft, entities), acolyteId)).toBe(false);
-    setCreatorChoice(draft, entities, activePackage!.instanceId, { type: "option-ids", optionIds: [packageOptionId] });
-    expect(isOriginConsequenceComplete(deriveDraftConsequences(draft, entities), acolyteId)).toBe(true);
+    const completed = deriveDraftConsequences(draft, entities);
+    expect(isOriginConsequenceComplete(completed, acolyteId)).toBe(true);
+    markStepResolved(draft, "background");
+    const controller = new StepController(draft);
+    controller.setOriginConsequenceCompletion("background", isOriginConsequenceComplete(completed, acolyteId));
+    expect(controller.isStepResolved("background")).toBe(true);
   });
 
   it("stores a validated choice once, preserves it as inactive across an origin change, and leaves base abilities alone", () => {

@@ -39,7 +39,8 @@ import {
 } from "./character-proficiencies-step";
 import { querySpellEligibility } from "./character-spell-eligibility-step";
 import { selectSpells } from "./character-spell-selection-step";
-import { clearCreatorChoice, resolveCreatorRandomGrant, setCreatorChoice } from "./creator-draft-commands";
+import { clearCreatorChoice, resolveCreatorRandomGrant, setCreatorChoices } from "./creator-draft-commands";
+import type { CreatorChoiceSubmission } from "./creator-active-choice-renderer";
 import { openCreatorCatalogDetails } from "./creator-catalog-details-modal";
 import { createCreatorRandomSource } from "./creator-random-source";
 import type { RandomSource } from "./creator-random-grant-resolution";
@@ -88,6 +89,7 @@ const STEP_LABELS: ReadonlyMap<CreatorStep, string> = new Map([
 ]);
 
 type InternalSubstep = "background-choices" | "class-starting-grants";
+type CreatorOrigin = "species" | "background" | "class";
 
 function getStepLabel(step: CreatorStep): string {
   return STEP_LABELS.get(step) ?? step;
@@ -119,6 +121,7 @@ export class CharacterCreatorModal extends ObsidianModal {
   private speciesChoiceLoadError: string | null = null;
   private readonly internalSubstepsPending = new Set<InternalSubstep>();
   private readonly internalSubstepLoadErrors = new Map<InternalSubstep, string>();
+  private renderGeneration = 0;
 
   constructor(
     app: App,
@@ -355,6 +358,30 @@ export class CharacterCreatorModal extends ObsidianModal {
     this.updateNavigationButtons();
   }
 
+  private isCurrentRender(generation: number): boolean { return generation === this.renderGeneration; }
+
+  /** Updates the controller projection and every visible projection of an origin's completion together. */
+  private updateOriginConsequenceCompletion(origin: CreatorOrigin, complete: boolean, generation: number): void {
+    if (!this.isCurrentRender(generation)) return;
+    this.controller.setOriginConsequenceCompletion(origin, complete);
+    if (origin === "species") {
+      this.speciesChoicesPending = false;
+      if (complete) this.speciesChoiceLoadError = null;
+    } else {
+      this.internalSubstepsPending.delete(origin === "background" ? "background-choices" : "class-starting-grants");
+    }
+    this.renderProgressBar();
+    this.renderDiagnosticsBanner();
+    this.updateNavigationButtons();
+  }
+
+  private submitCatalogChoiceBatch(step: "species-choices" | "background-choices" | "class-starting-grants", entities: readonly EntityDetailResponse[], choices: readonly CreatorChoiceSubmission[]): void {
+    try {
+      setCreatorChoices(this.controller.draft, entities, choices);
+      this.resolveCatalogChoiceSubstep(step);
+    } catch { /* Invalid batches leave the authoritative draft and current render unchanged. */ }
+  }
+
   private failInternalSubstep(step: InternalSubstep, message: string): void {
     this.internalSubstepsPending.delete(step);
     this.internalSubstepLoadErrors.set(step, message);
@@ -408,6 +435,7 @@ export class CharacterCreatorModal extends ObsidianModal {
 
   private renderCurrentStep(): void {
     if (!this.stepContentEl) return;
+    const generation = ++this.renderGeneration;
     this.stepContentEl.empty();
 
     const currentStep = this.controller.currentStep;
@@ -435,13 +463,13 @@ export class CharacterCreatorModal extends ObsidianModal {
     if (currentStep === "review") {
       this.renderReviewStep();
     } else {
-      this.renderStepContent(currentStep);
+      this.renderStepContent(currentStep, generation);
     }
 
     this.updateNavigationButtons();
   }
 
-  private renderStepContent(step: CreatorStep): void {
+  private renderStepContent(step: CreatorStep, generation: number): void {
     if (!this.stepContentEl) return;
 
     const heading = this.stepContentEl.createEl("h2", {
@@ -465,13 +493,13 @@ export class CharacterCreatorModal extends ObsidianModal {
         this.renderIdentityStep(body);
         break;
       case "species":
-        void this.renderSpeciesStep(body);
+        void this.renderSpeciesStep(body, generation);
         break;
       case "background":
-        void this.renderBackgroundStep(body);
+        void this.renderBackgroundStep(body, generation);
         break;
       case "class":
-        void this.renderClassStep(body);
+        void this.renderClassStep(body, generation);
         break;
       case "abilities":
         this.renderAbilitiesStep(body);
@@ -700,7 +728,7 @@ export class CharacterCreatorModal extends ObsidianModal {
    * Renders the Species step: dropdown for species selection filtered
    * by ruleset and enabled sources. Uses catalog data when available.
    */
-  private async renderSpeciesStep(container: HTMLElement): Promise<void> {
+  private async renderSpeciesStep(container: HTMLElement, generation: number): Promise<void> {
     const draft = this.controller.draft;
     const ruleset = draft.ruleset.ruleset;
 
@@ -729,6 +757,7 @@ export class CharacterCreatorModal extends ObsidianModal {
 
     try {
       const speciesIndex = await catalog.fetchIndex(revision, "species");
+      if (!this.isCurrentRender(generation)) return;
       loadingEl.remove();
 
       const filtered = speciesIndex.filter((s) =>
@@ -783,36 +812,27 @@ export class CharacterCreatorModal extends ObsidianModal {
           (sourceId, access) => this.isEntityEligible(sourceId, access),
           () => undefined,
           () => {
+            if (!this.isCurrentRender(generation)) return;
             this.speciesChoicesPending = false;
             this.renderDiagnosticsBanner();
             this.updateNavigationButtons();
           },
           (message) => {
-            this.controller.setOriginConsequenceCompletion("species", false);
-            this.speciesChoicesPending = false;
+            if (!this.isCurrentRender(generation)) return;
             this.speciesChoiceLoadError = message;
-            this.renderDiagnosticsBanner();
-            this.updateNavigationButtons();
+            this.updateOriginConsequenceCompletion("species", false, generation);
           },
-          (instanceId, value, entities) => {
-            setCreatorChoice(draft, entities, instanceId, value);
-            this.speciesChoicesPending = false;
-            this.speciesChoiceLoadError = null;
-            this.resolveCatalogChoiceSubstep("species-choices");
+          (choices, entities) => {
+            if (!this.isCurrentRender(generation)) return;
+            this.submitCatalogChoiceBatch("species-choices", entities, choices);
           },
           (instanceId) => { clearCreatorChoice(draft, instanceId); this.renderCurrentStep(); },
           (grantId, entities) => this.resolveOriginRandomGrant(entities, grantId),
-          (complete) => {
-            this.controller.setOriginConsequenceCompletion("species", complete);
-            this.speciesChoicesPending = false;
-            this.speciesChoiceLoadError = null;
-            this.renderProgressBar();
-            this.renderDiagnosticsBanner();
-            this.updateNavigationButtons();
-          },
+          (complete) => this.updateOriginConsequenceCompletion("species", complete, generation),
         );
       }
     } catch {
+      if (!this.isCurrentRender(generation)) return;
       loadingEl.remove();
       container.createEl("p", {
         text: "Failed to load species. Check your connection and try again.",
@@ -824,7 +844,7 @@ export class CharacterCreatorModal extends ObsidianModal {
    * Renders the Background step: dropdown for background selection
    * filtered by ruleset. Uses catalog data when available.
    */
-  private async renderBackgroundStep(container: HTMLElement): Promise<void> {
+  private async renderBackgroundStep(container: HTMLElement, generation: number): Promise<void> {
     const draft = this.controller.draft;
     const ruleset = draft.ruleset.ruleset;
 
@@ -851,6 +871,7 @@ export class CharacterCreatorModal extends ObsidianModal {
 
     try {
       const bgIndex = await catalog.fetchIndex(revision, "background");
+      if (!this.isCurrentRender(generation)) return;
       loadingEl.remove();
 
       const filtered = bgIndex.filter((b) =>
@@ -898,24 +919,23 @@ export class CharacterCreatorModal extends ObsidianModal {
           container, draft, catalog, selected,
           (sourceId, access) => this.isEntityEligible(sourceId, access),
           () => undefined,
-          () => this.presentInternalSubstep("background-choices"),
+          () => { if (this.isCurrentRender(generation)) this.presentInternalSubstep("background-choices"); },
           (message) => {
-            this.controller.setOriginConsequenceCompletion("background", false);
+            if (!this.isCurrentRender(generation)) return;
             this.failInternalSubstep("background-choices", message);
+            this.updateOriginConsequenceCompletion("background", false, generation);
           },
-          (instanceId, value, entities) => {
-            setCreatorChoice(draft, entities, instanceId, value);
-            this.resolveCatalogChoiceSubstep("background-choices");
+          (choices, entities) => {
+            if (!this.isCurrentRender(generation)) return;
+            this.submitCatalogChoiceBatch("background-choices", entities, choices);
           },
           (instanceId) => { clearCreatorChoice(draft, instanceId); this.renderCurrentStep(); },
           (grantId, entities) => this.resolveOriginRandomGrant(entities, grantId),
-          (complete) => {
-            this.controller.setOriginConsequenceCompletion("background", complete);
-            this.presentInternalSubstep("background-choices");
-          },
+          (complete) => this.updateOriginConsequenceCompletion("background", complete, generation),
         );
       }
     } catch {
+      if (!this.isCurrentRender(generation)) return;
       loadingEl.remove();
       container.createEl("p", {
         text: "Failed to load backgrounds. Check your connection and try again.",
@@ -927,7 +947,7 @@ export class CharacterCreatorModal extends ObsidianModal {
    * Renders the Class step: dropdown for class selection filtered
    * by ruleset. Uses catalog data when available.
    */
-  private async renderClassStep(container: HTMLElement): Promise<void> {
+  private async renderClassStep(container: HTMLElement, generation: number): Promise<void> {
     const draft = this.controller.draft;
     const ruleset = draft.ruleset.ruleset;
 
@@ -954,6 +974,7 @@ export class CharacterCreatorModal extends ObsidianModal {
 
     try {
       const classIndex = await catalog.fetchIndex(revision, "class");
+      if (!this.isCurrentRender(generation)) return;
       loadingEl.remove();
 
       const filtered = classIndex.filter((c) =>
@@ -1001,24 +1022,23 @@ export class CharacterCreatorModal extends ObsidianModal {
           container, draft, catalog, selected,
           (sourceId, access) => this.isEntityEligible(sourceId, access),
           () => undefined,
-          () => this.presentInternalSubstep("class-starting-grants"),
+          () => { if (this.isCurrentRender(generation)) this.presentInternalSubstep("class-starting-grants"); },
           (message) => {
-            this.controller.setOriginConsequenceCompletion("class", false);
+            if (!this.isCurrentRender(generation)) return;
             this.failInternalSubstep("class-starting-grants", message);
+            this.updateOriginConsequenceCompletion("class", false, generation);
           },
-          (instanceId, value, entities) => {
-            setCreatorChoice(draft, entities, instanceId, value);
-            this.resolveCatalogChoiceSubstep("class-starting-grants");
+          (choices, entities) => {
+            if (!this.isCurrentRender(generation)) return;
+            this.submitCatalogChoiceBatch("class-starting-grants", entities, choices);
           },
           (instanceId) => { clearCreatorChoice(draft, instanceId); this.renderCurrentStep(); },
           (grantId, entities) => this.resolveOriginRandomGrant(entities, grantId),
-          (complete) => {
-            this.controller.setOriginConsequenceCompletion("class", complete);
-            this.presentInternalSubstep("class-starting-grants");
-          },
+          (complete) => this.updateOriginConsequenceCompletion("class", complete, generation),
         );
       }
     } catch {
+      if (!this.isCurrentRender(generation)) return;
       loadingEl.remove();
       container.createEl("p", {
         text: "Failed to load classes. Check your connection and try again.",

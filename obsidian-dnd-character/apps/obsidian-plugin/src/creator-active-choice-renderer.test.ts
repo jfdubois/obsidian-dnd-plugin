@@ -92,7 +92,7 @@ describe("active creator choice slots", () => {
     mocks.dropdowns[0]!.change(String(languageOne)); confirm();
     expect(submit).not.toHaveBeenCalled();
     mocks.dropdowns[1]!.change(String(languageTwo)); confirm();
-    expect(submit).toHaveBeenCalledWith(expect.anything(), { type: "entity-ids", entityIds: [languageOne, languageTwo] });
+    expect(submit).toHaveBeenCalledWith([{ instanceId: expect.anything(), value: { type: "entity-ids", entityIds: [languageOne, languageTwo] } }]);
   });
 
   it("excludes a sibling selection, restores it when changed, and makes a cleared required slot unresolved", () => {
@@ -112,7 +112,7 @@ describe("active creator choice slots", () => {
     expect(mocks.dropdowns).toHaveLength(3);
     expect(container.textContent).toContain("Language 2 (optional)");
     mocks.dropdowns[0]!.change(String(languageOne)); confirm();
-    expect(submit).toHaveBeenCalledWith(expect.anything(), { type: "entity-ids", entityIds: [languageOne] });
+    expect(submit).toHaveBeenCalledWith([{ instanceId: expect.anything(), value: { type: "entity-ids", entityIds: [languageOne] } }]);
   });
 
   it("renders a one-of-N closed package as one dropdown and retains the option-ids contract", () => {
@@ -125,7 +125,7 @@ describe("active creator choice slots", () => {
     expect(mocks.dropdowns).toHaveLength(1);
     expect(mocks.dropdowns[0]!.options).toMatchObject({ [packageA]: "Package A", [packageB]: "Package B" });
     mocks.dropdowns[0]!.change(String(packageA)); confirm();
-    expect(submit).toHaveBeenCalledWith(choice.instanceId, { type: "option-ids", optionIds: [packageA] });
+    expect(submit).toHaveBeenCalledWith([{ instanceId: choice.instanceId, value: { type: "option-ids", optionIds: [packageA] } }]);
   });
 
   it("renders 2014 Acolyte's two language slots and one starting-equipment package dropdown", () => {
@@ -140,5 +140,21 @@ describe("active creator choice slots", () => {
     expect(container.textContent).toContain("Language 1");
     expect(container.textContent).toContain("Language 2");
     expect(mocks.dropdowns[2]!.options[String(packageA)]).toBe("Acolyte package");
+  });
+
+  it("submits all visible resolved choices as one batch", () => {
+    const packageA = createChoiceOptionId("option:batch:package:a");
+    const equipment: ChoiceConsequence = {
+      instanceId: createChoiceInstanceId("choice-instance:batch:equipment"), originId: createEntityId("background:2014:phb:acolyte"), status: "unresolved", candidates: [],
+      definition: { id: createChoiceDefinitionId("choice:batch:equipment"), label: "Starting equipment", type: "closed-option", minimum: 1, maximum: 1, repeatable: false, prerequisites: [], options: [{ id: packageA, label: "Package A", grants: [], choices: [] }] },
+    };
+    const submit = vi.fn(); const container = element();
+    renderActiveCreatorChoices(container as unknown as HTMLElement, "Background Choices", [entityChoice(), equipment], submit);
+    mocks.dropdowns[0]!.change(String(languageOne)); mocks.dropdowns[1]!.change(String(languageTwo)); mocks.dropdowns[2]!.change(String(packageA)); confirm();
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(submit).toHaveBeenCalledWith([
+      { instanceId: entityChoice().instanceId, value: { type: "entity-ids", entityIds: [languageOne, languageTwo] } },
+      { instanceId: equipment.instanceId, value: { type: "option-ids", optionIds: [packageA] } },
+    ]);
   });
 });

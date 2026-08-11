@@ -5,7 +5,7 @@ import type { CharacterDraft } from "./character-draft";
 import { renderInternalChoices } from "./character-internal-choice-renderer";
 import { deriveDraftConsequences } from "./creator-draft-commands";
 import { loadCreatorConsequenceReadModel } from "./creator-consequence-read-model";
-import { renderActiveCreatorChoices } from "./creator-active-choice-renderer";
+import { renderActiveCreatorChoices, type CreatorChoiceSubmission } from "./creator-active-choice-renderer";
 import type { ChoiceConsequence } from "./creator-consequence-service";
 import type { EntityDetailResponse } from "@obsidian-dnd/catalog-contract";
 import type { RuleGrantId } from "@obsidian-dnd/domain";
@@ -22,7 +22,7 @@ export async function renderClassStartingGrants(
   onResolved: (choices: Record<string, CharacterChoice>) => void,
   onChoicesPresented: () => void,
   onLoadError: (message: string) => void,
-  onChoiceSubmitted?: (instanceId: ChoiceConsequence["instanceId"], value: CharacterChoice["selectedValue"], entities: readonly EntityDetailResponse[]) => void,
+  onChoicesSubmitted?: (choices: readonly CreatorChoiceSubmission[], entities: readonly EntityDetailResponse[]) => void,
   onChoiceCleared?: (instanceId: ChoiceConsequence["instanceId"]) => void,
   onRandomGrantResolution?: (grantId: RuleGrantId, entities: readonly EntityDetailResponse[]) => void,
   onConsequenceCompletion?: (complete: boolean) => void,
@@ -46,8 +46,8 @@ export async function renderClassStartingGrants(
       onLoadError(`Selected catalog entity at ${selected.detailPath} is not class data. Refresh the catalog and try again.`);
       return;
     }
-    const legacyModel = onChoiceSubmitted === undefined ? deriveDraftConsequences(draft, [data]) : undefined;
-    const readModel = onChoiceSubmitted === undefined ? undefined : await loadCreatorConsequenceReadModel(draft, catalog, revision, [data]);
+    const legacyModel = onChoicesSubmitted === undefined ? deriveDraftConsequences(draft, [data]) : undefined;
+    const readModel = onChoicesSubmitted === undefined ? undefined : await loadCreatorConsequenceReadModel(draft, catalog, revision, [data]);
     const origin = (readModel?.model ?? legacyModel!).origins
       .find((entry) => entry.origin.id === selected.id);
     const choices = origin?.choices ?? [];
@@ -56,7 +56,7 @@ export async function renderClassStartingGrants(
     renderOriginConsequences(container, origin, model.diagnostics, onRandomGrantResolution === undefined ? undefined : (grantId) => onRandomGrantResolution(grantId, readModel?.entities ?? [data]));
     if (choices.length === 0 && (origin?.levelOneGrants.length ?? 0) === 0) {
       container.createEl("p", { text: "No additional starting grants for this class.", cls: "dnd-creator-info" });
-      if (onChoiceSubmitted === undefined) onResolved({});
+      if (onChoicesSubmitted === undefined) onResolved({});
       return;
     }
     if (choices.length === 0) {
@@ -67,7 +67,7 @@ export async function renderClassStartingGrants(
       onChoicesPresented();
       return;
     }
-    if (onChoiceSubmitted !== undefined) renderActiveCreatorChoices(container, "Class Starting Choices", choices, (instanceId, value) => onChoiceSubmitted(instanceId, value, readModel!.entities), onChoiceCleared);
+    if (onChoicesSubmitted !== undefined) renderActiveCreatorChoices(container, "Class Starting Choices", choices, (submissions) => onChoicesSubmitted(submissions, readModel!.entities), onChoiceCleared);
     else await renderInternalChoices(container, "Class Starting Choices", draft, catalog, revision, choices, isEntityEligible, onResolved);
     onChoicesPresented();
   } catch (error) {

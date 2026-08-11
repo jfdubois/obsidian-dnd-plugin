@@ -14,7 +14,7 @@ import { renderChoiceDefinition, type ChoiceDropdownState } from "./character-sp
 import { deriveDraftConsequences } from "./creator-draft-commands";
 import type { ChoiceConsequence } from "./creator-consequence-service";
 import { loadCreatorConsequenceReadModel } from "./creator-consequence-read-model";
-import { renderActiveCreatorChoices } from "./creator-active-choice-renderer";
+import { renderActiveCreatorChoices, type CreatorChoiceSubmission } from "./creator-active-choice-renderer";
 import type { EntityDetailResponse } from "@obsidian-dnd/catalog-contract";
 import { renderOriginConsequences } from "./creator-origin-consequence-renderer";
 import { isOriginConsequenceComplete } from "./creator-origin-completion";
@@ -31,7 +31,7 @@ export async function renderSpeciesChoices(
   onChoicesResolved: (choices: Record<string, CharacterChoice>) => void,
   onChoicesPresented?: () => void,
   onEntityLoadError?: (message: string) => void,
-  onChoiceSubmitted?: (instanceId: ChoiceConsequence["instanceId"], value: CharacterChoice["selectedValue"], entities: readonly EntityDetailResponse[]) => void,
+  onChoicesSubmitted?: (choices: readonly CreatorChoiceSubmission[], entities: readonly EntityDetailResponse[]) => void,
   onChoiceCleared?: (instanceId: ChoiceConsequence["instanceId"]) => void,
   onRandomGrantResolution?: (grantId: RuleGrantId, entities: readonly EntityDetailResponse[]) => void,
   onConsequenceCompletion?: (complete: boolean) => void,
@@ -71,8 +71,8 @@ export async function renderSpeciesChoices(
       return;
     }
 
-    const legacyModel = onChoiceSubmitted === undefined ? deriveDraftConsequences(draft, [speciesData]) : undefined;
-    const readModel = onChoiceSubmitted === undefined ? undefined : await loadCreatorConsequenceReadModel(draft, catalog, revision, [speciesData]);
+    const legacyModel = onChoicesSubmitted === undefined ? deriveDraftConsequences(draft, [speciesData]) : undefined;
+    const readModel = onChoicesSubmitted === undefined ? undefined : await loadCreatorConsequenceReadModel(draft, catalog, revision, [speciesData]);
     const model = readModel?.model ?? legacyModel!;
     const origin = model.origins.find((entry) => entry.origin.id === speciesId);
     const choices = origin?.choices ?? [];
@@ -83,11 +83,11 @@ export async function renderSpeciesChoices(
         text: "No additional choices for this species.",
         cls: "dnd-creator-info",
       });
-      if (onChoiceSubmitted === undefined) onChoicesResolved({});
+      if (onChoicesSubmitted === undefined) onChoicesResolved({});
       return;
     }
 
-    if (onChoiceSubmitted !== undefined) renderActiveCreatorChoices(container, "Species Choices", choices, (instanceId, value) => onChoiceSubmitted(instanceId, value, readModel!.entities), onChoiceCleared);
+    if (onChoicesSubmitted !== undefined) renderActiveCreatorChoices(container, "Species Choices", choices, (submissions) => onChoicesSubmitted(submissions, readModel!.entities), onChoiceCleared);
     else await renderChoicesSection(container, draft, catalog, revision, choices, isEntityEligible, onChoicesResolved);
     onChoicesPresented?.();
   } catch (error) {
