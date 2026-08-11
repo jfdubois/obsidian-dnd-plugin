@@ -1,11 +1,17 @@
-/* ── Species choice type renderers ───────────────────────────────
+/* ── Legacy compatibility choice renderers ───────────────────────
    Renders UI for each ChoiceDefinitionType.
    Uses only approved Obsidian APIs.                               */
+
+/**
+ * @deprecated The active creator modal renders `ChoiceConsequence` through
+ * creator-active-choice-renderer. Retained only for bounded legacy callers
+ * and tests while their public callback contract is retired.
+ */
 
 import { Setting } from "obsidian";
 import type { CatalogService } from "./catalog/catalog-service";
 import type { CharacterDraft } from "./character-draft";
-import type { CatalogRevision, EntityId, SourceId } from "@obsidian-dnd/domain";
+import type { CatalogRevision, ChoiceInstanceId, EntityId, SourceId } from "@obsidian-dnd/domain";
 import type {
   ChoiceDefinition,
   CatalogEntitySummary,
@@ -27,6 +33,8 @@ import {
 
 export interface ChoiceDropdownState {
   definition: ChoiceDefinition;
+  instanceId?: ChoiceInstanceId;
+  originId?: EntityId;
   selectedIds: Set<string>;
   candidates: CatalogEntitySummary[];
 }

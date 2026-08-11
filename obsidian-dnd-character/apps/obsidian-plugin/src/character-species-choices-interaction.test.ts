@@ -8,6 +8,7 @@ import {
 } from "@obsidian-dnd/catalog-contract";
 import {
   createEntityId,
+  createChoiceInstanceId,
   createChoiceDefinitionId,
   type RuleEntityKind,
 } from "@obsidian-dnd/domain";
@@ -35,6 +36,8 @@ function createDropdownState(
   );
   return {
     definition: def,
+    instanceId: createChoiceInstanceId(`species:2024:phb:elf:choice:${defId}`),
+    originId: createEntityId("species:2024:phb:elf"),
     selectedIds: new Set(selectedIds),
     candidates: [],
   };

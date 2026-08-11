@@ -8,17 +8,11 @@ import type {
   DraftSourceData,
   DraftIdentityData,
   DraftSpeciesData,
-  DraftSpeciesChoiceData,
   DraftBackgroundData,
-  DraftBackgroundChoiceData,
   DraftClassData,
-  DraftClassGrantData,
   DraftAbilityData,
   DraftProficiencyData,
-  DraftProficiencyChoiceData,
   DraftLanguageData,
-  DraftLanguageChoiceData,
-  DraftEquipmentChoiceData,
   DraftEquipmentData,
   DraftSpellEligibilityData,
   DraftSpellData,
@@ -30,17 +24,11 @@ import {
   createEmptyDraftSourceData,
   createEmptyDraftIdentityData,
   createEmptyDraftSpeciesData,
-  createEmptyDraftSpeciesChoiceData,
   createEmptyDraftBackgroundData,
-  createEmptyDraftBackgroundChoiceData,
   createEmptyDraftClassData,
-  createEmptyDraftClassGrantData,
   createEmptyDraftAbilityData,
   createEmptyDraftProficiencyData,
-  createEmptyDraftProficiencyChoiceData,
   createEmptyDraftLanguageData,
-  createEmptyDraftLanguageChoiceData,
-  createEmptyDraftEquipmentChoiceData,
   createEmptyDraftEquipmentData,
   createEmptyDraftSpellEligibilityData,
   createEmptyDraftSpellData,
@@ -54,6 +42,9 @@ import {
   buildDraftDiagnostics,
   getTransitiveDependents,
 } from "./character-draft-dependency";
+import type { RuleGrantId } from "@obsidian-dnd/domain";
+import type { ChoiceInstanceId } from "@obsidian-dnd/domain";
+import type { CharacterChoice } from "@obsidian-dnd/character-contract";
 
 /* ── Draft state ───────────────────────────────────────────────── */
 
@@ -63,17 +54,11 @@ export interface CharacterDraft {
   sources: DraftSourceData;
   identity: DraftIdentityData;
   species: DraftSpeciesData;
-  speciesChoices: DraftSpeciesChoiceData;
   background: DraftBackgroundData;
-  backgroundChoices: DraftBackgroundChoiceData;
   class: DraftClassData;
-  classGrants: DraftClassGrantData;
   abilities: DraftAbilityData;
-  proficiencyChoices: DraftProficiencyChoiceData;
   proficiencies: DraftProficiencyData;
-  languageChoices: DraftLanguageChoiceData;
   languages: DraftLanguageData;
-  equipmentChoices: DraftEquipmentChoiceData;
   equipment: DraftEquipmentData;
   spellEligibility: DraftSpellEligibilityData;
   spells: DraftSpellData;
@@ -83,6 +68,12 @@ export interface CharacterDraft {
 
   /* Diagnostics */
   diagnostics: DraftDiagnostic[];
+
+  /** Sole authoritative storage for catalog-owned creator choice resolutions. */
+  selections: Record<ChoiceInstanceId, CharacterChoice>;
+
+  /** Explicit dice-currency resolutions. Catalog formulas never enter draft state. */
+  randomGrantResolutions: Record<RuleGrantId, number>;
 }
 
 /* ── Factory ───────────────────────────────────────────────────── */
@@ -98,22 +89,18 @@ export function createEmptyCharacterDraft(): CharacterDraft {
     sources: createEmptyDraftSourceData(),
     identity: createEmptyDraftIdentityData(),
     species: createEmptyDraftSpeciesData(),
-    speciesChoices: createEmptyDraftSpeciesChoiceData(),
     background: createEmptyDraftBackgroundData(),
-    backgroundChoices: createEmptyDraftBackgroundChoiceData(),
     class: createEmptyDraftClassData(),
-    classGrants: createEmptyDraftClassGrantData(),
     abilities: createEmptyDraftAbilityData(),
-    proficiencyChoices: createEmptyDraftProficiencyChoiceData(),
     proficiencies: createEmptyDraftProficiencyData(),
-    languageChoices: createEmptyDraftLanguageChoiceData(),
     languages: createEmptyDraftLanguageData(),
-    equipmentChoices: createEmptyDraftEquipmentChoiceData(),
     equipment: createEmptyDraftEquipmentData(),
     spellEligibility: createEmptyDraftSpellEligibilityData(),
     spells: createEmptyDraftSpellData(),
     stepStatuses,
     diagnostics: [],
+    selections: {},
+    randomGrantResolutions: {},
   };
 }
 
@@ -129,22 +116,18 @@ export function isCharacterDraft(value: unknown): value is CharacterDraft {
     "sources",
     "identity",
     "species",
-    "speciesChoices",
     "background",
-    "backgroundChoices",
     "class",
-    "classGrants",
     "abilities",
-    "proficiencyChoices",
     "proficiencies",
-    "languageChoices",
     "languages",
-    "equipmentChoices",
     "equipment",
     "spellEligibility",
     "spells",
     "stepStatuses",
     "diagnostics",
+    "selections",
+    "randomGrantResolutions",
   ];
 
   for (const field of requiredFields) {
@@ -156,6 +139,9 @@ export function isCharacterDraft(value: unknown): value is CharacterDraft {
 
   // diagnostics must be an array
   if (!Array.isArray(obj.diagnostics)) return false;
+  if (typeof obj.selections !== "object" || obj.selections === null || Array.isArray(obj.selections)) return false;
+  if (typeof obj.randomGrantResolutions !== "object" || obj.randomGrantResolutions === null
+    || !Object.values(obj.randomGrantResolutions as Record<string, unknown>).every((value) => typeof value === "number" && Number.isInteger(value) && value > 0)) return false;
 
   return true;
 }

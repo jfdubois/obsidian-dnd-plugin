@@ -50,8 +50,8 @@ describe("selectProficiencyChoices with valid input", () => {
     const result = selectProficiencyChoices(draft, { athletics });
 
     expect(result).toBe(true);
-    expect(draft.proficiencyChoices.choices).toHaveProperty("athletics");
-    expect(draft.proficiencyChoices.choices["athletics" as ChoiceInstanceId]).toBe(athletics);
+    expect(draft.selections).toHaveProperty("athletics");
+    expect(draft.selections["athletics" as ChoiceInstanceId]).toBe(athletics);
   });
 
   it("marks the proficiency-choices draft step as resolved", () => {
@@ -77,7 +77,7 @@ describe("selectProficiencyChoices with valid input", () => {
     const result = selectProficiencyChoices(draft, {});
 
     expect(result).toBe(true);
-    expect(draft.proficiencyChoices.choices).toEqual({});
+    expect(draft.selections).toEqual({});
     expect(getStepState(draft, "proficiency-choices")).toBe("resolved");
   });
 
@@ -93,7 +93,7 @@ describe("selectProficiencyChoices with valid input", () => {
     });
 
     selectProficiencyChoices(draft, { athletics: choice1 });
-    expect(Object.keys(draft.proficiencyChoices.choices)).toHaveLength(1);
+    expect(Object.keys(draft.selections)).toHaveLength(1);
 
     const choice2 = createCharacterChoice({
       instanceId: createChoiceInstanceId("stealth"),
@@ -103,9 +103,9 @@ describe("selectProficiencyChoices with valid input", () => {
     });
 
     selectProficiencyChoices(draft, { stealth: choice2 });
-    expect(Object.keys(draft.proficiencyChoices.choices)).toHaveLength(1);
-    expect(draft.proficiencyChoices.choices).toHaveProperty("stealth");
-    expect(draft.proficiencyChoices.choices).not.toHaveProperty("athletics");
+    expect(Object.keys(draft.selections)).toHaveLength(2);
+    expect(draft.selections).toHaveProperty("stealth");
+    expect(draft.selections).toHaveProperty("athletics");
   });
 
   it("works with 2014 ruleset", () => {
@@ -154,7 +154,7 @@ describe("selectProficiencyChoices with valid input", () => {
 
     selectProficiencyChoices(draft, input);
 
-    expect(draft.proficiencyChoices.choices).not.toBe(input);
+    expect(draft.selections).not.toBe(input);
   });
 });
 
@@ -175,8 +175,8 @@ describe("selectLanguageChoices with valid input", () => {
     const result = selectLanguageChoices(draft, { common });
 
     expect(result).toBe(true);
-    expect(draft.languageChoices.choices).toHaveProperty("common");
-    expect(draft.languageChoices.choices["common" as ChoiceInstanceId]).toBe(common);
+    expect(draft.selections).toHaveProperty("common");
+    expect(draft.selections["common" as ChoiceInstanceId]).toBe(common);
   });
 
   it("marks the language-choices draft step as resolved", () => {
@@ -202,7 +202,7 @@ describe("selectLanguageChoices with valid input", () => {
     const result = selectLanguageChoices(draft, {});
 
     expect(result).toBe(true);
-    expect(draft.languageChoices.choices).toEqual({});
+    expect(draft.selections).toEqual({});
     expect(getStepState(draft, "language-choices")).toBe("resolved");
   });
 
@@ -218,7 +218,7 @@ describe("selectLanguageChoices with valid input", () => {
     });
 
     selectLanguageChoices(draft, { common: choice1 });
-    expect(Object.keys(draft.languageChoices.choices)).toHaveLength(1);
+    expect(Object.keys(draft.selections)).toHaveLength(1);
 
     const choice2 = createCharacterChoice({
       instanceId: createChoiceInstanceId("dwarvish"),
@@ -228,9 +228,9 @@ describe("selectLanguageChoices with valid input", () => {
     });
 
     selectLanguageChoices(draft, { dwarvish: choice2 });
-    expect(Object.keys(draft.languageChoices.choices)).toHaveLength(1);
-    expect(draft.languageChoices.choices).toHaveProperty("dwarvish");
-    expect(draft.languageChoices.choices).not.toHaveProperty("common");
+    expect(Object.keys(draft.selections)).toHaveLength(2);
+    expect(draft.selections).toHaveProperty("dwarvish");
+    expect(draft.selections).toHaveProperty("common");
   });
 
   it("works with 2014 ruleset", () => {
@@ -279,6 +279,6 @@ describe("selectLanguageChoices with valid input", () => {
 
     selectLanguageChoices(draft, input);
 
-    expect(draft.languageChoices.choices).not.toBe(input);
+    expect(draft.selections).not.toBe(input);
   });
 });

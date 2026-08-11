@@ -44,7 +44,7 @@ function makeCompleteDraft(): ReturnType<typeof createEmptyCharacterDraft> {
   };
 
   /* Species choices */
-  draft.speciesChoices.choices = {
+  draft.selections = {
     [createChoiceInstanceId("feat-1")]: {
       instanceId: createChoiceInstanceId("feat-1"),
       definitionId: createChoiceDefinitionId("feat-choice-1"),
@@ -145,7 +145,7 @@ describe("finalizeCharacter", () => {
     };
 
     /* Species choices */
-    draft.speciesChoices.choices = {
+    draft.selections = {
       [createChoiceInstanceId("feat-1")]: {
         instanceId: createChoiceInstanceId("feat-1"),
         definitionId: createChoiceDefinitionId("feat-choice-1"),
@@ -155,7 +155,8 @@ describe("finalizeCharacter", () => {
     };
 
     /* Background choices */
-    draft.backgroundChoices.choices = {
+    draft.selections = {
+      ...draft.selections,
       [createChoiceInstanceId("bg-feat")]: {
         instanceId: createChoiceInstanceId("bg-feat"),
         definitionId: createChoiceDefinitionId("bg-feat-def"),

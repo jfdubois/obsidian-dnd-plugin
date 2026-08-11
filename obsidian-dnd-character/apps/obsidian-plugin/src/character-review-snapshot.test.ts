@@ -36,7 +36,7 @@ describe("buildReviewSnapshot — positive", () => {
     draft.identity.name = "Gandalf";
     draft.identity.playerName = "Alice";
     draft.species.speciesId = createEntityId("wizard");
-    draft.speciesChoices.choices = {
+    draft.selections = {
       [createChoiceInstanceId("species-trait-1")]: createCharacterChoice({
         instanceId: createChoiceInstanceId("species-trait-1"),
         definitionId: createChoiceDefinitionId("ability-increase"),
@@ -45,24 +45,24 @@ describe("buildReviewSnapshot — positive", () => {
       }),
     };
     draft.background.backgroundId = createEntityId("sage");
-    draft.backgroundChoices.choices = {
+    Object.assign(draft.selections, {
       [createChoiceInstanceId("bg-skill-1")]: createCharacterChoice({
         instanceId: createChoiceInstanceId("bg-skill-1"),
         definitionId: createChoiceDefinitionId("skill-choices"),
         originGrantId: createEntityId("sage"),
         selectedValue: { type: "entity-ids", entityIds: [createEntityId("arcana"), createEntityId("history")] },
       }),
-    };
+    });
     draft.class.classId = createEntityId("wizard");
     draft.class.subclassId = createEntityId("evoker");
-    draft.classGrants.choices = {
+    Object.assign(draft.selections, {
       [createChoiceInstanceId("class-starting-equip")]: createCharacterChoice({
         instanceId: createChoiceInstanceId("class-starting-equip"),
         definitionId: createChoiceDefinitionId("starting-equipment"),
         originGrantId: createEntityId("wizard"),
         selectedValue: { type: "entity-ids", entityIds: [createEntityId("quarterstaff")] },
       }),
-    };
+    });
     draft.abilities.method = "standard-array";
     draft.abilities.scores = {
       STR: 8,
@@ -72,18 +72,15 @@ describe("buildReviewSnapshot — positive", () => {
       WIS: 16,
       CHA: 12,
     };
-    draft.proficiencyChoices.choices = {};
     draft.proficiencies.skillProficiencies = [
       createEntityId("arcana"),
       createEntityId("history"),
     ];
     draft.proficiencies.toolProficiencies = [];
-    draft.languageChoices.choices = {};
     draft.languages.languageIds = [
       createEntityId("common"),
       createEntityId("elvish"),
     ];
-    draft.equipmentChoices.choices = {};
     draft.equipment.items = [
       {
         instanceId: createItemInstanceId("weapon-1"),
@@ -110,28 +107,22 @@ describe("buildReviewSnapshot — positive", () => {
 
     expect(snapshot).not.toBeNull();
 
-    // Verify all 18 data sections are present and match draft selections
+    // Catalog-owned choices are exposed once through canonical selections.
     expect(snapshot!.ruleset.ruleset).toBe("2024");
     expect(snapshot!.sources.enabledSourceIds).toEqual([createSourceId("phb")]);
     expect(snapshot!.identity.name).toBe("Gandalf");
     expect(snapshot!.identity.playerName).toBe("Alice");
     expect(snapshot!.species.speciesId).toBe(createEntityId("wizard"));
-    expect(Object.keys(snapshot!.speciesChoices.choices)).toHaveLength(1);
     expect(snapshot!.background.backgroundId).toBe(createEntityId("sage"));
-    expect(Object.keys(snapshot!.backgroundChoices.choices)).toHaveLength(1);
     expect(snapshot!.class.classId).toBe(createEntityId("wizard"));
     expect(snapshot!.class.subclassId).toBe(createEntityId("evoker"));
-    expect(Object.keys(snapshot!.classGrants.choices)).toHaveLength(1);
     expect(snapshot!.abilities.method).toBe("standard-array");
     expect(snapshot!.abilities.scores?.INT).toBe(18);
-    expect(Object.keys(snapshot!.proficiencyChoices.choices)).toHaveLength(0);
     expect(snapshot!.proficiencies.skillProficiencies).toContain(
       createEntityId("arcana"),
     );
     expect(snapshot!.proficiencies.toolProficiencies).toEqual([]);
-    expect(Object.keys(snapshot!.languageChoices.choices)).toHaveLength(0);
     expect(snapshot!.languages.languageIds).toContain(createEntityId("common"));
-    expect(Object.keys(snapshot!.equipmentChoices.choices)).toHaveLength(0);
     expect(snapshot!.equipment.items).toHaveLength(1);
     expect(snapshot!.spellEligibility.isSpellcaster).toBe(true);
     expect(snapshot!.spellEligibility.spellcastingAbility).toBe("INT");
@@ -151,20 +142,15 @@ describe("buildReviewSnapshot — positive", () => {
     expect(snapshot!.sources).toBe(draft.sources);
     expect(snapshot!.identity).toBe(draft.identity);
     expect(snapshot!.species).toBe(draft.species);
-    expect(snapshot!.speciesChoices).toBe(draft.speciesChoices);
     expect(snapshot!.background).toBe(draft.background);
-    expect(snapshot!.backgroundChoices).toBe(draft.backgroundChoices);
     expect(snapshot!.class).toBe(draft.class);
-    expect(snapshot!.classGrants).toBe(draft.classGrants);
     expect(snapshot!.abilities).toBe(draft.abilities);
-    expect(snapshot!.proficiencyChoices).toBe(draft.proficiencyChoices);
     expect(snapshot!.proficiencies).toBe(draft.proficiencies);
-    expect(snapshot!.languageChoices).toBe(draft.languageChoices);
     expect(snapshot!.languages).toBe(draft.languages);
-    expect(snapshot!.equipmentChoices).toBe(draft.equipmentChoices);
     expect(snapshot!.equipment).toBe(draft.equipment);
     expect(snapshot!.spellEligibility).toBe(draft.spellEligibility);
     expect(snapshot!.spells).toBe(draft.spells);
+    expect(snapshot!.selections).toBe(draft.selections);
   });
 });
 

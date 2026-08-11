@@ -40,7 +40,7 @@ export function validateSpeciesChoices(
  * - The species step has been resolved first (species-choices depends on species)
  * - All choice values are valid CharacterChoice records
  *
- * Sets the draft.speciesChoices.choices with the validated selection,
+ * Compatibility adapter which writes the authoritative `draft.selections`,
  * marks the species-choices draft step as resolved, and invalidates
  * all downstream dependent steps.
  *
@@ -75,7 +75,7 @@ export function selectSpeciesChoices(
     return false;
   }
 
-  draft.speciesChoices.choices = { ...choices };
+  Object.assign(draft.selections, choices);
   markStepResolved(draft, "species-choices");
   invalidateDependentSteps(draft, "species-choices");
   return true;

@@ -53,17 +53,18 @@ describe("CharacterDraft factory", () => {
     expect(draft.sources).toEqual({ enabledSourceIds: [] });
     expect(draft.identity).toEqual({ name: "" });
     expect(draft.species).toEqual({ speciesId: null });
-    expect(draft.speciesChoices).toEqual({ choices: {} });
     expect(draft.background).toEqual({ backgroundId: null });
-    expect(draft.backgroundChoices).toEqual({ choices: {} });
     expect(draft.class).toEqual({ classId: null });
-    expect(draft.classGrants).toEqual({ choices: {} });
     expect(draft.abilities).toEqual({ method: null });
     expect(draft.proficiencies).toEqual({ skillProficiencies: [], toolProficiencies: [] });
     expect(draft.languages).toEqual({ languageIds: [] });
     expect(draft.equipment).toEqual({ items: [] });
     expect(draft.spellEligibility).toEqual({ isSpellcaster: false });
     expect(draft.spells).toEqual({ selections: [] });
+    expect(draft.selections).toEqual({});
+    for (const legacyBucket of ["speciesChoices", "backgroundChoices", "classGrants", "proficiencyChoices", "languageChoices", "equipmentChoices"]) {
+      expect(legacyBucket in draft).toBe(false);
+    }
   });
 
   it("initializes all step statuses as unvisited", () => {

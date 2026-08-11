@@ -84,8 +84,8 @@ describe("selectSpeciesChoices with valid input", () => {
     const result = selectSpeciesChoices(draft, { darkvision });
 
     expect(result).toBe(true);
-    expect(draft.speciesChoices.choices).toHaveProperty("darkvision");
-    expect(draft.speciesChoices.choices["darkvision" as ChoiceInstanceId]).toBe(darkvision);
+    expect(draft.selections).toHaveProperty("darkvision");
+    expect(draft.selections["darkvision" as ChoiceInstanceId]).toBe(darkvision);
   });
 
   it("marks the species-choices draft step as resolved", () => {
@@ -136,7 +136,7 @@ describe("selectSpeciesChoices with valid input", () => {
     const result = selectSpeciesChoices(draft, {});
 
     expect(result).toBe(true);
-    expect(draft.speciesChoices.choices).toEqual({});
+    expect(draft.selections).toEqual({});
     expect(getStepState(draft, "species-choices")).toBe("resolved");
   });
 
@@ -154,7 +154,7 @@ describe("selectSpeciesChoices with valid input", () => {
     });
 
     selectSpeciesChoices(draft, { darkvision: choice1 });
-    expect(Object.keys(draft.speciesChoices.choices)).toHaveLength(1);
+    expect(Object.keys(draft.selections)).toHaveLength(1);
 
     const choice2 = createCharacterChoice({
       instanceId: createChoiceInstanceId("fey_ancestry"),
@@ -164,9 +164,9 @@ describe("selectSpeciesChoices with valid input", () => {
     });
 
     selectSpeciesChoices(draft, { feyAncestry: choice2 });
-    expect(Object.keys(draft.speciesChoices.choices)).toHaveLength(1);
-    expect(draft.speciesChoices.choices).toHaveProperty("feyAncestry");
-    expect(draft.speciesChoices.choices).not.toHaveProperty("darkvision");
+    expect(Object.keys(draft.selections)).toHaveLength(2);
+    expect(draft.selections).toHaveProperty("feyAncestry");
+    expect(draft.selections).toHaveProperty("darkvision");
   });
 
   it("works with 2014 ruleset", () => {
@@ -257,6 +257,6 @@ describe("selectSpeciesChoices with valid input", () => {
     selectSpeciesChoices(draft, input);
 
     // The draft stores a copy, not the same reference
-    expect(draft.speciesChoices.choices).not.toBe(input);
+    expect(draft.selections).not.toBe(input);
   });
 });

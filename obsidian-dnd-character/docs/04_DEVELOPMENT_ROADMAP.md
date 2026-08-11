@@ -500,7 +500,7 @@ Create valid level-one characters through a dependency-aware modal.
   - Publish finite weapon scopes, source-owned exact proficiency eligibility constraints, and catalog-owned tool-proficiency groups without candidate expansion or EquipmentQuery coupling.
 - [x] **P10-CORRECTIVE-I — Normalize major-origin grants and choices**
   - Complete: normalized usable 2014 and 2024 Species, Background, and starting-Class grants, choices, diagnostics, and level-one coverage.
-- [ ] **P10-CORRECTIVE-J — Build origin-owned creator consequence service and draft integration**
+- [x] **P10-CORRECTIVE-J — Build origin-owned creator consequence service and draft integration**
 - [ ] **P10-CORRECTIVE-K — Render consequence panels and normalized details**
 - [ ] **P10-CORRECTIVE-L — Add supplemental 5eTools external-reference support**
 - [ ] **P10-CORRECTIVE-M — Rebaseline Phase 10 state-machine and manual validation**

@@ -39,7 +39,7 @@ function validateChoices(
  * - The species-choices, background-choices, and class steps are resolved
  * - All choice values are valid CharacterChoice records
  *
- * Sets the draft.proficiencyChoices.choices with the validated selection,
+ * Compatibility adapter which writes the authoritative `draft.selections`,
  * marks the proficiency-choices draft step as resolved, and invalidates
  * all downstream dependent steps.
  *
@@ -65,7 +65,7 @@ export function selectProficiencyChoices(
     return false;
   }
 
-  draft.proficiencyChoices.choices = { ...choices };
+  Object.assign(draft.selections, choices);
   markStepResolved(draft, "proficiency-choices");
   invalidateDependentSteps(draft, "proficiency-choices");
   return true;
@@ -78,7 +78,7 @@ export function selectProficiencyChoices(
  * - The species-choices, background-choices, and class steps are resolved
  * - All choice values are valid CharacterChoice records
  *
- * Sets the draft.languageChoices.choices with the validated selection,
+ * Compatibility adapter which writes the authoritative `draft.selections`,
  * marks the language-choices draft step as resolved, and invalidates
  * all downstream dependent steps.
  *
@@ -104,7 +104,7 @@ export function selectLanguageChoices(
     return false;
   }
 
-  draft.languageChoices.choices = { ...choices };
+  Object.assign(draft.selections, choices);
   markStepResolved(draft, "language-choices");
   invalidateDependentSteps(draft, "language-choices");
   return true;

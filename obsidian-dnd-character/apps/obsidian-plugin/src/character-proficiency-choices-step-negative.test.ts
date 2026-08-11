@@ -278,10 +278,10 @@ describe("selectProficiencyChoices does not mutate draft on rejection", () => {
     const draft = createEmptyCharacterDraft();
     resolvePrerequisites(draft, "2024");
 
-    expect(draft.proficiencyChoices.choices).toEqual({});
+    expect(draft.selections).toEqual({});
 
     selectProficiencyChoices(draft, null);
-    expect(draft.proficiencyChoices.choices).toEqual({});
+    expect(draft.selections).toEqual({});
   });
 
   it("does not resolve step for invalid input", () => {
@@ -324,7 +324,7 @@ describe("selectProficiencyChoices does not mutate draft on rejection", () => {
 
     selectProficiencyChoices(draft, null);
     expect(getStepState(draft, "proficiency-choices")).toBe("resolved");
-    expect(draft.proficiencyChoices.choices).toHaveProperty("athletics");
+    expect(draft.selections).toHaveProperty("athletics");
   });
 });
 
@@ -335,10 +335,10 @@ describe("selectLanguageChoices does not mutate draft on rejection", () => {
     const draft = createEmptyCharacterDraft();
     resolvePrerequisites(draft, "2024");
 
-    expect(draft.languageChoices.choices).toEqual({});
+    expect(draft.selections).toEqual({});
 
     selectLanguageChoices(draft, null);
-    expect(draft.languageChoices.choices).toEqual({});
+    expect(draft.selections).toEqual({});
   });
 
   it("does not resolve step for invalid input", () => {
@@ -381,6 +381,6 @@ describe("selectLanguageChoices does not mutate draft on rejection", () => {
 
     selectLanguageChoices(draft, null);
     expect(getStepState(draft, "language-choices")).toBe("resolved");
-    expect(draft.languageChoices.choices).toHaveProperty("common");
+    expect(draft.selections).toHaveProperty("common");
   });
 });

@@ -9,9 +9,13 @@ import type { CharacterDraft } from "./character-draft";
 import type { CharacterChoice } from "@obsidian-dnd/character-contract";
 import { createCharacterChoice } from "@obsidian-dnd/character-contract";
 import type { EntityId, CatalogRevision } from "@obsidian-dnd/domain";
-import { createChoiceInstanceId } from "@obsidian-dnd/domain";
-import type { CatalogEntitySummary, ChoiceDefinition } from "@obsidian-dnd/catalog-contract";
+import type { CatalogEntitySummary } from "@obsidian-dnd/catalog-contract";
 import { renderChoiceDefinition, type ChoiceDropdownState } from "./character-species-choice-renderers";
+import { deriveDraftConsequences } from "./creator-draft-commands";
+import type { ChoiceConsequence } from "./creator-consequence-service";
+import { loadCreatorConsequenceReadModel } from "./creator-consequence-read-model";
+import { renderActiveCreatorChoices } from "./creator-active-choice-renderer";
+import type { EntityDetailResponse } from "@obsidian-dnd/catalog-contract";
 
 /* ── Public API ────────────────────────────────────────────────── */
 
@@ -24,6 +28,8 @@ export async function renderSpeciesChoices(
   onChoicesResolved: (choices: Record<string, CharacterChoice>) => void,
   onChoicesPresented?: () => void,
   onEntityLoadError?: (message: string) => void,
+  onChoiceSubmitted?: (instanceId: ChoiceConsequence["instanceId"], value: CharacterChoice["selectedValue"], entities: readonly EntityDetailResponse[]) => void,
+  onChoiceCleared?: (instanceId: ChoiceConsequence["instanceId"]) => void,
 ): Promise<void> {
   const speciesId = draft.species.speciesId;
   if (!speciesId || speciesId !== selectedSpecies.id) return;
@@ -52,8 +58,11 @@ export async function renderSpeciesChoices(
       return;
     }
 
-    const choices = speciesData.choices;
-    if (!choices || choices.length === 0) {
+    const legacyModel = onChoiceSubmitted === undefined ? deriveDraftConsequences(draft, [speciesData]) : undefined;
+    const readModel = onChoiceSubmitted === undefined ? undefined : await loadCreatorConsequenceReadModel(draft, catalog, revision, [speciesData]);
+    const choices = (readModel?.model ?? legacyModel!).origins
+      .find((origin) => origin.origin.id === speciesId)?.choices ?? [];
+    if (choices.length === 0) {
       container.createEl("p", {
         text: "No additional choices for this species.",
         cls: "dnd-creator-info",
@@ -62,10 +71,8 @@ export async function renderSpeciesChoices(
       return;
     }
 
-    await renderChoicesSection(
-      container, draft, catalog, revision, speciesId,
-      choices, isEntityEligible, onChoicesResolved,
-    );
+    if (onChoiceSubmitted !== undefined) renderActiveCreatorChoices(container, "Species Choices", choices, (instanceId, value) => onChoiceSubmitted(instanceId, value, readModel!.entities), onChoiceCleared);
+    else await renderChoicesSection(container, draft, catalog, revision, choices, isEntityEligible, onChoicesResolved);
     onChoicesPresented?.();
   } catch {
     loadingEl.remove();
@@ -85,8 +92,7 @@ async function renderChoicesSection(
   draft: CharacterDraft,
   catalog: CatalogService,
   revision: CatalogRevision,
-  speciesId: string,
-  choices: ChoiceDefinition[],
+  choices: readonly ChoiceConsequence[],
   isEntityEligible: (sourceId: string, access: string) => boolean,
   onChoicesResolved: (choices: Record<string, CharacterChoice>) => void,
 ): Promise<void> {
@@ -95,15 +101,20 @@ async function renderChoicesSection(
 
   const dropdownStates: ChoiceDropdownState[] = [];
 
-  for (const def of choices) {
+  for (const choice of choices) {
     const state = await renderChoiceDefinition(
-      section, draft, catalog, revision, def, isEntityEligible,
+      section, draft, catalog, revision, choice.definition, isEntityEligible,
     );
-    if (state) dropdownStates.push(state);
+    if (state) {
+      state.instanceId = choice.instanceId;
+      state.originId = choice.originId;
+      state.selectedIds = selectedIds(choice);
+      dropdownStates.push(state);
+    }
   }
 
   if (dropdownStates.length > 0) {
-    renderConfirmButton(section, dropdownStates, speciesId, onChoicesResolved);
+    renderConfirmButton(section, dropdownStates, onChoicesResolved);
   }
 }
 
@@ -112,7 +123,6 @@ async function renderChoicesSection(
 function renderConfirmButton(
   container: HTMLElement,
   states: ChoiceDropdownState[],
-  speciesId: string,
   onChoicesResolved: (choices: Record<string, CharacterChoice>) => void,
 ): void {
   const btnContainer = container.createDiv({ cls: "dnd-choice-actions" });
@@ -121,7 +131,7 @@ function renderConfirmButton(
     btn.setButtonText("Confirm choices")
       .setCta()
       .onClick(() => {
-        const choices = buildChoices(states, speciesId);
+        const choices = buildChoices(states);
         if (choices !== null) onChoicesResolved(choices);
       });
   });
@@ -131,7 +141,7 @@ function renderConfirmButton(
 
 export function buildChoices(
   states: ChoiceDropdownState[],
-  originGrantId: string,
+  _legacyOriginGrantId?: string,
 ): Record<string, CharacterChoice> | null {
   const choices: Record<string, CharacterChoice> = {};
 
@@ -142,18 +152,24 @@ export function buildChoices(
       return null;
     }
 
-    const instanceId = createChoiceInstanceId(
-      `${definition.id}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    );
+    if (state.instanceId === undefined || state.originId === undefined) return null;
+    const instanceId = state.instanceId;
 
     const choice = createCharacterChoice({
       instanceId,
       definitionId: definition.id,
-      originGrantId: originGrantId as EntityId,
+      originGrantId: state.originId,
       selectedValue: { type: "entity-ids", entityIds: [...selectedIds] as EntityId[] },
     });
     choices[instanceId] = choice;
   }
 
   return choices;
+}
+
+function selectedIds(choice: ChoiceConsequence): Set<string> {
+  const selected = choice.selectedValue;
+  if (selected?.type === "entity-ids") return new Set(selected.entityIds);
+  if (selected?.type === "option-ids") return new Set(selected.optionIds);
+  return new Set();
 }

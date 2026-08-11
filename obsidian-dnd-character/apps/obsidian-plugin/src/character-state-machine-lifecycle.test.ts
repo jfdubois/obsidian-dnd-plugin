@@ -31,7 +31,7 @@ function buildCompleteDraft() {
   draft.identity.name = "Aragorn";
   draft.identity.playerName = "Alice";
   draft.species.speciesId = createEntityId("species:2024:xphb:human");
-  draft.speciesChoices.choices = {
+  draft.selections = {
     [createChoiceInstanceId("feat-1")]: {
       instanceId: createChoiceInstanceId("feat-1"),
       definitionId: createChoiceDefinitionId("feat-choice-1"),
@@ -40,31 +40,28 @@ function buildCompleteDraft() {
     } as CharacterChoice,
   };
   draft.background.backgroundId = createEntityId("background:2024:xphb:soldier");
-  draft.backgroundChoices.choices = {
+  Object.assign(draft.selections, {
     [createChoiceInstanceId("bg-skill")]: {
       instanceId: createChoiceInstanceId("bg-skill"),
       definitionId: createChoiceDefinitionId("skill-choices"),
       originGrantId: createEntityId("background:2024:xphb:soldier"),
       selectedValue: { type: "entity-ids", entityIds: [createEntityId("skill:2024:xphb:athletics")] },
     } as CharacterChoice,
-  };
+  });
   draft.class.classId = createEntityId("class:2024:xphb:fighter");
-  draft.classGrants.choices = {
+  Object.assign(draft.selections, {
     [createChoiceInstanceId("class-equip")]: {
       instanceId: createChoiceInstanceId("class-equip"),
       definitionId: createChoiceDefinitionId("starting-equipment"),
       originGrantId: createEntityId("class:2024:xphb:fighter"),
       selectedValue: { type: "entity-ids", entityIds: [createEntityId("item:2024:xphb:longsword")] },
     } as CharacterChoice,
-  };
+  });
   draft.abilities.method = "standard-array";
   draft.abilities.scores = { STR: 15, DEX: 14, CON: 13, INT: 10, WIS: 12, CHA: 16 };
-  draft.proficiencyChoices.choices = {};
   draft.proficiencies.skillProficiencies = [createEntityId("skill:2024:xphb:athletics")];
   draft.proficiencies.toolProficiencies = [];
-  draft.languageChoices.choices = {};
   draft.languages.languageIds = [createEntityId("language:2024:xphb:common")];
-  draft.equipmentChoices.choices = {};
   draft.equipment.items = [
     {
       instanceId: createItemInstanceId("item-1"),
@@ -89,32 +86,27 @@ describe("Creator state-machine lifecycle (CRE-011)", () => {
   /* ── 4. Review snapshot generation ──────────────────────────── */
 
   describe("Review snapshot generation", () => {
-    it("buildReviewSnapshot returns a non-null snapshot with all 18 sections populated", () => {
+    it("buildReviewSnapshot returns a non-null snapshot with canonical selections", () => {
       const draft = buildCompleteDraft();
       const snapshot = buildReviewSnapshot(draft);
       expect(snapshot).not.toBeNull();
 
-      // Verify all 18 data sections are present
+      // Legacy choice buckets are intentionally absent from the read model.
       expect(snapshot!.ruleset).toBeDefined();
       expect(snapshot!.sources).toBeDefined();
       expect(snapshot!.identity).toBeDefined();
       expect(snapshot!.species).toBeDefined();
-      expect(snapshot!.speciesChoices).toBeDefined();
       expect(snapshot!.background).toBeDefined();
-      expect(snapshot!.backgroundChoices).toBeDefined();
       expect(snapshot!.class).toBeDefined();
-      expect(snapshot!.classGrants).toBeDefined();
       expect(snapshot!.abilities).toBeDefined();
-      expect(snapshot!.proficiencyChoices).toBeDefined();
       expect(snapshot!.proficiencies).toBeDefined();
-      expect(snapshot!.languageChoices).toBeDefined();
       expect(snapshot!.languages).toBeDefined();
-      expect(snapshot!.equipmentChoices).toBeDefined();
       expect(snapshot!.equipment).toBeDefined();
       expect(snapshot!.spellEligibility).toBeDefined();
       expect(snapshot!.spells).toBeDefined();
 
-      expect(Object.keys(snapshot!)).toHaveLength(18);
+      expect(snapshot!.selections).toBeDefined();
+      expect(Object.keys(snapshot!)).toHaveLength(13);
     });
 
     it("buildReviewSnapshot returns null when one data step is unresolved", () => {
@@ -158,7 +150,7 @@ describe("Creator state-machine lifecycle (CRE-011)", () => {
       // 3. Build review snapshot
       const snapshot = buildReviewSnapshot(complete);
       expect(snapshot).not.toBeNull();
-      expect(Object.keys(snapshot!)).toHaveLength(18);
+      expect(Object.keys(snapshot!)).toHaveLength(13);
 
       // 4. Finalize to Character
       const character = finalizeCharacter(complete);

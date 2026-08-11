@@ -47,8 +47,8 @@ describe("selectEquipmentChoices with valid input", () => {
     const result = selectEquipmentChoices(draft, { longsword });
 
     expect(result).toBe(true);
-    expect(draft.equipmentChoices.choices).toHaveProperty("longsword");
-    expect(draft.equipmentChoices.choices["longsword" as ChoiceInstanceId]).toBe(longsword);
+    expect(draft.selections).toHaveProperty("longsword");
+    expect(draft.selections["longsword" as ChoiceInstanceId]).toBe(longsword);
   });
 
   it("marks the equipment-choices draft step as resolved", () => {
@@ -74,7 +74,7 @@ describe("selectEquipmentChoices with valid input", () => {
     const result = selectEquipmentChoices(draft, {});
 
     expect(result).toBe(true);
-    expect(draft.equipmentChoices.choices).toEqual({});
+    expect(draft.selections).toEqual({});
     expect(getStepState(draft, "equipment-choices")).toBe("resolved");
   });
 
@@ -90,7 +90,7 @@ describe("selectEquipmentChoices with valid input", () => {
     });
 
     selectEquipmentChoices(draft, { longsword: choice1 });
-    expect(Object.keys(draft.equipmentChoices.choices)).toHaveLength(1);
+    expect(Object.keys(draft.selections)).toHaveLength(1);
 
     const choice2 = createCharacterChoice({
       instanceId: createChoiceInstanceId("greatsword"),
@@ -100,9 +100,9 @@ describe("selectEquipmentChoices with valid input", () => {
     });
 
     selectEquipmentChoices(draft, { greatsword: choice2 });
-    expect(Object.keys(draft.equipmentChoices.choices)).toHaveLength(1);
-    expect(draft.equipmentChoices.choices).toHaveProperty("greatsword");
-    expect(draft.equipmentChoices.choices).not.toHaveProperty("longsword");
+    expect(Object.keys(draft.selections)).toHaveLength(2);
+    expect(draft.selections).toHaveProperty("greatsword");
+    expect(draft.selections).toHaveProperty("longsword");
   });
 
   it("works with 2014 ruleset", () => {
@@ -151,6 +151,6 @@ describe("selectEquipmentChoices with valid input", () => {
 
     selectEquipmentChoices(draft, input);
 
-    expect(draft.equipmentChoices.choices).not.toBe(input);
+    expect(draft.selections).not.toBe(input);
   });
 });

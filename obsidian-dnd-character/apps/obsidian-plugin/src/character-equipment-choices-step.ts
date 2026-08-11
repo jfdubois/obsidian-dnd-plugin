@@ -39,7 +39,7 @@ function validateEquipmentChoices(
  * - The background-choices and class steps are resolved
  * - All choice values are valid CharacterChoice records
  *
- * Sets the draft.equipmentChoices.choices with the validated selection,
+ * Compatibility adapter which writes the authoritative `draft.selections`,
  * marks the equipment-choices draft step as resolved, and invalidates
  * all downstream dependent steps.
  *
@@ -62,7 +62,7 @@ export function selectEquipmentChoices(
     return false;
   }
 
-  draft.equipmentChoices.choices = { ...choices };
+  Object.assign(draft.selections, choices);
   markStepResolved(draft, "equipment-choices");
   invalidateDependentSteps(draft, "equipment-choices");
   return true;

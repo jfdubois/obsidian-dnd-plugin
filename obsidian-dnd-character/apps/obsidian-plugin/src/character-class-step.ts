@@ -62,7 +62,6 @@ export function selectClass(
   }
 
   draft.class.classId = classId;
-  draft.classGrants.choices = {};
   markStepResolved(draft, "class");
   invalidateDependentSteps(draft, "class");
   return true;

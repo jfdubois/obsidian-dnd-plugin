@@ -84,13 +84,8 @@ function evaluateEntitySelectionPrerequisite(
   // Check if the entity is the selected class
   if (draft.class.classId === entityId) return true;
 
-  // Check if the entity is a selected species choice option
-  for (const choice of Object.values(draft.speciesChoices.choices)) {
-    if (choice.selectedValue.type === "entity-ids" && choice.selectedValue.entityIds.includes(entityId as never)) return true;
-  }
-
-  // Check if the entity is a selected background choice option
-  for (const choice of Object.values(draft.backgroundChoices.choices)) {
+  // Catalog-owned creator resolutions are globally stored by stable instance ID.
+  for (const choice of Object.values(draft.selections)) {
     if (choice.selectedValue.type === "entity-ids" && choice.selectedValue.entityIds.includes(entityId as never)) return true;
   }
 

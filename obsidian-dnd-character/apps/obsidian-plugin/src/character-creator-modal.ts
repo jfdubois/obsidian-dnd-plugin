@@ -13,24 +13,22 @@ import {
 
 import type { Character, CharacterChoice } from "@obsidian-dnd/character-contract";
 import type { CharacterDraft } from "./character-draft";
-import { isDraftComplete, hasErrors } from "./character-draft";
+import { isDraftComplete, hasErrors, invalidateDependentSteps, markStepResolved } from "./character-draft";
 import type { CreatorStep } from "./character-step-controller";
 import { StepController, CREATOR_STEPS } from "./character-step-controller";
 import type { ReviewSnapshot } from "./character-review-snapshot";
 import { buildReviewSnapshot } from "./character-review-snapshot";
-import { finalizeCharacter } from "./character-finalize";
+import { finalizeCharacterWithCatalog } from "./character-finalize";
+import { loadCreatorConsequenceReadModel } from "./creator-consequence-read-model";
 import type { Ability } from "@obsidian-dnd/domain";
 import { createEntityId } from "@obsidian-dnd/domain";
 import { selectRuleset } from "./character-ruleset-step";
 import type { CatalogService } from "./catalog/catalog-service";
 import { selectSources } from "./character-source-step";
 import { selectSpecies } from "./character-species-step";
-import { selectSpeciesChoices } from "./character-species-choices-step";
 import { renderSpeciesChoices } from "./character-species-choices-renderer";
 import { selectBackground } from "./character-background-step";
 import { selectClass } from "./character-class-step";
-import { selectBackgroundChoices } from "./character-background-choices-step";
-import { selectClassStartingGrants } from "./character-class-starting-grants-step";
 import { renderBackgroundChoices } from "./character-background-choices-renderer";
 import { renderClassStartingGrants } from "./character-class-starting-grants-renderer";
 import { selectAbilityScores } from "./character-ability-scores-step";
@@ -40,6 +38,7 @@ import {
 } from "./character-proficiencies-step";
 import { querySpellEligibility } from "./character-spell-eligibility-step";
 import { selectSpells } from "./character-spell-selection-step";
+import { clearCreatorChoice, setCreatorChoice } from "./creator-draft-commands";
 
 /* ── Persistence callback ─────────────────────────────────────── */
 
@@ -358,6 +357,15 @@ export class CharacterCreatorModal extends ObsidianModal {
       this.renderDiagnosticsBanner();
       this.updateNavigationButtons();
     }
+  }
+
+  /** Completes a visual substep after its catalog choice command succeeded. */
+  private resolveCatalogChoiceSubstep(step: "species-choices" | "background-choices" | "class-starting-grants"): void {
+    this.internalSubstepsPending.delete(step as InternalSubstep);
+    this.internalSubstepLoadErrors.delete(step as InternalSubstep);
+    markStepResolved(this.controller.draft, step);
+    invalidateDependentSteps(this.controller.draft, step);
+    this.renderCurrentStep();
   }
 
   /* ── Step rendering ────────────────────────────────────────── */
@@ -735,15 +743,7 @@ export class CharacterCreatorModal extends ObsidianModal {
           catalog,
           selectedSpecies,
           (sourceId, access) => this.isEntityEligible(sourceId, access),
-          (choices) => {
-            this.speciesChoicesPending = false;
-            this.speciesChoiceLoadError = null;
-            if (selectSpeciesChoices(draft, choices)) {
-              this.renderCurrentStep();
-            } else {
-              this.renderDiagnosticsBanner();
-            }
-          },
+          () => undefined,
           () => {
             this.speciesChoicesPending = false;
             this.renderDiagnosticsBanner();
@@ -755,6 +755,13 @@ export class CharacterCreatorModal extends ObsidianModal {
             this.renderDiagnosticsBanner();
             this.updateNavigationButtons();
           },
+          (instanceId, value, entities) => {
+            setCreatorChoice(draft, entities, instanceId, value);
+            this.speciesChoicesPending = false;
+            this.speciesChoiceLoadError = null;
+            this.resolveCatalogChoiceSubstep("species-choices");
+          },
+          (instanceId) => { clearCreatorChoice(draft, instanceId); this.renderCurrentStep(); },
         );
       }
     } catch {
@@ -840,11 +847,14 @@ export class CharacterCreatorModal extends ObsidianModal {
         await renderBackgroundChoices(
           container, draft, catalog, selected,
           (sourceId, access) => this.isEntityEligible(sourceId, access),
-          (choices) => this.resolveInternalSubstep(
-            "background-choices", choices, selectBackgroundChoices,
-          ),
+          () => undefined,
           () => this.presentInternalSubstep("background-choices"),
           (message) => this.failInternalSubstep("background-choices", message),
+          (instanceId, value, entities) => {
+            setCreatorChoice(draft, entities, instanceId, value);
+            this.resolveCatalogChoiceSubstep("background-choices");
+          },
+          (instanceId) => { clearCreatorChoice(draft, instanceId); this.renderCurrentStep(); },
         );
       }
     } catch {
@@ -930,11 +940,14 @@ export class CharacterCreatorModal extends ObsidianModal {
         await renderClassStartingGrants(
           container, draft, catalog, selected,
           (sourceId, access) => this.isEntityEligible(sourceId, access),
-          (choices) => this.resolveInternalSubstep(
-            "class-starting-grants", choices, selectClassStartingGrants,
-          ),
+          () => undefined,
           () => this.presentInternalSubstep("class-starting-grants"),
           (message) => this.failInternalSubstep("class-starting-grants", message),
+          (instanceId, value, entities) => {
+            setCreatorChoice(draft, entities, instanceId, value);
+            this.resolveCatalogChoiceSubstep("class-starting-grants");
+          },
+          (instanceId) => { clearCreatorChoice(draft, instanceId); this.renderCurrentStep(); },
         );
       }
     } catch {
@@ -1219,8 +1232,9 @@ export class CharacterCreatorModal extends ObsidianModal {
   private renderEquipmentStep(container: HTMLElement): void {
     const draft = this.controller.draft;
 
-    // Display current equipment choices
-    const choices = draft.equipmentChoices.choices;
+    // Draft selections are the sole catalog-choice authority. This simple
+    // compatibility display deliberately does not turn them into inventory.
+    const choices = draft.selections;
     const choiceKeys = Object.keys(choices);
 
     if (choiceKeys.length > 0) {
@@ -1579,8 +1593,30 @@ export class CharacterCreatorModal extends ObsidianModal {
       return;
     }
 
-    const character = finalizeCharacter(draft);
-    if (character === null) {
+    const catalog = this.catalogService;
+    const revision = catalog?.getRuntimeStatus().activeRevision;
+    if (catalog === null || revision === undefined) return;
+    let character: Character | null | undefined;
+    try {
+      const [species, backgrounds, classes] = await Promise.all([
+        catalog.fetchIndex(revision, "species"),
+        catalog.fetchIndex(revision, "background"),
+        catalog.fetchIndex(revision, "class"),
+      ]);
+      const summaries = [
+        species.find((entry) => entry.id === draft.species.speciesId),
+        backgrounds.find((entry) => entry.id === draft.background.backgroundId),
+        classes.find((entry) => entry.id === draft.class.classId),
+      ];
+      if (summaries.some((entry) => entry === undefined)) return;
+      const origins = await Promise.all(summaries.map(async (summary) =>
+        (await catalog.fetchEntity(revision, summary!.id, summary!.detailPath)).data));
+      const loaded = await loadCreatorConsequenceReadModel(draft, catalog, revision, origins);
+      character = finalizeCharacterWithCatalog(draft, loaded.entities);
+    } catch {
+      return;
+    }
+    if (character === null || character === undefined) {
       // Finalize failed — draft incomplete or missing required fields
       return;
     }

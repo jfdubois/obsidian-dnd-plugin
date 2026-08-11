@@ -206,10 +206,10 @@ describe("selectSpeciesChoices does not mutate draft on rejection", () => {
     selectSources(draft, []);
     selectSpecies(draft, createEntityId("human"));
 
-    expect(draft.speciesChoices.choices).toEqual({});
+    expect(draft.selections).toEqual({});
 
     selectSpeciesChoices(draft, null);
-    expect(draft.speciesChoices.choices).toEqual({});
+    expect(draft.selections).toEqual({});
   });
 
   it("does not resolve step for invalid input", () => {
@@ -260,7 +260,7 @@ describe("selectSpeciesChoices does not mutate draft on rejection", () => {
     selectSpeciesChoices(draft, null);
     // Draft must remain unchanged
     expect(getStepState(draft, "species-choices")).toBe("resolved");
-    expect(draft.speciesChoices.choices).toHaveProperty("darkvision");
+    expect(draft.selections).toHaveProperty("darkvision");
   });
 
   it("does not set choices when species not resolved", () => {
@@ -274,7 +274,7 @@ describe("selectSpeciesChoices does not mutate draft on rejection", () => {
     });
 
     selectSpeciesChoices(draft, { trait: choice });
-    expect(draft.speciesChoices.choices).toEqual({});
+    expect(draft.selections).toEqual({});
     expect(getStepState(draft, "species-choices")).toBe("unvisited");
   });
 });
@@ -335,7 +335,7 @@ describe("selectSpeciesChoices zero-choice recursion guard", () => {
       selectedValue: { type: "entity-ids", entityIds: [createEntityId("fey_ancestry_feat")] },
     });
     expect(selectSpeciesChoices(draft, { feyAncestry: choice })).toBe(true);
-    expect(draft.speciesChoices.choices).toHaveProperty("feyAncestry");
+    expect(draft.selections).toHaveProperty("feyAncestry");
   });
 
   it("does not mutate draft when rejecting duplicate empty choices", () => {
@@ -351,6 +351,6 @@ describe("selectSpeciesChoices zero-choice recursion guard", () => {
     // Second call must not change anything
     expect(selectSpeciesChoices(draft, {})).toBe(false);
     expect(getStepState(draft, "species-choices")).toBe(firstState);
-    expect(draft.speciesChoices.choices).toEqual({});
+    expect(draft.selections).toEqual({});
   });
 });

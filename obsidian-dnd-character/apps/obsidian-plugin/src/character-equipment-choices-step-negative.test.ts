@@ -133,10 +133,10 @@ describe("selectEquipmentChoices does not mutate draft on rejection", () => {
     const draft = createEmptyCharacterDraft();
     resolvePrerequisites(draft, "2024");
 
-    expect(draft.equipmentChoices.choices).toEqual({});
+    expect(draft.selections).toEqual({});
 
     selectEquipmentChoices(draft, null);
-    expect(draft.equipmentChoices.choices).toEqual({});
+    expect(draft.selections).toEqual({});
   });
 
   it("does not resolve step for invalid input", () => {
@@ -179,6 +179,6 @@ describe("selectEquipmentChoices does not mutate draft on rejection", () => {
 
     selectEquipmentChoices(draft, null);
     expect(getStepState(draft, "equipment-choices")).toBe("resolved");
-    expect(draft.equipmentChoices.choices).toHaveProperty("longsword");
+    expect(draft.selections).toHaveProperty("longsword");
   });
 });

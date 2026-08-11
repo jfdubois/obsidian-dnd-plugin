@@ -18,6 +18,7 @@ import {
   createCharacterClassState,
   createCharacterSpellState,
   createCharacterResourceState,
+  isCharacter,
 } from "@obsidian-dnd/character-contract";
 
 import type {
@@ -31,7 +32,10 @@ import {
   createCharacterId,
   createCatalogRevision,
   createClassInstanceId,
+  createItemInstanceId,
 } from "@obsidian-dnd/domain";
+import type { EntityDetailResponse, RuleGrant } from "@obsidian-dnd/catalog-contract";
+import { deriveDraftConsequences } from "./creator-draft-commands";
 
 /* ── Public API ────────────────────────────────────────────────── */
 
@@ -66,6 +70,53 @@ export function finalizeCharacter(draft: CharacterDraft): Character | null {
     overrides: {},
     metadata: { createdAt: now, updatedAt: now },
   });
+}
+
+/**
+ * The creator's materialization boundary.  It deliberately derives from the
+ * current draft and normalized catalog itself: presentation models are
+ * disposable and must never become persistence authority.
+ */
+export function finalizeCharacterWithCatalog(draft: CharacterDraft, entities: readonly EntityDetailResponse[]): Character | null {
+  const model = deriveDraftConsequences(draft, entities);
+  // Stale draft history is intentionally retained, but is not final state.
+  if (model.diagnostics.some((diagnostic) => diagnostic.code !== "stale-choice")) return null;
+  const grants = model.origins.flatMap((origin) => origin.grants);
+  const grantIds = new Set<string>();
+  for (const consequence of grants) {
+    if (grantIds.has(String(consequence.grant.id)) || !isMaterializableGrant(consequence.grant, entities, consequence.resolvedAmount)) return null;
+    grantIds.add(String(consequence.grant.id));
+  }
+
+  const base = finalizeCharacter(draft);
+  if (base === null) return null;
+  const inventory = [...base.inventory];
+  const currency = { ...base.currency };
+  for (const consequence of grants) {
+    const grant = consequence.grant;
+    if (grant.type === "item") {
+      inventory.push({ instanceId: createItemInstanceId(`grant:${grant.id}`), type: "catalog-item", itemId: grant.itemId, quantity: grant.quantity, equipped: false, attuned: false });
+    } else if (grant.type === "named-item") {
+      inventory.push({ instanceId: createItemInstanceId(`grant:${grant.id}`), type: "named-item", name: grant.name.trim(), quantity: grant.quantity, equipped: false });
+    } else if (grant.type === "currency") {
+      const amount = grant.amount.type === "fixed" ? grant.amount.value : consequence.resolvedAmount;
+      if (amount === undefined || !Number.isSafeInteger(currency[grant.denomination] + amount)) return null;
+      currency[grant.denomination] += amount;
+    }
+  }
+  const activeSelections = Object.fromEntries(Object.entries(draft.selections)
+    .filter(([instanceId]) => model.activeChoiceIds.has(instanceId as ChoiceInstanceId))) as Record<ChoiceInstanceId, CharacterChoice>;
+  const character = { ...base, selections: activeSelections, inventory, currency };
+  return isCharacter(character) ? character : null;
+}
+
+function isMaterializableGrant(grant: RuleGrant, entities: readonly EntityDetailResponse[], resolvedAmount: number | undefined): boolean {
+  if (grant.type === "item") return Number.isInteger(grant.quantity) && grant.quantity > 0
+    && entities.some((entity) => entity.id === grant.itemId && entity.kind === "item");
+  if (grant.type === "named-item") return Number.isInteger(grant.quantity) && grant.quantity > 0 && grant.name.trim().length > 0;
+  if (grant.type !== "currency") return true;
+  const amount = grant.amount.type === "fixed" ? grant.amount.value : resolvedAmount;
+  return amount !== undefined && Number.isSafeInteger(amount) && amount >= 0;
 }
 
 /* ── Field builders ────────────────────────────────────────────── */
@@ -121,14 +172,7 @@ function buildOrigins(draft: CharacterDraft) {
 function mergeSelections(
   draft: CharacterDraft,
 ): Record<ChoiceInstanceId, CharacterChoice> {
-  return {
-    ...draft.speciesChoices.choices,
-    ...draft.backgroundChoices.choices,
-    ...draft.classGrants.choices,
-    ...draft.proficiencyChoices.choices,
-    ...draft.languageChoices.choices,
-    ...draft.equipmentChoices.choices,
-  };
+  return { ...draft.selections };
 }
 
 function buildAbilities(draft: CharacterDraft) {

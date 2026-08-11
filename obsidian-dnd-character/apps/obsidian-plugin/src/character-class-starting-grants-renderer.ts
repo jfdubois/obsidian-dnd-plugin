@@ -3,6 +3,11 @@ import type { CharacterChoice } from "@obsidian-dnd/character-contract";
 import type { CatalogService } from "./catalog/catalog-service";
 import type { CharacterDraft } from "./character-draft";
 import { renderInternalChoices } from "./character-internal-choice-renderer";
+import { deriveDraftConsequences } from "./creator-draft-commands";
+import { loadCreatorConsequenceReadModel } from "./creator-consequence-read-model";
+import { renderActiveCreatorChoices } from "./creator-active-choice-renderer";
+import type { ChoiceConsequence } from "./creator-consequence-service";
+import type { EntityDetailResponse } from "@obsidian-dnd/catalog-contract";
 
 export async function renderClassStartingGrants(
   container: HTMLElement,
@@ -13,6 +18,8 @@ export async function renderClassStartingGrants(
   onResolved: (choices: Record<string, CharacterChoice>) => void,
   onChoicesPresented: () => void,
   onLoadError: (message: string) => void,
+  onChoiceSubmitted?: (instanceId: ChoiceConsequence["instanceId"], value: CharacterChoice["selectedValue"], entities: readonly EntityDetailResponse[]) => void,
+  onChoiceCleared?: (instanceId: ChoiceConsequence["instanceId"]) => void,
 ): Promise<void> {
   if (draft.class.classId !== selected.id) return;
   const revision = catalog.getRuntimeStatus().activeRevision;
@@ -26,13 +33,17 @@ export async function renderClassStartingGrants(
       onLoadError(`Selected catalog entity at ${selected.detailPath} is not class data. Refresh the catalog and try again.`);
       return;
     }
-    const levelOneGrants = result.data.levels[1]?.grants ?? [];
-    if (result.data.startingChoices.length === 0 && levelOneGrants.length === 0) {
+    const legacyModel = onChoiceSubmitted === undefined ? deriveDraftConsequences(draft, [result.data]) : undefined;
+    const readModel = onChoiceSubmitted === undefined ? undefined : await loadCreatorConsequenceReadModel(draft, catalog, revision, [result.data]);
+    const origin = (readModel?.model ?? legacyModel!).origins
+      .find((entry) => entry.origin.id === selected.id);
+    const choices = origin?.choices ?? [];
+    if (choices.length === 0 && (origin?.levelOneGrants.length ?? 0) === 0) {
       container.createEl("p", { text: "No additional starting grants for this class.", cls: "dnd-creator-info" });
       onResolved({});
       return;
     }
-    if (result.data.startingChoices.length === 0) {
+    if (choices.length === 0) {
       container.createEl("p", {
         text: "This class has catalog-defined starting grants that require review before continuing.",
         cls: "dnd-creator-info",
@@ -40,10 +51,8 @@ export async function renderClassStartingGrants(
       onChoicesPresented();
       return;
     }
-    await renderInternalChoices(
-      container, "Class Starting Choices", draft, catalog, revision, selected.id,
-      result.data.startingChoices, isEntityEligible, onResolved,
-    );
+    if (onChoiceSubmitted !== undefined) renderActiveCreatorChoices(container, "Class Starting Choices", choices, (instanceId, value) => onChoiceSubmitted(instanceId, value, readModel!.entities), onChoiceCleared);
+    else await renderInternalChoices(container, "Class Starting Choices", draft, catalog, revision, choices, isEntityEligible, onResolved);
     onChoicesPresented();
   } catch {
     loading.remove();

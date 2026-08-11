@@ -1,6 +1,8 @@
-/* ── Species choice content renderers ────────────────────────────
+/* ── Legacy compatibility choice content renderers ───────────────
    Renders UI for language, equipment, spell, and feature choices.
    Uses only approved Obsidian APIs.                               */
+
+/** @deprecated Active creator rendering consumes consequence candidates. */
 
 import { Setting } from "obsidian";
 import type { CatalogService } from "./catalog/catalog-service";

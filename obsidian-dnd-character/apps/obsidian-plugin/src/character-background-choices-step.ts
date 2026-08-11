@@ -9,7 +9,8 @@ export function selectBackgroundChoices(
   if (getStepState(draft, "background") !== "resolved") return false;
   if (getStepState(draft, "background-choices") === "resolved"
     && Object.keys(choices).length === 0) return false;
-  draft.backgroundChoices.choices = { ...choices };
+  // Legacy bulk adapter; catalog-owned resolutions live only in selections.
+  Object.assign(draft.selections, choices);
   markStepResolved(draft, "background-choices");
   invalidateDependentSteps(draft, "background-choices");
   return true;

@@ -30,7 +30,7 @@ function buildCompleteDraft() {
   draft.identity.name = "Aragorn";
   draft.identity.playerName = "Alice";
   draft.species.speciesId = createEntityId("species:2024:xphb:human");
-  draft.speciesChoices.choices = {
+  draft.selections = {
     [createChoiceInstanceId("feat-1")]: {
       instanceId: createChoiceInstanceId("feat-1"),
       definitionId: createChoiceDefinitionId("feat-choice-1"),
@@ -39,31 +39,28 @@ function buildCompleteDraft() {
     } as CharacterChoice,
   };
   draft.background.backgroundId = createEntityId("background:2024:xphb:soldier");
-  draft.backgroundChoices.choices = {
+  Object.assign(draft.selections, {
     [createChoiceInstanceId("bg-skill")]: {
       instanceId: createChoiceInstanceId("bg-skill"),
       definitionId: createChoiceDefinitionId("skill-choices"),
       originGrantId: createEntityId("background:2024:xphb:soldier"),
       selectedValue: { type: "entity-ids", entityIds: [createEntityId("skill:2024:xphb:athletics")] },
     } as CharacterChoice,
-  };
+  });
   draft.class.classId = createEntityId("class:2024:xphb:fighter");
-  draft.classGrants.choices = {
+  Object.assign(draft.selections, {
     [createChoiceInstanceId("class-equip")]: {
       instanceId: createChoiceInstanceId("class-equip"),
       definitionId: createChoiceDefinitionId("starting-equipment"),
       originGrantId: createEntityId("class:2024:xphb:fighter"),
       selectedValue: { type: "entity-ids", entityIds: [createEntityId("item:2024:xphb:longsword")] },
     } as CharacterChoice,
-  };
+  });
   draft.abilities.method = "standard-array";
   draft.abilities.scores = { STR: 15, DEX: 14, CON: 13, INT: 10, WIS: 12, CHA: 16 };
-  draft.proficiencyChoices.choices = {};
   draft.proficiencies.skillProficiencies = [createEntityId("skill:2024:xphb:athletics")];
   draft.proficiencies.toolProficiencies = [];
-  draft.languageChoices.choices = {};
   draft.languages.languageIds = [createEntityId("language:2024:xphb:common")];
-  draft.equipmentChoices.choices = {};
   draft.equipment.items = [];
   draft.spellEligibility.isSpellcaster = false;
   draft.spells.selections = [];

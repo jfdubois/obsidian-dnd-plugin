@@ -9,27 +9,24 @@ import type {
   DraftSourceData,
   DraftIdentityData,
   DraftSpeciesData,
-  DraftSpeciesChoiceData,
   DraftBackgroundData,
-  DraftBackgroundChoiceData,
   DraftClassData,
-  DraftClassGrantData,
   DraftAbilityData,
-  DraftProficiencyChoiceData,
   DraftProficiencyData,
-  DraftLanguageChoiceData,
   DraftLanguageData,
-  DraftEquipmentChoiceData,
   DraftEquipmentData,
   DraftSpellEligibilityData,
   DraftSpellData,
 } from "./character-draft-steps";
 import { ALL_DRAFT_STEPS } from "./character-draft-steps";
+import type { ChoiceInstanceId } from "@obsidian-dnd/domain";
+import type { CharacterChoice } from "@obsidian-dnd/character-contract";
 
 /* ── Snapshot type ─────────────────────────────────────────────── */
 
 /**
- * Read-only aggregation of all 18 resolved draft data sections.
+ * Read-only aggregation of resolved draft data. Catalog-owned choice state is
+ * exposed exactly once via `selections`; legacy step buckets are excluded.
  * The snapshot is derived from the draft, never persisted.
  */
 export interface ReviewSnapshot {
@@ -37,20 +34,15 @@ export interface ReviewSnapshot {
   sources: Readonly<DraftSourceData>;
   identity: Readonly<DraftIdentityData>;
   species: Readonly<DraftSpeciesData>;
-  speciesChoices: Readonly<DraftSpeciesChoiceData>;
   background: Readonly<DraftBackgroundData>;
-  backgroundChoices: Readonly<DraftBackgroundChoiceData>;
   class: Readonly<DraftClassData>;
-  classGrants: Readonly<DraftClassGrantData>;
   abilities: Readonly<DraftAbilityData>;
-  proficiencyChoices: Readonly<DraftProficiencyChoiceData>;
   proficiencies: Readonly<DraftProficiencyData>;
-  languageChoices: Readonly<DraftLanguageChoiceData>;
   languages: Readonly<DraftLanguageData>;
-  equipmentChoices: Readonly<DraftEquipmentChoiceData>;
   equipment: Readonly<DraftEquipmentData>;
   spellEligibility: Readonly<DraftSpellEligibilityData>;
   spells: Readonly<DraftSpellData>;
+  selections: Readonly<Record<ChoiceInstanceId, CharacterChoice>>;
 }
 
 /* ── Builder ───────────────────────────────────────────────────── */
@@ -85,19 +77,14 @@ export function buildReviewSnapshot(
     sources: draft.sources,
     identity: draft.identity,
     species: draft.species,
-    speciesChoices: draft.speciesChoices,
     background: draft.background,
-    backgroundChoices: draft.backgroundChoices,
     class: draft.class,
-    classGrants: draft.classGrants,
     abilities: draft.abilities,
-    proficiencyChoices: draft.proficiencyChoices,
     proficiencies: draft.proficiencies,
-    languageChoices: draft.languageChoices,
     languages: draft.languages,
-    equipmentChoices: draft.equipmentChoices,
     equipment: draft.equipment,
     spellEligibility: draft.spellEligibility,
     spells: draft.spells,
+    selections: draft.selections,
   };
 }

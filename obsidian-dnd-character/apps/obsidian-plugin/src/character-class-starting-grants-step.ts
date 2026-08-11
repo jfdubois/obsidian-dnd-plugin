@@ -9,7 +9,8 @@ export function selectClassStartingGrants(
   if (getStepState(draft, "class") !== "resolved") return false;
   if (getStepState(draft, "class-starting-grants") === "resolved"
     && Object.keys(choices).length === 0) return false;
-  draft.classGrants.choices = { ...choices };
+  // Legacy bulk adapter; catalog-owned resolutions live only in selections.
+  Object.assign(draft.selections, choices);
   markStepResolved(draft, "class-starting-grants");
   invalidateDependentSteps(draft, "class-starting-grants");
   return true;
