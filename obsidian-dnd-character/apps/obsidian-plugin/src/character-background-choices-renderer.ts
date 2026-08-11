@@ -8,6 +8,8 @@ import { loadCreatorConsequenceReadModel } from "./creator-consequence-read-mode
 import { renderActiveCreatorChoices } from "./creator-active-choice-renderer";
 import type { ChoiceConsequence } from "./creator-consequence-service";
 import type { EntityDetailResponse } from "@obsidian-dnd/catalog-contract";
+import type { RuleGrantId } from "@obsidian-dnd/domain";
+import { renderOriginConsequences } from "./creator-origin-consequence-renderer";
 
 export async function renderBackgroundChoices(
   container: HTMLElement,
@@ -20,6 +22,7 @@ export async function renderBackgroundChoices(
   onLoadError: (message: string) => void,
   onChoiceSubmitted?: (instanceId: ChoiceConsequence["instanceId"], value: CharacterChoice["selectedValue"], entities: readonly EntityDetailResponse[]) => void,
   onChoiceCleared?: (instanceId: ChoiceConsequence["instanceId"]) => void,
+  onRandomGrantResolution?: (grantId: RuleGrantId, entities: readonly EntityDetailResponse[]) => void,
 ): Promise<void> {
   if (draft.background.backgroundId !== selected.id) return;
   const revision = catalog.getRuntimeStatus().activeRevision;
@@ -35,8 +38,10 @@ export async function renderBackgroundChoices(
     }
     const legacyModel = onChoiceSubmitted === undefined ? deriveDraftConsequences(draft, [result.data]) : undefined;
     const readModel = onChoiceSubmitted === undefined ? undefined : await loadCreatorConsequenceReadModel(draft, catalog, revision, [result.data]);
-    const choices = (readModel?.model ?? legacyModel!).origins
-      .find((origin) => origin.origin.id === selected.id)?.choices ?? [];
+    const model = readModel?.model ?? legacyModel!;
+    const origin = model.origins.find((entry) => entry.origin.id === selected.id);
+    const choices = origin?.choices ?? [];
+    renderOriginConsequences(container, origin, model.diagnostics, onRandomGrantResolution === undefined ? undefined : (grantId) => onRandomGrantResolution(grantId, readModel?.entities ?? [result.data]));
     if (choices.length === 0) {
       container.createEl("p", { text: "No additional choices for this background.", cls: "dnd-creator-info" });
       onResolved({});

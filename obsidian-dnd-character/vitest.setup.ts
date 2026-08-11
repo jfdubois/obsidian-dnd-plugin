@@ -41,6 +41,9 @@ class MockButtonComponent {
   setClass(_cls: string) {
     return this;
   }
+  setTooltip(_text: string) {
+    return this;
+  }
   setCta() {
     return this;
   }
@@ -51,6 +54,7 @@ class MockButtonComponent {
   onClick(_fn: any) {
     return this;
   }
+  buttonEl = { setAttribute: vi.fn() };
 }
 
 class MockToggle {

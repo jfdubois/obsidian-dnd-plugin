@@ -8,7 +8,7 @@ import type { CatalogService } from "./catalog/catalog-service";
 import type { CharacterDraft } from "./character-draft";
 import type { CharacterChoice } from "@obsidian-dnd/character-contract";
 import { createCharacterChoice } from "@obsidian-dnd/character-contract";
-import type { EntityId, CatalogRevision } from "@obsidian-dnd/domain";
+import type { EntityId, CatalogRevision, RuleGrantId } from "@obsidian-dnd/domain";
 import type { CatalogEntitySummary } from "@obsidian-dnd/catalog-contract";
 import { renderChoiceDefinition, type ChoiceDropdownState } from "./character-species-choice-renderers";
 import { deriveDraftConsequences } from "./creator-draft-commands";
@@ -16,6 +16,7 @@ import type { ChoiceConsequence } from "./creator-consequence-service";
 import { loadCreatorConsequenceReadModel } from "./creator-consequence-read-model";
 import { renderActiveCreatorChoices } from "./creator-active-choice-renderer";
 import type { EntityDetailResponse } from "@obsidian-dnd/catalog-contract";
+import { renderOriginConsequences } from "./creator-origin-consequence-renderer";
 
 /* ── Public API ────────────────────────────────────────────────── */
 
@@ -30,6 +31,7 @@ export async function renderSpeciesChoices(
   onEntityLoadError?: (message: string) => void,
   onChoiceSubmitted?: (instanceId: ChoiceConsequence["instanceId"], value: CharacterChoice["selectedValue"], entities: readonly EntityDetailResponse[]) => void,
   onChoiceCleared?: (instanceId: ChoiceConsequence["instanceId"]) => void,
+  onRandomGrantResolution?: (grantId: RuleGrantId, entities: readonly EntityDetailResponse[]) => void,
 ): Promise<void> {
   const speciesId = draft.species.speciesId;
   if (!speciesId || speciesId !== selectedSpecies.id) return;
@@ -60,8 +62,10 @@ export async function renderSpeciesChoices(
 
     const legacyModel = onChoiceSubmitted === undefined ? deriveDraftConsequences(draft, [speciesData]) : undefined;
     const readModel = onChoiceSubmitted === undefined ? undefined : await loadCreatorConsequenceReadModel(draft, catalog, revision, [speciesData]);
-    const choices = (readModel?.model ?? legacyModel!).origins
-      .find((origin) => origin.origin.id === speciesId)?.choices ?? [];
+    const model = readModel?.model ?? legacyModel!;
+    const origin = model.origins.find((entry) => entry.origin.id === speciesId);
+    const choices = origin?.choices ?? [];
+    renderOriginConsequences(container, origin, model.diagnostics, onRandomGrantResolution === undefined ? undefined : (grantId) => onRandomGrantResolution(grantId, readModel?.entities ?? [speciesData]));
     if (choices.length === 0) {
       container.createEl("p", {
         text: "No additional choices for this species.",

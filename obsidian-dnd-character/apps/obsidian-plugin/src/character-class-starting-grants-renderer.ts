@@ -8,6 +8,8 @@ import { loadCreatorConsequenceReadModel } from "./creator-consequence-read-mode
 import { renderActiveCreatorChoices } from "./creator-active-choice-renderer";
 import type { ChoiceConsequence } from "./creator-consequence-service";
 import type { EntityDetailResponse } from "@obsidian-dnd/catalog-contract";
+import type { RuleGrantId } from "@obsidian-dnd/domain";
+import { renderOriginConsequences } from "./creator-origin-consequence-renderer";
 
 export async function renderClassStartingGrants(
   container: HTMLElement,
@@ -20,6 +22,7 @@ export async function renderClassStartingGrants(
   onLoadError: (message: string) => void,
   onChoiceSubmitted?: (instanceId: ChoiceConsequence["instanceId"], value: CharacterChoice["selectedValue"], entities: readonly EntityDetailResponse[]) => void,
   onChoiceCleared?: (instanceId: ChoiceConsequence["instanceId"]) => void,
+  onRandomGrantResolution?: (grantId: RuleGrantId, entities: readonly EntityDetailResponse[]) => void,
 ): Promise<void> {
   if (draft.class.classId !== selected.id) return;
   const revision = catalog.getRuntimeStatus().activeRevision;
@@ -38,6 +41,7 @@ export async function renderClassStartingGrants(
     const origin = (readModel?.model ?? legacyModel!).origins
       .find((entry) => entry.origin.id === selected.id);
     const choices = origin?.choices ?? [];
+    renderOriginConsequences(container, origin, (readModel?.model ?? legacyModel!).diagnostics, onRandomGrantResolution === undefined ? undefined : (grantId) => onRandomGrantResolution(grantId, readModel?.entities ?? [result.data]));
     if (choices.length === 0 && (origin?.levelOneGrants.length ?? 0) === 0) {
       container.createEl("p", { text: "No additional starting grants for this class.", cls: "dnd-creator-info" });
       onResolved({});

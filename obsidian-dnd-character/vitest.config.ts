@@ -4,6 +4,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   resolve: {
     alias: {
+      "obsidian": path.resolve(__dirname, "test/obsidian-test-shim.ts"),
       "@obsidian-dnd/domain": path.resolve(__dirname, "packages/domain/src"),
       "@obsidian-dnd/catalog-contract": path.resolve(__dirname, "packages/catalog-contract/src"),
       "@obsidian-dnd/character-contract": path.resolve(__dirname, "packages/character-contract/src"),

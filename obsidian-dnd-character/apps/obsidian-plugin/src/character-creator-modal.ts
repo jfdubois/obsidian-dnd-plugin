@@ -12,6 +12,7 @@ import {
 } from "obsidian";
 
 import type { Character, CharacterChoice } from "@obsidian-dnd/character-contract";
+import type { CatalogEntitySummary, EntityDetailResponse } from "@obsidian-dnd/catalog-contract";
 import type { CharacterDraft } from "./character-draft";
 import { isDraftComplete, hasErrors, invalidateDependentSteps, markStepResolved } from "./character-draft";
 import type { CreatorStep } from "./character-step-controller";
@@ -20,7 +21,7 @@ import type { ReviewSnapshot } from "./character-review-snapshot";
 import { buildReviewSnapshot } from "./character-review-snapshot";
 import { finalizeCharacterWithCatalog } from "./character-finalize";
 import { loadCreatorConsequenceReadModel } from "./creator-consequence-read-model";
-import type { Ability } from "@obsidian-dnd/domain";
+import type { Ability, RuleGrantId } from "@obsidian-dnd/domain";
 import { createEntityId } from "@obsidian-dnd/domain";
 import { selectRuleset } from "./character-ruleset-step";
 import type { CatalogService } from "./catalog/catalog-service";
@@ -38,7 +39,11 @@ import {
 } from "./character-proficiencies-step";
 import { querySpellEligibility } from "./character-spell-eligibility-step";
 import { selectSpells } from "./character-spell-selection-step";
-import { clearCreatorChoice, setCreatorChoice } from "./creator-draft-commands";
+import { clearCreatorChoice, resolveCreatorRandomGrant, setCreatorChoice } from "./creator-draft-commands";
+import { openCreatorCatalogDetails } from "./creator-catalog-details-modal";
+import { createCreatorRandomSource } from "./creator-random-source";
+import type { RandomSource } from "./creator-random-grant-resolution";
+import { renderOriginConsequences } from "./creator-origin-consequence-renderer";
 
 /* ── Persistence callback ─────────────────────────────────────── */
 
@@ -88,12 +93,22 @@ function getStepLabel(step: CreatorStep): string {
   return STEP_LABELS.get(step) ?? step;
 }
 
+function userFacingCreatorDiagnostic(code: string, fallback: string): string {
+  if (code === "unresolved-choice") return "Choose the required origin option before creating the character.";
+  if (code === "invalid-choice") return "Replace an invalid origin selection before creating the character.";
+  if (code === "no-choice-candidates") return "A required origin choice has no valid candidates with the current catalog and source policy.";
+  if (code === "unresolved-random-grant") return "Roll the required starting currency before creating the character.";
+  if (code === "invalid-random-grant") return "The saved starting-currency result is invalid and must be corrected.";
+  return fallback;
+}
+
 /* ── Modal class ───────────────────────────────────────────────── */
 
 export class CharacterCreatorModal extends ObsidianModal {
   private readonly controller: StepController;
   private readonly persist: CharacterPersistenceCallback | undefined;
   private readonly catalogService: CatalogService | null;
+  private readonly randomSource: RandomSource;
   private saveButton: ButtonComponent | null = null;
   private nextButton: ButtonComponent | null = null;
   private backButton: ButtonComponent | null = null;
@@ -110,11 +125,13 @@ export class CharacterCreatorModal extends ObsidianModal {
     draft: CharacterDraft,
     persist?: CharacterPersistenceCallback,
     catalogService: CatalogService | null = null,
+    randomSource: RandomSource = createCreatorRandomSource(),
   ) {
     super(app);
     this.controller = new StepController(draft);
     this.persist = persist;
     this.catalogService = catalogService;
+    this.randomSource = randomSource;
   }
 
   /* ── Lifecycle ─────────────────────────────────────────────── */
@@ -366,6 +383,26 @@ export class CharacterCreatorModal extends ObsidianModal {
     markStepResolved(this.controller.draft, step);
     invalidateDependentSteps(this.controller.draft, step);
     this.renderCurrentStep();
+  }
+
+  private addOriginDetailsAction(container: HTMLElement, label: string, summary: Pick<CatalogEntitySummary, "id" | "detailPath">): void {
+    const catalog = this.catalogService;
+    const revision = catalog?.getRuntimeStatus().activeRevision;
+    if (catalog === null || revision === undefined) return;
+    new Setting(container).setName(`${label} details`).addButton((button) => {
+      button.setButtonText("(?)").setTooltip(`View ${label} details`).onClick(async () => {
+        try { openCreatorCatalogDetails(this.app, (await catalog.fetchEntity(revision, summary.id, summary.detailPath)).data); }
+        catch { /* The adjacent selector already reports catalog availability. */ }
+      });
+      button.buttonEl.setAttribute("aria-label", `View ${label} details`);
+    });
+  }
+
+  private resolveOriginRandomGrant(entities: readonly EntityDetailResponse[], grantId: RuleGrantId): void {
+    try {
+      resolveCreatorRandomGrant(this.controller.draft, entities, grantId, this.randomSource);
+      this.renderCurrentStep();
+    } catch { /* The consequence panel continues to show the governed diagnostic. */ }
   }
 
   /* ── Step rendering ────────────────────────────────────────── */
@@ -737,6 +774,7 @@ export class CharacterCreatorModal extends ObsidianModal {
       if (draft.species.speciesId) {
         const selectedSpecies = sorted.find((entry) => entry.id === draft.species.speciesId);
         if (selectedSpecies === undefined) return;
+        this.addOriginDetailsAction(container, "Species", selectedSpecies);
         await renderSpeciesChoices(
           container,
           draft,
@@ -762,6 +800,7 @@ export class CharacterCreatorModal extends ObsidianModal {
             this.resolveCatalogChoiceSubstep("species-choices");
           },
           (instanceId) => { clearCreatorChoice(draft, instanceId); this.renderCurrentStep(); },
+          (grantId, entities) => this.resolveOriginRandomGrant(entities, grantId),
         );
       }
     } catch {
@@ -844,6 +883,7 @@ export class CharacterCreatorModal extends ObsidianModal {
       if (draft.background.backgroundId) {
         const selected = sorted.find((entry) => entry.id === draft.background.backgroundId);
         if (selected === undefined) return;
+        this.addOriginDetailsAction(container, "Background", selected);
         await renderBackgroundChoices(
           container, draft, catalog, selected,
           (sourceId, access) => this.isEntityEligible(sourceId, access),
@@ -855,6 +895,7 @@ export class CharacterCreatorModal extends ObsidianModal {
             this.resolveCatalogChoiceSubstep("background-choices");
           },
           (instanceId) => { clearCreatorChoice(draft, instanceId); this.renderCurrentStep(); },
+          (grantId, entities) => this.resolveOriginRandomGrant(entities, grantId),
         );
       }
     } catch {
@@ -937,6 +978,7 @@ export class CharacterCreatorModal extends ObsidianModal {
       if (draft.class.classId) {
         const selected = sorted.find((entry) => entry.id === draft.class.classId);
         if (selected === undefined) return;
+        this.addOriginDetailsAction(container, "Class", selected);
         await renderClassStartingGrants(
           container, draft, catalog, selected,
           (sourceId, access) => this.isEntityEligible(sourceId, access),
@@ -948,6 +990,7 @@ export class CharacterCreatorModal extends ObsidianModal {
             this.resolveCatalogChoiceSubstep("class-starting-grants");
           },
           (instanceId) => { clearCreatorChoice(draft, instanceId); this.renderCurrentStep(); },
+          (grantId, entities) => this.resolveOriginRandomGrant(entities, grantId),
         );
       }
     } catch {
@@ -1420,10 +1463,44 @@ export class CharacterCreatorModal extends ObsidianModal {
       this.stepContentEl.createEl("p", {
         text: "Cannot display review: draft is not complete.",
       });
-      return;
+    } else {
+      this.renderReviewSection(snapshot);
     }
+    void this.renderConsequenceReview();
+  }
 
-    this.renderReviewSection(snapshot);
+  /** Loads a disposable consequence view for review; it never writes creator state. */
+  private async renderConsequenceReview(): Promise<void> {
+    const review = this.stepContentEl;
+    const catalog = this.catalogService;
+    const revision = catalog?.getRuntimeStatus().activeRevision;
+    const draft = this.controller.draft;
+    if (review === null || catalog === null || revision === undefined) return;
+    try {
+      const [species, backgrounds, classes] = await Promise.all([
+        catalog.fetchIndex(revision, "species"), catalog.fetchIndex(revision, "background"), catalog.fetchIndex(revision, "class"),
+      ]);
+      const summaries = [
+        species.find((entry) => entry.id === draft.species.speciesId),
+        backgrounds.find((entry) => entry.id === draft.background.backgroundId),
+        classes.find((entry) => entry.id === draft.class.classId),
+      ];
+      if (summaries.some((entry) => entry === undefined)) return;
+      const origins = await Promise.all(summaries.map(async (summary) =>
+        (await catalog.fetchEntity(revision, summary!.id, summary!.detailPath)).data));
+      const model = await loadCreatorConsequenceReadModel(draft, catalog, revision, origins);
+      const section = review.createDiv({ cls: "dnd-creator-review-consequences" });
+      section.createEl("h3", { text: "Origin consequences" });
+      for (const origin of model.model.origins) {
+        section.createEl("h4", { text: origin.origin.name });
+        renderOriginConsequences(section, origin, model.model.diagnostics);
+      }
+      const blockers = model.model.diagnostics.filter((entry) => entry.code !== "stale-choice");
+      if (blockers.length > 0) {
+        section.createEl("h3", { text: "Unresolved blockers" });
+        for (const blocker of blockers) section.createEl("p", { text: userFacingCreatorDiagnostic(blocker.code, blocker.message), cls: "dnd-creator-error" });
+      }
+    } catch { /* Catalog availability is already represented by creator diagnostics. */ }
   }
 
   private renderReviewSection(snapshot: ReviewSnapshot): void {
