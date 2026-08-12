@@ -77,8 +77,8 @@ export const CREATOR_STEP_DRAFT_STEPS: ReadonlyMap<CreatorStep, ReadonlyArray<Dr
     ["background", ["background", "background-choices"]],
     ["class", ["class", "class-starting-grants"]],
     ["abilities", ["abilities"]],
-    ["proficienciesAndLanguages", ["proficiency-choices", "proficiencies", "language-choices", "languages"]],
-    ["equipment", ["equipment"]],
+    ["proficienciesAndLanguages", []],
+    ["equipment", []],
     ["spells", ["spell-eligibility", "spells"]],
     ["review", ["review"]],
   ]);
@@ -205,6 +205,7 @@ export class StepController {
    * choice authority once an origin has been selected.
    */
   isStepResolved(step: CreatorStep): boolean {
+    if (step === "proficienciesAndLanguages" || step === "equipment" || step === "review") return true;
     const origin = step === "species" || step === "background" || step === "class" ? step : undefined;
     if (origin !== undefined) {
       const selected = origin === "species" ? this.draft.species.speciesId

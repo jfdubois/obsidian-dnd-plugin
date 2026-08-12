@@ -11,6 +11,7 @@ import {
   hasErrors,
   markStepResolved,
   getStepState,
+  getStepStatuses,
 } from "./character-draft";
 import type { CreatorStep } from "./character-step-controller";
 import { StepController } from "./character-step-controller";
@@ -140,6 +141,20 @@ describe("CharacterCreatorModal", () => {
   });
 
   describe("Step resolution", () => {
+    it("treats derived global summaries as resolved without legacy draft writes", () => {
+      const controller = new StepController(draft);
+      expect(controller.isStepResolved("proficienciesAndLanguages")).toBe(true);
+      expect(controller.isStepResolved("equipment")).toBe(true);
+      expect(getStepState(draft, "languages")).toBe("unvisited");
+      expect(getStepState(draft, "equipment")).toBe("unvisited");
+    });
+
+    it("does not emit legacy global-page required-step diagnostics", () => {
+      markStepResolved(draft, "proficiencies");
+      markStepResolved(draft, "languages");
+      markStepResolved(draft, "equipment");
+      expect(buildDraftDiagnostics(getStepStatuses(draft)).filter((entry) => entry.message === "Required step not yet completed")).toEqual([]);
+    });
     it("marks current step as resolved", () => {
       const controller = new StepController(draft);
       controller.markCurrentStepResolved();

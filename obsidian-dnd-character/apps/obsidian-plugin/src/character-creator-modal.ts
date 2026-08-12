@@ -22,7 +22,6 @@ import { buildReviewSnapshot } from "./character-review-snapshot";
 import { finalizeCharacterWithCatalog } from "./character-finalize";
 import { loadCreatorConsequenceReadModel } from "./creator-consequence-read-model";
 import type { Ability, ChoiceInstanceId, EntityId, RuleGrantId } from "@obsidian-dnd/domain";
-import { createEntityId } from "@obsidian-dnd/domain";
 import { selectRuleset } from "./character-ruleset-step";
 import type { CatalogService } from "./catalog/catalog-service";
 import { selectSources } from "./character-source-step";
@@ -33,10 +32,6 @@ import { selectClass } from "./character-class-step";
 import { renderBackgroundChoices } from "./character-background-choices-renderer";
 import { renderClassStartingGrants } from "./character-class-starting-grants-renderer";
 import { selectAbilityScores } from "./character-ability-scores-step";
-import {
-  selectProficiencies,
-  selectLanguages,
-} from "./character-proficiencies-step";
 import { querySpellEligibility } from "./character-spell-eligibility-step";
 import { selectSpells } from "./character-spell-selection-step";
 import { clearCreatorChoice, deriveDraftConsequences, resolveCreatorRandomGrant, setCreatorChoices } from "./creator-draft-commands";
@@ -46,6 +41,7 @@ import { openCreatorCatalogDetails } from "./creator-catalog-details-modal";
 import { createCreatorRandomSource } from "./creator-random-source";
 import type { RandomSource } from "./creator-random-grant-resolution";
 import { renderOriginConsequences } from "./creator-origin-consequence-renderer";
+import { deriveCreatorGlobalSummary, type CreatorSummaryEntry } from "./creator-global-summary";
 
 /* ── Persistence callback ─────────────────────────────────────── */
 
@@ -619,7 +615,7 @@ export class CharacterCreatorModal extends ObsidianModal {
         void this.renderProficienciesAndLanguagesStep(body);
         break;
       case "equipment":
-        this.renderEquipmentStep(body);
+        void this.renderEquipmentStep(body);
         break;
       case "spells":
         void this.renderSpellsStep(body);
@@ -1244,238 +1240,42 @@ export class CharacterCreatorModal extends ObsidianModal {
       });
   }
 
-  /**
-   * Renders the Proficiencies & Languages step: skill/tool checkboxes
-   * and language selection from catalog.
-   */
+  /** Origin-owned language and proficiency choices are presented once here. */
   private async renderProficienciesAndLanguagesStep(
     container: HTMLElement,
   ): Promise<void> {
-    const draft = this.controller.draft;
-    const ruleset = draft.ruleset.ruleset;
-
-    if (ruleset === null) {
-      container.createEl("p", { text: "Please select a ruleset first." });
-      return;
-    }
-
-    // Skill proficiencies (static list of standard skills)
-    const skillSection = container.createDiv({
-      cls: "dnd-creator-section",
-    });
-    skillSection.createEl("h3", { text: "Skill Proficiencies" });
-
-    const standardSkills: ReadonlyArray<{ id: string; name: string }> = [
-      { id: "skill:2024:core:acrobatics", name: "Acrobatics" },
-      { id: "skill:2024:core:animal-handling", name: "Animal Handling" },
-      { id: "skill:2024:core:arcana", name: "Arcana" },
-      { id: "skill:2024:core:athletics", name: "Athletics" },
-      { id: "skill:2024:core:deception", name: "Deception" },
-      { id: "skill:2024:core:history", name: "History" },
-      { id: "skill:2024:core:insight", name: "Insight" },
-      { id: "skill:2024:core:intimidation", name: "Intimidation" },
-      { id: "skill:2024:core:investigation", name: "Investigation" },
-      { id: "skill:2024:core:medicine", name: "Medicine" },
-      { id: "skill:2024:core:nature", name: "Nature" },
-      { id: "skill:2024:core:perception", name: "Perception" },
-      { id: "skill:2024:core:performance", name: "Performance" },
-      { id: "skill:2024:core:persuasion", name: "Persuasion" },
-      { id: "skill:2024:core:religion", name: "Religion" },
-      { id: "skill:2024:core:sleight-of-hand", name: "Sleight of Hand" },
-      { id: "skill:2024:core:stealth", name: "Stealth" },
-      { id: "skill:2024:core:survival", name: "Survival" },
-    ];
-
-    const selectedSkills = new Set(draft.proficiencies.skillProficiencies);
-
-    for (const skill of standardSkills) {
-      const setting = new Setting(skillSection);
-      setting.setName(skill.name);
-
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      const skillEntityId = createEntityId(skill.id);
-      checkbox.checked = selectedSkills.has(skillEntityId);
-      checkbox.setAttribute("aria-label", `Select ${skill.name} proficiency`);
-
-      checkbox.addEventListener("change", () => {
-        if (checkbox.checked) {
-          selectedSkills.add(skillEntityId);
-        } else {
-          selectedSkills.delete(skillEntityId);
-        }
-      });
-
-      setting.controlEl.appendChild(checkbox);
-    }
-
-    // Tool proficiencies
-    const toolSection = container.createDiv({
-      cls: "dnd-creator-section",
-    });
-    toolSection.createEl("h3", { text: "Tool Proficiencies" });
-
-    const selectedTools = new Set(draft.proficiencies.toolProficiencies);
-
-    // Tool proficiencies are loaded from catalog when available
-    // Note: "tool" is not a standard RuleEntityKind, so we use a static list
-    const staticTools: ReadonlyArray<{ id: string; name: string }> = [
-      { id: "tool:2024:core:herbalism-kit", name: "Herbalism Kit" },
-      { id: "tool:2024:core:musical-instrument", name: "Musical Instrument" },
-      { id: "tool:2024:core:thieves-tools", name: "Thieves' Tools" },
-      { id: "tool:2024:core:artisan-tools", name: "Artisan's Tools" },
-      { id: "tool:2024:core:gaming-set", name: "Gaming Set" },
-      { id: "tool:2024:core:vehicles-land", name: "Vehicles (Land)" },
-      { id: "tool:2024:core:vehicles-water", name: "Vehicles (Water)" },
-    ];
-
-    for (const tool of staticTools) {
-      const setting = new Setting(toolSection);
-      setting.setName(tool.name);
-
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      const toolEntityId = createEntityId(tool.id);
-      checkbox.checked = selectedTools.has(toolEntityId);
-      checkbox.setAttribute("aria-label", `Select ${tool.name}`);
-
-      checkbox.addEventListener("change", () => {
-        if (checkbox.checked) {
-          selectedTools.add(toolEntityId);
-        } else {
-          selectedTools.delete(toolEntityId);
-        }
-      });
-
-      setting.controlEl.appendChild(checkbox);
-    }
-
-    // Language selection
-    const langSection = container.createDiv({
-      cls: "dnd-creator-section",
-    });
-    langSection.createEl("h3", { text: "Languages" });
-
-    const selectedLangs = new Set(draft.languages.languageIds);
-
-    // Load languages from catalog
-    let langOptions: ReadonlyArray<{ id: string; name: string }> = [];
-    const catalog = this.catalogService;
-    if (catalog !== null) {
-      const status = catalog.getRuntimeStatus();
-      const revision = status.activeRevision;
-      if (revision !== undefined) {
-        try {
-          const langIndex = await catalog.fetchIndex(revision, "language");
-          const filtered = langIndex.filter((l) => l.ruleset === ruleset);
-          langOptions = filtered.map((l) => ({ id: l.id, name: l.name }));
-        } catch {
-          // Fall through to empty list
-        }
-      }
-    }
-
-    // Add standard languages as fallback
-    if (langOptions.length === 0) {
-      langOptions = [
-        { id: "language:2024:core:common", name: "Common" },
-        { id: "language:2024:core:dwarvish", name: "Dwarvish" },
-        { id: "language:2024:core:elvish", name: "Elvish" },
-        { id: "language:2024:core:giant", name: "Giant" },
-        { id: "language:2024:core:goblin", name: "Goblin" },
-        { id: "language:2024:core:gnomish", name: "Gnomish" },
-        { id: "language:2024:core:halfling", name: "Halfling" },
-        { id: "language:2024:core:orcish", name: "Orcish" },
-        { id: "language:2024:core:sylvan", name: "Sylvan" },
-        { id: "language:2024:core:undercommon", name: "Undercommon" },
-      ];
-    }
-
-    for (const lang of langOptions) {
-      const setting = new Setting(langSection);
-      setting.setName(lang.name);
-
-      const checkbox = document.createElement("input");
-      checkbox.type = "checkbox";
-      const langEntityId = createEntityId(lang.id);
-      checkbox.checked = selectedLangs.has(langEntityId);
-      checkbox.setAttribute("aria-label", `Select ${lang.name}`);
-
-      checkbox.addEventListener("change", () => {
-        if (checkbox.checked) {
-          selectedLangs.add(langEntityId);
-        } else {
-          selectedLangs.delete(langEntityId);
-        }
-      });
-
-      setting.controlEl.appendChild(checkbox);
-    }
-
-    // Confirm button
-    const confirmBtn = new ButtonComponent(container);
-    confirmBtn.setButtonText("Confirm Proficiencies & Languages")
-      .setClass("dnd-creator-confirm-proficiencies")
-      .onClick(() => {
-        const profOk = selectProficiencies(draft, {
-          skillProficiencies: [...selectedSkills],
-          toolProficiencies: [...selectedTools],
-        });
-        const langOk = selectLanguages(draft, {
-          languageIds: [...selectedLangs],
-        });
-        if (profOk && langOk) {
-          this.renderCurrentStep();
-        }
-      });
+    await this.renderDerivedGlobalSummary(container, "proficiencies");
   }
 
   /**
    * Renders the Equipment step: starting equipment choices.
    * Shows current equipment and allows manual entry.
    */
-  private renderEquipmentStep(container: HTMLElement): void {
+  private async renderEquipmentStep(container: HTMLElement): Promise<void> {
+    await this.renderDerivedGlobalSummary(container, "equipment");
+  }
+
+  private async renderDerivedGlobalSummary(container: HTMLElement, page: "proficiencies" | "equipment"): Promise<void> {
+    const catalog = this.catalogService;
+    const revision = catalog?.getRuntimeStatus().activeRevision;
     const draft = this.controller.draft;
+    if (catalog === null || revision === undefined) { container.createEl("p", { text: "Catalog is not active." }); return; }
+    try {
+      const [species, backgrounds, classes] = await Promise.all([catalog.fetchIndex(revision, "species"), catalog.fetchIndex(revision, "background"), catalog.fetchIndex(revision, "class")]);
+      const summaries = [species.find((entry) => entry.id === draft.species.speciesId), backgrounds.find((entry) => entry.id === draft.background.backgroundId), classes.find((entry) => entry.id === draft.class.classId)];
+      if (summaries.some((entry) => entry === undefined)) return;
+      const origins = await Promise.all(summaries.map(async (summary) => (await catalog.fetchEntity(revision, summary!.id, summary!.detailPath)).data));
+      const loaded = await loadCreatorConsequenceReadModel(draft, catalog, revision, origins);
+      const summary = deriveCreatorGlobalSummary(loaded.model, loaded.entities);
+      if (page === "proficiencies") { this.renderSummaryList(container, "Languages", summary.languages); this.renderSummaryList(container, "Proficiencies", summary.proficiencies); }
+      else this.renderSummaryList(container, "Starting Equipment", summary.equipment, true);
+    } catch { container.createEl("p", { text: "Unable to load derived creator summary." }); }
+  }
 
-    // Draft selections are the sole catalog-choice authority. This simple
-    // compatibility display deliberately does not turn them into inventory.
-    const choices = draft.selections;
-    const choiceKeys = Object.keys(choices);
-
-    if (choiceKeys.length > 0) {
-      const info = container.createDiv({ cls: "dnd-creator-info" });
-      info.createEl("h3", { text: "Current Equipment Choices" });
-      for (const key of choiceKeys) {
-        const choice = choices[key as keyof typeof choices];
-        if (choice) {
-          const item = info.createDiv({ cls: "dnd-creator-equipment-item" });
-          item.createEl("strong", { text: `${key}:` });
-          item.createSpan({ text: String(choice) });
-        }
-      }
-    } else {
-      container.createEl("p", {
-        text: "No equipment choices have been made yet. Select your starting equipment.",
-      });
-    }
-
-    // Manual equipment entry
-    const setting = new Setting(container);
-    setting.setName("Add Equipment Item");
-    setting.setDesc("Enter an equipment item ID or name.");
-
-    setting.addText((text) => {
-      text.setPlaceholder("Equipment item ID");
-    });
-
-    const addBtn = new ButtonComponent(container);
-    addBtn.setButtonText("Add")
-      .setClass("dnd-creator-add-equipment")
-      .onClick(() => {
-        // Equipment choices are resolved by the domain step
-        this.controller.markStepResolved("equipment");
-        this.renderCurrentStep();
-      });
+  private renderSummaryList(container: HTMLElement, title: string, entries: readonly CreatorSummaryEntry[], quantities = false): void {
+    const section = container.createDiv({ cls: "dnd-creator-section" }); section.createEl("h3", { text: title });
+    if (entries.length === 0) { section.createEl("p", { text: "No derived entries." }); return; }
+    for (const entry of entries) section.createEl("p", { text: `${entry.label}${quantities && "quantity" in entry && entry.quantity !== undefined ? ` ×${entry.quantity}` : ""} — ${entry.origin}` });
   }
 
   /**

@@ -250,11 +250,14 @@ export function isDraftComplete(draft: CharacterDraft): boolean {
 
 /** Legacy-free base completion used with an authoritative consequence model. */
 export function isDraftCompleteWithoutCatalogOriginChoices(draft: CharacterDraft): boolean {
-  const catalogChoiceSteps = new Set<DraftStep>([
+  const nonAuthoritativeCreatorSteps = new Set<DraftStep>([
     "species-choices", "background-choices", "class-starting-grants",
+    "proficiency-choices", "proficiencies", "language-choices", "languages",
+    "equipment-choices", "equipment",
+    "review",
   ]);
   return ALL_DRAFT_STEPS.every(
-    (step) => catalogChoiceSteps.has(step) || draft.stepStatuses.get(step) === "resolved",
+    (step) => nonAuthoritativeCreatorSteps.has(step) || draft.stepStatuses.get(step) === "resolved",
   );
 }
 

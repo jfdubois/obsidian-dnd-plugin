@@ -18,7 +18,7 @@ import type {
   DraftSpellEligibilityData,
   DraftSpellData,
 } from "./character-draft-steps";
-import { ALL_DRAFT_STEPS } from "./character-draft-steps";
+import { isDraftCompleteWithoutCatalogOriginChoices } from "./character-draft";
 import type { ChoiceInstanceId } from "@obsidian-dnd/domain";
 import type { CharacterChoice } from "@obsidian-dnd/character-contract";
 
@@ -48,10 +48,6 @@ export interface ReviewSnapshot {
 /* ── Builder ───────────────────────────────────────────────────── */
 
 /** Data steps (all draft steps except the review step itself). */
-const DATA_STEPS: ReadonlyArray<string> = ALL_DRAFT_STEPS.filter(
-  (step) => step !== "review",
-);
-
 /**
  * Builds a read-only review snapshot from a fully resolved character draft.
  *
@@ -63,12 +59,7 @@ const DATA_STEPS: ReadonlyArray<string> = ALL_DRAFT_STEPS.filter(
 export function buildReviewSnapshot(
   draft: CharacterDraft,
 ): ReviewSnapshot | null {
-  const allResolved = DATA_STEPS.every((step) => {
-    const state = draft.stepStatuses.get(step as typeof ALL_DRAFT_STEPS[number]);
-    return state === "resolved";
-  });
-
-  if (!allResolved) {
+  if (!isDraftCompleteWithoutCatalogOriginChoices(draft)) {
     return null;
   }
 

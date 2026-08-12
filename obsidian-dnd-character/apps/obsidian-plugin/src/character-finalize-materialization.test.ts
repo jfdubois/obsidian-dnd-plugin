@@ -3,6 +3,8 @@ import { createChoiceDefinitionId, createChoiceInstanceId, createChoiceOptionId,
 import { createItemRule, type BackgroundRule, type ChoiceDefinition, type ClassRule, type RuleGrant, type SpeciesRule } from "@obsidian-dnd/catalog-contract";
 import { serializeCharacter, type CharacterChoice } from "@obsidian-dnd/character-contract";
 import { createEmptyCharacterDraft, markStepResolved } from "./character-draft";
+import { isDraftCompleteWithoutCatalogOriginChoices } from "./character-draft";
+import { buildReviewSnapshot } from "./character-review-snapshot";
 import { finalizeCharacterWithCatalog } from "./character-finalize";
 import { setCreatorChoice } from "./creator-draft-commands";
 import { ALL_DRAFT_STEPS } from "./character-draft-steps";
@@ -25,6 +27,14 @@ function classRule(startingChoices: ChoiceDefinition[] = []): ClassRule { return
 function draft() { const value = createEmptyCharacterDraft(); value.ruleset.ruleset = "2024"; value.identity.name = "Materialized"; value.species.speciesId = speciesId; value.background.backgroundId = backgroundId; value.class.classId = classId; value.abilities.scores = { STR: 15, DEX: 14, CON: 13, INT: 12, WIS: 10, CHA: 8 }; for (const step of ALL_DRAFT_STEPS) markStepResolved(value, step); return value; }
 
 describe("catalog-aware creator finalization", () => {
+  it("does not require legacy global buckets for review or materialization", () => {
+    const value = draft();
+    for (const step of ["proficiency-choices", "proficiencies", "language-choices", "languages", "equipment-choices", "equipment"] as const) value.stepStatuses.set(step, "unvisited");
+    expect(isDraftCompleteWithoutCatalogOriginChoices(value)).toBe(true);
+    expect(buildReviewSnapshot(value)).not.toBeNull();
+    expect(finalizeCharacterWithCatalog(value, [species(speciesId, []), background(), classRule(), item()])).not.toBeNull();
+  });
+
   it("materializes active item, named-item, fixed and resolved dice grants without mutating the draft or catalog", () => {
     const value = draft(); value.randomGrantResolutions[diceGrant.id] = 50;
     const entities = [species(), background(), classRule(), item()]; const beforeDraft = structuredClone(value); const beforeCatalog = structuredClone(entities);

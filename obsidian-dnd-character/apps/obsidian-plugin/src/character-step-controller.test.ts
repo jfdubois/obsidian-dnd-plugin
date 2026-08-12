@@ -58,13 +58,8 @@ describe("CREATOR_STEP_DRAFT_STEPS mapping", () => {
     ]);
   });
 
-  it("maps proficienciesAndLanguages to proficiency-choices, proficiencies, language-choices, and languages", () => {
-    expect(getDraftStepsForCreatorStep("proficienciesAndLanguages")).toEqual([
-      "proficiency-choices",
-      "proficiencies",
-      "language-choices",
-      "languages",
-    ]);
+  it("maps proficienciesAndLanguages to no legacy completion buckets", () => {
+    expect(getDraftStepsForCreatorStep("proficienciesAndLanguages")).toEqual([]);
   });
 
   it("maps spells to spell-eligibility and spells draft steps", () => {
@@ -285,7 +280,7 @@ describe("StepController dependency invalidation", () => {
     expect(invalidated).toHaveLength(0);
   });
 
-  it("invalidating class invalidates class-starting-grants and downstream", () => {
+  it("invalidating class invalidates class-starting-grants and genuine downstream steps", () => {
     const ctrl = new StepController(createEmptyCharacterDraft());
     for (const step of CREATOR_STEPS) {
       ctrl.markStepResolved(step);
@@ -293,9 +288,9 @@ describe("StepController dependency invalidation", () => {
 
     const invalidated = ctrl.invalidateDependents("class");
     expect(invalidated).toContain("class-starting-grants");
-    expect(invalidated).toContain("proficiencies");
-    expect(invalidated).toContain("languages");
-    expect(invalidated).toContain("equipment");
+    expect(invalidated).not.toContain("proficiencies");
+    expect(invalidated).not.toContain("languages");
+    expect(invalidated).not.toContain("equipment");
     expect(invalidated).toContain("spell-eligibility");
   });
 });

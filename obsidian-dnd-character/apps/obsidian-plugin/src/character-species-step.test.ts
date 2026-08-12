@@ -83,7 +83,7 @@ describe("selectSpecies with valid input", () => {
     // All downstream dependents of species should be invalidated
     expect(getStepState(draft, "species-choices")).toBe("invalidated");
     expect(getStepState(draft, "abilities")).toBe("invalidated");
-    expect(getStepState(draft, "proficiencies")).toBe("invalidated");
+    expect(getStepState(draft, "proficiencies")).toBe("resolved");
   });
 
   it("overwrites a previously selected species", () => {
