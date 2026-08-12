@@ -13,7 +13,9 @@ export function isOriginConsequenceComplete(
   const origin = model.origins.find((entry) => entry.origin.id === originId);
   if (origin === undefined) return false;
   if (origin.choices.some((choice) => choice.status !== "resolved")) return false;
-  if (origin.grants.some((grant) => grant.randomResolution?.status !== "resolved")) return false;
+  if (origin.grants.some((grant) =>
+    grant.randomResolution !== undefined && grant.randomResolution.status !== "resolved",
+  )) return false;
   return !model.diagnostics.some((diagnostic) =>
     diagnostic.originId === originId && diagnostic.code !== "stale-choice",
   );

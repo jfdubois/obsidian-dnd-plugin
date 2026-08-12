@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import type { App } from "obsidian";
-import { createChoiceDefinitionId, createChoiceOptionId, createEntityId, createSourceId } from "@obsidian-dnd/domain";
+import { createChoiceDefinitionId, createChoiceOptionId, createEntityId, createRuleGrantId, createSourceId } from "@obsidian-dnd/domain";
 import type { ChoiceInstanceId } from "@obsidian-dnd/domain";
 import type { CharacterChoice } from "@obsidian-dnd/character-contract";
-import { createLanguageRule, type BackgroundRule, type ChoiceDefinition, type EntityDetailResponse } from "@obsidian-dnd/catalog-contract";
+import { createLanguageRule, type BackgroundRule, type ChoiceDefinition, type EntityDetailResponse, type RuleGrant } from "@obsidian-dnd/catalog-contract";
 import { CharacterCreatorModal } from "./character-creator-modal";
 import { createEmptyCharacterDraft, getStepState, markStepResolved } from "./character-draft";
 import { isOriginConsequenceComplete } from "./creator-origin-completion";
@@ -65,18 +65,23 @@ function progressBar(): { element: HTMLElement; dots: Array<{ text: string; clas
 }
 
 function acolyteFixture(): { draft: ReturnType<typeof createEmptyCharacterDraft>; entities: EntityDetailResponse[]; submissions: Array<{ instanceId: ChoiceInstanceId; value: CharacterChoice["selectedValue"] }> } {
-  const backgroundId = createEntityId("background:2014:test:acolyte");
-  const commonId = createEntityId("language:2014:test:common");
-  const elvishId = createEntityId("language:2014:test:elvish");
-  const language: ChoiceDefinition = { id: createChoiceDefinitionId("choice:test:acolyte:language"), label: "Choose languages", type: "language", minimum: 2, maximum: 2, repeatable: false, optionQuery: { type: "entity", kind: "language" }, prerequisites: [] };
-  const packageId = createChoiceOptionId("option:test:acolyte:package");
-  const equipment: ChoiceDefinition = { id: createChoiceDefinitionId("choice:test:acolyte:equipment"), label: "Starting equipment", type: "closed-option", minimum: 1, maximum: 1, repeatable: false, prerequisites: [], options: [{ id: packageId, label: "Package", grants: [], choices: [] }] };
-  const background: BackgroundRule = { id: backgroundId, kind: "background", name: "Acolyte", sourceId: createSourceId("test"), ruleset: "2014", access: "core", legacy: false, content: [], prerequisites: [], effects: [], grants: [], choices: [language, equipment], dependencies: [], skillProficiencies: [] };
+  const backgroundId = createEntityId("background:2014:phb:acolyte");
+  const commonId = createEntityId("language:2014:phb:common");
+  const elvishId = createEntityId("language:2014:phb:elvish");
+  const language: ChoiceDefinition = { id: createChoiceDefinitionId("choice:background:2014:phb:acolyte:language:0"), label: "Choose languages", type: "language", minimum: 2, maximum: 2, repeatable: false, optionQuery: { type: "entity", kind: "language" }, prerequisites: [] };
+  const packageId = createChoiceOptionId("option:background:2014:phb:acolyte:equipment:0");
+  const equipment: ChoiceDefinition = { id: createChoiceDefinitionId("choice:background:2014:phb:acolyte:equipment:0"), label: "Choose starting equipment", type: "closed-option", minimum: 1, maximum: 1, repeatable: false, prerequisites: [], options: [{ id: packageId, label: "Package A", grants: [], choices: [] }, { id: createChoiceOptionId("option:background:2014:phb:acolyte:equipment:1"), label: "Package B", grants: [], choices: [] }] };
+  const grants: RuleGrant[] = [
+    { id: createRuleGrantId("grant:background:2014:phb:acolyte:item"), type: "item", itemId: createEntityId("item:2014:phb:acolyte:pack"), quantity: 1 },
+    { id: createRuleGrantId("grant:background:2014:phb:acolyte:named"), type: "named-item", name: "holy symbol", quantity: 1 },
+    { id: createRuleGrantId("grant:background:2014:phb:acolyte:currency"), type: "currency", denomination: "cp", amount: { type: "fixed", value: 1500 } },
+  ];
+  const background: BackgroundRule = { id: backgroundId, kind: "background", name: "Acolyte", sourceId: createSourceId("phb"), ruleset: "2014", access: "core", legacy: false, content: [], prerequisites: [], effects: [], grants, choices: [language, equipment], dependencies: [], skillProficiencies: [] };
   const draft = createEmptyCharacterDraft();
   draft.ruleset.ruleset = "2014"; draft.background.backgroundId = backgroundId; markStepResolved(draft, "background");
   const languageInstance = `${backgroundId}:choice:${language.id}` as ChoiceInstanceId;
   const equipmentInstance = `${backgroundId}:choice:${equipment.id}` as ChoiceInstanceId;
-  return { draft, entities: [background, createLanguageRule(commonId, "Common", createSourceId("test"), "2014", "core", [], "language"), createLanguageRule(elvishId, "Elvish", createSourceId("test"), "2014", "core", [], "language")], submissions: [{ instanceId: languageInstance, value: { type: "entity-ids", entityIds: [commonId, elvishId] } }, { instanceId: equipmentInstance, value: { type: "option-ids", optionIds: [packageId] } }] };
+  return { draft, entities: [background, createLanguageRule(commonId, "Common", createSourceId("phb"), "2014", "core", [], "language"), createLanguageRule(elvishId, "Elvish", createSourceId("phb"), "2014", "core", [], "language")], submissions: [{ instanceId: languageInstance, value: { type: "entity-ids", entityIds: [commonId, elvishId] } }, { instanceId: equipmentInstance, value: { type: "option-ids", optionIds: [packageId] } }] };
 }
 
 describe("creator origin completion projection", () => {
@@ -118,6 +123,11 @@ describe("creator origin completion projection", () => {
     access.submitCatalogChoiceBatch("background-choices", entities, submissions);
     access.renderGeneration = 5;
 
+    const consequence = deriveDraftConsequences(draft, entities).origins[0]!;
+    expect(consequence.choices.every((choice) => choice.status === "resolved")).toBe(true);
+    expect(consequence.grants.some((grant) => grant.randomResolution !== undefined)).toBe(false);
+    expect(deriveDraftConsequences(draft, entities).diagnostics).toEqual([]);
+    expect(isOriginConsequenceComplete(deriveDraftConsequences(draft, entities), draft.background.backgroundId!)).toBe(true);
     expect(access.controller.isStepResolved("background")).toBe(true);
     expect(progress.dots.find((dot) => dot.text === "Background")?.classes).toContain("dnd-creator-step-dot-resolved");
     access.updateOriginConsequenceCompletion("background", false, 4);
