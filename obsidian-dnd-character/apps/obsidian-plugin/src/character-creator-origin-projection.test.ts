@@ -5,7 +5,9 @@ import type { ChoiceInstanceId } from "@obsidian-dnd/domain";
 import type { CharacterChoice } from "@obsidian-dnd/character-contract";
 import { createLanguageRule, type BackgroundRule, type ChoiceDefinition, type EntityDetailResponse } from "@obsidian-dnd/catalog-contract";
 import { CharacterCreatorModal } from "./character-creator-modal";
-import { createEmptyCharacterDraft, markStepResolved } from "./character-draft";
+import { createEmptyCharacterDraft, getStepState, markStepResolved } from "./character-draft";
+import { isOriginConsequenceComplete } from "./creator-origin-completion";
+import { deriveDraftConsequences, setCreatorChoices } from "./creator-draft-commands";
 import type { StepController } from "./character-step-controller";
 
 type Origin = "species" | "background" | "class";
@@ -18,6 +20,11 @@ interface ModalAccess {
   updateOriginConsequenceCompletion(origin: Origin, complete: boolean, generation: number): void;
   submitCatalogChoiceBatch(step: "species-choices" | "background-choices" | "class-starting-grants", entities: readonly EntityDetailResponse[], choices: readonly { instanceId: ChoiceInstanceId; value: CharacterChoice["selectedValue"] }[]): void;
   clearCatalogChoice(step: "species-choices" | "background-choices" | "class-starting-grants", entities: readonly EntityDetailResponse[], instanceId: ChoiceInstanceId): void;
+  navigateNext(): void;
+  renderProgressBar(): void;
+  renderCurrentStep(): void;
+  projectCatalogCommandCompletion(step: "species-choices" | "background-choices" | "class-starting-grants", entities: readonly EntityDetailResponse[], activeIds: readonly string[]): void;
+  resolveCatalogChoiceSubstep(step: "species-choices" | "background-choices" | "class-starting-grants", entities: readonly EntityDetailResponse[]): void;
 }
 
 interface ProgressElement {
@@ -123,5 +130,77 @@ describe("creator origin completion projection", () => {
     expect(access.controller.isStepResolved("background")).toBe(true);
     access.clearCatalogChoice("background-choices", entities, submissions[0]!.instanceId);
     expect(access.controller.isStepResolved("background")).toBe(false);
+  });
+
+  it("keeps the completed Background projection through the exact local refresh, Next, and Class progress path", () => {
+    const { draft, entities, submissions } = acolyteFixture();
+    const modal = new CharacterCreatorModal(app(), draft);
+    const access = modal as unknown as ModalAccess;
+    const progress = progressBar();
+    access.progressBarEl = progress.element;
+    access.renderGeneration = 4;
+    (access.controller as unknown as { _currentIndex: number })._currentIndex = 4;
+
+    const completion = () => (access.controller as unknown as { originConsequenceCompletion: Map<Origin, boolean> }).originConsequenceCompletion.get("background");
+
+    // T0: the selected origin is unresolved before the governed batch.
+    expect(completion()).toBeUndefined();
+    expect(access.controller.isStepResolved("background")).toBe(false);
+    setCreatorChoices(draft, entities, submissions);
+
+    // T1: selection persistence changes the consequence model, not the disposable projection.
+    const model = deriveDraftConsequences(draft, entities);
+    expect(isOriginConsequenceComplete(model, draft.background.backgroundId!)).toBe(true);
+    expect(completion()).toBeUndefined();
+    expect(access.controller.isStepResolved("background")).toBe(false);
+    expect(getStepState(draft, "background")).toBe("resolved");
+    expect(Object.keys(draft.selections)).toHaveLength(2);
+    expect(model.diagnostics.filter((diagnostic) => diagnostic.originId === draft.background.backgroundId)).toEqual([]);
+
+    // T2/T3/T4: command projection and the targeted region refresh preserve completion.
+    access.projectCatalogCommandCompletion("background-choices", entities, submissions.map((submission) => submission.instanceId));
+    expect(completion()).toBe(true);
+    expect(access.controller.isStepResolved("background")).toBe(true);
+    access.resolveCatalogChoiceSubstep("background-choices", entities);
+    expect(completion()).toBe(true);
+    expect(access.controller.isStepResolved("background")).toBe(true);
+
+    // T5/T6: use the modal navigation and progress methods, not a helper-only path.
+    access.navigateNext();
+    expect(access.controller.currentStep).toBe("class");
+    expect(completion()).toBe(true);
+    access.renderProgressBar();
+    expect(completion()).toBe(true);
+    expect(access.controller.isStepResolved("background")).toBe(true);
+    const backgroundDots = progress.dots.filter((dot) => dot.text === "Background");
+    expect(backgroundDots[backgroundDots.length - 1]?.classes).toContain("dnd-creator-step-dot-resolved");
+  });
+
+  it("does not full-rerender the creator step for confirmed or cleared local choices", () => {
+    const { draft, entities, submissions } = acolyteFixture();
+    const modal = new CharacterCreatorModal(app(), draft);
+    const access = modal as unknown as ModalAccess;
+    const render = vi.spyOn(access, "renderCurrentStep");
+
+    access.submitCatalogChoiceBatch("background-choices", entities, submissions);
+    access.clearCatalogChoice("background-choices", entities, submissions[0]!.instanceId);
+
+    expect(render).not.toHaveBeenCalled();
+  });
+
+  it("preserves the modal content scroll root through a local choice confirmation", () => {
+    const { draft, entities, submissions } = acolyteFixture();
+    const modal = new CharacterCreatorModal(app(), draft);
+    const access = modal as unknown as ModalAccess;
+    const scrollRoot = {
+      scrollTop: 284,
+      scrollHeight: 800,
+      clientHeight: 400,
+      querySelector: () => null,
+    };
+    (access as unknown as { contentEl: HTMLElement }).contentEl = scrollRoot as unknown as HTMLElement;
+
+    access.submitCatalogChoiceBatch("background-choices", entities, submissions);
+    expect(scrollRoot.scrollTop).toBe(284);
   });
 });
