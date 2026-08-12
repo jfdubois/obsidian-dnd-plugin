@@ -9,6 +9,10 @@ import { createEmptyCharacterDraft, getStepState, markStepResolved } from "./cha
 import { isOriginConsequenceComplete } from "./creator-origin-completion";
 import { deriveDraftConsequences, setCreatorChoices } from "./creator-draft-commands";
 import type { StepController } from "./character-step-controller";
+import { selectRuleset } from "./character-ruleset-step";
+import { selectSources } from "./character-source-step";
+import { selectSpecies } from "./character-species-step";
+import { selectBackground } from "./character-background-step";
 
 type Origin = "species" | "background" | "class";
 
@@ -174,6 +178,67 @@ describe("creator origin completion projection", () => {
     expect(access.controller.isStepResolved("background")).toBe(true);
     const backgroundDots = progress.dots.filter((dot) => dot.text === "Background");
     expect(backgroundDots[backgroundDots.length - 1]?.classes).toContain("dnd-creator-step-dot-resolved");
+  });
+
+  it("resolves Background in the real empty-draft lifecycle despite its unvisited legacy choices step", () => {
+    const { entities, submissions } = acolyteFixture();
+    const draft = createEmptyCharacterDraft();
+    const elfId = createEntityId("species:2014:test:elf");
+    selectRuleset(draft, "2014");
+    selectSources(draft, []);
+    expect(selectSpecies(draft, elfId)).toBe(true);
+
+    const modal = new CharacterCreatorModal(app(), draft);
+    const access = modal as unknown as ModalAccess;
+    access.controller.setOriginConsequenceCompletion("species", true);
+    expect(selectBackground(draft, entities[0]!.id)).toBe(true);
+
+    const progress = progressBar();
+    access.progressBarEl = progress.element;
+    access.renderGeneration = 4;
+    (access.controller as unknown as { _currentIndex: number })._currentIndex = 4;
+    access.submitCatalogChoiceBatch("background-choices", entities, submissions);
+    access.navigateNext();
+    expect(access.controller.currentStep).toBe("class");
+    access.renderProgressBar();
+
+    expect(getStepState(draft, "background")).toBe("resolved");
+    expect(getStepState(draft, "background-choices")).toBe("unvisited");
+    expect((access.controller as unknown as { originConsequenceCompletion: Map<Origin, boolean> }).originConsequenceCompletion.get("background")).toBe(true);
+    expect(access.controller.isStepResolved("background")).toBe(true);
+    const backgroundDots = progress.dots.filter((dot) => dot.text === "Background");
+    expect(backgroundDots[backgroundDots.length - 1]?.classes).toContain("dnd-creator-step-dot-resolved");
+  });
+
+  it.each<Origin>(["species", "background", "class"])("does not let non-resolved legacy %s steps veto authoritative completion", (origin) => {
+    const { access } = modalFor(origin);
+    const legacySteps = origin === "species" ? ["species", "species-choices"]
+      : origin === "background" ? ["background", "background-choices"]
+        : ["class", "class-starting-grants"];
+    for (const step of legacySteps) access.controller.draft.stepStatuses.set(step as never, "invalidated");
+    const progress = progressBar();
+    access.progressBarEl = progress.element;
+    access.updateOriginConsequenceCompletion(origin, true, 4);
+
+    const oldLegacyVetoResult = getStepState(access.controller.draft, origin) === "resolved"
+      && (access.controller as unknown as { originConsequenceCompletion: Map<Origin, boolean> }).originConsequenceCompletion.get(origin) === true;
+    expect(oldLegacyVetoResult).toBe(false);
+    expect(access.controller.isStepResolved(origin)).toBe(true);
+    expect(progress.dots.find((dot) => dot.text === (origin === "class" ? "Class" : origin[0]!.toUpperCase() + origin.slice(1)))?.classes).toContain("dnd-creator-step-dot-resolved");
+  });
+
+  it.each<"false" | "absent">(["false", "absent"])("keeps selected Background unresolved when its projection is %s", (projection) => {
+    const { access } = modalFor("background");
+    if (projection === "false") access.updateOriginConsequenceCompletion("background", false, 4);
+    expect(access.controller.isStepResolved("background")).toBe(false);
+  });
+
+  it("keeps Background unresolved with no selected origin even if compatibility state is resolved", () => {
+    const modal = new CharacterCreatorModal(app(), createEmptyCharacterDraft());
+    const access = modal as unknown as ModalAccess;
+    access.controller.markStepResolved("background");
+    access.updateOriginConsequenceCompletion("background", true, 4);
+    expect(access.controller.isStepResolved("background")).toBe(false);
   });
 
   it("does not full-rerender the creator step for confirmed or cleared local choices", () => {

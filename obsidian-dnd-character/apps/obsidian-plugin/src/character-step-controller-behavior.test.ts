@@ -6,6 +6,13 @@ import {
   CREATOR_STEPS,
 } from "./character-step-controller";
 
+function completeCatalogOrigins(ctrl: StepController): void {
+  ctrl.draft.species.speciesId = createEntityId("species:2014:phb:elf");
+  ctrl.draft.background.backgroundId = createEntityId("background:2014:phb:acolyte");
+  ctrl.draft.class.classId = createEntityId("class:2014:phb:cleric");
+  for (const origin of ["species", "background", "class"] as const) ctrl.setOriginConsequenceCompletion(origin, true);
+}
+
 /* ── Save readiness ───────────────────────────────────────────── */
 
 describe("StepController canSave", () => {
@@ -19,6 +26,7 @@ describe("StepController canSave", () => {
     for (const step of CREATOR_STEPS) {
       ctrl.markStepResolved(step);
     }
+    completeCatalogOrigins(ctrl);
     expect(ctrl.canSave()).toBe(true);
   });
 
@@ -39,6 +47,7 @@ describe("StepController canSave", () => {
         ctrl.markStepResolved(step);
       }
     }
+    completeCatalogOrigins(ctrl);
     expect(ctrl.canSave()).toBe(true);
   });
 });
@@ -75,6 +84,7 @@ describe("StepController skip logic", () => {
     ctrl.markStepResolved("species");
     ctrl.markStepResolved("background");
     ctrl.markStepResolved("class");
+    completeCatalogOrigins(ctrl);
     ctrl.markStepResolved("abilities");
     ctrl.markStepResolved("proficienciesAndLanguages");
     // equipment-choices is not mapped to a CreatorStep; resolve manually
@@ -93,6 +103,7 @@ describe("StepController skip logic", () => {
     ctrl.markStepResolved("species");
     ctrl.markStepResolved("background");
     ctrl.markStepResolved("class");
+    completeCatalogOrigins(ctrl);
     ctrl.markStepResolved("abilities");
     ctrl.markStepResolved("proficienciesAndLanguages");
     // equipment-choices is not mapped to a CreatorStep; resolve manually

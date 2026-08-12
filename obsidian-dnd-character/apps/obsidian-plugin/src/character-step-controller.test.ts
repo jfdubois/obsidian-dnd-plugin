@@ -153,6 +153,10 @@ describe("StepController navigation", () => {
     ctrl.markStepResolved("species");
     ctrl.markStepResolved("background");
     ctrl.markStepResolved("class");
+    ctrl.draft.species.speciesId = createEntityId("species:2014:phb:elf");
+    ctrl.draft.background.backgroundId = createEntityId("background:2014:phb:acolyte");
+    ctrl.draft.class.classId = createEntityId("class:2014:phb:cleric");
+    for (const origin of ["species", "background", "class"] as const) ctrl.setOriginConsequenceCompletion(origin, true);
     expect(ctrl.jumpTo("abilities")).toBe(true);
     expect(ctrl.currentStep).toBe("abilities");
     expect(ctrl.currentStepIndex).toBe(6);
@@ -164,11 +168,32 @@ describe("StepController navigation", () => {
     for (const step of CREATOR_STEPS) {
       ctrl.markStepResolved(step);
     }
+    ctrl.draft.species.speciesId = createEntityId("species:2014:phb:elf");
+    ctrl.draft.background.backgroundId = createEntityId("background:2014:phb:acolyte");
+    ctrl.draft.class.classId = createEntityId("class:2014:phb:cleric");
+    for (const origin of ["species", "background", "class"] as const) ctrl.setOriginConsequenceCompletion(origin, true);
     // equipment-choices is not mapped to a CreatorStep; resolve manually
     ctrl.draft.stepStatuses.set("equipment-choices", "resolved");
     for (const step of CREATOR_STEPS) {
       expect(ctrl.canNavigateTo(step)).toBe(true);
     }
+  });
+
+  it("uses origin consequence completion rather than invalidated legacy choice steps for downstream navigation", () => {
+    const ctrl = makeController();
+    ctrl.draft.species.speciesId = createEntityId("species:2014:phb:elf");
+    ctrl.draft.background.backgroundId = createEntityId("background:2014:phb:acolyte");
+    ctrl.draft.class.classId = createEntityId("class:2014:phb:cleric");
+    for (const origin of ["species", "background", "class"] as const) {
+      ctrl.setOriginConsequenceCompletion(origin, true);
+    }
+    for (const step of ["species", "species-choices", "background", "background-choices", "class", "class-starting-grants"] as const) {
+      ctrl.draft.stepStatuses.set(step, "invalidated");
+    }
+    ctrl.draft.stepStatuses.set("equipment-choices", "resolved");
+
+    expect(ctrl.canNavigateTo("proficienciesAndLanguages")).toBe(true);
+    expect(ctrl.canNavigateTo("equipment")).toBe(true);
   });
 });
 
@@ -186,14 +211,14 @@ describe("StepController step resolution", () => {
     expect(ctrl.isStepResolved("species")).toBe(false);
   });
 
-  it("species step requires both species and species-choices resolved", () => {
+  it("species step remains unresolved without a selected species", () => {
     const ctrl = new StepController(createEmptyCharacterDraft());
     const draft = ctrl.draft;
     draft.stepStatuses.set("species", "resolved");
     expect(ctrl.isStepResolved("species")).toBe(false);
 
     draft.stepStatuses.set("species-choices", "resolved");
-    expect(ctrl.isStepResolved("species")).toBe(true);
+    expect(ctrl.isStepResolved("species")).toBe(false);
   });
 
   it("uses the active consequence projection for a selected zero-choice species", () => {

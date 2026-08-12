@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createEmptyCharacterDraft, getStepState } from "./character-draft";
+import { createEntityId } from "@obsidian-dnd/domain";
 import {
   StepController,
   CREATOR_STEPS,
@@ -106,14 +107,12 @@ describe("StepController blocked save", () => {
 /* ── Invalid step resolution ──────────────────────────────────── */
 
 describe("StepController invalid resolution state", () => {
-  it("isStepResolved returns false for invalidated steps", () => {
+  it("isStepResolved remains false for an invalidated origin when its projection is incomplete", () => {
     const ctrl = new StepController(createEmptyCharacterDraft());
-    ctrl.markStepResolved("species");
-    expect(ctrl.isStepResolved("species")).toBe(true);
-
-    // Invalidate species (downstream of ruleset)
+    ctrl.draft.species.speciesId = createEntityId("species:2014:phb:elf");
     ctrl.draft.stepStatuses.set("species", "invalidated");
     ctrl.draft.stepStatuses.set("species-choices", "invalidated");
+    ctrl.setOriginConsequenceCompletion("species", false);
     expect(ctrl.isStepResolved("species")).toBe(false);
   });
 
@@ -157,6 +156,10 @@ describe("StepController skip logic edge cases", () => {
     ctrl.markStepResolved("species");
     ctrl.markStepResolved("background");
     ctrl.markStepResolved("class");
+    ctrl.draft.species.speciesId = createEntityId("species:2014:phb:elf");
+    ctrl.draft.background.backgroundId = createEntityId("background:2014:phb:acolyte");
+    ctrl.draft.class.classId = createEntityId("class:2014:phb:cleric");
+    for (const origin of ["species", "background", "class"] as const) ctrl.setOriginConsequenceCompletion(origin, true);
     ctrl.markStepResolved("abilities");
     ctrl.markStepResolved("proficienciesAndLanguages");
     // equipment-choices is not mapped to a CreatorStep; resolve manually

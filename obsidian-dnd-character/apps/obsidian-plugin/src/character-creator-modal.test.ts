@@ -188,6 +188,10 @@ describe("CharacterCreatorModal", () => {
       for (const step of steps) {
         controller.markStepResolved(step);
       }
+      draft.species.speciesId = createEntityId("species:2014:phb:elf");
+      draft.background.backgroundId = createEntityId("background:2014:phb:acolyte");
+      draft.class.classId = createEntityId("class:2014:phb:cleric");
+      for (const origin of ["species", "background", "class"] as const) controller.setOriginConsequenceCompletion(origin, true);
       expect(controller.canSave()).toBe(true);
     });
 

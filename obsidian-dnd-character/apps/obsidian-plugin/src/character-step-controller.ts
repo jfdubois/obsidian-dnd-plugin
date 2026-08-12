@@ -41,6 +41,17 @@ export type CreatorStep =
   | "spells"
   | "review";
 
+type CreatorOrigin = "species" | "background" | "class";
+
+const CATALOG_ORIGIN_DRAFT_STEPS: ReadonlyMap<DraftStep, CreatorOrigin> = new Map([
+  ["species", "species"],
+  ["species-choices", "species"],
+  ["background", "background"],
+  ["background-choices", "background"],
+  ["class", "class"],
+  ["class-starting-grants", "class"],
+]);
+
 /** Ordered list of the 11 creation modal steps. */
 export const CREATOR_STEPS: ReadonlyArray<CreatorStep> = [
   "ruleset",
@@ -101,7 +112,7 @@ export interface ReviewState {
 export class StepController {
   private _draft: CharacterDraft;
   private _currentIndex: number;
-  private readonly originConsequenceCompletion = new Map<"species" | "background" | "class", boolean>();
+  private readonly originConsequenceCompletion = new Map<CreatorOrigin, boolean>();
 
   constructor(draft: CharacterDraft) {
     this._draft = draft;
@@ -171,7 +182,9 @@ export class StepController {
       const dependencies = getStepDependencies(draftStep);
       for (const dep of dependencies) {
         // Only check dependencies that are outside this creator step's own draft steps
-        if (!draftSteps.has(dep) && getStepState(this.draft, dep) !== "resolved") {
+        if (draftSteps.has(dep)) continue;
+        const origin = CATALOG_ORIGIN_DRAFT_STEPS.get(dep);
+        if (origin !== undefined ? !this.isStepResolved(origin) : getStepState(this.draft, dep) !== "resolved") {
           return false;
         }
       }
@@ -198,9 +211,9 @@ export class StepController {
         : origin === "background" ? this.draft.background.backgroundId
           : this.draft.class.classId;
       if (selected !== null) {
-        return getStepState(this.draft, origin) === "resolved"
-          && this.originConsequenceCompletion.get(origin) === true;
+        return this.originConsequenceCompletion.get(origin) === true;
       }
+      return false;
     }
     const draftSteps = getDraftStepsForCreatorStep(step);
     return draftSteps.every(
@@ -209,7 +222,7 @@ export class StepController {
   }
 
   /** Records the disposable completion projection for a loaded origin model. */
-  setOriginConsequenceCompletion(origin: "species" | "background" | "class", complete: boolean): void {
+  setOriginConsequenceCompletion(origin: CreatorOrigin, complete: boolean): void {
     this.originConsequenceCompletion.set(origin, complete);
   }
 
