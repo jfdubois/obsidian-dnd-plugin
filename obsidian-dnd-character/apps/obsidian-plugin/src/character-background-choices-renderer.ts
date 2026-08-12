@@ -23,7 +23,7 @@ export async function renderBackgroundChoices(
   onChoicesPresented: () => void,
   onLoadError: (message: string) => void,
   onChoicesSubmitted?: (choices: readonly CreatorChoiceSubmission[], entities: readonly EntityDetailResponse[]) => void,
-  onChoiceCleared?: (instanceId: ChoiceConsequence["instanceId"]) => void,
+  onChoiceCleared?: (instanceId: ChoiceConsequence["instanceId"], entities: readonly EntityDetailResponse[]) => void,
   onRandomGrantResolution?: (grantId: RuleGrantId, entities: readonly EntityDetailResponse[]) => void,
   onConsequenceCompletion?: (complete: boolean) => void,
 ): Promise<void> {
@@ -58,7 +58,7 @@ export async function renderBackgroundChoices(
       if (onChoicesSubmitted === undefined) onResolved({});
       return;
     }
-    if (onChoicesSubmitted !== undefined) renderActiveCreatorChoices(container, "Background Choices", choices, (submissions) => onChoicesSubmitted(submissions, readModel!.entities), onChoiceCleared);
+    if (onChoicesSubmitted !== undefined) renderActiveCreatorChoices(container, "Background Choices", choices, (submissions) => onChoicesSubmitted(submissions, readModel!.entities), onChoiceCleared === undefined ? undefined : (instanceId) => onChoiceCleared(instanceId, readModel!.entities));
     else await renderInternalChoices(container, "Background Choices", draft, catalog, revision, choices, isEntityEligible, onResolved);
     onChoicesPresented();
   } catch (error) {

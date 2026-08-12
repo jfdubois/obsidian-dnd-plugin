@@ -23,7 +23,7 @@ export async function renderClassStartingGrants(
   onChoicesPresented: () => void,
   onLoadError: (message: string) => void,
   onChoicesSubmitted?: (choices: readonly CreatorChoiceSubmission[], entities: readonly EntityDetailResponse[]) => void,
-  onChoiceCleared?: (instanceId: ChoiceConsequence["instanceId"]) => void,
+  onChoiceCleared?: (instanceId: ChoiceConsequence["instanceId"], entities: readonly EntityDetailResponse[]) => void,
   onRandomGrantResolution?: (grantId: RuleGrantId, entities: readonly EntityDetailResponse[]) => void,
   onConsequenceCompletion?: (complete: boolean) => void,
 ): Promise<void> {
@@ -67,7 +67,7 @@ export async function renderClassStartingGrants(
       onChoicesPresented();
       return;
     }
-    if (onChoicesSubmitted !== undefined) renderActiveCreatorChoices(container, "Class Starting Choices", choices, (submissions) => onChoicesSubmitted(submissions, readModel!.entities), onChoiceCleared);
+    if (onChoicesSubmitted !== undefined) renderActiveCreatorChoices(container, "Class Starting Choices", choices, (submissions) => onChoicesSubmitted(submissions, readModel!.entities), onChoiceCleared === undefined ? undefined : (instanceId) => onChoiceCleared(instanceId, readModel!.entities));
     else await renderInternalChoices(container, "Class Starting Choices", draft, catalog, revision, choices, isEntityEligible, onResolved);
     onChoicesPresented();
   } catch (error) {

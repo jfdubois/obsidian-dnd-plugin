@@ -32,7 +32,7 @@ export async function renderSpeciesChoices(
   onChoicesPresented?: () => void,
   onEntityLoadError?: (message: string) => void,
   onChoicesSubmitted?: (choices: readonly CreatorChoiceSubmission[], entities: readonly EntityDetailResponse[]) => void,
-  onChoiceCleared?: (instanceId: ChoiceConsequence["instanceId"]) => void,
+  onChoiceCleared?: (instanceId: ChoiceConsequence["instanceId"], entities: readonly EntityDetailResponse[]) => void,
   onRandomGrantResolution?: (grantId: RuleGrantId, entities: readonly EntityDetailResponse[]) => void,
   onConsequenceCompletion?: (complete: boolean) => void,
 ): Promise<void> {
@@ -87,7 +87,7 @@ export async function renderSpeciesChoices(
       return;
     }
 
-    if (onChoicesSubmitted !== undefined) renderActiveCreatorChoices(container, "Species Choices", choices, (submissions) => onChoicesSubmitted(submissions, readModel!.entities), onChoiceCleared);
+    if (onChoicesSubmitted !== undefined) renderActiveCreatorChoices(container, "Species Choices", choices, (submissions) => onChoicesSubmitted(submissions, readModel!.entities), onChoiceCleared === undefined ? undefined : (instanceId) => onChoiceCleared(instanceId, readModel!.entities));
     else await renderChoicesSection(container, draft, catalog, revision, choices, isEntityEligible, onChoicesResolved);
     onChoicesPresented?.();
   } catch (error) {

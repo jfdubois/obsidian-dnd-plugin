@@ -1,6 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
 import type { App } from "obsidian";
-import { createEntityId } from "@obsidian-dnd/domain";
+import { createChoiceDefinitionId, createChoiceOptionId, createEntityId, createSourceId } from "@obsidian-dnd/domain";
+import type { ChoiceInstanceId } from "@obsidian-dnd/domain";
+import type { CharacterChoice } from "@obsidian-dnd/character-contract";
+import { createLanguageRule, type BackgroundRule, type ChoiceDefinition, type EntityDetailResponse } from "@obsidian-dnd/catalog-contract";
 import { CharacterCreatorModal } from "./character-creator-modal";
 import { createEmptyCharacterDraft, markStepResolved } from "./character-draft";
 import type { StepController } from "./character-step-controller";
@@ -13,6 +16,8 @@ interface ModalAccess {
   progressBarEl: HTMLElement | null;
   renderProgressBar(): void;
   updateOriginConsequenceCompletion(origin: Origin, complete: boolean, generation: number): void;
+  submitCatalogChoiceBatch(step: "species-choices" | "background-choices" | "class-starting-grants", entities: readonly EntityDetailResponse[], choices: readonly { instanceId: ChoiceInstanceId; value: CharacterChoice["selectedValue"] }[]): void;
+  clearCatalogChoice(step: "species-choices" | "background-choices" | "class-starting-grants", entities: readonly EntityDetailResponse[], instanceId: ChoiceInstanceId): void;
 }
 
 interface ProgressElement {
@@ -48,6 +53,21 @@ function progressBar(): { element: HTMLElement; dots: Array<{ text: string; clas
   return { element: element() as unknown as HTMLElement, dots };
 }
 
+function acolyteFixture(): { draft: ReturnType<typeof createEmptyCharacterDraft>; entities: EntityDetailResponse[]; submissions: Array<{ instanceId: ChoiceInstanceId; value: CharacterChoice["selectedValue"] }> } {
+  const backgroundId = createEntityId("background:2014:test:acolyte");
+  const commonId = createEntityId("language:2014:test:common");
+  const elvishId = createEntityId("language:2014:test:elvish");
+  const language: ChoiceDefinition = { id: createChoiceDefinitionId("choice:test:acolyte:language"), label: "Choose languages", type: "language", minimum: 2, maximum: 2, repeatable: false, optionQuery: { type: "entity", kind: "language" }, prerequisites: [] };
+  const packageId = createChoiceOptionId("option:test:acolyte:package");
+  const equipment: ChoiceDefinition = { id: createChoiceDefinitionId("choice:test:acolyte:equipment"), label: "Starting equipment", type: "closed-option", minimum: 1, maximum: 1, repeatable: false, prerequisites: [], options: [{ id: packageId, label: "Package", grants: [], choices: [] }] };
+  const background: BackgroundRule = { id: backgroundId, kind: "background", name: "Acolyte", sourceId: createSourceId("test"), ruleset: "2014", access: "core", legacy: false, content: [], prerequisites: [], effects: [], grants: [], choices: [language, equipment], dependencies: [], skillProficiencies: [] };
+  const draft = createEmptyCharacterDraft();
+  draft.ruleset.ruleset = "2014"; draft.background.backgroundId = backgroundId; markStepResolved(draft, "background");
+  const languageInstance = `${backgroundId}:choice:${language.id}` as ChoiceInstanceId;
+  const equipmentInstance = `${backgroundId}:choice:${equipment.id}` as ChoiceInstanceId;
+  return { draft, entities: [background, createLanguageRule(commonId, "Common", createSourceId("test"), "2014", "core", [], "language"), createLanguageRule(elvishId, "Elvish", createSourceId("test"), "2014", "core", [], "language")], submissions: [{ instanceId: languageInstance, value: { type: "entity-ids", entityIds: [commonId, elvishId] } }, { instanceId: equipmentInstance, value: { type: "option-ids", optionIds: [packageId] } }] };
+}
+
 describe("creator origin completion projection", () => {
   it.each<Origin>(["species", "background", "class"])("refreshes the progress projection when %s becomes complete", (origin) => {
     const { access } = modalFor(origin); const refresh = vi.spyOn(access, "renderProgressBar");
@@ -75,6 +95,33 @@ describe("creator origin completion projection", () => {
     access.updateOriginConsequenceCompletion("background", false, 4);
     access.renderGeneration = 5;
     access.updateOriginConsequenceCompletion("background", true, 4);
+    expect(access.controller.isStepResolved("background")).toBe(false);
+  });
+
+  it("projects a completed Acolyte batch before navigation makes its asynchronous Background callback stale", () => {
+    const { draft, entities, submissions } = acolyteFixture();
+    const modal = new CharacterCreatorModal(app(), draft);
+    const access = modal as unknown as ModalAccess;
+    const progress = progressBar(); access.progressBarEl = progress.element; access.renderGeneration = 4;
+
+    access.submitCatalogChoiceBatch("background-choices", entities, submissions);
+    access.renderGeneration = 5;
+
+    expect(access.controller.isStepResolved("background")).toBe(true);
+    expect(progress.dots.find((dot) => dot.text === "Background")?.classes).toContain("dnd-creator-step-dot-resolved");
+    access.updateOriginConsequenceCompletion("background", false, 4);
+    expect(access.controller.isStepResolved("background")).toBe(true);
+  });
+
+  it("projects Background incomplete synchronously when an active required choice is cleared", () => {
+    const { draft, entities, submissions } = acolyteFixture();
+    const modal = new CharacterCreatorModal(app(), draft);
+    const access = modal as unknown as ModalAccess;
+    access.renderGeneration = 4;
+
+    access.submitCatalogChoiceBatch("background-choices", entities, submissions);
+    expect(access.controller.isStepResolved("background")).toBe(true);
+    access.clearCatalogChoice("background-choices", entities, submissions[0]!.instanceId);
     expect(access.controller.isStepResolved("background")).toBe(false);
   });
 });

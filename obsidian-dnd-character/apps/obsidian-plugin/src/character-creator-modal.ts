@@ -21,7 +21,7 @@ import type { ReviewSnapshot } from "./character-review-snapshot";
 import { buildReviewSnapshot } from "./character-review-snapshot";
 import { finalizeCharacterWithCatalog } from "./character-finalize";
 import { loadCreatorConsequenceReadModel } from "./creator-consequence-read-model";
-import type { Ability, RuleGrantId } from "@obsidian-dnd/domain";
+import type { Ability, ChoiceInstanceId, EntityId, RuleGrantId } from "@obsidian-dnd/domain";
 import { createEntityId } from "@obsidian-dnd/domain";
 import { selectRuleset } from "./character-ruleset-step";
 import type { CatalogService } from "./catalog/catalog-service";
@@ -39,7 +39,8 @@ import {
 } from "./character-proficiencies-step";
 import { querySpellEligibility } from "./character-spell-eligibility-step";
 import { selectSpells } from "./character-spell-selection-step";
-import { clearCreatorChoice, resolveCreatorRandomGrant, setCreatorChoices } from "./creator-draft-commands";
+import { clearCreatorChoice, deriveDraftConsequences, resolveCreatorRandomGrant, setCreatorChoices } from "./creator-draft-commands";
+import { isOriginConsequenceComplete } from "./creator-origin-completion";
 import type { CreatorChoiceSubmission } from "./creator-active-choice-renderer";
 import { openCreatorCatalogDetails } from "./creator-catalog-details-modal";
 import { createCreatorRandomSource } from "./creator-random-source";
@@ -90,6 +91,7 @@ const STEP_LABELS: ReadonlyMap<CreatorStep, string> = new Map([
 
 type InternalSubstep = "background-choices" | "class-starting-grants";
 type CreatorOrigin = "species" | "background" | "class";
+type CatalogChoiceSubstep = "species-choices" | "background-choices" | "class-starting-grants";
 
 function getStepLabel(step: CreatorStep): string {
   return STEP_LABELS.get(step) ?? step;
@@ -360,9 +362,8 @@ export class CharacterCreatorModal extends ObsidianModal {
 
   private isCurrentRender(generation: number): boolean { return generation === this.renderGeneration; }
 
-  /** Updates the controller projection and every visible projection of an origin's completion together. */
-  private updateOriginConsequenceCompletion(origin: CreatorOrigin, complete: boolean, generation: number): void {
-    if (!this.isCurrentRender(generation)) return;
+  /** Projects an authoritative consequence result to the controller and visible UI. */
+  private projectOriginConsequenceCompletion(origin: CreatorOrigin, complete: boolean): void {
     this.controller.setOriginConsequenceCompletion(origin, complete);
     if (origin === "species") {
       this.speciesChoicesPending = false;
@@ -375,9 +376,43 @@ export class CharacterCreatorModal extends ObsidianModal {
     this.updateNavigationButtons();
   }
 
-  private submitCatalogChoiceBatch(step: "species-choices" | "background-choices" | "class-starting-grants", entities: readonly EntityDetailResponse[], choices: readonly CreatorChoiceSubmission[]): void {
+  /** Applies a presentation-only async result only while its render is still current. */
+  private updateOriginConsequenceCompletion(origin: CreatorOrigin, complete: boolean, generation: number): void {
+    if (!this.isCurrentRender(generation)) return;
+    this.projectOriginConsequenceCompletion(origin, complete);
+  }
+
+  private originForCatalogSubstep(step: CatalogChoiceSubstep): CreatorOrigin {
+    if (step === "species-choices") return "species";
+    if (step === "background-choices") return "background";
+    return "class";
+  }
+
+  private originIdForCatalogSubstep(step: CatalogChoiceSubstep): EntityId | null {
+    const origin = this.originForCatalogSubstep(step);
+    if (origin === "species") return this.controller.draft.species.speciesId;
+    if (origin === "background") return this.controller.draft.background.backgroundId;
+    return this.controller.draft.class.classId;
+  }
+
+  private projectCatalogCommandCompletion(step: CatalogChoiceSubstep, entities: readonly EntityDetailResponse[], activeIds: readonly string[]): void {
+    const model = deriveDraftConsequences(this.controller.draft, entities);
+    const origin = this.originForCatalogSubstep(step);
+    const originId = this.originIdForCatalogSubstep(step);
+    if (originId === null) throw new Error("Catalog choice origin is not selected");
+    const matched = model.origins.find((entry) => entry.origin.id === originId);
+    if (matched === undefined || matched.origin.kind !== origin) throw new Error("Catalog choice origin is inconsistent");
+    for (const id of activeIds) {
+      const owner = model.origins.find((entry) => entry.choices.some((choice) => choice.instanceId === id) || entry.grants.some((grant) => grant.grant.id === id));
+      if (owner?.origin.id !== originId) throw new Error("Catalog command crosses origin boundaries");
+    }
+    this.projectOriginConsequenceCompletion(origin, isOriginConsequenceComplete(model, originId));
+  }
+
+  private submitCatalogChoiceBatch(step: CatalogChoiceSubstep, entities: readonly EntityDetailResponse[], choices: readonly CreatorChoiceSubmission[]): void {
     try {
       setCreatorChoices(this.controller.draft, entities, choices);
+      this.projectCatalogCommandCompletion(step, entities, choices.map((choice) => choice.instanceId));
       this.resolveCatalogChoiceSubstep(step);
     } catch { /* Invalid batches leave the authoritative draft and current render unchanged. */ }
   }
@@ -405,7 +440,7 @@ export class CharacterCreatorModal extends ObsidianModal {
   }
 
   /** Completes a visual substep after its catalog choice command succeeded. */
-  private resolveCatalogChoiceSubstep(step: "species-choices" | "background-choices" | "class-starting-grants"): void {
+  private resolveCatalogChoiceSubstep(step: CatalogChoiceSubstep): void {
     this.internalSubstepsPending.delete(step as InternalSubstep);
     this.internalSubstepLoadErrors.delete(step as InternalSubstep);
     this.renderCurrentStep();
@@ -424,9 +459,22 @@ export class CharacterCreatorModal extends ObsidianModal {
     });
   }
 
-  private resolveOriginRandomGrant(entities: readonly EntityDetailResponse[], grantId: RuleGrantId): void {
+  private clearCatalogChoice(step: CatalogChoiceSubstep, entities: readonly EntityDetailResponse[], instanceId: ChoiceInstanceId): void {
+    try {
+      const before = deriveDraftConsequences(this.controller.draft, entities);
+      const origin = this.originForCatalogSubstep(step);
+      const originId = this.originIdForCatalogSubstep(step);
+      if (originId === null || !before.origins.some((entry) => entry.origin.id === originId && entry.origin.kind === origin && entry.choices.some((choice) => choice.instanceId === instanceId))) throw new Error("Catalog choice is not active for this origin");
+      clearCreatorChoice(this.controller.draft, instanceId);
+      this.projectCatalogCommandCompletion(step, entities, []);
+      this.renderCurrentStep();
+    } catch { /* Invalid clear commands leave the authoritative draft and current render unchanged. */ }
+  }
+
+  private resolveOriginRandomGrant(step: CatalogChoiceSubstep, entities: readonly EntityDetailResponse[], grantId: RuleGrantId): void {
     try {
       resolveCreatorRandomGrant(this.controller.draft, entities, grantId, this.randomSource);
+      this.projectCatalogCommandCompletion(step, entities, [grantId]);
       this.renderCurrentStep();
     } catch { /* The consequence panel continues to show the governed diagnostic. */ }
   }
@@ -826,8 +874,8 @@ export class CharacterCreatorModal extends ObsidianModal {
             if (!this.isCurrentRender(generation)) return;
             this.submitCatalogChoiceBatch("species-choices", entities, choices);
           },
-          (instanceId) => { clearCreatorChoice(draft, instanceId); this.renderCurrentStep(); },
-          (grantId, entities) => this.resolveOriginRandomGrant(entities, grantId),
+          (instanceId, entities) => this.clearCatalogChoice("species-choices", entities, instanceId),
+          (grantId, entities) => this.resolveOriginRandomGrant("species-choices", entities, grantId),
           (complete) => this.updateOriginConsequenceCompletion("species", complete, generation),
         );
       }
@@ -929,8 +977,8 @@ export class CharacterCreatorModal extends ObsidianModal {
             if (!this.isCurrentRender(generation)) return;
             this.submitCatalogChoiceBatch("background-choices", entities, choices);
           },
-          (instanceId) => { clearCreatorChoice(draft, instanceId); this.renderCurrentStep(); },
-          (grantId, entities) => this.resolveOriginRandomGrant(entities, grantId),
+          (instanceId, entities) => this.clearCatalogChoice("background-choices", entities, instanceId),
+          (grantId, entities) => this.resolveOriginRandomGrant("background-choices", entities, grantId),
           (complete) => this.updateOriginConsequenceCompletion("background", complete, generation),
         );
       }
@@ -1032,8 +1080,8 @@ export class CharacterCreatorModal extends ObsidianModal {
             if (!this.isCurrentRender(generation)) return;
             this.submitCatalogChoiceBatch("class-starting-grants", entities, choices);
           },
-          (instanceId) => { clearCreatorChoice(draft, instanceId); this.renderCurrentStep(); },
-          (grantId, entities) => this.resolveOriginRandomGrant(entities, grantId),
+          (instanceId, entities) => this.clearCatalogChoice("class-starting-grants", entities, instanceId),
+          (grantId, entities) => this.resolveOriginRandomGrant("class-starting-grants", entities, grantId),
           (complete) => this.updateOriginConsequenceCompletion("class", complete, generation),
         );
       }
