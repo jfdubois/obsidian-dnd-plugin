@@ -111,6 +111,7 @@ describe("Creator state-machine lifecycle (CRE-011)", () => {
 
     it("buildReviewSnapshot returns null when one data step is unresolved", () => {
       const draft = buildCompleteDraft();
+      draft.spellEligibility.isSpellcaster = true;
       draft.stepStatuses.set("spells", "unvisited");
       const snapshot = buildReviewSnapshot(draft);
       expect(snapshot).toBeNull();

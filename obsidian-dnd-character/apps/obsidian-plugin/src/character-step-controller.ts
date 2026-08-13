@@ -10,6 +10,7 @@ import {
   invalidateDependentSteps,
   getStepState,
 } from "./character-draft";
+import { isSpellSelectionCapabilityRequired } from "./creator-spell-capability";
 import { getStepDependencies } from "./character-draft-dependency";
 import type {
   DraftRulesetData,
@@ -265,7 +266,7 @@ export class StepController {
 
   /** Returns true if the step can be automatically skipped. */
   isStepSkippable(step: CreatorStep): boolean {
-    if (step === "spells" && this.draft.spellEligibility.isSpellcaster === false) {
+    if (step === "spells" && !isSpellSelectionCapabilityRequired(this.draft)) {
       return true;
     }
     return false;

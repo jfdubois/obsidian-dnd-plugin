@@ -45,6 +45,7 @@ import {
 import type { RuleGrantId } from "@obsidian-dnd/domain";
 import type { ChoiceInstanceId } from "@obsidian-dnd/domain";
 import type { CharacterChoice } from "@obsidian-dnd/character-contract";
+import { isSpellSelectionCapabilityRequired } from "./creator-spell-capability";
 
 /* ── Draft state ───────────────────────────────────────────────── */
 
@@ -244,7 +245,8 @@ function refreshDiagnostics(draft: CharacterDraft): void {
 
 export function isDraftComplete(draft: CharacterDraft): boolean {
   return ALL_DRAFT_STEPS.every(
-    (step) => draft.stepStatuses.get(step) === "resolved",
+    (step) => (step === "spell-eligibility" || step === "spells") && !isSpellSelectionCapabilityRequired(draft)
+      || draft.stepStatuses.get(step) === "resolved",
   );
 }
 
@@ -257,7 +259,9 @@ export function isDraftCompleteWithoutCatalogOriginChoices(draft: CharacterDraft
     "review",
   ]);
   return ALL_DRAFT_STEPS.every(
-    (step) => nonAuthoritativeCreatorSteps.has(step) || draft.stepStatuses.get(step) === "resolved",
+    (step) => nonAuthoritativeCreatorSteps.has(step)
+      || ((step === "spell-eligibility" || step === "spells") && !isSpellSelectionCapabilityRequired(draft))
+      || draft.stepStatuses.get(step) === "resolved",
   );
 }
 

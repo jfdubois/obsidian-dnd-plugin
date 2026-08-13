@@ -1161,6 +1161,14 @@ export class CharacterCreatorModal extends ObsidianModal {
           (instanceId, entities) => this.clearCatalogChoice("class-starting-grants", entities, instanceId),
           (grantId, entities) => this.resolveOriginRandomGrant("class-starting-grants", entities, grantId),
           (complete) => this.updateOriginConsequenceCompletion("class", complete, generation),
+          (capability) => {
+            const { required, complete } = capability;
+            if (!this.isCurrentRender(generation)) return;
+            if (draft.spellEligibility.isSpellcaster !== required) querySpellEligibility(draft, { isSpellcaster: required });
+            if (required && complete) this.controller.markStepResolved("spells");
+            this.renderProgressBar();
+            this.updateNavigationButtons();
+          },
         );
       }
     } catch {

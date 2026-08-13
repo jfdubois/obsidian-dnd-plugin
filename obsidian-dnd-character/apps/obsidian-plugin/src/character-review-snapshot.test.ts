@@ -181,6 +181,7 @@ describe("buildReviewSnapshot — negative", () => {
         markStepResolved(draft, step);
       }
     }
+    draft.spellEligibility.isSpellcaster = true;
 
     const snapshot = buildReviewSnapshot(draft);
     expect(snapshot).toBeNull();

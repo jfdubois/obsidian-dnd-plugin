@@ -8,8 +8,9 @@ import type { CatalogService } from "./catalog/catalog-service";
 import { CharacterCreatorModal } from "./character-creator-modal";
 import { CharacterCreatorRuntime } from "./character-creator-runtime";
 import { CharacterRepository } from "./character-repository";
-import { createEmptyCharacterDraft, markStepResolved } from "./character-draft";
+import { createEmptyCharacterDraft, isDraftComplete, markStepResolved } from "./character-draft";
 import { ALL_DRAFT_STEPS } from "./character-draft-steps";
+import { buildReviewSnapshot } from "./character-review-snapshot";
 
 vi.mock("./character-folder", () => ({ ensureCharacterFolder: vi.fn().mockResolvedValue({ status: "exists" }) }));
 
@@ -39,7 +40,9 @@ function representativeDraft() {
   draft.background.backgroundId = acolyte.id;
   draft.class.classId = barbarian.id;
   draft.abilities.scores = { STR: 10, DEX: 10, CON: 10, INT: 10, WIS: 10, CHA: 10 };
-  for (const step of ALL_DRAFT_STEPS) markStepResolved(draft, step);
+  for (const step of ALL_DRAFT_STEPS) {
+    if (step !== "spell-eligibility" && step !== "spells") markStepResolved(draft, step);
+  }
   draft.selections[`${acolyte.id}:choice:background:2014:phb:acolyte:language:0` as never] = {
     instanceId: `${acolyte.id}:choice:background:2014:phb:acolyte:language:0` as never,
     definitionId: "background:2014:phb:acolyte:language:0" as never,
@@ -73,6 +76,7 @@ interface ModalAccess {
 
 describe("2014 Review → Save production pipeline", () => {
   it("S0-S8 persists the normalized representative once, then closes after the vault succeeds", async () => {
+    const draft = representativeDraft();
     const files: Record<string, string> = {};
     const stages: string[] = [];
     const vaultCreate = vi.fn(async (path: string, contents: string) => {
@@ -85,11 +89,13 @@ describe("2014 Review → Save production pipeline", () => {
     const repositoryCreate = vi.spyOn(repository, "create");
     const runtime = new CharacterCreatorRuntime(app, repository, catalog());
     const persist = vi.fn(runtime.buildPersistenceCallback());
-    const modal = new CharacterCreatorModal(app, representativeDraft(), persist, catalog(), undefined, "", (stage) => stages.push(stage));
+    const modal = new CharacterCreatorModal(app, draft, persist, catalog(), undefined, "", (stage) => stages.push(stage));
     const access = modal as unknown as ModalAccess;
     for (const origin of ["species", "background", "class"] as const) access.controller.setOriginConsequenceCompletion(origin, true);
     expect(access.controller.jumpTo("review")).toBe(true);
     expect(access.controller.canSave()).toBe(true);
+    expect(isDraftComplete(draft)).toBe(true);
+    expect(buildReviewSnapshot(draft)).not.toBeNull();
     const close = vi.spyOn(modal, "close");
 
     await access.handleSave();
@@ -104,6 +110,7 @@ describe("2014 Review → Save production pipeline", () => {
     expect(isCharacter(saved)).toBe(true);
     expect(saved.origins).toEqual({ speciesId: elf.id, backgroundId: acolyte.id });
     expect(saved.progression.classes[0]?.classId).toBe(barbarian.id);
+    expect(saved.spells.selections).toEqual([]);
     expect(Object.values(saved.selections).some((choice) => choice.selectedValue.type === "entity-ids" && choice.selectedValue.entityIds.includes(celestial.id))).toBe(true);
     expect(saved.currency.cp).toBe(1500);
     expect(saved.inventory.filter((item) => item.type === "catalog-item")).toHaveLength(4);

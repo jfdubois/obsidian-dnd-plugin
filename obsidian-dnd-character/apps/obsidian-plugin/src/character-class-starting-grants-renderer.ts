@@ -12,6 +12,7 @@ import type { RuleGrantId } from "@obsidian-dnd/domain";
 import { renderOriginConsequences } from "./creator-origin-consequence-renderer";
 import { isOriginConsequenceComplete } from "./creator-origin-completion";
 import { originConsequenceLoadDiagnostic, originEntityLoadDiagnostic } from "./creator-consequence-load-diagnostic";
+import { deriveSpellSelectionCapability } from "./creator-spell-capability";
 
 export async function renderClassStartingGrants(
   container: HTMLElement,
@@ -26,6 +27,7 @@ export async function renderClassStartingGrants(
   onChoiceCleared?: (instanceId: ChoiceConsequence["instanceId"], entities: readonly EntityDetailResponse[]) => void,
   onRandomGrantResolution?: (grantId: RuleGrantId, entities: readonly EntityDetailResponse[]) => void,
   onConsequenceCompletion?: (complete: boolean) => void,
+  onSpellSelectionCapability?: (capability: { required: boolean; complete: boolean }) => void,
 ): Promise<void> {
   if (draft.class.classId !== selected.id) return;
   const revision = catalog.getRuntimeStatus().activeRevision;
@@ -53,6 +55,7 @@ export async function renderClassStartingGrants(
     const choices = origin?.choices ?? [];
     const model = readModel?.model ?? legacyModel!;
     onConsequenceCompletion?.(isOriginConsequenceComplete(model, selected.id));
+    onSpellSelectionCapability?.(deriveSpellSelectionCapability(model));
     renderOriginConsequences(container, origin, model.diagnostics, onRandomGrantResolution === undefined ? undefined : (grantId) => onRandomGrantResolution(grantId, readModel?.entities ?? [data]));
     if (choices.length === 0 && (origin?.levelOneGrants.length ?? 0) === 0) {
       container.createEl("p", { text: "No additional starting grants for this class.", cls: "dnd-creator-info" });
