@@ -19,7 +19,7 @@ import type { CreatorStep } from "./character-step-controller";
 import { StepController, CREATOR_STEPS } from "./character-step-controller";
 import type { ReviewSnapshot } from "./character-review-snapshot";
 import { buildReviewSnapshot } from "./character-review-snapshot";
-import { finalizeCharacterWithCatalog } from "./character-finalize";
+import { finalizeCharacterWithCatalogResult } from "./character-finalize";
 import { loadCreatorConsequenceReadModel } from "./creator-consequence-read-model";
 import type { Ability, ChoiceInstanceId, EntityId, RuleGrantId } from "@obsidian-dnd/domain";
 import { selectRuleset } from "./character-ruleset-step";
@@ -52,7 +52,14 @@ import { deriveCreatorGlobalSummary, type CreatorSummaryEntry } from "./creator-
  */
 export type CharacterPersistenceCallback = (
   character: Character,
-) => Promise<void>;
+) => Promise<void | CharacterPersistenceResult>;
+
+export type CharacterPersistenceResult =
+  | { status: "created" }
+  | { status: "failure"; category: "persistence"; message: string };
+
+/** Optional test/host observability for the save pipeline; it never renders or logs. */
+export type CharacterSavePipelineStage = "S0" | "S1" | "S2" | "S3" | "S4" | "S5" | "S7" | "S8";
 
 /* ── Modal factory ─────────────────────────────────────────────── */
 
@@ -122,6 +129,8 @@ export class CharacterCreatorModal extends ObsidianModal {
   private stepContentEl: HTMLElement | null = null;
   private progressBarEl: HTMLElement | null = null;
   private diagnosticsEl: HTMLElement | null = null;
+  /** Save-time failures are separate from draft diagnostics and survive Review refreshes. */
+  private saveDiagnostic: { category: "creator" | "catalog" | "validation" | "persistence"; message: string } | null = null;
   private speciesChoicesPending = false;
   private speciesChoiceLoadError: string | null = null;
   private readonly internalSubstepsPending = new Set<InternalSubstep>();
@@ -137,6 +146,7 @@ export class CharacterCreatorModal extends ObsidianModal {
     catalogService: CatalogService | null = null,
     randomSource: RandomSource = createCreatorRandomSource(),
     private readonly fiveEToolsWebBaseUrl = "",
+    private readonly onSavePipelineStage?: (stage: CharacterSavePipelineStage) => void,
   ) {
     super(app);
     this.controller = new StepController(draft);
@@ -290,6 +300,9 @@ export class CharacterCreatorModal extends ObsidianModal {
         && d.message != null
         && d.message.trim().length > 0;
     });
+    if (this.saveDiagnostic !== null) {
+      diagnostics.push({ step: "review", message: this.saveDiagnostic.message, severity: "error" });
+    }
     if (this.speciesChoiceLoadError !== null) {
       diagnostics.push({
         step: "species-choices",
@@ -1621,21 +1634,29 @@ export class CharacterCreatorModal extends ObsidianModal {
 
   private async handleSave(): Promise<void> {
     const draft = this.controller.draft;
+    this.onSavePipelineStage?.("S0");
 
     // Gate: draft must be complete
-    if (!this.controller.canSave()) {
+    const canSave = this.controller.canSave();
+    this.onSavePipelineStage?.("S1");
+    if (!canSave) {
+      this.presentSaveDiagnostic("creator", "Character could not be saved because required creator steps are incomplete.");
       return;
     }
 
     // Gate: no errors
     if (hasErrors(draft)) {
+      this.presentSaveDiagnostic("creator", "Character could not be saved because creator errors must be resolved first.");
       return;
     }
 
     const catalog = this.catalogService;
     const revision = catalog?.getRuntimeStatus().activeRevision;
-    if (catalog === null || revision === undefined) return;
-    let character: Character | null | undefined;
+    if (catalog === null || catalog === undefined || revision === undefined) {
+      this.presentSaveDiagnostic("catalog", "Character could not be saved because the active catalog is unavailable. Refresh the catalog and try again.");
+      return;
+    }
+    let character: Character | undefined;
     try {
       const [species, backgrounds, classes] = await Promise.all([
         catalog.fetchIndex(revision, "species"),
@@ -1647,25 +1668,57 @@ export class CharacterCreatorModal extends ObsidianModal {
         backgrounds.find((entry) => entry.id === draft.background.backgroundId),
         classes.find((entry) => entry.id === draft.class.classId),
       ];
-      if (summaries.some((entry) => entry === undefined)) return;
+      if (summaries.some((entry) => entry === undefined)) {
+        this.presentSaveDiagnostic("catalog", "Character could not be saved because a selected origin is unavailable in the active catalog.");
+        return;
+      }
       const origins = await Promise.all(summaries.map(async (summary) =>
         (await catalog.fetchEntity(revision, summary!.id, summary!.detailPath)).data));
       const loaded = await loadCreatorConsequenceReadModel(draft, catalog, revision, origins);
-      character = finalizeCharacterWithCatalog(draft, loaded.entities);
+      this.onSavePipelineStage?.("S2");
+      this.onSavePipelineStage?.("S3");
+      const finalization = finalizeCharacterWithCatalogResult(draft, loaded.entities);
+      if (finalization.status === "failure") {
+        this.onSavePipelineStage?.("S4");
+        const diagnostic = finalization.diagnostics[0];
+        this.presentSaveDiagnostic(
+          finalization.code === "document-validation-failed" ? "validation" : "creator",
+          diagnostic === undefined ? finalization.message : `${finalization.message} ${userFacingCreatorDiagnostic(diagnostic.code, diagnostic.message)}`,
+        );
+        return;
+      }
+      character = finalization.character;
+      this.onSavePipelineStage?.("S4");
     } catch {
-      return;
-    }
-    if (character === null || character === undefined) {
-      // Finalize failed — draft incomplete or missing required fields
+      this.presentSaveDiagnostic("catalog", "Character could not be saved because the active catalog could not be loaded. Refresh the catalog and try again.");
       return;
     }
 
     // Persist the character if a callback was provided
     if (this.persist !== undefined) {
-      await this.persist(character);
+      this.onSavePipelineStage?.("S5");
+      try {
+        const result = await this.persist(character);
+        if (result?.status === "failure") {
+          this.onSavePipelineStage?.("S7");
+          this.presentSaveDiagnostic("persistence", result.message);
+          return;
+        }
+        this.onSavePipelineStage?.("S7");
+      } catch {
+        this.onSavePipelineStage?.("S7");
+        this.presentSaveDiagnostic("persistence", "Character could not be saved because the vault write failed. Check the vault and try again.");
+        return;
+      }
     }
 
     // Success: close the modal
+    this.onSavePipelineStage?.("S8");
     this.close();
+  }
+
+  private presentSaveDiagnostic(category: "creator" | "catalog" | "validation" | "persistence", message: string): void {
+    this.saveDiagnostic = { category, message };
+    this.renderDiagnosticsBanner();
   }
 }

@@ -12,6 +12,7 @@ import { createEmptyCharacterDraft } from "./character-draft";
 import {
   CharacterCreatorModal,
   type CharacterPersistenceCallback,
+  type CharacterPersistenceResult,
 } from "./character-creator-modal";
 
 /* ── Runtime class ─────────────────────────────────────────────── */
@@ -106,23 +107,32 @@ export class CharacterCreatorRuntime {
     const repository = this.repository;
     const notifySuccess = this.notifySuccess.bind(this);
     const notifyError = this.notifyError.bind(this);
-    return async (character: Character): Promise<void> => {
-      const result = await repository.create(character);
+    return async (character: Character): Promise<CharacterPersistenceResult> => {
+      let result;
+      try {
+        result = await repository.create(character);
+      } catch {
+        return { status: "failure", category: "persistence", message: "Character could not be saved because the vault write failed. Check the vault and try again." };
+      }
 
       if (result.status === "created") {
         notifySuccess(
           `Character "${character.identity.name}" created successfully.`,
         );
+        return { status: "created" };
       } else if (
         result.status === "error" &&
         result.reason === "duplicate-id"
       ) {
-        notifyError(
-          `Character "${character.identity.name}" already exists. Use a different name.`,
-        );
+        const message = `Character could not be saved because "${character.identity.name}" already exists. Use a different name.`;
+        notifyError(message);
+        return { status: "failure", category: "persistence", message };
       } else if (result.status === "error") {
-        notifyError(`Failed to create character.`);
+        const message = "Character could not be saved because the vault write failed. Check the vault and try again.";
+        notifyError(message);
+        return { status: "failure", category: "persistence", message };
       }
+      return { status: "failure", category: "persistence", message: "Character could not be saved because persistence returned an unexpected result." };
     };
   }
 

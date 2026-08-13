@@ -119,7 +119,7 @@ describe("CharacterCreatorRuntime.buildPersistenceCallback", () => {
       identity: { name: "Hero", source: "test" },
     } as unknown as Character;
 
-    await callback(mockCharacter);
+    await expect(callback(mockCharacter)).resolves.toEqual({ status: "created" });
 
     expect(repository.create).toHaveBeenCalledWith(mockCharacter);
   });
@@ -139,7 +139,7 @@ describe("CharacterCreatorRuntime.buildPersistenceCallback", () => {
       identity: { name: "Hero", source: "test" },
     } as unknown as Character;
 
-    await callback(mockCharacter);
+    await expect(callback(mockCharacter)).resolves.toEqual({ status: "created" });
 
     const noticeFn = app.notice;
     expect(noticeFn).toHaveBeenCalledWith(
@@ -162,7 +162,7 @@ describe("CharacterCreatorRuntime.buildPersistenceCallback", () => {
       identity: { name: "Hero", source: "test" },
     } as unknown as Character;
 
-    await callback(mockCharacter);
+    await expect(callback(mockCharacter)).resolves.toMatchObject({ status: "failure", category: "persistence" });
 
     const noticeFn = app.notice;
     expect(noticeFn).toHaveBeenCalledWith(
@@ -185,11 +185,11 @@ describe("CharacterCreatorRuntime.buildPersistenceCallback", () => {
       identity: { name: "Hero", source: "test" },
     } as unknown as Character;
 
-    await callback(mockCharacter);
+    await expect(callback(mockCharacter)).resolves.toMatchObject({ status: "failure", category: "persistence" });
 
     const noticeFn = app.notice;
     expect(noticeFn).toHaveBeenCalledWith(
-      expect.stringContaining("Failed to create"),
+      expect.stringContaining("could not be saved"),
       expect.any(Number),
     );
   });

@@ -39,6 +39,21 @@ import { deriveDraftConsequences } from "./creator-draft-commands";
 
 /* ── Public API ────────────────────────────────────────────────── */
 
+export type CharacterFinalizationFailureCode =
+  | "creator-incomplete"
+  | "consequence-blocked"
+  | "grant-materialization-failed"
+  | "document-validation-failed";
+
+export type CharacterFinalizationResult =
+  | { status: "success"; character: Character }
+  | {
+    status: "failure";
+    code: CharacterFinalizationFailureCode;
+    message: string;
+    diagnostics: readonly { code: string; message: string }[];
+  };
+
 export function finalizeCharacter(draft: CharacterDraft): Character | null {
   /* Gate: draft must be fully resolved */
   if (!isDraftComplete(draft)) {
@@ -83,19 +98,35 @@ function finalizeResolvedDraft(draft: CharacterDraft): Character | null {
  * disposable and must never become persistence authority.
  */
 export function finalizeCharacterWithCatalog(draft: CharacterDraft, entities: readonly EntityDetailResponse[]): Character | null {
+  const result = finalizeCharacterWithCatalogResult(draft, entities);
+  return result.status === "success" ? result.character : null;
+}
+
+/**
+ * Authoritative finalization with a structured explanation for the Review UI.
+ * The nullable wrapper above remains for callers that only need the document.
+ */
+export function finalizeCharacterWithCatalogResult(draft: CharacterDraft, entities: readonly EntityDetailResponse[]): CharacterFinalizationResult {
   const model = deriveDraftConsequences(draft, entities);
   // Stale draft history is intentionally retained, but is not final state.
-  if (model.diagnostics.some((diagnostic) => diagnostic.code !== "stale-choice")) return null;
-  if (!isDraftCompleteWithoutCatalogOriginChoices(draft)) return null;
+  const blockers = model.diagnostics.filter((diagnostic) => diagnostic.code !== "stale-choice");
+  if (blockers.length > 0) {
+    return { status: "failure", code: "consequence-blocked", message: "Character could not be saved because required origin consequences are incomplete.", diagnostics: blockers };
+  }
+  if (!isDraftCompleteWithoutCatalogOriginChoices(draft)) {
+    return { status: "failure", code: "creator-incomplete", message: "Character could not be saved because required creator information is incomplete.", diagnostics: [] };
+  }
   const grants = model.origins.flatMap((origin) => origin.grants);
   const grantIds = new Set<string>();
   for (const consequence of grants) {
-    if (grantIds.has(String(consequence.grant.id)) || !isMaterializableGrant(consequence.grant, entities, consequence.resolvedAmount)) return null;
+    if (grantIds.has(String(consequence.grant.id)) || !isMaterializableGrant(consequence.grant, entities, consequence.resolvedAmount)) {
+      return { status: "failure", code: "grant-materialization-failed", message: "Character could not be saved because an origin starting grant could not be materialized from the active catalog.", diagnostics: [] };
+    }
     grantIds.add(String(consequence.grant.id));
   }
 
   const base = finalizeResolvedDraft(draft);
-  if (base === null) return null;
+  if (base === null) return { status: "failure", code: "creator-incomplete", message: "Character could not be saved because required creator information is incomplete.", diagnostics: [] };
   const inventory = [...base.inventory];
   const currency = { ...base.currency };
   for (const consequence of grants) {
@@ -106,14 +137,19 @@ export function finalizeCharacterWithCatalog(draft: CharacterDraft, entities: re
       inventory.push({ instanceId: createItemInstanceId(`grant:${grant.id}`), type: "named-item", name: grant.name.trim(), quantity: grant.quantity, equipped: false });
     } else if (grant.type === "currency") {
       const amount = grant.amount.type === "fixed" ? grant.amount.value : consequence.resolvedAmount;
-      if (amount === undefined || !Number.isSafeInteger(currency[grant.denomination] + amount)) return null;
+      if (amount === undefined || !Number.isSafeInteger(currency[grant.denomination] + amount)) {
+        return { status: "failure", code: "grant-materialization-failed", message: "Character could not be saved because an origin currency grant is invalid.", diagnostics: [] };
+      }
       currency[grant.denomination] += amount;
     }
   }
   const activeSelections = Object.fromEntries(Object.entries(draft.selections)
     .filter(([instanceId]) => model.activeChoiceIds.has(instanceId as ChoiceInstanceId))) as Record<ChoiceInstanceId, CharacterChoice>;
   const character = { ...base, selections: activeSelections, inventory, currency };
-  return isCharacter(character) ? character : null;
+  if (!isCharacter(character)) {
+    return { status: "failure", code: "document-validation-failed", message: "Character could not be saved because the final character document failed validation.", diagnostics: [] };
+  }
+  return { status: "success", character };
 }
 
 function isMaterializableGrant(grant: RuleGrant, entities: readonly EntityDetailResponse[], resolvedAmount: number | undefined): boolean {
