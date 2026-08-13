@@ -68,7 +68,12 @@ describe("Golden Character 2024 - Elf Rogue 5", () => {
             classId: rogueId,
             level: 5,
             isStartingClass: true,
-            hitPointIncreases: [],
+            hitPointIncreases: [
+              { level: 2, rollOrMax: 8, isMaximized: true },
+              { level: 3, rollOrMax: 8, isMaximized: true },
+              { level: 4, rollOrMax: 8, isMaximized: true },
+              { level: 5, rollOrMax: 8, isMaximized: true },
+            ],
           },
         ],
       },
@@ -114,7 +119,7 @@ describe("Golden Character 2024 - Elf Rogue 5", () => {
     expect(dv?.hasSense).toBe(true);
     expect(dv?.range).toBe(60);
 
-    // Max HP: 5 * (8 + 2) = 50
+    // Max HP: level 1 (8+2) + levels 2-5 (8+2 each) = 50
     expect(p.maxHp.totalHp).toBe(50);
     expect(p.maxHp.conModifier).toBe(2);
 
@@ -173,7 +178,12 @@ describe("Golden Character 2024 - Elf Rogue 5", () => {
             classId: rogueId,
             level: 5,
             isStartingClass: true,
-            hitPointIncreases: [],
+            hitPointIncreases: [
+              { level: 2, rollOrMax: 8, isMaximized: true },
+              { level: 3, rollOrMax: 8, isMaximized: true },
+              { level: 4, rollOrMax: 8, isMaximized: true },
+              { level: 5, rollOrMax: 8, isMaximized: true },
+            ],
           },
         ],
       },
@@ -226,7 +236,12 @@ describe("Golden Character 2024 - Elf Rogue 5", () => {
             classId: rogueId,
             level: 5,
             isStartingClass: true,
-            hitPointIncreases: [],
+            hitPointIncreases: [
+              { level: 2, rollOrMax: 8, isMaximized: true },
+              { level: 3, rollOrMax: 8, isMaximized: true },
+              { level: 4, rollOrMax: 8, isMaximized: true },
+              { level: 5, rollOrMax: 8, isMaximized: true },
+            ],
           },
         ],
       },

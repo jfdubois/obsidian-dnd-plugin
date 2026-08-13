@@ -147,7 +147,24 @@ describe("calculateMaxHp - effects", () => {
     const hpFeatId = eid("tough");
     const conFeat = makeFeat(conFeatId, [makeEffect("add-ability", { ability: "CON", value: 4 })]);
     const hpFeat = makeFeat(hpFeatId, [makeEffect("add-hit-point-increase", { value: 3 })]);
-    const character = makeCharacterWithClass(classId, 3, 10, {
+    const character = makeCharacter({
+      progression: {
+        classes: [
+          {
+            instanceId: cid("rogue-1"),
+            classId,
+            level: 3,
+            isStartingClass: true,
+            hitPointIncreases: [
+              { level: 2, rollOrMax: 10, isMaximized: true },
+              { level: 3, rollOrMax: 10, isMaximized: true },
+            ],
+          },
+        ],
+      },
+      abilities: {
+        scores: { STR: 10, DEX: 10, CON: 10, INT: 10, WIS: 10, CHA: 10 },
+      },
       selections: {
         [cii("choice-1")]: {
           instanceId: cii("choice-1"),
@@ -176,7 +193,10 @@ describe("calculateMaxHp - effects", () => {
     const result = calculateMaxHp(character, catalog);
 
     // CON 10 + 4 = 14 -> +2 modifier
-    // 10*3 + 2*3 + 3 = 30 + 6 + 3 = 39
+    // Level 1: 10 + 2 = 12
+    // Level 2: 10 + 2 = 12
+    // Level 3: 10 + 2 = 12
+    // Class HP: 36 + effect 3 = 39
     expect(result.conModifier).toBe(2);
     expect(result.totalHp).toBe(39);
     expect(result.hitPointIncreases).toEqual([3]);

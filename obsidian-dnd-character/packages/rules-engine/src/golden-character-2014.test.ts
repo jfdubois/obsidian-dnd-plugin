@@ -65,7 +65,12 @@ describe("Golden Character 2014 - Human Fighter 5", () => {
             classId: fighterId,
             level: 5,
             isStartingClass: true,
-            hitPointIncreases: [],
+            hitPointIncreases: [
+              { level: 2, rollOrMax: 10, isMaximized: true },
+              { level: 3, rollOrMax: 10, isMaximized: true },
+              { level: 4, rollOrMax: 10, isMaximized: true },
+              { level: 5, rollOrMax: 10, isMaximized: true },
+            ],
           },
         ],
       },
@@ -112,7 +117,7 @@ describe("Golden Character 2014 - Human Fighter 5", () => {
     const walk = p.movementSenses.movement.find((m) => m.kind === "walk");
     expect(walk?.speed).toBe(30);
 
-    // Max HP: 5 * (10 + 3) = 65
+    // Max HP: level 1 (10+3) + levels 2-5 (10+3 each) = 65
     expect(p.maxHp.totalHp).toBe(65);
     expect(p.maxHp.conModifier).toBe(3);
 
@@ -159,7 +164,12 @@ describe("Golden Character 2014 - Human Fighter 5", () => {
             classId: fighterId,
             level: 5,
             isStartingClass: true,
-            hitPointIncreases: [],
+            hitPointIncreases: [
+              { level: 2, rollOrMax: 10, isMaximized: true },
+              { level: 3, rollOrMax: 10, isMaximized: true },
+              { level: 4, rollOrMax: 10, isMaximized: true },
+              { level: 5, rollOrMax: 10, isMaximized: true },
+            ],
           },
         ],
       },
@@ -205,7 +215,12 @@ describe("Golden Character 2014 - Human Fighter 5", () => {
             classId: fighterId,
             level: 5,
             isStartingClass: true,
-            hitPointIncreases: [],
+            hitPointIncreases: [
+              { level: 2, rollOrMax: 10, isMaximized: true },
+              { level: 3, rollOrMax: 10, isMaximized: true },
+              { level: 4, rollOrMax: 10, isMaximized: true },
+              { level: 5, rollOrMax: 10, isMaximized: true },
+            ],
           },
         ],
       },

@@ -33,21 +33,56 @@ function isAddHitPointIncreaseEffect(
   return effect.type === "add-hit-point-increase";
 }
 
+/* ── Per-level HP gain with minimum rule ───────────────────────────
+   D&D 5e: a character's hit point maximum cannot decrease when
+   gaining a level. Each level contributes at least 1 HP.           */
+
+function clampedLevelHpGain(baseHp: number, conModifier: number): number {
+  return Math.max(1, baseHp + conModifier);
+}
+
+/* ── Per-class HP calculation ──────────────────────────────────────
+   Starting level (level 1): full hit die + CON modifier.
+   Subsequent levels (2+): authoritative hitPointIncreases entries
+   consumed from persisted CharacterClassState, each plus CON modifier.
+   Missing entries for levels 2+ are not backfilled; the engine
+   trusts the persisted state produced by the level-up workflow.    */
+
+function calculateClassMaxHp(
+  cls: Character["progression"]["classes"][number],
+  hitDie: number,
+  conModifier: number,
+): number {
+  // Level 1: full hit die + CON (minimum 1)
+  let hp = clampedLevelHpGain(hitDie, conModifier);
+
+  // Levels 2+: consume persisted hitPointIncreases for this class
+  for (const increase of cls.hitPointIncreases) {
+    if (increase.level >= 2 && increase.level <= cls.level) {
+      hp += clampedLevelHpGain(increase.rollOrMax, conModifier);
+    }
+  }
+
+  return hp;
+}
+
 /* ── Main calculation ────────────────────────────────────────────── */
 
 /**
  * Calculates the maximum hit points for a character.
  *
- * Formula:
- *   totalHp = sum(per-class hitDie * level)
- *            + conModifier * totalLevels
- *            + sum(hit-point-increase effects)
+ * Formula (single-class):
+ *   level 1:   max(1, hitDie + conModifier)
+ *   level 2+:  sum of max(1, hitPointIncrease.rollOrMax + conModifier)
+ *   total:     class HP + sum(add-hit-point-increase effect values)
  *
- * Process:
- * 1. Calculate final CON modifier from ability scores
- * 2. Sum hitDie * level for each class
- * 3. Add CON modifier * total levels
- * 4. Add all add-hit-point-increase effect values
+ * Data flow:
+ * 1. Starting level HP comes from normalized class hitDie.
+ * 2. Subsequent level HP comes from persisted hitPointIncreases
+ *    entries (populated by the level-up workflow, Phase 13).
+ * 3. Constitution modifier is applied per level with minimum-1 rule.
+ * 4. add-hit-point-increase effects (e.g., Tough feat) are flat
+ *    additive bonuses independent of per-level HP choices.
  *
  * @param character - The character document
  * @param catalog - The catalog lookup for resolving entity effects
@@ -67,7 +102,7 @@ export function calculateMaxHp(
   for (const cls of character.progression.classes) {
     const classRule = catalog.getClass(cls.classId);
     const hitDie = classRule?.hitDie ?? 8;
-    const maxHp = hitDie * cls.level + conModifier * cls.level;
+    const maxHp = calculateClassMaxHp(cls, hitDie, conModifier);
 
     perClassBreakdown.push({
       classId: cls.classId,
