@@ -17,6 +17,7 @@ import {
   serializeCharacter,
 } from '@obsidian-dnd/character-contract';
 import { characterIdStr } from '@obsidian-dnd/domain';
+import { characterVaultFilePath } from './character-vault-path';
 
 /* ── Result types ──────────────────────────────────────────────── */
 
@@ -98,9 +99,13 @@ export async function updateCharacterInVault(
   mutation: (character: Character) => Character,
   charactersVaultPath: string,
 ): Promise<UpdateCharacterResult> {
-  // 1. Construct the file path.
-  const idStr = characterIdStr(characterId);
-  const filePath = `${charactersVaultPath}/${idStr}.json`;
+	// 1. Construct the file path.
+	const idStr = characterIdStr(characterId);
+	const path = characterVaultFilePath(charactersVaultPath, idStr);
+	if (path.status === 'invalid') {
+		return { status: 'error', reason: 'not-found', characterId: idStr };
+	}
+	const filePath = path.filePath;
 
   // 2. Locate the file.
   const file = app.vault.getFileByPath(filePath);

@@ -9,6 +9,7 @@
 import type { App } from 'obsidian';
 import type { CharacterId } from '@obsidian-dnd/domain';
 import { characterIdStr } from '@obsidian-dnd/domain';
+import { characterVaultFilePath } from './character-vault-path';
 
 /* ── Result types ──────────────────────────────────────────────── */
 
@@ -70,7 +71,11 @@ export async function deleteCharacterFromVault(
 ): Promise<DeleteCharacterResult> {
 	// 1. Construct the file path.
 	const idStr = characterIdStr(characterId);
-	const filePath = `${charactersVaultPath}/${idStr}.json`;
+	const path = characterVaultFilePath(charactersVaultPath, idStr);
+	if (path.status === 'invalid') {
+		return { status: 'error', reason: 'not-found', characterId: idStr };
+	}
+	const filePath = path.filePath;
 
 	// 2. Check if the file exists.
 	const file = app.vault.getFileByPath(filePath);

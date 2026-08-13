@@ -89,6 +89,21 @@ describe('createCharacterInVault', () => {
 		}
 	});
 
+	it('encodes the ISO-timestamp character ID into a Windows-safe Vault filename', async () => {
+		vi.mocked(domain.characterIdStr).mockReturnValue('2026-08-13T14:00:00.000Z');
+
+		const result = await createCharacterInVault(mockApp, { id: 'unused' } as unknown as Character, vaultPath);
+
+		expect(result).toMatchObject({
+			status: 'created',
+			filePath: 'dnd-characters/2026-08-13T14%3A00%3A00.000Z.json',
+		});
+		expect(mockVault.create).toHaveBeenCalledWith(
+			'dnd-characters/2026-08-13T14%3A00%3A00.000Z.json',
+			expect.any(String),
+		);
+	});
+
 	it('returns duplicate-id error when file already exists', async () => {
 		vi.mocked(mockVault.getFileByPath).mockReturnValue({} as TFile);
 

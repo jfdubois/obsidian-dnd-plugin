@@ -6,11 +6,22 @@
  */
 
 import type { App, Vault } from 'obsidian';
+import { normalizeCharacterFolderPath } from './character-vault-path';
 
 /** Result of an ensure-folder operation. */
 export type EnsureFolderResult =
 	| { status: 'created' }
 	| { status: 'exists' };
+
+export class CharacterFolderOperationError extends Error {
+	public constructor(
+		public readonly reason: 'invalid-character-path' | 'folder-file-collision' | 'folder-creation-failed',
+		public readonly cause: unknown,
+	) {
+		super(reason);
+		this.name = 'CharacterFolderOperationError';
+	}
+}
 
 /**
  * Ensure the character folder exists at the configured vault path.
@@ -30,41 +41,26 @@ export async function ensureCharacterFolder(
 	path: string,
 ): Promise<EnsureFolderResult> {
 	const vault: Vault = app.vault;
-
-	// Check if the folder already exists.
-	const existing = vault.getFolderByPath(path);
-	if (existing !== null) {
-		return { status: 'exists' };
+	const normalizedPath = normalizeCharacterFolderPath(path);
+	if (normalizedPath === null) {
+		throw new CharacterFolderOperationError('invalid-character-path', path);
 	}
 
-	// Folder does not exist; attempt to create it.
-	try {
-		await vault.createFolder(path);
-		return { status: 'created' };
-	} catch (error) {
-		// createFolder throws if the folder already exists (race condition).
-		// Suppress that error and report the folder as existing.
-		if (isFolderAlreadyExistsError(error)) {
-			return { status: 'exists' };
+	let created = false;
+	let currentPath = '';
+	for (const segment of normalizedPath.split('/')) {
+		currentPath = currentPath.length === 0 ? segment : `${currentPath}/${segment}`;
+		if (vault.getFolderByPath(currentPath) !== null) continue;
+		if (vault.getFileByPath(currentPath) !== null) {
+			throw new CharacterFolderOperationError('folder-file-collision', currentPath);
 		}
-		// Re-throw unexpected errors (disk full, permission denied, etc.).
-		throw error;
+		try {
+			await vault.createFolder(currentPath);
+			created = true;
+		} catch (cause) {
+			if (vault.getFolderByPath(currentPath) !== null) continue;
+			throw new CharacterFolderOperationError('folder-creation-failed', cause);
+		}
 	}
-}
-
-/**
- * Check if an error from `Vault.createFolder` indicates the folder already exists.
- *
- * Obsidian's createFolder throws a generic Error when the folder exists.
- * We match on the error message to distinguish this from other failures.
- */
-function isFolderAlreadyExistsError(error: unknown): boolean {
-	if (!(error instanceof Error)) {
-		return false;
-	}
-	const message = error.message.toLowerCase();
-	return (
-		message.includes('already exists') ||
-		message.includes('already exist')
-	);
+	return { status: created ? 'created' : 'exists' };
 }

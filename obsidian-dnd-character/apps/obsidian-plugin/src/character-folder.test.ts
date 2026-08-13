@@ -23,11 +23,14 @@ describe('ensureCharacterFolder', () => {
 	let mockApp: App;
 
 	beforeEach(() => {
-		mockVault = {
+	mockVault = {
 			getFolderByPath: vi.fn(),
+			getFileByPath: vi.fn(),
 			createFolder: vi.fn(),
 		} as unknown as Vault;
-		mockApp = { vault: mockVault } as unknown as App;
+	mockApp = { vault: mockVault } as unknown as App;
+	vi.mocked(mockVault.getFolderByPath).mockReturnValue(null);
+	vi.mocked(mockVault.getFileByPath).mockReturnValue(null);
 	});
 
 	it("returns 'exists' when folder already exists", async () => {
@@ -52,11 +55,12 @@ describe('ensureCharacterFolder', () => {
 		expect(mockVault.createFolder).toHaveBeenCalledWith('dnd-characters');
 	});
 
-	it("returns 'exists' when createFolder throws due to race condition", async () => {
+	it("returns 'exists' when a concurrent create makes the folder available", async () => {
 		vi.mocked(mockVault.getFolderByPath).mockReturnValue(null);
-		vi.mocked(mockVault.createFolder).mockRejectedValue(
-			new Error('Folder already exists: dnd-characters'),
-		);
+		vi.mocked(mockVault.createFolder).mockImplementation(async () => {
+			vi.mocked(mockVault.getFolderByPath).mockReturnValue({} as TFolder);
+			throw new Error('Folder already exists: dnd-characters');
+		});
 
 		const result = await ensureCharacterFolder(mockApp, 'dnd-characters');
 
@@ -64,35 +68,21 @@ describe('ensureCharacterFolder', () => {
 		expect(mockVault.createFolder).toHaveBeenCalledWith('dnd-characters');
 	});
 
-	it("returns 'exists' for alternate 'already exist' error message", async () => {
+	it('throws a structured folder operation error when creation fails', async () => {
 		vi.mocked(mockVault.getFolderByPath).mockReturnValue(null);
-		vi.mocked(mockVault.createFolder).mockRejectedValue(
-			new Error('Folder already exist at path'),
-		);
+		vi.mocked(mockVault.createFolder).mockRejectedValue(new Error('Disk full'));
 
-		const result = await ensureCharacterFolder(mockApp, 'dnd-characters');
-
-		expect(result).toEqual({ status: 'exists' });
+		await expect(ensureCharacterFolder(mockApp, 'dnd-characters')).rejects.toMatchObject({
+			reason: 'folder-creation-failed',
+			cause: expect.objectContaining({ message: 'Disk full' }),
+		});
 	});
 
-	it('throws when createFolder fails with unexpected error', async () => {
+	it('detects a file collision at a required folder path', async () => {
 		vi.mocked(mockVault.getFolderByPath).mockReturnValue(null);
-		vi.mocked(mockVault.createFolder).mockRejectedValue(
-			new Error('Disk full'),
-		);
+		vi.mocked(mockVault.getFileByPath).mockReturnValue({} as never);
 
-		await expect(ensureCharacterFolder(mockApp, 'dnd-characters')).rejects.toThrow(
-			'Disk full',
-		);
-	});
-
-	it('throws when createFolder throws a non-Error', async () => {
-		vi.mocked(mockVault.getFolderByPath).mockReturnValue(null);
-		vi.mocked(mockVault.createFolder).mockRejectedValue('string error');
-
-		await expect(ensureCharacterFolder(mockApp, 'dnd-characters')).rejects.toBe(
-			'string error',
-		);
+		await expect(ensureCharacterFolder(mockApp, 'dnd-characters')).rejects.toMatchObject({ reason: 'folder-file-collision' });
 	});
 
 	it('uses the configured path from settings', async () => {

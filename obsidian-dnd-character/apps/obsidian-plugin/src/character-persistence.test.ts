@@ -162,7 +162,7 @@ describe('Character persistence lifecycle', () => {
 
 		it('create fails with duplicate-id when file already exists', async () => {
 			vi.mocked(characterCreate.createCharacterInVault).mockResolvedValue({
-				status: 'error', reason: 'duplicate-id', characterId: 'char-1',
+			status: 'error', reason: 'duplicate-id', characterId: 'char-1', filePath: 'dnd-characters/char-1.json',
 			});
 			const result = await repo.create(makeTestCharacter());
 			expect(result.status).toBe('error');

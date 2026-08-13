@@ -52,11 +52,17 @@ import { deriveCreatorGlobalSummary, type CreatorSummaryEntry } from "./creator-
  */
 export type CharacterPersistenceCallback = (
   character: Character,
-) => Promise<void | CharacterPersistenceResult>;
+) => Promise<CharacterPersistenceResult>;
 
 export type CharacterPersistenceResult =
   | { status: "created" }
-  | { status: "failure"; category: "persistence"; message: string };
+  | {
+    status: "failure";
+    category: "persistence";
+    message: string;
+    reason: "invalid-character-path" | "folder-creation-failed" | "folder-file-collision" | "duplicate-id" | "serialization-failed" | "vault-write-failed" | "unknown-persistence-exception";
+    cause?: unknown;
+  };
 
 /** Optional test/host observability for the save pipeline; it never renders or logs. */
 export type CharacterSavePipelineStage = "S0" | "S1" | "S2" | "S3" | "S4" | "S5" | "S7" | "S8";
@@ -1707,7 +1713,7 @@ export class CharacterCreatorModal extends ObsidianModal {
       this.onSavePipelineStage?.("S5");
       try {
         const result = await this.persist(character);
-        if (result?.status === "failure") {
+        if (result.status === "failure") {
           this.onSavePipelineStage?.("S7");
           this.presentSaveDiagnostic("persistence", result.message);
           return;

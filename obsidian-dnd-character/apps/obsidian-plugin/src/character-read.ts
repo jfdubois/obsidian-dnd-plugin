@@ -12,6 +12,7 @@ import {
   deserializeCharacter,
   CharacterSerializationError,
 } from '@obsidian-dnd/character-contract';
+import { characterVaultFilePath } from './character-vault-path';
 
 /* ── Read result types ─────────────────────────────────────────── */
 
@@ -94,8 +95,12 @@ export async function readCharacterFromVault(
   characterId: string,
   charactersVaultPath: string,
 ): Promise<ReadCharacterResult> {
-  // 1. Construct the file path.
-  const filePath = `${charactersVaultPath}/${characterId}.json`;
+	// 1. Construct the file path.
+	const path = characterVaultFilePath(charactersVaultPath, characterId);
+	if (path.status === 'invalid') {
+		return { status: 'error', reason: 'not-found', characterId };
+	}
+	const filePath = path.filePath;
 
   // 2. Locate the file.
   const file = app.vault.getFileByPath(filePath);

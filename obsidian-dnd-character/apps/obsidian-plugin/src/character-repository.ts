@@ -17,6 +17,7 @@ import { characterIdStr } from '@obsidian-dnd/domain';
 
 import { ensureCharacterFolder } from './character-folder';
 import type { EnsureFolderResult } from './character-folder';
+export { CharacterFolderOperationError } from './character-folder';
 
 import { createCharacterInVault } from './character-create';
 import type {

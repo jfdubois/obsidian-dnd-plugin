@@ -11,6 +11,7 @@ import type { Character } from '@obsidian-dnd/character-contract';
 import { serializeCharacter } from '@obsidian-dnd/character-contract';
 import { ensureCharacterFolder } from './character-folder';
 import { characterIdStr } from '@obsidian-dnd/domain';
+import { characterVaultFilePath } from './character-vault-path';
 
 /* ── Result types ──────────────────────────────────────────────── */
 
@@ -26,6 +27,14 @@ export interface CharacterDuplicateError {
 	status: 'error';
 	reason: 'duplicate-id';
 	characterId: string;
+	filePath: string;
+}
+
+/** Invalid configured folder path or character filename. */
+export interface CharacterInvalidPathError {
+	status: 'error';
+	reason: 'invalid-character-path';
+	message: string;
 }
 
 /** Serialization failure error result. */
@@ -39,13 +48,14 @@ export interface CharacterSerializationErrorResult {
 export interface CharacterVaultWriteError {
 	status: 'error';
 	reason: 'vault-write-failed';
+	filePath: string;
 	cause: unknown;
 }
 
 /** Folder creation failure error result. */
 export interface CharacterFolderError {
 	status: 'error';
-	reason: 'folder-creation-failed';
+	reason: 'folder-creation-failed' | 'folder-file-collision';
 	cause: unknown;
 }
 
@@ -59,6 +69,7 @@ export interface CharacterFolderError {
 export type CreateCharacterResult =
 	| CharacterCreatedResult
 	| CharacterDuplicateError
+	| CharacterInvalidPathError
 	| CharacterSerializationErrorResult
 	| CharacterVaultWriteError
 	| CharacterFolderError;
@@ -85,20 +96,30 @@ export async function createCharacterInVault(
 	character: Character,
 	charactersVaultPath: string,
 ): Promise<CreateCharacterResult> {
+	const characterId = characterIdStr(character.id);
+	const path = characterVaultFilePath(charactersVaultPath, characterId);
+	if (path.status === 'invalid') {
+		return { status: 'error', reason: 'invalid-character-path', message: path.message };
+	}
+
 	// 1. Ensure the character folder exists.
 	try {
-		await ensureCharacterFolder(app, charactersVaultPath);
+		await ensureCharacterFolder(app, path.folderPath);
 	} catch (cause) {
+		if (hasFolderOperationReason(cause, 'invalid-character-path')) {
+			return { status: 'error', reason: 'invalid-character-path', message: 'The configured character folder path is invalid.' };
+		}
 		return {
 			status: 'error',
-			reason: 'folder-creation-failed',
+			reason: hasFolderOperationReason(cause, 'folder-file-collision')
+				? 'folder-file-collision'
+				: 'folder-creation-failed',
 			cause,
 		};
 	}
 
 	// 2. Construct the target file path.
-	const characterId = characterIdStr(character.id);
-	const filePath = `${charactersVaultPath}/${characterId}.json`;
+	const filePath = path.filePath;
 
 	// 3. Check for duplicate file.
 	const existing = app.vault.getFileByPath(filePath);
@@ -107,6 +128,7 @@ export async function createCharacterInVault(
 			status: 'error',
 			reason: 'duplicate-id',
 			characterId,
+			filePath,
 		};
 	}
 
@@ -134,7 +156,15 @@ export async function createCharacterInVault(
 		return {
 			status: 'error',
 			reason: 'vault-write-failed',
+			filePath,
 			cause,
 		};
 	}
+}
+
+function hasFolderOperationReason(
+	cause: unknown,
+	reason: 'invalid-character-path' | 'folder-file-collision',
+): boolean {
+	return typeof cause === 'object' && cause !== null && 'reason' in cause && cause.reason === reason;
 }

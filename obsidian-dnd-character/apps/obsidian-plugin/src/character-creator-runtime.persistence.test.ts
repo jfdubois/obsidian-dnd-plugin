@@ -185,13 +185,30 @@ describe("CharacterCreatorRuntime.buildPersistenceCallback", () => {
       identity: { name: "Hero", source: "test" },
     } as unknown as Character;
 
-    await expect(callback(mockCharacter)).resolves.toMatchObject({ status: "failure", category: "persistence" });
+    await expect(callback(mockCharacter)).resolves.toMatchObject({ status: "failure", category: "persistence", reason: "io-error" });
 
     const noticeFn = app.notice;
     expect(noticeFn).toHaveBeenCalledWith(
       expect.stringContaining("could not be saved"),
       expect.any(Number),
     );
+  });
+
+  it("preserves the Vault.create failure internally while keeping the safe user diagnostic", async () => {
+    const runtime = new CharacterCreatorRuntime(app, repository as unknown as InstanceType<typeof repositoryModule.CharacterRepository>);
+    const cause = new Error("EINVAL: invalid argument, open 'characters/2026-08-13T14:00:00.000Z.json'");
+    (repository.create as ReturnType<typeof vi.fn>).mockResolvedValue({
+      status: "error", reason: "vault-write-failed", filePath: "characters/2026-08-13T14:00:00.000Z.json", cause,
+    } as unknown as CreateCharacterResult);
+
+    const result = await runtime.buildPersistenceCallback()({ identity: { name: "a" } } as Character);
+
+    expect(result).toMatchObject({
+      status: "failure",
+      reason: "vault-write-failed",
+      cause,
+      message: "Character could not be saved because the vault write failed. Check the vault and try again.",
+    });
   });
 });
 

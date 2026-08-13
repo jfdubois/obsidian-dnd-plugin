@@ -111,8 +111,8 @@ export class CharacterCreatorRuntime {
       let result;
       try {
         result = await repository.create(character);
-      } catch {
-        return { status: "failure", category: "persistence", message: "Character could not be saved because the vault write failed. Check the vault and try again." };
+      } catch (cause) {
+        return { status: "failure", category: "persistence", reason: "unknown-persistence-exception", cause, message: "Character could not be saved because the vault write failed. Check the vault and try again." };
       }
 
       if (result.status === "created") {
@@ -126,13 +126,13 @@ export class CharacterCreatorRuntime {
       ) {
         const message = `Character could not be saved because "${character.identity.name}" already exists. Use a different name.`;
         notifyError(message);
-        return { status: "failure", category: "persistence", message };
+        return { status: "failure", category: "persistence", reason: "duplicate-id", message };
       } else if (result.status === "error") {
         const message = "Character could not be saved because the vault write failed. Check the vault and try again.";
         notifyError(message);
-        return { status: "failure", category: "persistence", message };
+        return { status: "failure", category: "persistence", reason: result.reason, cause: "cause" in result ? result.cause : undefined, message };
       }
-      return { status: "failure", category: "persistence", message: "Character could not be saved because persistence returned an unexpected result." };
+      return { status: "failure", category: "persistence", reason: "unknown-persistence-exception", message: "Character could not be saved because persistence returned an unexpected result." };
     };
   }
 

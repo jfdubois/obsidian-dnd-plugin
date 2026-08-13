@@ -323,7 +323,7 @@ describe('CharacterRepository', () => {
 		// create: duplicate-id
 		const char = { id: 'char-1' } as unknown as Character;
 		vi.mocked(characterCreate.createCharacterInVault).mockResolvedValue({
-			status: 'error' as const, reason: 'duplicate-id' as const, characterId: 'char-1',
+			status: 'error' as const, reason: 'duplicate-id' as const, characterId: 'char-1', filePath: 'dnd-characters/char-1.json',
 		});
 		const createRes = await repo.create(char);
 		expect(createRes.status).toBe('error');
