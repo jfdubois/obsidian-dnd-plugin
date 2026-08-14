@@ -2,7 +2,7 @@
 
 ## Current work
 
-Phase 10 corrective work — P10-CORRECTIVE-H through P10-CORRECTIVE-L complete; next is P10-CORRECTIVE-M
+Phase 10 corrective work — P10-CORRECTIVE-H through P10-CORRECTIVE-M complete; Phase 10 gate next
 
 ## PB8-004 automated gate
 
@@ -22,13 +22,13 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-P10-CORRECTIVE-M — Rebaseline Phase 10 state-machine and manual validation
+Phase 10 gate — Final completion review for corrected Phase 10
 
 ## Branch baseline
 
 - Branch: `dev`
-- Last synchronized commit: see Git history for P10-CORRECTIVE-K on `dev`
-- Working tree: clean after P10-CORRECTIVE-K completion commit
+- Last synchronized commit: see Git history for P10-CORRECTIVE-M on `dev`
+- Working tree: clean after P10-CORRECTIVE-M completion commit
 
 ## Blockers
 
@@ -84,13 +84,19 @@ None recorded.
 - Phase 9 starting commit: a362900
 - Completed Phase 9 task commits: P9-T001 — see Git history for P9-T001; P9-T002 — see Git history for P9-T002; P9-T003 — see Git history for P9-T003; P9-T004 — see Git history for P9-T004; P9-T005 — see Git history for P9-T005; P9-T006 — see Git history for P9-T006; P9-T007 — see Git history for P9-T007; P9-T008 — see Git history for P9-T008; P9-T009 — see Git history for P9-T009; P9-T010 — see Git history for P9-T010; P9-T011 — see Git history for P9-T011; P9-T012 — c3032a7; P9-T013 — 2111f0c; P9-T014 — 541120b; P9-T015 — 2db464f; P9-T016 — a0d9726; P9-T017 — see Git history for P9-T017; P9-T018 — see Git history for P9-T018
 - Phase 10 starting commit: 77baeed
-- Completed Phase 10 task commits: P10-T001 — see Git history for P10-T001; P10-T002 — see Git history for P10-T002; P10-T003 — see Git history for P10-T003; P10-T004 — see Git history for P10-T004; P10-T005 — see Git history for P10-T005; P10-T006 — see Git history for P10-T006; P10-T007 — see Git history for P10-T007; P10-T008 — see Git history for P10-T008; P10-T009 — 0b69134; P10-T010 — see Git history for P10-T010; P10-T011 — see Git history for P10-T011; P10-T012 — see Git history for P10-T012; P10-T013 — see Git history for P10-T013; P10-T014 — see Git history for P10-T014; P10-T015 — see Git history for P10-T015; P10-T016 — see Git history for P10-T016; P10-T017 — see Git history for P10-T017; P10-T018 — see Git history for P10-T018; P10-T019 — see Git history for P10-T019; P10-T020 — see Git history for P10-T020; P10-T020-CORRECTIVE — see Git history for P10-T020-CORRECTIVE; P10-T020-CORRECTIVE-G-R1 — see Git history for P10-T020-CORRECTIVE-G-R1; P10-CORRECTIVE-H — see Git history for P10-CORRECTIVE-H; P10-CORRECTIVE-H1 — see Git history for P10-CORRECTIVE-H1; P10-CORRECTIVE-H2 — see Git history for P10-CORRECTIVE-H2; P10-CORRECTIVE-H3 — see Git history for P10-CORRECTIVE-H3; P10-CORRECTIVE-H4 — chore(project): complete P10-CORRECTIVE-H4; P10-CORRECTIVE-H5 — chore(project): complete P10-CORRECTIVE-H5; P10-CORRECTIVE-H6 — chore(project): complete P10-CORRECTIVE-H6; P10-CORRECTIVE-I — see Git history for P10-CORRECTIVE-I; P10-CORRECTIVE-J — see Git history for P10-CORRECTIVE-J; P10-CORRECTIVE-K — see Git history for P10-CORRECTIVE-K
-- Phase 10 gate: reopened. Previous gate evidence is retained historically but is not the current release gate. Phase 10 must pass P10-CORRECTIVE-H through P10-CORRECTIVE-M and a new completion review before proceeding permanently to Phase 11.
+- Completed Phase 10 task commits: P10-T001 — see Git history for P10-T001; P10-T002 — see Git history for P10-T002; P10-T003 — see Git history for P10-T003; P10-T004 — see Git history for P10-T004; P10-T005 — see Git history for P10-T005; P10-T006 — see Git history for P10-T006; P10-T007 — see Git history for P10-T007; P10-T008 — see Git history for P10-T008; P10-T009 — 0b69134; P10-T010 — see Git history for P10-T010; P10-T011 — see Git history for P10-T011; P10-T012 — see Git history for P10-T012; P10-T013 — see Git history for P10-T013; P10-T014 — see Git history for P10-T014; P10-T015 — see Git history for P10-T015; P10-T016 — see Git history for P10-T016; P10-T017 — see Git history for P10-T017; P10-T018 — see Git history for P10-T018; P10-T019 — see Git history for P10-T019; P10-T020 — see Git history for P10-T020; P10-T020-CORRECTIVE — see Git history for P10-T020-CORRECTIVE; P10-T020-CORRECTIVE-G-R1 — see Git history for P10-T020-CORRECTIVE-G-R1; P10-CORRECTIVE-H — see Git history for P10-CORRECTIVE-H; P10-CORRECTIVE-H1 — see Git history for P10-CORRECTIVE-H1; P10-CORRECTIVE-H2 — see Git history for P10-CORRECTIVE-H2; P10-CORRECTIVE-H3 — see Git history for P10-CORRECTIVE-H3; P10-CORRECTIVE-H4 — chore(project): complete P10-CORRECTIVE-H4; P10-CORRECTIVE-H5 — chore(project): complete P10-CORRECTIVE-H5; P10-CORRECTIVE-H6 — chore(project): complete P10-CORRECTIVE-H6; P10-CORRECTIVE-I — see Git history for P10-CORRECTIVE-I; P10-CORRECTIVE-J — see Git history for P10-CORRECTIVE-J; P10-CORRECTIVE-K — see Git history for P10-CORRECTIVE-K; P10-CORRECTIVE-L — see Git history for P10-CORRECTIVE-L; P10-CORRECTIVE-M — see Git history for P10-CORRECTIVE-M
+- Phase 10 gate: corrective sequence through P10-CORRECTIVE-M complete. Gate review and commit pending.
 - Blocking issue: none
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-13 — P10-CORRECTIVE-M — Rebaseline Phase 10 state-machine and manual validation — complete (no changes needed)
+Summary: Verified that all acceptance criteria are already satisfied by existing implementation. Level-one character initialization correctly derives currentHp from max HP via production rules engine. Review snapshot shows derived results (abilities, HP) via `buildCreatorPreview`. Real PHB Elf (species:2014:phb:elf) consequences reach production `calculateAbilityScores` with DEX +2 origin contribution. Persistence invariants hold: currentHp persisted, maximumHp not persisted, base scores unchanged, no transient fields leaked. Full S0-S8 pipeline integration test confirms end-to-end correctness.
+Validation: npm run check PASS (5062 tests, 2 skipped); npm run build PASS; diff check clean.
+Compatibility notes: No new implementation or tests needed. Existing implementation in character-finalize.ts, character-review-snapshot.ts, and creator-preview.ts already satisfies all requirements.
+Commit: see Git history for P10-CORRECTIVE-M.
 
 2026-08-11 — P10-CORRECTIVE-L — Add supplemental 5eTools external-reference support — complete
 Summary: Catalog schema v3 adds validated catalog-owned 5eTools relative references for Species, Background, and Class using the pinned builder route adapter. Settings schema v2 adds disabled-by-default `fiveEToolsWebBaseUrl`; the plugin safely composes an explicit generic details action with no external fetch, and creator/finalization state remains independent of the setting.
