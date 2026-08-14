@@ -509,10 +509,10 @@ Dependencies: H → H1 → H2 → H3 → H4 → H5 → H6 → I → J → K; K �
 
 ### Phase 10 gate
 
-- [ ] Corrective sequence through P10-CORRECTIVE-M passes and a new completion review confirms valid level-one creation for both rulesets.
-- [ ] Core content appears and non-selected source content remains ineligible under the revalidated source policy.
-- [ ] Normalized origin ownership and dependency invalidation are proven without global-step or display-name assumptions.
-- [ ] Species, Background, and starting-Class details actions use normalized catalog content only.
+- [x] Corrective sequence through P10-CORRECTIVE-M passes and a new completion review confirms valid level-one creation for both rulesets.
+- [x] Core content appears and non-selected source content remains ineligible under the revalidated source policy.
+- [x] Normalized origin ownership and dependency invalidation are proven without global-step or display-name assumptions.
+- [x] Species, Background, and starting-Class details actions use normalized catalog content only.
 
 Historical Phase 10 gate evidence is retained, but it is superseded as the current release gate by this corrective sequence. Phase 11 must not be considered permanently unblocked until the new completion review passes.
 
