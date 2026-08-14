@@ -1,197 +1,95 @@
-import { describe, it, expect } from "vitest";
-import {
-  createEntityId,
-  createSourceId,
-  createChoiceInstanceId,
-  createChoiceDefinitionId,
-  createItemInstanceId,
-} from "@obsidian-dnd/domain";
-import { createCharacterChoice } from "@obsidian-dnd/character-contract";
-import {
-  createEmptyCharacterDraft,
-  markStepResolved,
-} from "./character-draft";
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+import type { EntityDetailResponse } from "@obsidian-dnd/catalog-contract";
+import { createEmptyCharacterDraft, markStepResolved } from "./character-draft";
 import { ALL_DRAFT_STEPS } from "./character-draft-steps";
 import { buildReviewSnapshot } from "./character-review-snapshot";
+import { buildCreatorPreview } from "./creator-preview";
+import { finalizeCharacterWithCatalog } from "./character-finalize";
 
-/* ── Helpers ───────────────────────────────────────────────────── */
+const catalogRoot = new URL("../../catalog-server/catalog/v1/revisions/5etools-3c5d9d3-b3/entities/", import.meta.url);
 
-function resolveAllDataSteps(draft: ReturnType<typeof createEmptyCharacterDraft>): void {
-  for (const step of ALL_DRAFT_STEPS) {
-    if (step !== "review") {
-      markStepResolved(draft, step);
-    }
-  }
+function entity(kind: string, id: string): EntityDetailResponse {
+  return JSON.parse(readFileSync(new URL(`${kind}/${id}.json`, catalogRoot), "utf8")) as EntityDetailResponse;
 }
 
-/* ── Positive: snapshot reflects all resolved selections ───────── */
+const elf = entity("species", "species:2014:phb:elf");
+const human = entity("species", "species:2014:phb:human");
+const acolyte = entity("background", "background:2014:phb:acolyte");
+const barbarian = entity("class", "class:2014:phb:barbarian");
+const celestial = entity("language", "language:2014:phb:celestial");
+const draconic = entity("language", "language:2014:phb:draconic");
+const holySymbol = entity("item", "item:2014:phb:holy-symbol");
+const commonClothes = entity("item", "item:2014:phb:common-clothes");
+const pouch = entity("item", "item:2014:phb:pouch");
+const book = entity("item", "item:2014:phb:book");
+const entities = [elf, human, acolyte, barbarian, celestial, draconic, holySymbol, commonClothes, pouch, book];
 
-describe("buildReviewSnapshot — positive", () => {
-  it("returns snapshot matching all resolved draft selections", () => {
-    const draft = createEmptyCharacterDraft();
+function representativeDraft() {
+  const draft = createEmptyCharacterDraft();
+  draft.ruleset.ruleset = "2014";
+  draft.identity.name = "Review Elf";
+  draft.species.speciesId = elf.id;
+  draft.background.backgroundId = acolyte.id;
+  draft.class.classId = barbarian.id;
+  draft.abilities.scores = { STR: 10, DEX: 10, CON: 10, INT: 10, WIS: 10, CHA: 10 };
+  for (const step of ALL_DRAFT_STEPS) markStepResolved(draft, step);
+  draft.selections[`${acolyte.id}:choice:background:2014:phb:acolyte:language:0` as never] = {
+    instanceId: `${acolyte.id}:choice:background:2014:phb:acolyte:language:0` as never,
+    definitionId: "background:2014:phb:acolyte:language:0" as never,
+    originGrantId: acolyte.id,
+    selectedValue: { type: "entity-ids", entityIds: [celestial.id, draconic.id] },
+  };
+  draft.selections[`${acolyte.id}:choice:background:2014:phb:acolyte:equipment:1` as never] = {
+    instanceId: `${acolyte.id}:choice:background:2014:phb:acolyte:equipment:1` as never,
+    definitionId: "background:2014:phb:acolyte:equipment:1" as never,
+    originGrantId: acolyte.id,
+    selectedValue: { type: "option-ids", optionIds: ["background:2014:phb:acolyte:equipment:1:a" as never] },
+  };
+  return draft;
+}
 
-    // Populate every data section with representative selections
-    draft.ruleset.ruleset = "2024";
-    draft.sources.enabledSourceIds = [createSourceId("phb")];
-    draft.identity.name = "Gandalf";
-    draft.identity.playerName = "Alice";
-    draft.species.speciesId = createEntityId("wizard");
-    draft.selections = {
-      [createChoiceInstanceId("species-trait-1")]: createCharacterChoice({
-        instanceId: createChoiceInstanceId("species-trait-1"),
-        definitionId: createChoiceDefinitionId("ability-increase"),
-        originGrantId: createEntityId("wizard"),
-        selectedValue: { type: "entity-ids", entityIds: [createEntityId("int-increase")] },
-      }),
-    };
-    draft.background.backgroundId = createEntityId("sage");
-    Object.assign(draft.selections, {
-      [createChoiceInstanceId("bg-skill-1")]: createCharacterChoice({
-        instanceId: createChoiceInstanceId("bg-skill-1"),
-        definitionId: createChoiceDefinitionId("skill-choices"),
-        originGrantId: createEntityId("sage"),
-        selectedValue: { type: "entity-ids", entityIds: [createEntityId("arcana"), createEntityId("history")] },
-      }),
-    });
-    draft.class.classId = createEntityId("wizard");
-    draft.class.subclassId = createEntityId("evoker");
-    Object.assign(draft.selections, {
-      [createChoiceInstanceId("class-starting-equip")]: createCharacterChoice({
-        instanceId: createChoiceInstanceId("class-starting-equip"),
-        definitionId: createChoiceDefinitionId("starting-equipment"),
-        originGrantId: createEntityId("wizard"),
-        selectedValue: { type: "entity-ids", entityIds: [createEntityId("quarterstaff")] },
-      }),
-    });
-    draft.abilities.method = "standard-array";
-    draft.abilities.scores = {
-      STR: 8,
-      DEX: 14,
-      CON: 12,
-      INT: 18,
-      WIS: 16,
-      CHA: 12,
-    };
-    draft.proficiencies.skillProficiencies = [
-      createEntityId("arcana"),
-      createEntityId("history"),
-    ];
-    draft.proficiencies.toolProficiencies = [];
-    draft.languages.languageIds = [
-      createEntityId("common"),
-      createEntityId("elvish"),
-    ];
-    draft.equipment.items = [
-      {
-        instanceId: createItemInstanceId("weapon-1"),
-        type: "catalog-item",
-        itemId: createEntityId("quarterstaff"),
-        quantity: 1,
-        equipped: true,
-        attuned: false,
-      },
-    ];
-    draft.spellEligibility.isSpellcaster = true;
-    draft.spellEligibility.spellcastingAbility = "INT";
-    draft.spells.selections = [
-      {
-        spellId: createEntityId("firebolt"),
-        acquisition: "known",
-      },
-    ];
+describe("buildReviewSnapshot", () => {
+  it("derives PHB Elf origin effects and initial HP through the production catalog", () => {
+    const draft = representativeDraft();
+    const snapshot = buildReviewSnapshot(draft, entities);
 
-    // Resolve all data steps
-    resolveAllDataSteps(draft);
-
-    const snapshot = buildReviewSnapshot(draft);
-
-    expect(snapshot).not.toBeNull();
-
-    // Catalog-owned choices are exposed once through canonical selections.
-    expect(snapshot!.ruleset.ruleset).toBe("2024");
-    expect(snapshot!.sources.enabledSourceIds).toEqual([createSourceId("phb")]);
-    expect(snapshot!.identity.name).toBe("Gandalf");
-    expect(snapshot!.identity.playerName).toBe("Alice");
-    expect(snapshot!.species.speciesId).toBe(createEntityId("wizard"));
-    expect(snapshot!.background.backgroundId).toBe(createEntityId("sage"));
-    expect(snapshot!.class.classId).toBe(createEntityId("wizard"));
-    expect(snapshot!.class.subclassId).toBe(createEntityId("evoker"));
-    expect(snapshot!.abilities.method).toBe("standard-array");
-    expect(snapshot!.abilities.scores?.INT).toBe(18);
-    expect(snapshot!.proficiencies.skillProficiencies).toContain(
-      createEntityId("arcana"),
-    );
-    expect(snapshot!.proficiencies.toolProficiencies).toEqual([]);
-    expect(snapshot!.languages.languageIds).toContain(createEntityId("common"));
-    expect(snapshot!.equipment.items).toHaveLength(1);
-    expect(snapshot!.spellEligibility.isSpellcaster).toBe(true);
-    expect(snapshot!.spellEligibility.spellcastingAbility).toBe("INT");
-    expect(snapshot!.spells.selections).toHaveLength(1);
+    expect(snapshot?.abilities.scores).toEqual({ STR: 10, DEX: 10, CON: 10, INT: 10, WIS: 10, CHA: 10 });
+    expect(snapshot?.derived.abilities).toEqual(expect.arrayContaining([
+      expect.objectContaining({ ability: "DEX", baseScore: 10, originContribution: 2, finalScore: 12, modifier: 1 }),
+      expect.objectContaining({ ability: "CON", baseScore: 10, originContribution: 0, finalScore: 10, modifier: 0 }),
+    ]));
+    expect(snapshot?.derived.abilityContributions).toEqual(expect.arrayContaining([
+      expect.objectContaining({ ability: "DEX", value: 2, provenance: expect.objectContaining({ sourceKind: "species", entityId: elf.id }) }),
+    ]));
+    expect(snapshot?.derived.hitPoints).toEqual({ maximum: 12, initialCurrent: 12 });
   });
 
-  it("snapshot references the same draft data objects", () => {
-    const draft = createEmptyCharacterDraft();
-    draft.ruleset.ruleset = "2024";
-    resolveAllDataSteps(draft);
+  it("saves the preview-derived initial HP without persisting derived totals", () => {
+    const draft = representativeDraft();
+    const preview = buildCreatorPreview(draft, entities);
+    const character = finalizeCharacterWithCatalog(draft, entities);
 
-    const snapshot = buildReviewSnapshot(draft);
-    expect(snapshot).not.toBeNull();
-
-    // Snapshot fields reference the same objects as the draft
-    expect(snapshot!.ruleset).toBe(draft.ruleset);
-    expect(snapshot!.sources).toBe(draft.sources);
-    expect(snapshot!.identity).toBe(draft.identity);
-    expect(snapshot!.species).toBe(draft.species);
-    expect(snapshot!.background).toBe(draft.background);
-    expect(snapshot!.class).toBe(draft.class);
-    expect(snapshot!.abilities).toBe(draft.abilities);
-    expect(snapshot!.proficiencies).toBe(draft.proficiencies);
-    expect(snapshot!.languages).toBe(draft.languages);
-    expect(snapshot!.equipment).toBe(draft.equipment);
-    expect(snapshot!.spellEligibility).toBe(draft.spellEligibility);
-    expect(snapshot!.spells).toBe(draft.spells);
-    expect(snapshot!.selections).toBe(draft.selections);
-  });
-});
-
-/* ── Negative: incomplete draft returns null ───────────────────── */
-
-describe("buildReviewSnapshot — negative", () => {
-  it("returns null when no steps are resolved", () => {
-    const draft = createEmptyCharacterDraft();
-    const snapshot = buildReviewSnapshot(draft);
-    expect(snapshot).toBeNull();
+    expect(character?.resources.currentHp).toBe(preview?.projection.maxHp.totalHp);
+    expect(character?.resources.currentHp).toBe(12);
+    expect(character?.abilities.scores).toEqual({ STR: 10, DEX: 10, CON: 10, INT: 10, WIS: 10, CHA: 10 });
+    expect(JSON.stringify(character)).not.toContain("maximumHp");
+    expect(JSON.stringify(character)).not.toContain("finalScore");
+    expect(JSON.stringify(character)).not.toContain("optionQuery");
   });
 
-  it("returns null when only one step is resolved", () => {
-    const draft = createEmptyCharacterDraft();
-    draft.ruleset.ruleset = "2024";
-    markStepResolved(draft, "ruleset");
+  it("updates derived consequences after an origin change without rewriting base ability state", () => {
+    const draft = representativeDraft();
+    const elfSnapshot = buildReviewSnapshot(draft, entities);
+    draft.species.speciesId = human.id;
+    const humanSnapshot = buildReviewSnapshot(draft, entities);
 
-    const snapshot = buildReviewSnapshot(draft);
-    expect(snapshot).toBeNull();
+    expect(elfSnapshot?.derived.abilities.find((entry) => entry.ability === "DEX")?.finalScore).toBe(12);
+    expect(humanSnapshot?.derived.abilities.find((entry) => entry.ability === "DEX")?.finalScore).toBe(10);
+    expect(draft.abilities.scores).toEqual({ STR: 10, DEX: 10, CON: 10, INT: 10, WIS: 10, CHA: 10 });
   });
 
-  it("returns null when one data step is unresolved", () => {
-    const draft = createEmptyCharacterDraft();
-
-    // Resolve all data steps except "spells"
-    for (const step of ALL_DRAFT_STEPS) {
-      if (step !== "review" && step !== "spells") {
-        markStepResolved(draft, step);
-      }
-    }
-    draft.spellEligibility.isSpellcaster = true;
-
-    const snapshot = buildReviewSnapshot(draft);
-    expect(snapshot).toBeNull();
-  });
-
-  it("returns null even when review step is resolved but data steps are not", () => {
-    const draft = createEmptyCharacterDraft();
-    markStepResolved(draft, "review");
-
-    const snapshot = buildReviewSnapshot(draft);
-    expect(snapshot).toBeNull();
+  it("returns null before the draft is complete", () => {
+    expect(buildReviewSnapshot(createEmptyCharacterDraft(), entities)).toBeNull();
   });
 });

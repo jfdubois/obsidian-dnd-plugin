@@ -86,34 +86,17 @@ describe("Creator state-machine lifecycle (CRE-011)", () => {
   /* ── 4. Review snapshot generation ──────────────────────────── */
 
   describe("Review snapshot generation", () => {
-    it("buildReviewSnapshot returns a non-null snapshot with canonical selections", () => {
+    it("buildReviewSnapshot requires normalized catalog details for a derived result", () => {
       const draft = buildCompleteDraft();
-      const snapshot = buildReviewSnapshot(draft);
-      expect(snapshot).not.toBeNull();
+      expect(buildReviewSnapshot(draft, [])).toBeNull();
 
-      // Legacy choice buckets are intentionally absent from the read model.
-      expect(snapshot!.ruleset).toBeDefined();
-      expect(snapshot!.sources).toBeDefined();
-      expect(snapshot!.identity).toBeDefined();
-      expect(snapshot!.species).toBeDefined();
-      expect(snapshot!.background).toBeDefined();
-      expect(snapshot!.class).toBeDefined();
-      expect(snapshot!.abilities).toBeDefined();
-      expect(snapshot!.proficiencies).toBeDefined();
-      expect(snapshot!.languages).toBeDefined();
-      expect(snapshot!.equipment).toBeDefined();
-      expect(snapshot!.spellEligibility).toBeDefined();
-      expect(snapshot!.spells).toBeDefined();
-
-      expect(snapshot!.selections).toBeDefined();
-      expect(Object.keys(snapshot!)).toHaveLength(13);
     });
 
     it("buildReviewSnapshot returns null when one data step is unresolved", () => {
       const draft = buildCompleteDraft();
       draft.spellEligibility.isSpellcaster = true;
       draft.stepStatuses.set("spells", "unvisited");
-      const snapshot = buildReviewSnapshot(draft);
+      const snapshot = buildReviewSnapshot(draft, []);
       expect(snapshot).toBeNull();
     });
   });
@@ -138,7 +121,7 @@ describe("Creator state-machine lifecycle (CRE-011)", () => {
   /* ── 6. End-to-end lifecycle ────────────────────────────────── */
 
   describe("End-to-end draft lifecycle", () => {
-    it("full lifecycle: create → resolve → snapshot → finalize", () => {
+    it("legacy draft lifecycle: create → resolve → catalog-backed review gate → finalize", () => {
       // 1. Create fresh draft
       const draft = createEmptyCharacterDraft();
       expect(isDraftComplete(draft)).toBe(false);
@@ -149,9 +132,8 @@ describe("Creator state-machine lifecycle (CRE-011)", () => {
       expect(complete.diagnostics).toHaveLength(0);
 
       // 3. Build review snapshot
-      const snapshot = buildReviewSnapshot(complete);
-      expect(snapshot).not.toBeNull();
-      expect(Object.keys(snapshot!)).toHaveLength(13);
+      const snapshot = buildReviewSnapshot(complete, []);
+      expect(snapshot).toBeNull();
 
       // 4. Finalize to Character
       const character = finalizeCharacter(complete);

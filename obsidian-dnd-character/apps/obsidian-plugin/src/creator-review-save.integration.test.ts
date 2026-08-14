@@ -105,7 +105,7 @@ describe("2014 Review → Save production pipeline", () => {
     expect(access.controller.jumpTo("review")).toBe(true);
     expect(access.controller.canSave()).toBe(true);
     expect(isDraftComplete(draft)).toBe(true);
-    expect(buildReviewSnapshot(draft)).not.toBeNull();
+    expect(buildReviewSnapshot(draft, entities)?.derived.hitPoints).toEqual({ maximum: 12, initialCurrent: 12 });
     const close = vi.spyOn(modal, "close");
 
     await access.handleSave();
@@ -121,6 +121,7 @@ describe("2014 Review → Save production pipeline", () => {
     expect(isCharacter(saved)).toBe(true);
     expect(saved.origins).toEqual({ speciesId: elf.id, backgroundId: acolyte.id });
     expect(saved.progression.classes[0]?.classId).toBe(barbarian.id);
+    expect(saved.resources.currentHp).toBe(12);
     expect(saved.spells.selections).toEqual([]);
     expect(Object.values(saved.selections).some((choice) => choice.selectedValue.type === "entity-ids" && choice.selectedValue.entityIds.includes(celestial.id))).toBe(true);
     expect(saved.currency.cp).toBe(1500);

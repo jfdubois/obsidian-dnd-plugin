@@ -36,6 +36,7 @@ import {
 } from "@obsidian-dnd/domain";
 import type { EntityDetailResponse, RuleGrant } from "@obsidian-dnd/catalog-contract";
 import { deriveDraftConsequences } from "./creator-draft-commands";
+import { deriveCreatorCharacterState } from "./creator-derived-state";
 
 /* ── Public API ────────────────────────────────────────────────── */
 
@@ -145,7 +146,15 @@ export function finalizeCharacterWithCatalogResult(draft: CharacterDraft, entiti
   }
   const activeSelections = Object.fromEntries(Object.entries(draft.selections)
     .filter(([instanceId]) => model.activeChoiceIds.has(instanceId as ChoiceInstanceId))) as Record<ChoiceInstanceId, CharacterChoice>;
-  const character = { ...base, selections: activeSelections, inventory, currency };
+  const materializedCharacter = { ...base, selections: activeSelections, inventory, currency };
+  const projection = deriveCreatorCharacterState(materializedCharacter, entities);
+  const character = {
+    ...materializedCharacter,
+    resources: createCharacterResourceState({
+      ...materializedCharacter.resources,
+      currentHp: projection.maxHp.totalHp,
+    }),
+  };
   if (!isCharacter(character)) {
     return { status: "failure", code: "document-validation-failed", message: "Character could not be saved because the final character document failed validation.", diagnostics: [] };
   }

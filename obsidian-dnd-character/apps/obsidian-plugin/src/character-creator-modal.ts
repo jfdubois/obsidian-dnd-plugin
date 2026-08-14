@@ -1441,20 +1441,10 @@ export class CharacterCreatorModal extends ObsidianModal {
   private renderReviewStep(): void {
     if (!this.stepContentEl) return;
 
-    const snapshot = buildReviewSnapshot(this.controller.draft);
-
     const heading = this.stepContentEl.createEl("h2", {
       text: "Review Character",
     });
     heading.addClass("dnd-creator-step-heading");
-
-    if (!snapshot) {
-      this.stepContentEl.createEl("p", {
-        text: "Cannot display review: draft is not complete.",
-      });
-    } else {
-      this.renderReviewSection(snapshot);
-    }
     void this.renderConsequenceReview();
   }
 
@@ -1478,6 +1468,12 @@ export class CharacterCreatorModal extends ObsidianModal {
       const origins = await Promise.all(summaries.map(async (summary) =>
         (await catalog.fetchEntity(revision, summary!.id, summary!.detailPath)).data));
       const model = await loadCreatorConsequenceReadModel(draft, catalog, revision, origins);
+      const snapshot = buildReviewSnapshot(draft, model.entities);
+      if (snapshot === null) {
+        review.createEl("p", { text: "Cannot display review: draft is incomplete or its derived state could not be resolved." });
+        return;
+      }
+      this.renderReviewSection(snapshot);
       const section = review.createDiv({ cls: "dnd-creator-review-consequences" });
       section.createEl("h3", { text: "Origin consequences" });
       for (const origin of model.model.origins) {
@@ -1536,12 +1532,22 @@ export class CharacterCreatorModal extends ObsidianModal {
         },
       },
       {
-        title: "Ability Scores",
+        title: "Base Ability Scores",
         render: () => {
           if (!snapshot.abilities.scores) return "Not set";
           const entries = Object.entries(snapshot.abilities.scores);
           return entries.map(([k, v]) => `${k}: ${v}`).join(", ");
         },
+      },
+      {
+        title: "Derived Ability Scores",
+        render: () => snapshot.derived.abilities.map((entry) =>
+          `${entry.ability}: ${entry.finalScore} (${entry.modifier >= 0 ? "+" : ""}${entry.modifier}; base ${entry.baseScore}${entry.originContribution === 0 ? "" : `, origin ${entry.originContribution >= 0 ? "+" : ""}${entry.originContribution}`})`,
+        ).join(", "),
+      },
+      {
+        title: "Hit Points",
+        render: () => `Maximum: ${snapshot.derived.hitPoints.maximum}; initial current: ${snapshot.derived.hitPoints.initialCurrent}`,
       },
       {
         title: "Proficiencies",

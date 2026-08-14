@@ -31,8 +31,9 @@ describe("catalog-aware creator finalization", () => {
     const value = draft();
     for (const step of ["proficiency-choices", "proficiencies", "language-choices", "languages", "equipment-choices", "equipment"] as const) value.stepStatuses.set(step, "unvisited");
     expect(isDraftCompleteWithoutCatalogOriginChoices(value)).toBe(true);
-    expect(buildReviewSnapshot(value)).not.toBeNull();
-    expect(finalizeCharacterWithCatalog(value, [species(speciesId, []), background(), classRule(), item()])).not.toBeNull();
+    const entities = [species(speciesId, []), background(), classRule(), item()];
+    expect(buildReviewSnapshot(value, entities)).not.toBeNull();
+    expect(finalizeCharacterWithCatalog(value, entities)).not.toBeNull();
   });
 
   it("materializes active item, named-item, fixed and resolved dice grants without mutating the draft or catalog", () => {

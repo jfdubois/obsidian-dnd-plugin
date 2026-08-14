@@ -269,12 +269,11 @@ describe("finalizeCharacter", () => {
     expect(result!.metadata.createdAt).toBe(result!.metadata.updatedAt);
   });
 
-  it("initializes resources with default starting values", () => {
+  it("initializes non-HP mutable resources with default starting values", () => {
     const draft = makeCompleteDraft();
     const result = finalizeCharacter(draft);
 
     expect(result).not.toBeNull();
-    expect(result!.resources.currentHp).toBe(0);
     expect(result!.resources.temporaryHp).toBe(0);
     expect(result!.resources.deathSaves.successes).toBe(0);
     expect(result!.resources.deathSaves.failures).toBe(0);
