@@ -9,7 +9,10 @@ import { describe, it, expect } from 'vitest';
 import { createCatalogRevision } from '@obsidian-dnd/domain';
 import { KIND_INDEX_FILENAME } from './kind-index-mapping';
 import { validateArtifactPath } from './artifact-path-utils';
-import { buildCatalogArtifactUrl } from './catalog-artifact-path';
+import {
+  buildCatalogArtifactUrl,
+  encodeCatalogArtifactPathForRequest,
+} from './catalog-artifact-path';
 
 /* ── KIND_INDEX_FILENAME ──────────────────────────────────────── */
 
@@ -182,6 +185,29 @@ describe('buildCatalogArtifactUrl', () => {
   it('builds URL for entity detail artifact', () => {
     const url = buildCatalogArtifactUrl(baseUrl, revision, 'species/human.json');
     expect(url).toBe('https://catalog.example.com/catalog/v1/revisions/rev-001/species/human.json');
+  });
+
+  it('encodes literal percent characters in published detail filename segments once', () => {
+    const detailPath = 'entities/item/item:2014:phb:silk-rope-%2850-feet%29.json';
+    const url = buildCatalogArtifactUrl(baseUrl, revision, detailPath);
+
+    expect(url).toBe('https://catalog.example.com/catalog/v1/revisions/rev-001/entities/item/item%3A2014%3Aphb%3Asilk-rope-%252850-feet%2529.json');
+    const filename = url.split('/').slice(-1)[0];
+    expect(decodeURIComponent(filename!)).toBe('item:2014:phb:silk-rope-%2850-feet%29.json');
+  });
+
+  it('encodes another literal canonical percent escape without encoding separators', () => {
+    const detailPath = 'entities/class-feature/class-feature:2014:phb:land%27s-stride.json';
+
+    expect(encodeCatalogArtifactPathForRequest(detailPath))
+      .toBe('entities/class-feature/class-feature%3A2014%3Aphb%3Aland%2527s-stride.json');
+  });
+
+  it('produces the same request path across repeated construction from the literal path', () => {
+    const detailPath = 'entities/item/item:2014:phb:silk-rope-%2850-feet%29.json';
+
+    expect(buildCatalogArtifactUrl(baseUrl, revision, detailPath))
+      .toBe(buildCatalogArtifactUrl(baseUrl, revision, detailPath));
   });
 
   it('strips trailing slashes from base URL', () => {
