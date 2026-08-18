@@ -13,6 +13,8 @@ import { expandVersions } from "./versions-expander";
 import { classifySourceFileRole } from "./source-file-role";
 import { pinnedFiveEToolsPath } from "./test-pinned-source-path";
 
+const REAL_CATALOG_INTEGRATION_TIMEOUT_MS = 15_000;
+
 interface LocatedRecord {
   readonly record: RawRecord;
   readonly entityKind: string;
@@ -112,7 +114,7 @@ describe("pinned append-style _mod regressions", () => {
     expect(materialized.remaining).not.toHaveProperty("_templates");
     expect(materialized.remaining).not.toHaveProperty("_versions");
     expect(clone(selectedFiles)).toEqual(before);
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 });
 
 describe("pinned vehicle copy-chain characterization", () => {
@@ -161,5 +163,5 @@ describe("pinned vehicle copy-chain characterization", () => {
     ]);
     expect(result.baseEntity.name).toBe("Vehicle (Water)");
     expect(result.baseEntity.source).toBe("DMG");
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 });

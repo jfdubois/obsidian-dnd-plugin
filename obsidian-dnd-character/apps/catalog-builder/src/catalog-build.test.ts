@@ -11,6 +11,7 @@ import { CATALOG_SCHEMA_VERSION } from "@obsidian-dnd/catalog-contract";
 
 let tempRoot: string;
 const CLONE_PATH = path.resolve(process.cwd(), "../external/5etools-src");
+const REAL_CATALOG_INTEGRATION_TIMEOUT_MS = 15_000;
 
 beforeEach(() => {
   tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "catalog-build-test-"));
@@ -41,7 +42,7 @@ describe("catalog build — real 5eTools pipeline", () => {
     expect(result.entityCount).toBeGreaterThan(0);
     expect(result.kindCount).toBeGreaterThan(0);
     expect(result.sourceRevision).toBe(sourceManifest.commitHash);
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 
   it("produces a catalog revision with real Git SHA", () => {
     const sourceManifest = readSourceManifest(CLONE_PATH);
@@ -56,7 +57,7 @@ describe("catalog build — real 5eTools pipeline", () => {
     const result = buildCatalog(config, sourceManifest);
     expect(result.catalogRevision).toContain("5etools-");
     expect(result.sourceRevision).toMatch(/^[0-9a-f]{40}$/);
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 
   it("includes builder version suffix in catalog revision", () => {
     const sourceManifest = readSourceManifest(CLONE_PATH);
@@ -70,7 +71,7 @@ describe("catalog build — real 5eTools pipeline", () => {
 
     const result = buildCatalog(config, sourceManifest);
     expect(result.catalogRevision).toBe(`5etools-${sourceManifest.shortHash}-${BUILDER_VERSION}`);
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 
   it("publishes manifest.json with correct metadata", () => {
     const sourceManifest = readSourceManifest(CLONE_PATH);
@@ -98,7 +99,7 @@ describe("catalog build — real 5eTools pipeline", () => {
     expect(manifest.schemaVersion).toBe(CATALOG_SCHEMA_VERSION);
     expect(manifest.catalogRevision).toBe(result.catalogRevision);
     expect(manifest.sourceRevision).toBe(result.sourceRevision);
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 
   it("writes index files for all entity kinds", () => {
     const sourceManifest = readSourceManifest(CLONE_PATH);
@@ -124,7 +125,7 @@ describe("catalog build — real 5eTools pipeline", () => {
       const content = JSON.parse(fs.readFileSync(path.join(indexDir, file), "utf8"));
       expect(Array.isArray(content)).toBe(true);
     }
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 
   it("generates validation report with no duplicate IDs", () => {
     const sourceManifest = readSourceManifest(CLONE_PATH);
@@ -147,7 +148,7 @@ describe("catalog build — real 5eTools pipeline", () => {
     const report = JSON.parse(fs.readFileSync(reportPath, "utf8"));
     expect(report.valid).toBe(true);
     expect(report.duplicateIds).toEqual([]);
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 
   it("generates inventory report with entity counts", () => {
     const sourceManifest = readSourceManifest(CLONE_PATH);
@@ -172,7 +173,7 @@ describe("catalog build — real 5eTools pipeline", () => {
     expect(report.totalEntities).toBeGreaterThan(0);
     expect(report.totalEntities).toBeLessThanOrEqual(result.entityCount);
     expect(report.byKind.length).toBeGreaterThan(0);
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 
   it("writes entity detail files with checksums", () => {
     const sourceManifest = readSourceManifest(CLONE_PATH);
@@ -192,7 +193,7 @@ describe("catalog build — real 5eTools pipeline", () => {
     );
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
     expect(Object.keys(manifest.checksums).length).toBeGreaterThan(0);
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 
   it("includes diagnostics for each build step", () => {
     const sourceManifest = readSourceManifest(CLONE_PATH);
@@ -209,7 +210,7 @@ describe("catalog build — real 5eTools pipeline", () => {
     expect(result.diagnostics.some((d) => d.includes("Loaded"))).toBe(true);
     expect(result.diagnostics.some((d) => d.includes("Validated"))).toBe(true);
     expect(result.diagnostics.some((d) => d.includes("Normalized"))).toBe(true);
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 
   it("fails with actionable diagnostics on invalid clone path", () => {
     const sourceManifest = readSourceManifest(CLONE_PATH);
@@ -255,7 +256,7 @@ describe("catalog build — real 5eTools pipeline", () => {
     expect(fs.existsSync(currentPath)).toBe(true);
     const current = JSON.parse(fs.readFileSync(currentPath, "utf8"));
     expect(current.currentRevision).toBe(result.catalogRevision);
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 
   it("publishes b2 beside the legacy b1 revision for the same pinned source", () => {
     const sourceManifest = readSourceManifest(CLONE_PATH);
@@ -286,5 +287,5 @@ describe("catalog build — real 5eTools pipeline", () => {
     expect(JSON.parse(fs.readFileSync(path.join(tempRoot, "catalog", "v1", "current.json"), "utf8")))
       .toEqual({ currentRevision: b2Revision });
     expect(fs.readFileSync(path.join(b1Destination, "manifest.json"), "utf8")).toBe(b1ManifestBefore);
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 });

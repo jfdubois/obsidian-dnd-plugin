@@ -20,7 +20,7 @@ import { StepController, CREATOR_STEPS } from "./character-step-controller";
 import type { ReviewSnapshot } from "./character-review-snapshot";
 import { buildReviewSnapshot } from "./character-review-snapshot";
 import { finalizeCharacterWithCatalogResult } from "./character-finalize";
-import { loadCreatorConsequenceReadModel } from "./creator-consequence-read-model";
+import { loadCreatorConsequenceReadModel, RequiredCatalogEntityLoadError } from "./creator-consequence-read-model";
 import type { Ability, ChoiceInstanceId, EntityId, RuleGrantId } from "@obsidian-dnd/domain";
 import { selectRuleset } from "./character-ruleset-step";
 import type { CatalogService } from "./catalog/catalog-service";
@@ -1709,7 +1709,11 @@ export class CharacterCreatorModal extends ObsidianModal {
       }
       character = finalization.character;
       this.onSavePipelineStage?.("S4");
-    } catch {
+    } catch (cause) {
+      if (cause instanceof RequiredCatalogEntityLoadError) {
+        this.presentSaveDiagnostic("catalog", `Character could not be saved because required catalog item ${cause.entityId} is unavailable. Refresh the catalog and try again.`);
+        return;
+      }
       this.presentSaveDiagnostic("catalog", "Character could not be saved because the active catalog could not be loaded. Refresh the catalog and try again.");
       return;
     }

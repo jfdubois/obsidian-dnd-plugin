@@ -8,6 +8,7 @@ import { createBuilderConfig, BUILDER_VERSION } from "./config.js";
 
 let tempRoot: string;
 const CLONE_PATH = path.resolve(process.cwd(), "../external/5etools-src");
+const REAL_CATALOG_INTEGRATION_TIMEOUT_MS = 15_000;
 
 beforeEach(() => {
   tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "catalog-build-test-"));
@@ -51,7 +52,7 @@ describe("catalog build — additional required acceptance tests", () => {
       expect(typeof firstSpecies.id).toBe("string");
       expect(firstSpecies.id.length).toBeGreaterThan(0);
     }
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 
   it("represents both 2014 and 2024 rulesets in manifest", () => {
     const sourceManifest = readSourceManifest(CLONE_PATH);
@@ -72,7 +73,7 @@ describe("catalog build — additional required acceptance tests", () => {
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
     expect(manifest.rulesets).toContain("2014");
     expect(manifest.rulesets).toContain("2024");
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 
   it("does not use manual-smoke revision metadata in real build", () => {
     const sourceManifest = readSourceManifest(CLONE_PATH);
@@ -95,7 +96,7 @@ describe("catalog build — additional required acceptance tests", () => {
     );
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
     expect(manifest.catalogRevision).not.toContain("manual-smoke");
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 
   it("catalog revision includes builder version suffix", () => {
     const sourceManifest = readSourceManifest(CLONE_PATH);
@@ -119,7 +120,7 @@ describe("catalog build — additional required acceptance tests", () => {
     const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
     expect(manifest.catalogRevision).toBe(result.catalogRevision);
     expect(manifest.catalogRevision).toContain(`-${BUILDER_VERSION}`);
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 
   it("preserves previous revision when building new catalog", () => {
     const sourceManifest = readSourceManifest(CLONE_PATH);
@@ -144,5 +145,5 @@ describe("catalog build — additional required acceptance tests", () => {
     const currentPath = path.join(tempRoot, "catalog", "v1", "current.json");
     const current = JSON.parse(fs.readFileSync(currentPath, "utf8"));
     expect(current.currentRevision).toBe(result1.catalogRevision);
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 });

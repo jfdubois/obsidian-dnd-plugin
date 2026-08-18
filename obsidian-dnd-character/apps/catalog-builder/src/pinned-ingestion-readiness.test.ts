@@ -16,6 +16,7 @@ import { expandVersions } from "./versions-expander";
 import { pinnedFiveEToolsPath, pinnedFiveEToolsRevision } from "./test-pinned-source-path";
 
 const PINNED_COMMIT = pinnedFiveEToolsRevision();
+const REAL_CATALOG_INTEGRATION_TIMEOUT_MS = 15_000;
 const CONSUMED_DIRECTIVES = [
   "_copy",
   "_mod",
@@ -336,7 +337,7 @@ describe("pinned 5eTools ingestion readiness", () => {
         "setProp",
       ],
     });
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 
   it("resolves representative pinned copy identities without fallback", () => {
     const { context, records } = loadContext();
@@ -355,7 +356,7 @@ describe("pinned 5eTools ingestion readiness", () => {
     for (const [located, firstName, firstSource, terminalName, terminalSource, terminalKind, terminalPath] of cases) {
       expectResolved(context, located, { firstName, firstSource, terminalName, terminalSource, terminalKind, terminalPath });
     }
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 
   it("resolves abbreviation-based vehicle copies to the selected base record", () => {
     const { context, records } = loadContext();
@@ -415,7 +416,7 @@ describe("pinned 5eTools ingestion readiness", () => {
     expectNoConsumedDirectives(materialized.result.record);
     expect(clone(derived.record)).toEqual(derivedBefore);
     expect(clone(selectedBase.record)).toEqual(selectedBaseBefore);
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 
   it("validates every pinned _copy._preserve payload and observed _mod mode", () => {
     const { records } = loadContext();
@@ -430,7 +431,7 @@ describe("pinned 5eTools ingestion readiness", () => {
       if (copy._mod !== undefined) collectModModes(copy._mod, modes);
     }
     expect([...modes].sort()).toEqual([...modes].filter((mode) => KNOWN_MOD_MODES_SET.has(mode)).sort());
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 
   it("materializes representative pinned outputs and consumes builder directives", () => {
     const { context, records } = loadContext();
@@ -456,7 +457,7 @@ describe("pinned 5eTools ingestion readiness", () => {
       expectNoConsumedDirectives(result.result.record);
       expect(clone(located.record)).toEqual(before);
     }
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 
   it("expands P4-T005 pinned versions and representative abstract/template versions without diagnostics", () => {
     const { context } = loadContext();
@@ -528,5 +529,5 @@ describe("pinned 5eTools ingestion readiness", () => {
     expect(expandedShadowAmethyst.source).toBe("FTD");
     expectNoConsumedDirectives(expandedShadowAmethyst);
     expect(clone(selectedFiles)).toEqual(before);
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 });

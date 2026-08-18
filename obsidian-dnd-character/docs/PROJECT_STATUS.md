@@ -2,7 +2,7 @@
 
 ## Current work
 
-Phase 10 complete — corrective sequence through P10-CORRECTIVE-M and gate passed
+Phase 10 corrective — catalog-backed origin grants complete; Phase 10 gate remains passed
 
 ## PB8-004 automated gate
 
@@ -36,21 +36,21 @@ None recorded.
 
 ## Validation baseline
 
-- `npm --prefix obsidian-dnd-character run check`: passing post-P10-T020-CORRECTIVE-G-R1 (typecheck, lint, full test suite; 4848 tests; 30 pre-existing console warnings).
-- `npm --prefix obsidian-dnd-character run build`: passing post-P8-CORRECTIVE-002-R1.
+- `npm --prefix obsidian-dnd-character run check`: passing twice after the catalog-backed origin-grant corrective (5067 tests, 2 skipped; 30 pre-existing console warnings).
+- `npm --prefix obsidian-dnd-character run build`: passing after the catalog-backed origin-grant corrective.
 - `npm --workspace @obsidian-dnd/obsidian-plugin run bundle`: script not defined in current workspace.
-- Tests: full suite passing after P8-CORRECTIVE-002-R1.
+- Tests: full suite passing twice after the catalog-backed origin-grant corrective.
 
 ## Catalog baseline
 
 - 5eTools source commit: `3c5d9d3175ca9637132011c75efd73aad7a2364d` pinned and verified clean.
 - Pinned source inventory: 502 files, 404 collections, 25672 raw records, 2801 `_copy` records, 317 nested copy chains, 259 `_preserve` payloads, 127 records with `_versions`, 359 version entries, 7 abstract bundles, 50 abstract implementations, 187 copy template references, 21 version template references.
 - Catalog schema version: 1.
-- Active catalog revision: `5etools-3c5d9d3-b1` (real production catalog, generated 2026-08-07).
+- Active catalog revision: `5etools-3c5d9d3-b3` (real production catalog).
 - Production catalog: 3170 entities (1501 × 2014, 1669 × 2024), 8 kinds (background: 36, class: 12, class-feature: 296, feat: 119, item: 1375, species: 39, spell: 740, subclass-feature: 553), 4 sources (dmg, phb, xdmg, xphb).
 - Validation: `valid: true`, 0 duplicates, 0 unresolved references, 38 unmapped-narrative warnings (non-blocking).
 - Smoke catalog `manual-smoke-001` preserved unchanged alongside production revision.
-- Catalog server verified serving `5etools-3c5d9d3-b1` via Docker (nginx:alpine, port 8080).
+- Catalog server verified serving `5etools-3c5d9d3-b3` via Docker (nginx:alpine, port 8080).
 
 ## Plugin baseline
 
@@ -92,6 +92,11 @@ None recorded.
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
 
+2026-08-18 — Phase 10 corrective — Catalog-backed origin grants — complete
+Summary: `loadCreatorConsequenceReadModel()` had silently omitted a required catalog-backed ItemRule when detail retrieval failed, so strict finalization received an incomplete dependency set and rejected the grant. It now confirms each required item ID against the active item index, obtains the exact ItemRule through the catalog cache or lazy detail loading, and runtime-validates it before finalization. Missing index entries, retrieval failures, and invalid details now fail before finalization with typed actionable diagnostics. The historical Silk Rope fetch failure is not recoverable, but the swallowed required-entity failure is reproduced and repaired; uncached Silk Rope lazy-loads and materializes for the Tiefling + Sailor + Paladin scenario. `character-finalize.ts` remains strict and unchanged. No entity/item-name exceptions, catalog definitions, candidate lists, or catalog paths persist in CharacterDocument.
+Validation: focused creator hydration/finalization PASS (2 files, 10 tests); real-catalog integration tests PASS (5 files, 29 tests); `npm --prefix obsidian-dnd-character run check` PASS twice (292 files passed, 3 skipped; 5067 tests passed, 2 skipped); `npm --prefix obsidian-dnd-character run build` PASS; diff check clean. The baseline full-suite timeout policy now gives only genuine real-source build/ingestion tests an explicit 15,000 ms timeout; no global timeout, worker/parallelism, retries, assertion weakening, or production catalog-builder behavior changed.
+Commit: see Git history for Phase 10 catalog-backed origin-grant corrective.
+
 2026-08-13 — Phase 10 gate — Complete
 Summary: Corrective sequence through P10-CORRECTIVE-M complete. Gate review confirms: (1) valid level-one creation for both rulesets via production rules engine; (2) core content eligibility and source policy enforced; (3) normalized origin ownership and dependency invalidation proven; (4) Species/Background/Class details use normalized catalog content only. Full validation suite passes.
 Validation: npm run check PASS (5062 tests, 2 skipped, 30 pre-existing warnings); npm run build PASS; diff check clean.
@@ -102,12 +107,6 @@ Summary: Verified that all acceptance criteria are already satisfied by existing
 Validation: npm run check PASS (5062 tests, 2 skipped); npm run build PASS; diff check clean.
 Compatibility notes: No new implementation or tests needed. Existing implementation in character-finalize.ts, character-review-snapshot.ts, and creator-preview.ts already satisfies all requirements.
 Commit: see Git history for P10-CORRECTIVE-M.
-
-2026-08-11 — P10-CORRECTIVE-L — Add supplemental 5eTools external-reference support — complete
-Summary: Catalog schema v3 adds validated catalog-owned 5eTools relative references for Species, Background, and Class using the pinned builder route adapter. Settings schema v2 adds disabled-by-default `fiveEToolsWebBaseUrl`; the plugin safely composes an explicit generic details action with no external fetch, and creator/finalization state remains independent of the setting.
-Validation: focused external/settings/real-build tests PASS; typecheck PASS; lint baseline warnings only; full suite and build PASS; diff check PASS. Desktop external-link verification remains assigned to P10-CORRECTIVE-M.
-Compatibility notes: Catalog v2 remains transition-compatible; no CharacterDocument schema or external metadata persistence.
-Commit: see Git history for P10-CORRECTIVE-L.
 
 2026-08-11 — P10-CORRECTIVE-K — Render consequence panels and normalized details — complete
 Summary: Added reusable normalized-catalog origin details, shared Species/Background/Class consequence summaries, active-choice status presentation, explicit command-backed random starting currency display, and a read-only consequence-aware review section. Details are offline, catalog-backed, and accessible; final save remains catalog-aware finalization.

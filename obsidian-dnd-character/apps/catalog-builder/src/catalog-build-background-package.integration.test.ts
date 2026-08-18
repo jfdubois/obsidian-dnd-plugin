@@ -10,6 +10,7 @@ import { createSourceManifest } from "./source-manifest";
 import { createDeterministicRuleGrantId } from "./rule-grant-id";
 
 const SOURCE_CLONE = path.resolve(process.cwd(), "../external/5etools-src");
+const REAL_CATALOG_INTEGRATION_TIMEOUT_MS = 15_000;
 const backgroundId = createEntityId("background:2014:phb:slice-c-package");
 let root: string;
 
@@ -77,7 +78,7 @@ describe("catalog build — Background complete equipment package", () => {
     for (const forbidden of ["equipmentType", "equipmentTypes", "special", "fallbackName", "canonical-reference-required", "deferredEquipment", "candidates"]) {
       expect(serialized).not.toContain(forbidden);
     }
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 
   it("maps plural source equipmentTypes to one published multi-group query", () => {
     const result = buildCatalog(createBuilderConfig({ clonePath: root, outputPath: root, includedRulesets: ["2014", "2024"], contentPolicy: { enabledSourceIds: [], includeCore: true }, buildMode: "full" }), createSourceManifest({ clonePath: root, commitHash: "0123456789abcdef0123456789abcdef01234567", shortHash: "0123456", subject: "slice-c", date: "2026-08-10T00:00:00Z" }));
@@ -90,7 +91,7 @@ describe("catalog build — Background complete equipment package", () => {
     const nested = closed.options[0]?.choices.filter((choice) => choice.type === "equipment") ?? [];
     expect(nested).toHaveLength(1);
     expect(nested[0]).toMatchObject({ optionQuery: { equipmentGroups: ["artisan-tool", "musical-instrument"] } });
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 
   it("fails the real build for a missing authoritative item reference without publishing a named fallback", () => {
     fs.writeFileSync(path.join(root, "data", "slice-c-broken-background.json"), JSON.stringify({ background: [{
@@ -100,5 +101,5 @@ describe("catalog build — Background complete equipment package", () => {
     expect(result.publishResult.success).toBe(false);
     expect(result.publishResult.errors).toEqual(expect.arrayContaining([expect.stringContaining("missing-item") ]));
     expect(result.publishResult.errors.join(" ")).not.toContain("named-item");
-  });
+  }, REAL_CATALOG_INTEGRATION_TIMEOUT_MS);
 });

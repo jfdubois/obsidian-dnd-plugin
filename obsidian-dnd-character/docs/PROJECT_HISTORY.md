@@ -6,6 +6,12 @@ It is historical reference and is not part of normal task or between-task contex
 
 ## Archived work log
 
+2026-08-11 — P10-CORRECTIVE-L — Add supplemental 5eTools external-reference support — complete
+Summary: Catalog schema v3 adds validated catalog-owned 5eTools relative references for Species, Background, and Class using the pinned builder route adapter. Settings schema v2 adds disabled-by-default `fiveEToolsWebBaseUrl`; the plugin safely composes an explicit generic details action with no external fetch, and creator/finalization state remains independent of the setting.
+Validation: focused external/settings/real-build tests PASS; typecheck PASS; lint baseline warnings only; full suite and build PASS; diff check PASS. Desktop external-link verification remains assigned to P10-CORRECTIVE-M.
+Compatibility notes: Catalog v2 remains transition-compatible; no CharacterDocument schema or external metadata persistence.
+Commit: see Git history for P10-CORRECTIVE-L.
+
 2026-08-01 — Post-gate compatibility corrections — complete
 Summary: Corrected Phase 6 compatibility gaps: minAppVersion 1.7.0→1.7.2 (required for Workspace.revealLeaf), package.json version 0.0.0→0.1.0 (aligned with manifest), versions.json created with {"0.1.0": "1.7.2"}, API_USAGE.md corrected for PluginSettingTab.display and Plugin.onload signatures.
 Validation: `npm --prefix obsidian-dnd-character run check` passes (typecheck + lint, 2821/2823 tests). `npm --prefix obsidian-dnd-character run build` passes (EXIT 0). `npm --workspace @obsidian-dnd/obsidian-plugin run bundle` passes (CJS, obsidian external, no prohibited deps).
