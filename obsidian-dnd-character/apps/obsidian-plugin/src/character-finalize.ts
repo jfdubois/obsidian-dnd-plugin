@@ -26,11 +26,11 @@ import type {
   Ruleset,
   Ability,
   ChoiceInstanceId,
+  CatalogRevision,
   EntityId,
 } from "@obsidian-dnd/domain";
 import {
   createCharacterId,
-  createCatalogRevision,
   createClassInstanceId,
   createItemInstanceId,
 } from "@obsidian-dnd/domain";
@@ -42,6 +42,7 @@ import { deriveCreatorCharacterState } from "./creator-derived-state";
 
 export type CharacterFinalizationFailureCode =
   | "creator-incomplete"
+  | "catalog-revision-unavailable"
   | "consequence-blocked"
   | "grant-materialization-failed"
   | "document-validation-failed";
@@ -55,16 +56,16 @@ export type CharacterFinalizationResult =
     diagnostics: readonly { code: string; message: string }[];
   };
 
-export function finalizeCharacter(draft: CharacterDraft): Character | null {
+export function finalizeCharacter(draft: CharacterDraft, catalogRevision: CatalogRevision | undefined): Character | null {
   /* Gate: draft must be fully resolved */
   if (!isDraftComplete(draft)) {
     return null;
   }
 
-  return finalizeResolvedDraft(draft);
+  return catalogRevision === undefined ? null : finalizeResolvedDraft(draft, catalogRevision);
 }
 
-function finalizeResolvedDraft(draft: CharacterDraft): Character | null {
+function finalizeResolvedDraft(draft: CharacterDraft, catalogRevision: CatalogRevision): Character | null {
 
   /* Gate: required entity selections must be populated */
   if (draft.ruleset.ruleset === null) return null;
@@ -78,7 +79,7 @@ function finalizeResolvedDraft(draft: CharacterDraft): Character | null {
 
   return createCharacter({
     id: createCharacterId(now),
-    catalog: buildCatalogReference(),
+    catalog: buildCatalogReference(catalogRevision),
     contentPolicy: buildContentPolicy(draft),
     identity: buildIdentity(draft),
     progression: buildProgression(draft),
@@ -98,8 +99,8 @@ function finalizeResolvedDraft(draft: CharacterDraft): Character | null {
  * current draft and normalized catalog itself: presentation models are
  * disposable and must never become persistence authority.
  */
-export function finalizeCharacterWithCatalog(draft: CharacterDraft, entities: readonly EntityDetailResponse[]): Character | null {
-  const result = finalizeCharacterWithCatalogResult(draft, entities);
+export function finalizeCharacterWithCatalog(draft: CharacterDraft, entities: readonly EntityDetailResponse[], catalogRevision: CatalogRevision | undefined): Character | null {
+  const result = finalizeCharacterWithCatalogResult(draft, entities, catalogRevision);
   return result.status === "success" ? result.character : null;
 }
 
@@ -107,7 +108,10 @@ export function finalizeCharacterWithCatalog(draft: CharacterDraft, entities: re
  * Authoritative finalization with a structured explanation for the Review UI.
  * The nullable wrapper above remains for callers that only need the document.
  */
-export function finalizeCharacterWithCatalogResult(draft: CharacterDraft, entities: readonly EntityDetailResponse[]): CharacterFinalizationResult {
+export function finalizeCharacterWithCatalogResult(draft: CharacterDraft, entities: readonly EntityDetailResponse[], catalogRevision: CatalogRevision | undefined): CharacterFinalizationResult {
+  if (catalogRevision === undefined) {
+    return { status: "failure", code: "catalog-revision-unavailable", message: "Character could not be saved because no active compatible catalog revision is available.", diagnostics: [] };
+  }
   const model = deriveDraftConsequences(draft, entities);
   // Stale draft history is intentionally retained, but is not final state.
   const blockers = model.diagnostics.filter((diagnostic) => diagnostic.code !== "stale-choice");
@@ -126,7 +130,7 @@ export function finalizeCharacterWithCatalogResult(draft: CharacterDraft, entiti
     grantIds.add(String(consequence.grant.id));
   }
 
-  const base = finalizeResolvedDraft(draft);
+  const base = finalizeResolvedDraft(draft, catalogRevision);
   if (base === null) return { status: "failure", code: "creator-incomplete", message: "Character could not be saved because required creator information is incomplete.", diagnostics: [] };
   const inventory = [...base.inventory];
   const currency = { ...base.currency };
@@ -172,8 +176,7 @@ function isMaterializableGrant(grant: RuleGrant, entities: readonly EntityDetail
 
 /* ── Field builders ────────────────────────────────────────────── */
 
-function buildCatalogReference() {
-  const revision = createCatalogRevision("default");
+function buildCatalogReference(revision: CatalogRevision) {
   return createCharacterCatalogReference({
     catalogSchemaVersion: 1,
     createdWithRevision: revision,

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { App, TFile } from "obsidian";
-import { createEntityId, createRuleGrantId, createSourceId } from "@obsidian-dnd/domain";
+import { createCatalogRevision, createEntityId, createRuleGrantId, createSourceId } from "@obsidian-dnd/domain";
 import type { BackgroundRule, ClassRule, RuleGrant, SpeciesRule } from "@obsidian-dnd/catalog-contract";
 import { createEmptyCharacterDraft, markStepResolved } from "./character-draft";
 import { finalizeCharacterWithCatalog } from "./character-finalize";
@@ -11,6 +11,7 @@ vi.mock("./character-folder", () => ({ ensureCharacterFolder: vi.fn().mockResolv
 import { createCharacterInVault } from "./character-create";
 
 const source = createSourceId("persistence"); const speciesId = createEntityId("species:2024:persistence"); const backgroundId = createEntityId("background:2024:persistence"); const classId = createEntityId("class:2024:persistence");
+const revision = createCatalogRevision("creator-persistence-test-revision");
 const dice: RuleGrant = { id: createRuleGrantId("grant:persistence:dice"), type: "currency", denomination: "gp", amount: { type: "dice", count: 2, dieSides: 4, multiplier: 10 } };
 function species(): SpeciesRule { return { id: speciesId, kind: "species", name: "Species", sourceId: source, ruleset: "2024", access: "core", legacy: false, content: [], prerequisites: [], effects: [], grants: [dice], choices: [], dependencies: [], size: "Medium", speed: 30, darkvision: false, languageIds: [], traitDefs: [] }; }
 function background(): BackgroundRule { return { id: backgroundId, kind: "background", name: "Background", sourceId: source, ruleset: "2024", access: "core", legacy: false, content: [], prerequisites: [], effects: [], grants: [], choices: [], dependencies: [], skillProficiencies: [] }; }
@@ -23,8 +24,8 @@ describe("creator finalization persistence boundary", () => {
   it("does not write invalid drafts, and a failed write followed by retry uses the unchanged resolved result", async () => {
     const value = draft(); const entities = [species(), background(), cls()]; const beforeDraft = structuredClone(value); const beforeCatalog = structuredClone(entities);
     const invalid = structuredClone(value); delete invalid.randomGrantResolutions[dice.id];
-    expect(finalizeCharacterWithCatalog(invalid, entities)).toBeNull(); expect(create).not.toHaveBeenCalled();
-    const first = finalizeCharacterWithCatalog(value, entities)!; const second = finalizeCharacterWithCatalog(value, entities)!;
+    expect(finalizeCharacterWithCatalog(invalid, entities, revision)).toBeNull(); expect(create).not.toHaveBeenCalled();
+    const first = finalizeCharacterWithCatalog(value, entities, revision)!; const second = finalizeCharacterWithCatalog(value, entities, revision)!;
     expect(first.currency.gp).toBe(60); expect(second.currency.gp).toBe(60); expect(first.inventory).toEqual(second.inventory);
     const vaultCreate = vi.fn().mockRejectedValueOnce(new Error("write failed")).mockImplementation(async (path: string, content: string) => { files[path] = content; return { path } as TFile; });
     const app = { vault: { getFileByPath: vi.fn(() => null), create: vaultCreate } } as unknown as App;

@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import type { App, TFile } from "obsidian";
 import { createCatalogRevision, type CatalogRevision } from "@obsidian-dnd/domain";
-import { deserializeCharacter, isCharacter } from "@obsidian-dnd/character-contract";
+import { deserializeCharacter, isCharacter, type Character } from "@obsidian-dnd/character-contract";
 import type { EntityDetailResponse } from "@obsidian-dnd/catalog-contract";
 import type { CatalogService } from "./catalog/catalog-service";
 import { CharacterCreatorModal } from "./character-creator-modal";
@@ -12,7 +12,7 @@ import { createEmptyCharacterDraft, isDraftComplete, markStepResolved } from "./
 import { ALL_DRAFT_STEPS } from "./character-draft-steps";
 import { buildReviewSnapshot } from "./character-review-snapshot";
 
-const revision = createCatalogRevision("5etools-3c5d9d3-b3");
+const revision = createCatalogRevision("5etools-test-revision-123");
 const catalogRoot = new URL("../../catalog-server/catalog/v1/revisions/5etools-3c5d9d3-b3/entities/", import.meta.url);
 
 function catalogEntity(kind: string, id: string): EntityDetailResponse {
@@ -61,9 +61,9 @@ function representativeDraft() {
   return draft;
 }
 
-function catalog(): CatalogService {
+function catalog(activeRevision: CatalogRevision | null = revision): CatalogService {
   return {
-    getRuntimeStatus: () => ({ state: "current", activeRevision: revision }),
+    getRuntimeStatus: () => activeRevision === null ? { state: "inactive" as const } : { state: "current" as const, activeRevision },
     fetchIndex: vi.fn(async (_revision: CatalogRevision, kind: string) => entities
       .filter((entity) => entity.kind === kind)
       .map((entity) => ({ id: entity.id, kind: entity.kind, name: entity.name, detailPath: String(entity.id) }))),
@@ -78,7 +78,7 @@ interface ModalAccess {
 }
 
 describe("2014 Review → Save production pipeline", () => {
-  it("S0-S8 persists the normalized representative once, then closes after the vault succeeds", async () => {
+  it("S0-S8 persists the active catalog revision through finalization and the vault", async () => {
     const draft = representativeDraft();
     const files: Record<string, string> = {};
     const stages: string[] = [];
@@ -105,7 +105,7 @@ describe("2014 Review → Save production pipeline", () => {
     expect(access.controller.jumpTo("review")).toBe(true);
     expect(access.controller.canSave()).toBe(true);
     expect(isDraftComplete(draft)).toBe(true);
-    expect(buildReviewSnapshot(draft, entities)?.derived.hitPoints).toEqual({ maximum: 12, initialCurrent: 12 });
+    expect(buildReviewSnapshot(draft, entities, revision)?.derived.hitPoints).toEqual({ maximum: 12, initialCurrent: 12 });
     const close = vi.spyOn(modal, "close");
 
     await access.handleSave();
@@ -117,9 +117,20 @@ describe("2014 Review → Save production pipeline", () => {
     expect(persist).toHaveBeenCalledTimes(1);
     expect(close).toHaveBeenCalledOnce();
     expect(stages).toEqual(["S0", "S1", "S2", "S3", "S4", "S5", "S6", "S7", "S8"]);
-    const saved = deserializeCharacter(Object.values(files)[0]!);
+    const serialized = Object.values(files)[0]!;
+    expect(JSON.parse(serialized).catalog).toEqual({
+      catalogSchemaVersion: 1,
+      createdWithRevision: revision,
+      lastValidatedRevision: revision,
+    });
+    const saved = deserializeCharacter(serialized);
     expect(isCharacter(saved)).toBe(true);
     expect(saved.origins).toEqual({ speciesId: elf.id, backgroundId: acolyte.id });
+    expect(saved.catalog).toEqual({
+      catalogSchemaVersion: 1,
+      createdWithRevision: revision,
+      lastValidatedRevision: revision,
+    });
     expect(saved.progression.classes[0]?.classId).toBe(barbarian.id);
     expect(saved.resources.currentHp).toBe(12);
     expect(saved.spells.selections).toEqual([]);
@@ -130,6 +141,39 @@ describe("2014 Review → Save production pipeline", () => {
     expect(JSON.stringify(saved)).not.toContain("optionQuery");
     expect(JSON.stringify(saved)).not.toContain("dieSides");
 		await expect(repository.read(saved.id)).resolves.toMatchObject({ status: "read", character: saved });
+  });
+
+  it("persists the exact non-default revision from the active catalog runtime state", async () => {
+    const activeRevision = createCatalogRevision("5etools-test-revision-123");
+    let persisted: Character | undefined;
+    const persist = vi.fn(async (character: Character) => {
+      persisted = character;
+      return { status: "created" as const };
+    });
+    const modal = new CharacterCreatorModal({} as App, representativeDraft(), persist, catalog(activeRevision));
+    const access = modal as unknown as ModalAccess;
+    for (const origin of ["species", "background", "class"] as const) access.controller.setOriginConsequenceCompletion(origin, true);
+
+    await access.handleSave();
+
+    expect(persist).toHaveBeenCalledOnce();
+    expect(persisted?.catalog).toEqual({
+      catalogSchemaVersion: 1,
+      createdWithRevision: activeRevision,
+      lastValidatedRevision: activeRevision,
+    });
+  });
+
+  it("fails before persistence when no active catalog revision is available", async () => {
+    const persist = vi.fn();
+    const modal = new CharacterCreatorModal({} as App, representativeDraft(), persist, catalog(null));
+    const access = modal as unknown as ModalAccess;
+    for (const origin of ["species", "background", "class"] as const) access.controller.setOriginConsequenceCompletion(origin, true);
+
+    await access.handleSave();
+
+    expect(persist).not.toHaveBeenCalled();
+    expect(access.saveDiagnostic).toMatchObject({ category: "catalog", message: expect.stringContaining("active catalog is unavailable") });
   });
 
   it("projects an authoritative finalization blocker on Review without persistence", async () => {

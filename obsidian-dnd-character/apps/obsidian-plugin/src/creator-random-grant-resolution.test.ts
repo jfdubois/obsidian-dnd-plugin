@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createChoiceDefinitionId, createChoiceOptionId, createEntityId, createRuleGrantId, createSourceId } from "@obsidian-dnd/domain";
+import { createCatalogRevision, createChoiceDefinitionId, createChoiceOptionId, createEntityId, createRuleGrantId, createSourceId } from "@obsidian-dnd/domain";
 import type { BackgroundRule, ChoiceDefinition, ClassRule, RuleGrant, SpeciesRule } from "@obsidian-dnd/catalog-contract";
 import { createEmptyCharacterDraft, markStepResolved } from "./character-draft";
 import { deriveDraftConsequences, clearCreatorRandomGrant, resolveCreatorRandomGrant, setCreatorChoice, setCreatorOrigin } from "./creator-draft-commands";
@@ -8,6 +8,7 @@ import { finalizeCharacterWithCatalog } from "./character-finalize";
 import { ALL_DRAFT_STEPS } from "./character-draft-steps";
 
 const sourceId = createSourceId("test");
+const revision = createCatalogRevision("random-grant-test-revision");
 const speciesId = createEntityId("species:2024:random:test");
 const otherSpeciesId = createEntityId("species:2024:random:other");
 const classId = createEntityId("class:2024:random:test");
@@ -122,12 +123,12 @@ describe("creator random grant resolution", () => {
 
   it("blocks finalization only for active missing or invalid dice results, never inactive historical state", () => {
     const draft = completeDraft(); const entities = [species(), background(), classRule()];
-    expect(finalizeCharacterWithCatalog(draft, entities)).toBeNull();
+    expect(finalizeCharacterWithCatalog(draft, entities, revision)).toBeNull();
     draft.randomGrantResolutions[diceId] = 73;
-    expect(finalizeCharacterWithCatalog(draft, entities)).toBeNull();
+    expect(finalizeCharacterWithCatalog(draft, entities, revision)).toBeNull();
     draft.species.speciesId = otherSpeciesId;
     const inactive = deriveDraftConsequences(draft, [species(otherSpeciesId, []), background(), classRule()]);
     expect(inactive.diagnostics.map((entry) => entry.code)).not.toContain("invalid-random-grant");
-    expect(finalizeCharacterWithCatalog(draft, [species(otherSpeciesId, []), background(), classRule()])).not.toBeNull();
+    expect(finalizeCharacterWithCatalog(draft, [species(otherSpeciesId, []), background(), classRule()], revision)).not.toBeNull();
   });
 });

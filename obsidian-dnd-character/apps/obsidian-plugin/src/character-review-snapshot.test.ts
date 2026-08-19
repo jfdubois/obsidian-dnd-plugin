@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import type { EntityDetailResponse } from "@obsidian-dnd/catalog-contract";
+import { createCatalogRevision } from "@obsidian-dnd/domain";
 import { createEmptyCharacterDraft, markStepResolved } from "./character-draft";
 import { ALL_DRAFT_STEPS } from "./character-draft-steps";
 import { buildReviewSnapshot } from "./character-review-snapshot";
@@ -8,6 +9,7 @@ import { buildCreatorPreview } from "./creator-preview";
 import { finalizeCharacterWithCatalog } from "./character-finalize";
 
 const catalogRoot = new URL("../../catalog-server/catalog/v1/revisions/5etools-3c5d9d3-b3/entities/", import.meta.url);
+const revision = createCatalogRevision("5etools-3c5d9d3-b3");
 
 function entity(kind: string, id: string): EntityDetailResponse {
   return JSON.parse(readFileSync(new URL(`${kind}/${id}.json`, catalogRoot), "utf8")) as EntityDetailResponse;
@@ -52,7 +54,7 @@ function representativeDraft() {
 describe("buildReviewSnapshot", () => {
   it("derives PHB Elf origin effects and initial HP through the production catalog", () => {
     const draft = representativeDraft();
-    const snapshot = buildReviewSnapshot(draft, entities);
+    const snapshot = buildReviewSnapshot(draft, entities, revision);
 
     expect(snapshot?.abilities.scores).toEqual({ STR: 10, DEX: 10, CON: 10, INT: 10, WIS: 10, CHA: 10 });
     expect(snapshot?.derived.abilities).toEqual(expect.arrayContaining([
@@ -67,8 +69,8 @@ describe("buildReviewSnapshot", () => {
 
   it("saves the preview-derived initial HP without persisting derived totals", () => {
     const draft = representativeDraft();
-    const preview = buildCreatorPreview(draft, entities);
-    const character = finalizeCharacterWithCatalog(draft, entities);
+    const preview = buildCreatorPreview(draft, entities, revision);
+    const character = finalizeCharacterWithCatalog(draft, entities, revision);
 
     expect(character?.resources.currentHp).toBe(preview?.projection.maxHp.totalHp);
     expect(character?.resources.currentHp).toBe(12);
@@ -80,9 +82,9 @@ describe("buildReviewSnapshot", () => {
 
   it("updates derived consequences after an origin change without rewriting base ability state", () => {
     const draft = representativeDraft();
-    const elfSnapshot = buildReviewSnapshot(draft, entities);
+    const elfSnapshot = buildReviewSnapshot(draft, entities, revision);
     draft.species.speciesId = human.id;
-    const humanSnapshot = buildReviewSnapshot(draft, entities);
+    const humanSnapshot = buildReviewSnapshot(draft, entities, revision);
 
     expect(elfSnapshot?.derived.abilities.find((entry) => entry.ability === "DEX")?.finalScore).toBe(12);
     expect(humanSnapshot?.derived.abilities.find((entry) => entry.ability === "DEX")?.finalScore).toBe(10);
@@ -90,6 +92,6 @@ describe("buildReviewSnapshot", () => {
   });
 
   it("returns null before the draft is complete", () => {
-    expect(buildReviewSnapshot(createEmptyCharacterDraft(), entities)).toBeNull();
+    expect(buildReviewSnapshot(createEmptyCharacterDraft(), entities, revision)).toBeNull();
   });
 });

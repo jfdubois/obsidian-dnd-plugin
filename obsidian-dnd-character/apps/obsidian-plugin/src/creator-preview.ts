@@ -4,6 +4,7 @@ import type { CharacterSheetProjection } from "@obsidian-dnd/rules-engine";
 import type { CharacterDraft } from "./character-draft";
 import { finalizeCharacterWithCatalogResult } from "./character-finalize";
 import { deriveCreatorCharacterState } from "./creator-derived-state";
+import type { CatalogRevision } from "@obsidian-dnd/domain";
 
 /** Disposable creator review state. It contains no persisted catalog copies. */
 export interface CreatorPreview {
@@ -14,8 +15,9 @@ export interface CreatorPreview {
 export function buildCreatorPreview(
   draft: CharacterDraft,
   entities: readonly EntityDetailResponse[],
+  catalogRevision: CatalogRevision | undefined,
 ): CreatorPreview | null {
-  const finalization = finalizeCharacterWithCatalogResult(draft, entities);
+  const finalization = finalizeCharacterWithCatalogResult(draft, entities, catalogRevision);
   if (finalization.status === "failure") return null;
   return {
     character: finalization.character,

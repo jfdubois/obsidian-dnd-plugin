@@ -5,13 +5,16 @@ import {
   createChoiceInstanceId,
   createChoiceDefinitionId,
   createItemInstanceId,
+  createCatalogRevision,
 } from "@obsidian-dnd/domain";
 import type { CharacterChoice } from "@obsidian-dnd/character-contract";
 import { isCharacter } from "@obsidian-dnd/character-contract";
 
 import { createEmptyCharacterDraft, markStepResolved } from "./character-draft";
-import { finalizeCharacter } from "./character-finalize";
+import { finalizeCharacter, finalizeCharacterWithCatalogResult } from "./character-finalize";
 import { ALL_DRAFT_STEPS } from "./character-draft-steps";
+
+const revision = createCatalogRevision("finalize-test-revision");
 
 /* ── Helpers ───────────────────────────────────────────────────── */
 
@@ -78,15 +81,34 @@ function makeCompleteDraft(): ReturnType<typeof createEmptyCharacterDraft> {
 describe("finalizeCharacter", () => {
   it("returns a valid Character from a complete draft", () => {
     const draft = makeCompleteDraft();
-    const result = finalizeCharacter(draft);
+    const result = finalizeCharacter(draft, revision);
 
     expect(result).not.toBeNull();
     expect(isCharacter(result!)).toBe(true);
   });
 
+  it("uses the supplied active revision in the complete catalog input passed to Character construction", () => {
+    const activeRevision = createCatalogRevision("5etools-test-revision-123");
+
+    const result = finalizeCharacter(makeCompleteDraft(), activeRevision);
+
+    expect(result?.catalog).toEqual({
+      catalogSchemaVersion: 1,
+      createdWithRevision: activeRevision,
+      lastValidatedRevision: activeRevision,
+    });
+  });
+
+  it("returns an actionable finalization failure when no active revision reaches the boundary", () => {
+    expect(finalizeCharacterWithCatalogResult(makeCompleteDraft(), [], undefined)).toMatchObject({
+      status: "failure",
+      code: "catalog-revision-unavailable",
+    });
+  });
+
   it("maps content policy from draft sources", () => {
     const draft = makeCompleteDraft();
-    const result = finalizeCharacter(draft);
+    const result = finalizeCharacter(draft, revision);
 
     expect(result).not.toBeNull();
     expect(result!.contentPolicy.ruleset).toBe("2024");
@@ -96,7 +118,7 @@ describe("finalizeCharacter", () => {
 
   it("maps identity from draft identity data", () => {
     const draft = makeCompleteDraft();
-    const result = finalizeCharacter(draft);
+    const result = finalizeCharacter(draft, revision);
 
     expect(result).not.toBeNull();
     expect(result!.identity.name).toBe("Aragorn");
@@ -105,7 +127,7 @@ describe("finalizeCharacter", () => {
 
   it("maps origins from species and background selections", () => {
     const draft = makeCompleteDraft();
-    const result = finalizeCharacter(draft);
+    const result = finalizeCharacter(draft, revision);
 
     expect(result).not.toBeNull();
     expect(result!.origins.speciesId).toBe(createEntityId("species:2024:xphb:human"));
@@ -114,7 +136,7 @@ describe("finalizeCharacter", () => {
 
   it("maps class to progression.classes", () => {
     const draft = makeCompleteDraft();
-    const result = finalizeCharacter(draft);
+    const result = finalizeCharacter(draft, revision);
 
     expect(result).not.toBeNull();
     expect(result!.progression.classes).toHaveLength(1);
@@ -170,7 +192,7 @@ describe("finalizeCharacter", () => {
       markStepResolved(draft, step);
     }
 
-    const result = finalizeCharacter(draft);
+    const result = finalizeCharacter(draft, revision);
 
     expect(result).not.toBeNull();
     const speciesChoiceId = createChoiceInstanceId("feat-1");
@@ -182,7 +204,7 @@ describe("finalizeCharacter", () => {
 
   it("maps ability scores to character abilities", () => {
     const draft = makeCompleteDraft();
-    const result = finalizeCharacter(draft);
+    const result = finalizeCharacter(draft, revision);
 
     expect(result).not.toBeNull();
     expect(result!.abilities.scores.STR).toBe(15);
@@ -191,7 +213,7 @@ describe("finalizeCharacter", () => {
 
   it("maps equipment items to inventory", () => {
     const draft = makeCompleteDraft();
-    const result = finalizeCharacter(draft);
+    const result = finalizeCharacter(draft, revision);
 
     expect(result).not.toBeNull();
     expect(result!.inventory).toHaveLength(1);
@@ -200,7 +222,7 @@ describe("finalizeCharacter", () => {
 
   it("does not persist candidate lists or catalog copies", () => {
     const draft = makeCompleteDraft();
-    const result = finalizeCharacter(draft);
+    const result = finalizeCharacter(draft, revision);
 
     expect(result).not.toBeNull();
     // Character has no field for candidate lists
@@ -213,55 +235,55 @@ describe("finalizeCharacter", () => {
   it("returns null for incomplete draft", () => {
     const draft = createEmptyCharacterDraft();
     // No steps resolved
-    const result = finalizeCharacter(draft);
+    const result = finalizeCharacter(draft, revision);
     expect(result).toBeNull();
   });
 
   it("returns null when species is not selected", () => {
     const draft = makeCompleteDraft();
     draft.species.speciesId = null;
-    const result = finalizeCharacter(draft);
+    const result = finalizeCharacter(draft, revision);
     expect(result).toBeNull();
   });
 
   it("returns null when background is not selected", () => {
     const draft = makeCompleteDraft();
     draft.background.backgroundId = null;
-    const result = finalizeCharacter(draft);
+    const result = finalizeCharacter(draft, revision);
     expect(result).toBeNull();
   });
 
   it("returns null when class is not selected", () => {
     const draft = makeCompleteDraft();
     draft.class.classId = null;
-    const result = finalizeCharacter(draft);
+    const result = finalizeCharacter(draft, revision);
     expect(result).toBeNull();
   });
 
   it("returns null when identity name is empty", () => {
     const draft = makeCompleteDraft();
     draft.identity.name = "";
-    const result = finalizeCharacter(draft);
+    const result = finalizeCharacter(draft, revision);
     expect(result).toBeNull();
   });
 
   it("returns null when ability scores are missing", () => {
     const draft = makeCompleteDraft();
     draft.abilities.scores = undefined;
-    const result = finalizeCharacter(draft);
+    const result = finalizeCharacter(draft, revision);
     expect(result).toBeNull();
   });
 
   it("returns null when ruleset is not selected", () => {
     const draft = makeCompleteDraft();
     draft.ruleset.ruleset = null;
-    const result = finalizeCharacter(draft);
+    const result = finalizeCharacter(draft, revision);
     expect(result).toBeNull();
   });
 
   it("sets metadata timestamps", () => {
     const draft = makeCompleteDraft();
-    const result = finalizeCharacter(draft);
+    const result = finalizeCharacter(draft, revision);
 
     expect(result).not.toBeNull();
     expect(result!.metadata.createdAt).toBeDefined();
@@ -271,7 +293,7 @@ describe("finalizeCharacter", () => {
 
   it("initializes non-HP mutable resources with default starting values", () => {
     const draft = makeCompleteDraft();
-    const result = finalizeCharacter(draft);
+    const result = finalizeCharacter(draft, revision);
 
     expect(result).not.toBeNull();
     expect(result!.resources.temporaryHp).toBe(0);
@@ -282,7 +304,7 @@ describe("finalizeCharacter", () => {
 
   it("initializes empty overrides", () => {
     const draft = makeCompleteDraft();
-    const result = finalizeCharacter(draft);
+    const result = finalizeCharacter(draft, revision);
 
     expect(result).not.toBeNull();
     expect(result!.overrides).toEqual({});
@@ -290,7 +312,7 @@ describe("finalizeCharacter", () => {
 
   it("sets schema version on result", () => {
     const draft = makeCompleteDraft();
-    const result = finalizeCharacter(draft);
+    const result = finalizeCharacter(draft, revision);
 
     expect(result).not.toBeNull();
     expect(result!.schemaVersion).toBe(2);

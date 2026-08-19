@@ -4,6 +4,7 @@
 
 import { describe, it, expect } from "vitest";
 import {
+  createCatalogRevision,
   createEntityId,
   createSourceId,
   createChoiceInstanceId,
@@ -21,6 +22,8 @@ import {
 import { ALL_DRAFT_STEPS } from "./character-draft-steps";
 import { buildReviewSnapshot } from "./character-review-snapshot";
 import { finalizeCharacter } from "./character-finalize";
+
+const revision = createCatalogRevision("state-machine-test-revision");
 
 /* ── Helpers ───────────────────────────────────────────────────── */
 
@@ -88,7 +91,7 @@ describe("Creator state-machine lifecycle (CRE-011)", () => {
   describe("Review snapshot generation", () => {
     it("buildReviewSnapshot requires normalized catalog details for a derived result", () => {
       const draft = buildCompleteDraft();
-      expect(buildReviewSnapshot(draft, [])).toBeNull();
+      expect(buildReviewSnapshot(draft, [], revision)).toBeNull();
 
     });
 
@@ -96,7 +99,7 @@ describe("Creator state-machine lifecycle (CRE-011)", () => {
       const draft = buildCompleteDraft();
       draft.spellEligibility.isSpellcaster = true;
       draft.stepStatuses.set("spells", "unvisited");
-      const snapshot = buildReviewSnapshot(draft, []);
+      const snapshot = buildReviewSnapshot(draft, [], revision);
       expect(snapshot).toBeNull();
     });
   });
@@ -106,14 +109,14 @@ describe("Creator state-machine lifecycle (CRE-011)", () => {
   describe("Atomic final save", () => {
     it("finalizeCharacter returns a valid Character object from a complete draft", () => {
       const draft = buildCompleteDraft();
-      const character = finalizeCharacter(draft);
+      const character = finalizeCharacter(draft, revision);
       expect(character).not.toBeNull();
       expect(isCharacter(character!)).toBe(true);
     });
 
     it("finalizeCharacter returns null for an incomplete draft", () => {
       const draft = createEmptyCharacterDraft();
-      const character = finalizeCharacter(draft);
+      const character = finalizeCharacter(draft, revision);
       expect(character).toBeNull();
     });
   });
@@ -132,11 +135,11 @@ describe("Creator state-machine lifecycle (CRE-011)", () => {
       expect(complete.diagnostics).toHaveLength(0);
 
       // 3. Build review snapshot
-      const snapshot = buildReviewSnapshot(complete, []);
+      const snapshot = buildReviewSnapshot(complete, [], revision);
       expect(snapshot).toBeNull();
 
       // 4. Finalize to Character
-      const character = finalizeCharacter(complete);
+      const character = finalizeCharacter(complete, revision);
       expect(character).not.toBeNull();
       expect(isCharacter(character!)).toBe(true);
       expect(character!.identity.name).toBe("Aragorn");

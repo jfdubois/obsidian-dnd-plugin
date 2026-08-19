@@ -19,7 +19,7 @@ import type {
   DraftSpellData,
 } from "./character-draft-steps";
 import { isDraftCompleteWithoutCatalogOriginChoices } from "./character-draft";
-import type { ChoiceInstanceId } from "@obsidian-dnd/domain";
+import type { CatalogRevision, ChoiceInstanceId } from "@obsidian-dnd/domain";
 import type { CharacterChoice } from "@obsidian-dnd/character-contract";
 import type { EntityDetailResponse, RuleEffect } from "@obsidian-dnd/catalog-contract";
 import type { EffectProvenance } from "@obsidian-dnd/rules-engine";
@@ -80,11 +80,12 @@ export interface ReviewSnapshot {
 export function buildReviewSnapshot(
   draft: CharacterDraft,
   entities: readonly EntityDetailResponse[],
+  catalogRevision: CatalogRevision | undefined,
 ): ReviewSnapshot | null {
   if (!isDraftCompleteWithoutCatalogOriginChoices(draft)) {
     return null;
   }
-  const preview = buildCreatorPreview(draft, entities);
+  const preview = buildCreatorPreview(draft, entities, catalogRevision);
   if (preview === null) return null;
   const abilityContributions = preview.projection.effects.flatMap((entry) => {
     const effect: RuleEffect = entry.effect;

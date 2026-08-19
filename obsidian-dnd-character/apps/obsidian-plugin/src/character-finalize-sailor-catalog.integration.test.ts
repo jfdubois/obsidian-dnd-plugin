@@ -75,7 +75,7 @@ describe("catalog-backed finalization dependency hydration", () => {
     const summary = itemSummary(silkRopeId);
     const fixture = catalogForItem();
     const loaded = await loadCreatorConsequenceReadModel(completedSailorDraft(), fixture.catalog, revision, origins());
-    const result = finalizeCharacterWithCatalogResult(completedSailorDraft(), loaded.entities);
+    const result = finalizeCharacterWithCatalogResult(completedSailorDraft(), loaded.entities, revision);
 
     expect(fixture.fetchEntity).toHaveBeenCalledWith(revision, silkRopeId, summary.detailPath);
     expect(result.status).toBe("success");
@@ -91,7 +91,7 @@ describe("catalog-backed finalization dependency hydration", () => {
     const loaded = await loadCreatorConsequenceReadModel(completedSailorDraft(), fixture.catalog, revision, origins());
 
     expect(fixture.networkLoads()).toBe(0);
-    expect(finalizeCharacterWithCatalogResult(completedSailorDraft(), loaded.entities).status).toBe("success");
+    expect(finalizeCharacterWithCatalogResult(completedSailorDraft(), loaded.entities, revision).status).toBe("success");
   });
 
   it("rejects an item grant genuinely absent from the active item index", async () => {

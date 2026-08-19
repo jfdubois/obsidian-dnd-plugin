@@ -1468,7 +1468,7 @@ export class CharacterCreatorModal extends ObsidianModal {
       const origins = await Promise.all(summaries.map(async (summary) =>
         (await catalog.fetchEntity(revision, summary!.id, summary!.detailPath)).data));
       const model = await loadCreatorConsequenceReadModel(draft, catalog, revision, origins);
-      const snapshot = buildReviewSnapshot(draft, model.entities);
+      const snapshot = buildReviewSnapshot(draft, model.entities, revision);
       if (snapshot === null) {
         review.createEl("p", { text: "Cannot display review: draft is incomplete or its derived state could not be resolved." });
         return;
@@ -1671,8 +1671,12 @@ export class CharacterCreatorModal extends ObsidianModal {
     }
 
     const catalog = this.catalogService;
-    const revision = catalog?.getRuntimeStatus().activeRevision;
-    if (catalog === null || catalog === undefined || revision === undefined) {
+    const status = catalog?.getRuntimeStatus();
+    const revision = status?.activeRevision;
+    const isCompatibleActiveRevision = status !== undefined
+      && revision !== undefined
+      && (status.state === "current" || status.state === "update-available" || status.state === "cached-offline" || status.state === "stale-offline");
+    if (catalog === null || catalog === undefined || !isCompatibleActiveRevision) {
       this.presentSaveDiagnostic("catalog", "Character could not be saved because the active catalog is unavailable. Refresh the catalog and try again.");
       return;
     }
@@ -1697,7 +1701,7 @@ export class CharacterCreatorModal extends ObsidianModal {
       const loaded = await loadCreatorConsequenceReadModel(draft, catalog, revision, origins);
       this.onSavePipelineStage?.("S2");
       this.onSavePipelineStage?.("S3");
-      const finalization = finalizeCharacterWithCatalogResult(draft, loaded.entities);
+      const finalization = finalizeCharacterWithCatalogResult(draft, loaded.entities, revision);
       if (finalization.status === "failure") {
         this.onSavePipelineStage?.("S4");
         const diagnostic = finalization.diagnostics[0];
