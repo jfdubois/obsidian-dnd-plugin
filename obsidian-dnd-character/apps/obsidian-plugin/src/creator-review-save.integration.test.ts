@@ -72,12 +72,66 @@ function catalog(activeRevision: CatalogRevision | null = revision): CatalogServ
 }
 
 interface ModalAccess {
-  controller: { setOriginConsequenceCompletion(origin: "species" | "background" | "class", complete: boolean): void; jumpTo(step: "review"): boolean; canSave(): boolean };
+  controller: {
+    draft: ReturnType<typeof createEmptyCharacterDraft>;
+    setOriginConsequenceCompletion(origin: "species" | "background" | "class", complete: boolean): void;
+    jumpTo(step: "review"): boolean;
+    canSave(): boolean;
+  };
   handleSave(): Promise<void>;
   saveDiagnostic: { category: string; message: string } | null;
 }
 
 describe("2014 Review → Save production pipeline", () => {
+  it("uses the runtime-opened modal save path to pass the active revision unchanged to repository persistence and vault serialization", async () => {
+    const files: Record<string, string> = {};
+    const folders = new Set<string>();
+    const vaultCreate = vi.fn(async (path: string, contents: string) => {
+      files[path] = contents;
+      return { path } as TFile;
+    });
+    const app = { vault: {
+      getFolderByPath: vi.fn((path: string) => folders.has(path) ? { path } : null),
+      getFileByPath: vi.fn((path: string) => files[path] === undefined ? null : { path }),
+      createFolder: vi.fn(async (path: string) => { folders.add(path); return { path }; }),
+      create: vaultCreate,
+    }, notice: vi.fn() } as unknown as App;
+    const repository = new CharacterRepository(app, "characters");
+    const repositoryCreate = vi.spyOn(repository, "create");
+    const runtime = new CharacterCreatorRuntime(app, repository, catalog(revision));
+    const open = vi.spyOn(CharacterCreatorModal.prototype, "open").mockImplementation(() => undefined);
+
+    const modal = await runtime.openCreator();
+    open.mockRestore();
+    expect(modal).not.toBeNull();
+    const access = modal as unknown as ModalAccess;
+    Object.assign(access.controller.draft, representativeDraft());
+    for (const origin of ["species", "background", "class"] as const) access.controller.setOriginConsequenceCompletion(origin, true);
+    expect(access.controller.jumpTo("review")).toBe(true);
+
+    await access.handleSave();
+
+    expect(repositoryCreate).toHaveBeenCalledOnce();
+    const persisted = repositoryCreate.mock.calls[0]![0];
+    expect(persisted.catalog).toEqual({
+      catalogSchemaVersion: 1,
+      createdWithRevision: revision,
+      lastValidatedRevision: revision,
+    });
+    expect(vaultCreate).toHaveBeenCalledOnce();
+    const serialized = Object.values(files)[0]!;
+    expect(JSON.parse(serialized).catalog).toEqual({
+      catalogSchemaVersion: 1,
+      createdWithRevision: revision,
+      lastValidatedRevision: revision,
+    });
+    expect(deserializeCharacter(serialized).catalog).toEqual({
+      catalogSchemaVersion: 1,
+      createdWithRevision: revision,
+      lastValidatedRevision: revision,
+    });
+  });
+
   it("S0-S8 persists the active catalog revision through finalization and the vault", async () => {
     const draft = representativeDraft();
     const files: Record<string, string> = {};
