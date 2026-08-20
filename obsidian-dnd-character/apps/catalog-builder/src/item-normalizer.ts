@@ -1,5 +1,7 @@
 import type { CopyModRawRecord } from "./mod-types";
 import { classifyItemSourceScope, type ItemSourceScopeContext } from "./item-source-scope";
+import { classifyRecordAccess } from "./record-access-classifier";
+import { classifyRecordRuleset } from "./ruleset-classifier";
 import { createCanonicalEntityId } from "@obsidian-dnd/domain";
 import { createItemRule, type ItemRule } from "@obsidian-dnd/catalog-contract";
 import {
@@ -111,6 +113,23 @@ function normalizeSingleItem(
     ));
     return { ok: false, diagnostics: Object.freeze(diagnostics) };
   }
+  const rulesetResult = classifyRecordRuleset({
+    record,
+    sourcePath: opts.sourcePath,
+    entityKind: opts.entityKind,
+    recordIndex: opts.recordIndex,
+  });
+  if (!rulesetResult.ok) {
+    diagnostics.push(makeDiagnostic(
+      rulesetResult.diagnostic.code === "INVALID_SOURCE" ? "INVALID_SOURCE" : "UNKNOWN_SOURCE",
+      rulesetResult.diagnostic.message,
+      record.name,
+      opts,
+      rulesetResult.diagnostic.source,
+    ));
+    return { ok: false, diagnostics: Object.freeze(diagnostics) };
+  }
+  const access = classifyRecordAccess(rulesetResult.classification).access;
 
   // 2. Generate canonical entity ID
   const idResult = createCanonicalEntityId({
@@ -151,7 +170,7 @@ function normalizeSingleItem(
     record.name,
     idResult.sourceId,
     scopeResult.ruleset,
-    "core",
+    access,
     category,
     properties,
     requiresAttunement,

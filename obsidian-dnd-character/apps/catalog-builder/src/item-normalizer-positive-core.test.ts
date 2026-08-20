@@ -24,6 +24,24 @@ describe("normalizeItems", () => {
   });
 
   describe("positive normalization", () => {
+    it("uses accepted 2014 record-level core markers", () => {
+      const result = normalizeItems({ records: [makeCopyModRawRecord({ srd: true })], context: ctx });
+
+      expect(result.items[0]!.access).toBe("core");
+    });
+
+    it("uses accepted 2024 record-level core markers", () => {
+      const result = normalizeItems({ records: [makeCopyModRawRecord({ source: "XDMG", srd52: true })], context: ctx });
+
+      expect(result.items[0]!.access).toBe("core");
+    });
+
+    it("keeps an unmarked 2024 item source-gated", () => {
+      const result = normalizeItems({ records: [makeCopyModRawRecord({ source: "XDMG" })], context: ctx });
+
+      expect(result.items[0]!.access).toBe("source");
+    });
+
     it("normalizes a valid PHB item", () => {
       const record = makeCopyModRawRecord();
       const input: ItemNormalizerInput = { records: [record], context: ctx };
@@ -35,7 +53,7 @@ describe("normalizeItems", () => {
       expect(item.kind).toBe("item");
       expect(item.name).toBe("Dagger");
       expect(item.ruleset).toBe("2014");
-      expect(item.access).toBe("core");
+      expect(item.access).toBe("source");
       expect(item.legacy).toBe(false);
       expect(item.content).toEqual([]);
       expect(item.prerequisites).toEqual([]);
