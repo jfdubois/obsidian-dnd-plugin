@@ -47,8 +47,8 @@ None recorded.
 - Pinned source inventory: 502 files, 404 collections, 25672 raw records, 2801 `_copy` records, 317 nested copy chains, 259 `_preserve` payloads, 127 records with `_versions`, 359 version entries, 7 abstract bundles, 50 abstract implementations, 187 copy template references, 21 version template references.
 - Catalog schema version: 3.
 - Active catalog revision: `5etools-3c5d9d3-b4` (real production catalog); the stale immutable `5etools-3c5d9d3-b3` revision remains retained.
-- Production catalog: 3170 entities (1501 × 2014, 1669 × 2024), 8 kinds (background: 36, class: 12, class-feature: 296, feat: 119, item: 1375, species: 39, spell: 740, subclass-feature: 553), 4 sources (dmg, phb, xdmg, xphb).
-- Validation: `valid: true`, 0 duplicates, 0 unresolved references, 38 unmapped-narrative warnings (non-blocking).
+- Production catalog: 3494 inventory entities (1657 × 2014, 1837 × 2024), 9 kinds (background: 36, class: 24, class-feature: 296, feat: 119, item: 1650, language: 37, species: 39, spell: 740, subclass-feature: 553), 4 sources (dmg, phb, xdmg, xphb).
+- Validation: `valid: true`, 0 duplicates, 0 unresolved references, 1341 unmapped-narrative warnings (non-blocking).
 - Smoke catalog `manual-smoke-001` preserved unchanged alongside production revision.
 - Catalog server verified serving `5etools-3c5d9d3-b4` via Docker (nginx:alpine, port 8080).
 
