@@ -16,7 +16,7 @@ export const BUILD_MODES: readonly BuildMode[] = ["full", "incremental"];
  * Bump this value whenever builder behavior changes that could alter catalog output
  * for the same source hash.
  */
-export const BUILDER_VERSION = "b3";
+export const BUILDER_VERSION = "b4";
 
 export function isBuildMode(value: unknown): value is BuildMode {
   return value === "full" || value === "incremental";

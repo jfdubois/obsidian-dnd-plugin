@@ -2,7 +2,7 @@
 
 ## Current work
 
-Phase 10 corrective — P10-CORRECTIVE-N Restore class starting equipment complete; Phase 10 gate reopened pending desktop verification
+Phase 10 corrective — P10-CORRECTIVE-N-R4 published repaired class starting-equipment catalog as immutable b4; Phase 10 gate reopened pending desktop verification
 
 ## PB8-004 automated gate
 
@@ -22,7 +22,7 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-Phase 10 gate — desktop verification of class-origin starting equipment
+Phase 10 gate — desktop revalidation of class-origin starting equipment against catalog revision `5etools-3c5d9d3-b4`
 
 ## Branch baseline
 
@@ -45,12 +45,12 @@ None recorded.
 
 - 5eTools source commit: `3c5d9d3175ca9637132011c75efd73aad7a2364d` pinned and verified clean.
 - Pinned source inventory: 502 files, 404 collections, 25672 raw records, 2801 `_copy` records, 317 nested copy chains, 259 `_preserve` payloads, 127 records with `_versions`, 359 version entries, 7 abstract bundles, 50 abstract implementations, 187 copy template references, 21 version template references.
-- Catalog schema version: 1.
-- Active catalog revision: `5etools-3c5d9d3-b3` (real production catalog).
+- Catalog schema version: 3.
+- Active catalog revision: `5etools-3c5d9d3-b4` (real production catalog); the stale immutable `5etools-3c5d9d3-b3` revision remains retained.
 - Production catalog: 3170 entities (1501 × 2014, 1669 × 2024), 8 kinds (background: 36, class: 12, class-feature: 296, feat: 119, item: 1375, species: 39, spell: 740, subclass-feature: 553), 4 sources (dmg, phb, xdmg, xphb).
 - Validation: `valid: true`, 0 duplicates, 0 unresolved references, 38 unmapped-narrative warnings (non-blocking).
 - Smoke catalog `manual-smoke-001` preserved unchanged alongside production revision.
-- Catalog server verified serving `5etools-3c5d9d3-b3` via Docker (nginx:alpine, port 8080).
+- Catalog server verified serving `5etools-3c5d9d3-b4` via Docker (nginx:alpine, port 8080).
 
 ## Plugin baseline
 
@@ -84,13 +84,19 @@ None recorded.
 - Phase 9 starting commit: a362900
 - Completed Phase 9 task commits: P9-T001 — see Git history for P9-T001; P9-T002 — see Git history for P9-T002; P9-T003 — see Git history for P9-T003; P9-T004 — see Git history for P9-T004; P9-T005 — see Git history for P9-T005; P9-T006 — see Git history for P9-T006; P9-T007 — see Git history for P9-T007; P9-T008 — see Git history for P9-T008; P9-T009 — see Git history for P9-T009; P9-T010 — see Git history for P9-T010; P9-T011 — see Git history for P9-T011; P9-T012 — c3032a7; P9-T013 — 2111f0c; P9-T014 — 541120b; P9-T015 — 2db464f; P9-T016 — a0d9726; P9-T017 — see Git history for P9-T017; P9-T018 — see Git history for P9-T018
 - Phase 10 starting commit: 77baeed
-- Completed Phase 10 task commits: P10-T001 — see Git history for P10-T001; P10-T002 — see Git history for P10-T002; P10-T003 — see Git history for P10-T003; P10-T004 — see Git history for P10-T004; P10-T005 — see Git history for P10-T005; P10-T006 — see Git history for P10-T006; P10-T007 — see Git history for P10-T007; P10-T008 — see Git history for P10-T008; P10-T009 — 0b69134; P10-T010 — see Git history for P10-T010; P10-T011 — see Git history for P10-T011; P10-T012 — see Git history for P10-T012; P10-T013 — see Git history for P10-T013; P10-T014 — see Git history for P10-T014; P10-T015 — see Git history for P10-T015; P10-T016 — see Git history for P10-T016; P10-T017 — see Git history for P10-T017; P10-T018 — see Git history for P10-T018; P10-T019 — see Git history for P10-T019; P10-T020 — see Git history for P10-T020; P10-T020-CORRECTIVE — see Git history for P10-T020-CORRECTIVE; P10-T020-CORRECTIVE-G-R1 — see Git history for P10-T020-CORRECTIVE-G-R1; P10-CORRECTIVE-H — see Git history for P10-CORRECTIVE-H; P10-CORRECTIVE-H1 — see Git history for P10-CORRECTIVE-H1; P10-CORRECTIVE-H2 — see Git history for P10-CORRECTIVE-H2; P10-CORRECTIVE-H3 — see Git history for P10-CORRECTIVE-H3; P10-CORRECTIVE-H4 — chore(project): complete P10-CORRECTIVE-H4; P10-CORRECTIVE-H5 — chore(project): complete P10-CORRECTIVE-H5; P10-CORRECTIVE-H6 — chore(project): complete P10-CORRECTIVE-H6; P10-CORRECTIVE-I — see Git history for P10-CORRECTIVE-I; P10-CORRECTIVE-J — see Git history for P10-CORRECTIVE-J; P10-CORRECTIVE-K — see Git history for P10-CORRECTIVE-K; P10-CORRECTIVE-L — see Git history for P10-CORRECTIVE-L; P10-CORRECTIVE-M — see Git history for P10-CORRECTIVE-M; P10-CORRECTIVE-N — chore(project): complete P10-CORRECTIVE-N
+- Completed Phase 10 task commits: P10-T001 — see Git history for P10-T001; P10-T002 — see Git history for P10-T002; P10-T003 — see Git history for P10-T003; P10-T004 — see Git history for P10-T004; P10-T005 — see Git history for P10-T005; P10-T006 — see Git history for P10-T006; P10-T007 — see Git history for P10-T007; P10-T008 — see Git history for P10-T008; P10-T009 — 0b69134; P10-T010 — see Git history for P10-T010; P10-T011 — see Git history for P10-T011; P10-T012 — see Git history for P10-T012; P10-T013 — see Git history for P10-T013; P10-T014 — see Git history for P10-T014; P10-T015 — see Git history for P10-T015; P10-T016 — see Git history for P10-T016; P10-T017 — see Git history for P10-T017; P10-T018 — see Git history for P10-T018; P10-T019 — see Git history for P10-T019; P10-T020 — see Git history for P10-T020; P10-T020-CORRECTIVE — see Git history for P10-T020-CORRECTIVE; P10-T020-CORRECTIVE-G-R1 — see Git history for P10-T020-CORRECTIVE-G-R1; P10-CORRECTIVE-H — see Git history for P10-CORRECTIVE-H; P10-CORRECTIVE-H1 — see Git history for P10-CORRECTIVE-H1; P10-CORRECTIVE-H2 — see Git history for P10-CORRECTIVE-H2; P10-CORRECTIVE-H3 — see Git history for P10-CORRECTIVE-H3; P10-CORRECTIVE-H4 — chore(project): complete P10-CORRECTIVE-H4; P10-CORRECTIVE-H5 — chore(project): complete P10-CORRECTIVE-H5; P10-CORRECTIVE-H6 — chore(project): complete P10-CORRECTIVE-H6; P10-CORRECTIVE-I — see Git history for P10-CORRECTIVE-I; P10-CORRECTIVE-J — see Git history for P10-CORRECTIVE-J; P10-CORRECTIVE-K — see Git history for P10-CORRECTIVE-K; P10-CORRECTIVE-L — see Git history for P10-CORRECTIVE-L; P10-CORRECTIVE-M — see Git history for P10-CORRECTIVE-M; P10-CORRECTIVE-N — chore(project): complete P10-CORRECTIVE-N; P10-CORRECTIVE-N-R4 — see Git history for P10-CORRECTIVE-N-R4
 - Phase 10 gate: reopened. Desktop verification of class-origin starting equipment is required before the gate can be closed again.
 - Blocking issue: Phase 10 desktop verification pending; do not begin Phase 11.
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-20 — P10-CORRECTIVE-N-R4 — Publish repaired class normalization as immutable catalog revision — complete
+Summary: Desktop diagnosis found stale immutable `5etools-3c5d9d3-b3` generated, served, and revision-scoped cached catalog artifacts even though the committed builder source correctly normalizes Paladin starting equipment. Bumping `BUILDER_VERSION` to `b4` published repaired output as `5etools-3c5d9d3-b4`; b3 remains retained and immutable. Publication atomically activated b4. The read-only host mount served the new immutable artifact without a rebuild; the catalog-server container restart refreshed its live `current.json` pointer.
+Validation: `npm --prefix obsidian-dnd-character run check` PASS; `npm --prefix obsidian-dnd-character run build` PASS; `git diff --check` PASS. Generated and served b4 Paladin artifacts match and contain the normalized equipment-or-gold package, chain mail grant, nested equipment choices, holy spellcasting focus query, and 5d4 × 10 gp alternative.
+Manual verification: desktop revalidation remains pending. Phase 10 gate remains reopened; do not begin Phase 11.
+Commit: see Git history for P10-CORRECTIVE-N-R4.
 
 2026-08-20 — P10-CORRECTIVE-N — Restore class starting equipment — complete
 Summary: First incorrect boundary: `extractStartingEquipment()` discarded valid structured `startingEquipment` because it expected an array. The generic repair supports applicable pinned 2014/2024 class starting-equipment structures; R1 added plural `equipmentTypes` support, R2 repaired pinned 2024 proficiency-array saving-throw extraction required by the real Monk source path, and R3 makes `UNSUPPORTED_STARTING_EQUIPMENT` block class normalization, preventing false-success equipment-less classes.
