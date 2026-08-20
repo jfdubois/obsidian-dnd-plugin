@@ -24,7 +24,7 @@ function makeSummary(
 ): CatalogEntitySummary {
   return createCatalogEntitySummary({
     id: createEntityId(id),
-    kind: kind as CatalogEntitySummary["kind"],
+    kind: kind as Exclude<CatalogEntitySummary["kind"], "item">,
     name,
     sourceId: createSourceId(sourceId),
     ruleset: ruleset as CatalogEntitySummary["ruleset"],

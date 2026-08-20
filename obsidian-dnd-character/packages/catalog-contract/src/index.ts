@@ -55,10 +55,13 @@ export {
 export {
   /* Entity summary types */
   type CatalogEntitySummary,
+  type CatalogItemSummary,
   /* Entity summary factory */
   createCatalogEntitySummary,
+  createCatalogItemSummary,
   /* Entity summary validator */
   isCatalogEntitySummary,
+  isCatalogItemSummary,
 } from "./entity-summary";
 
 export {
@@ -171,7 +174,12 @@ export {
   EQUIPMENT_GROUPS,
 } from "./query";
 
-export { evaluateEquipmentQuery } from "./equipment-query-evaluator";
+export {
+  evaluateEquipmentQuery,
+  evaluateEquipmentQueryIndex,
+  EquipmentQueryIndexCompatibilityError,
+  type EquipmentQueryIndexEligibilityInput,
+} from "./equipment-query-evaluator";
 
 export {
   /* Effect types */

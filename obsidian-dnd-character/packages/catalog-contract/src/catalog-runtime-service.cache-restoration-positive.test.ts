@@ -19,6 +19,7 @@ import { createCacheEnvelope, createNoExpiryExpiration } from './cache-envelope'
 import { buildEntityCacheKey } from './cache-keys';
 import { createSpeciesRule } from './entity-species';
 import { createEntityId, createSourceId } from '@obsidian-dnd/domain';
+import { isCatalogItemSummary } from './entity-summary';
 
 describe('CatalogRuntimeService — restoreFromCache (positive)', () => {
   beforeEach(() => {
@@ -36,7 +37,7 @@ describe('CatalogRuntimeService — restoreFromCache (positive)', () => {
       class: [cls('barbarian')],
       feat: [feat('tough')],
       spell: [spell('fireball')],
-      item: [item('dagger')],
+      item: [item('dagger', ['simple-weapon'])],
     };
     populateCache(store, REV_A, manifest, sources, indexByKind);
 
@@ -59,6 +60,9 @@ describe('CatalogRuntimeService — restoreFromCache (positive)', () => {
     const firstSpecies = service.index['species']?.[0];
     expect(firstSpecies).toBeDefined();
     expect(firstSpecies?.id).toBe('human');
+    const restoredItem = service.index['item']?.[0];
+    expect(isCatalogItemSummary(restoredItem)).toBe(true);
+    expect(isCatalogItemSummary(restoredItem) && restoredItem.equipmentGroups).toEqual(['simple-weapon']);
   });
 
   it('makes zero network calls during restoration', async () => {
@@ -72,7 +76,7 @@ describe('CatalogRuntimeService — restoreFromCache (positive)', () => {
       class: [cls('barbarian')],
       feat: [feat('tough')],
       spell: [spell('fireball')],
-      item: [item('dagger')],
+      item: [item('dagger', ['simple-weapon'])],
     };
     populateCache(store, REV_A, manifest, sources, indexByKind);
 
@@ -113,7 +117,7 @@ describe('CatalogRuntimeService — restoreFromCache (positive)', () => {
       class: [cls('barbarian'), cls('wizard')],
       feat: [feat('tough'), feat('observant')],
       spell: [spell('fireball'), spell('shield')],
-      item: [item('dagger'), item('longsword')],
+      item: [item('dagger', ['simple-weapon']), item('longsword', ['martial-weapon'])],
     };
     populateCache(store, REV_A, manifest, sources, indexByKind);
 
@@ -154,7 +158,7 @@ describe('CatalogRuntimeService — restoreFromCache (positive)', () => {
       class: [cls('barbarian')],
       feat: [feat('tough')],
       spell: [spell('fireball')],
-      item: [item('dagger')],
+      item: [item('dagger', ['simple-weapon'])],
     };
     populateCache(store, REV_A, manifest, sources, indexByKind);
 
@@ -194,7 +198,7 @@ describe('CatalogRuntimeService — restoreFromCache (positive)', () => {
       class: [cls('barbarian')],
       feat: [feat('tough')],
       spell: [spell('fireball')],
-      item: [item('dagger')],
+      item: [item('dagger', ['simple-weapon'])],
     };
     populateCache(store, REV_A, manifest, sources, indexByKind);
 

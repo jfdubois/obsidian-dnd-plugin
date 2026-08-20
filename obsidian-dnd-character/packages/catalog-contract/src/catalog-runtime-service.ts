@@ -8,7 +8,7 @@ import type { EntityDetailResponse } from './entity-detail';
 import type { CatalogCacheManager } from './cache-manager';
 import { isCatalogManifest } from './catalog-manifest';
 import { isCatalogSource } from './source-metadata';
-import { isCatalogEntitySummary } from './entity-summary';
+import { isCatalogEntitySummary, isCatalogItemSummary } from './entity-summary';
 import { isEntityDetailResponse } from './entity-detail';
 import { isCurrentRevision } from './current-revision';
 import { CatalogRuntimeError } from './catalog-runtime-error';
@@ -620,7 +620,8 @@ export class CatalogRuntimeService {
         return { success: false, reason: 'index-malformed' };
       }
       for (const entry of indexEnvelope.value) {
-        if (!isCatalogEntitySummary(entry)) {
+        if (!isCatalogEntitySummary(entry)
+          || (manifest.schemaVersion >= 4 && kind === 'item' && !isCatalogItemSummary(entry))) {
           return { success: false, reason: 'index-malformed' };
         }
       }
@@ -803,7 +804,8 @@ export class CatalogRuntimeService {
       }
 
       for (let i = 0; i < raw.length; i++) {
-        if (!isCatalogEntitySummary(raw[i])) {
+        if (!isCatalogEntitySummary(raw[i])
+          || (manifest.schemaVersion >= 4 && kind === 'item' && !isCatalogItemSummary(raw[i]))) {
           throw new CatalogRuntimeError({
             endpoint,
             revision,

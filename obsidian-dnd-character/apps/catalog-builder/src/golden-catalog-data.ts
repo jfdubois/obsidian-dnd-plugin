@@ -42,6 +42,7 @@ import {
   createEffectOrigin,
   createRenderParagraph,
   createCatalogEntitySummary,
+  createCatalogItemSummary,
 } from "@obsidian-dnd/catalog-contract";
 import type { CatalogableEntity } from "./compact-index-tag-generator.js";
 
@@ -333,9 +334,8 @@ export function createGoldenEntities(): CatalogableEntity[] {
 /* ── Summary factory for golden entities ───────────────────────── */
 
 export function createGoldenSummary(entity: CatalogableEntity, tags: string[], detailPath: string): CatalogEntitySummary {
-  return createCatalogEntitySummary({
+  const props = {
     id: entity.id,
-    kind: entity.kind,
     name: entity.name,
     sourceId: entity.sourceId,
     ruleset: entity.ruleset,
@@ -343,5 +343,9 @@ export function createGoldenSummary(entity: CatalogableEntity, tags: string[], d
     legacy: "legacy" in entity ? entity.legacy : false,
     tags,
     detailPath,
-  });
+  };
+  if (entity.kind === "item") {
+    return createCatalogItemSummary({ ...props, kind: "item", equipmentGroups: [...entity.equipmentGroups] });
+  }
+  return createCatalogEntitySummary({ ...props, kind: entity.kind });
 }

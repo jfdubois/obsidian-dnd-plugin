@@ -1,8 +1,9 @@
 import { vi } from 'vitest';
 import { createCatalogManifest } from './catalog-manifest';
 import { createCatalogSource } from './source-metadata';
-import type { CatalogEntitySummary } from './entity-summary';
-import { createCatalogEntitySummary } from './entity-summary';
+import type { CatalogEntitySummary, CatalogItemSummary } from './entity-summary';
+import { createCatalogEntitySummary, createCatalogItemSummary } from './entity-summary';
+import type { EquipmentGroup } from './query';
 import {
   createCatalogRevision,
   createEntityId,
@@ -44,7 +45,7 @@ export const makeSources = () => [
   }),
 ];
 
-export const sp = (id: string, overrides?: Partial<CatalogEntitySummary>) =>
+export const sp = (id: string, overrides?: Partial<Parameters<typeof createCatalogEntitySummary>[0]>) =>
   createCatalogEntitySummary({
     id: createEntityId(id),
     kind: 'species',
@@ -110,8 +111,8 @@ export const spell = (id: string) =>
     detailPath: `entities/spells/${id}.json`,
   });
 
-export const item = (id: string) =>
-  createCatalogEntitySummary({
+export const item = (id: string, equipmentGroups: EquipmentGroup[]): CatalogItemSummary =>
+  createCatalogItemSummary({
     id: createEntityId(id),
     kind: 'item',
     name: 'Dagger',
@@ -121,6 +122,7 @@ export const item = (id: string) =>
     legacy: false,
     tags: [],
     detailPath: `entities/items/${id}.json`,
+    equipmentGroups,
   });
 
 export function createMockPersistence(persistedRevision: string | null): ActiveRevisionPersistence {

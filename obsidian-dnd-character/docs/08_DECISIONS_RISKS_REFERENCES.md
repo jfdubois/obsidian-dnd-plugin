@@ -180,6 +180,17 @@ When implemented, the catalog schema version increments to the finalized v2 cont
 
 **Consequences:** P10-CORRECTIVE-I normalizes the coverage, P10-CORRECTIVE-J integrates the consequence service and invalidation, P10-CORRECTIVE-K renders panels/details, P10-CORRECTIVE-L handles supplemental external references, and P10-CORRECTIVE-M rebaselines validation. The prior Phase 10 gate evidence remains historical but is no longer the active release gate.
 
+### ADR-014 — Equipment eligibility metadata is projected into the compact item index
+
+**Status:** accepted
+**Date:** 2026-08-20
+
+**Context:** `EquipmentQuery` requires normalized equipment groups, but those groups existed only in `ItemRule` detail documents. Hydrating every item detail to evaluate one creator choice produced an unbounded query and renderer out-of-memory failure.
+
+**Decision:** Catalog schema v4 projects `ItemRule.equipmentGroups` into item compact-index entries as normalized query metadata. No raw 5eTools field, display-name interpretation, generic facet system, candidate list, or catalog definition is introduced into character state.
+
+**Consequences:** Equipment eligibility can be determined from the compact item index and item details remain lazy-loaded. Existing immutable revisions remain unchanged. Schema compatibility identifies revisions that contain the required item-index shape; an older or malformed item index must report an actionable equipment-query compatibility diagnostic and must never fall back to loading all item details. Candidate lists and catalog definitions remain disposable catalog/runtime data, never authoritative character state.
+
 ## Principal risks
 
 | ID | Risk | Impact | Mitigation |

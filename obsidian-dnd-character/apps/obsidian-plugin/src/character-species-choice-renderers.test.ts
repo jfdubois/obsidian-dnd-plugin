@@ -9,6 +9,7 @@ import { renderChoiceDefinition } from "./character-species-choice-renderers";
 import type { CatalogEntitySummary, QueryChoiceDefinitionType } from "@obsidian-dnd/catalog-contract";
 import {
   createCatalogEntitySummary,
+  createCatalogItemSummary,
   createChoiceDefinition,
   createEntityQuery,
   createProficiencyQuery,
@@ -82,16 +83,16 @@ function createEntitySummary(
   ruleset: Ruleset = "2024",
   access: ContentAccess = "core",
 ): CatalogEntitySummary {
+  const props = {
+    id: createEntityId(id), name, sourceId: srcId, ruleset, access, legacy: false,
+    tags: [], detailPath: `entities/${kind}/phb/${ruleset}/${id.split(":").pop()}.json`,
+  };
+  if (kind === "item") {
+    return createCatalogItemSummary({ ...props, kind: "item", equipmentGroups: [] });
+  }
   return createCatalogEntitySummary({
-    id: createEntityId(id),
     kind,
-    name,
-    sourceId: srcId,
-    ruleset,
-    access,
-    legacy: false,
-    tags: [],
-    detailPath: `entities/${kind}/phb/${ruleset}/${id.split(":").pop()}.json`,
+    ...props,
   });
 }
 

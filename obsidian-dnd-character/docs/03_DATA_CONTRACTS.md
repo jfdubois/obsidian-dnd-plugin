@@ -67,7 +67,22 @@ interface CatalogEntitySummary {
   tags: string[];
   detailPath: string;
 }
+
+interface CatalogItemSummary extends CatalogEntitySummary {
+  kind: "item";
+  equipmentGroups: EquipmentGroup[];
+}
 ```
+
+Catalog schema v4 projects the normalized `ItemRule.equipmentGroups` field into
+the compact item index as `CatalogItemSummary.equipmentGroups`. It is the only
+item-specific eligibility metadata added for the current creator vertical.
+Equipment-query preparation filters this disposable index data before lazy
+loading selected display details; it never stores candidate lists, index
+records, or catalog definitions in character state. Older schemas can still be
+read under normal catalog compatibility, but an equipment query against an item
+index without valid group metadata fails with an actionable compatibility
+diagnostic and never falls back to an all-item detail load.
 
 ## 5. Normalized entity
 

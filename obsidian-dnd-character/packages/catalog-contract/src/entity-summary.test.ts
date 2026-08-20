@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   createCatalogEntitySummary,
+  createCatalogItemSummary,
+  isCatalogItemSummary,
   isCatalogEntitySummary,
   type CatalogEntitySummary,
 } from "./entity-summary";
@@ -82,6 +84,35 @@ describe("CatalogEntitySummary", () => {
       detailPath: "entities/items/item:2024:xdmtn:amulet-health.json",
     };
     expect(isCatalogEntitySummary(sourceAccess)).toBe(true);
+  });
+
+  it("requires normalized equipment groups for the item-index refinement", () => {
+    const item: unknown = {
+      id: "item:2014:phb:club",
+      kind: "item",
+      name: "Club",
+      sourceId: "phb",
+      ruleset: "2014",
+      access: "core",
+      legacy: true,
+      tags: ["weapon"],
+      detailPath: "entities/item/item:2014:phb:club.json",
+      equipmentGroups: ["simple-weapon", "simple-melee-weapon"],
+    };
+    expect(isCatalogItemSummary(item)).toBe(true);
+    expect(isCatalogItemSummary({ ...(item as Record<string, unknown>), equipmentGroups: ["weapon"] })).toBe(false);
+    const { equipmentGroups: _equipmentGroups, ...legacyItem } = item as Record<string, unknown>;
+    expect(isCatalogItemSummary(legacyItem)).toBe(false);
+  });
+
+  it("keeps equipment metadata item-only and permits valid empty item groups", () => {
+    const item = createCatalogItemSummary({
+      id: createEntityId("item:2024:xphb:rope"), kind: "item", name: "Rope",
+      sourceId: createSourceId("xphb"), ruleset: "2024", access: "core", legacy: false,
+      tags: ["adventuring-gear"], detailPath: "entities/item/item:2024:xphb:rope.json", equipmentGroups: [],
+    });
+    expect(isCatalogItemSummary(item)).toBe(true);
+    expect(isCatalogEntitySummary({ ...validSummary, equipmentGroups: ["simple-weapon"] })).toBe(false);
   });
 
   it("validator accepts all entity kinds", () => {

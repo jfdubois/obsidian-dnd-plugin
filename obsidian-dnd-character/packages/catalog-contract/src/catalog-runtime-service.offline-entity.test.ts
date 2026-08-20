@@ -116,7 +116,7 @@ describe('offline entity loading through production path', () => {
       class: [cls('class:barbarian')],
       feat: [feat('feat:tough')],
       spell: [spell('spell:fireball')],
-      item: [item('item:dagger')],
+      item: [item('item:dagger', ['simple-weapon'])],
     };
     for (const kind of manifest.entityKinds) {
       const entries = indexByKind[kind as keyof typeof indexByKind] ?? [];
@@ -212,7 +212,7 @@ describe('offline entity loading through production path', () => {
       class: [cls('class:barbarian')],
       feat: [feat('feat:tough')],
       spell: [spell('spell:fireball')],
-      item: [item('item:dagger')],
+      item: [item('item:dagger', ['simple-weapon'])],
     };
     for (const kind of manifest.entityKinds) {
       const entries = indexByKind[kind as keyof typeof indexByKind] ?? [];

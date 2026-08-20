@@ -1,7 +1,7 @@
 import type {
   CatalogEntitySummary,
 } from "@obsidian-dnd/catalog-contract";
-import { createCatalogEntitySummary } from "@obsidian-dnd/catalog-contract";
+import { createCatalogEntitySummary, createCatalogItemSummary } from "@obsidian-dnd/catalog-contract";
 import type {
   EntityId,
   RuleEntityKind,
@@ -97,7 +97,7 @@ export function entityToSummary(
   // default to false for those kinds.
   const legacy = "legacy" in entity ? entity.legacy : false;
 
-  return createCatalogEntitySummary({
+  const props = {
     id: entity.id,
     kind: entity.kind,
     name: entity.name,
@@ -107,7 +107,11 @@ export function entityToSummary(
     legacy,
     tags,
     detailPath,
-  });
+  };
+  if (entity.kind === "item") {
+    return createCatalogItemSummary({ ...props, kind: "item", equipmentGroups: [...entity.equipmentGroups] });
+  }
+  return createCatalogEntitySummary({ ...props, kind: entity.kind });
 }
 
 /* ── Compact index builder ─────────────────────────────────────── */

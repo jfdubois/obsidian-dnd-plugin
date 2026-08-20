@@ -39,7 +39,7 @@ function buildIndex() {
     class: [cls('class:barbarian')],
     feat: [feat('feat:tough')],
     spell: [spell('spell:fireball')],
-    item: [item('item:dagger')],
+    item: [item('item:dagger', ['simple-weapon'])],
   };
 }
 

@@ -466,7 +466,7 @@ describe("RequestUrlCatalogClient", () => {
 
     expect(result.compatible).toBe(true);
     expect(result.serverSchemaVersion).toBe(2);
-    expect(result.pluginSchemaVersion).toBe(3);
+    expect(result.pluginSchemaVersion).toBe(4);
     expect(result.reason).toBeUndefined();
   });
 
@@ -475,7 +475,7 @@ describe("RequestUrlCatalogClient", () => {
 
     expect(result.compatible).toBe(false);
     expect(result.serverSchemaVersion).toBe(1);
-    expect(result.pluginSchemaVersion).toBe(3);
+    expect(result.pluginSchemaVersion).toBe(4);
     expect(result.reason).toContain("1");
   });
 

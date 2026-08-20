@@ -16,8 +16,8 @@ describe("schema version constants", () => {
     expect(CATALOG_API_VERSION).toBe(1);
   });
 
-  it("CATALOG_SCHEMA_VERSION equals 3", () => {
-    expect(CATALOG_SCHEMA_VERSION).toBe(3);
+  it("CATALOG_SCHEMA_VERSION equals 4", () => {
+    expect(CATALOG_SCHEMA_VERSION).toBe(4);
   });
 });
 
@@ -58,6 +58,14 @@ describe("isSupportedApiVersion", () => {
 describe("isSupportedSchemaVersion", () => {
   it("returns true for 2", () => {
     expect(isSupportedSchemaVersion(2)).toBe(true);
+  });
+
+  it("returns true for 3", () => {
+    expect(isSupportedSchemaVersion(3)).toBe(true);
+  });
+
+  it("returns true for 4", () => {
+    expect(isSupportedSchemaVersion(4)).toBe(true);
   });
 
   it("returns false for 0", () => {

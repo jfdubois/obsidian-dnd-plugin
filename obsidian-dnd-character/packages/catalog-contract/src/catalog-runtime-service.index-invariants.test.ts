@@ -37,7 +37,7 @@ const makeSources = () => [
   }),
 ];
 
-const sp = (id: string, overrides?: Partial<CatalogEntitySummary>) =>
+const sp = (id: string, overrides?: Partial<Parameters<typeof createCatalogEntitySummary>[0]>) =>
   createCatalogEntitySummary({
     id: createEntityId(id),
     kind: 'species',
