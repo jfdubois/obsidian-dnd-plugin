@@ -2,7 +2,7 @@
 
 ## Current work
 
-Phase 10 corrective — catalog-backed origin grants complete; Phase 10 gate remains passed
+Phase 10 corrective — P10-CORRECTIVE-N Restore class starting equipment complete; Phase 10 gate reopened pending desktop verification
 
 ## PB8-004 automated gate
 
@@ -22,7 +22,7 @@ Accepted for Phase 8 development with tracked deferred mobile validation.
 
 ## Next roadmap task
 
-Phase 11 — Character management (after Phase 10 gate)
+Phase 10 gate — desktop verification of class-origin starting equipment
 
 ## Branch baseline
 
@@ -84,13 +84,19 @@ None recorded.
 - Phase 9 starting commit: a362900
 - Completed Phase 9 task commits: P9-T001 — see Git history for P9-T001; P9-T002 — see Git history for P9-T002; P9-T003 — see Git history for P9-T003; P9-T004 — see Git history for P9-T004; P9-T005 — see Git history for P9-T005; P9-T006 — see Git history for P9-T006; P9-T007 — see Git history for P9-T007; P9-T008 — see Git history for P9-T008; P9-T009 — see Git history for P9-T009; P9-T010 — see Git history for P9-T010; P9-T011 — see Git history for P9-T011; P9-T012 — c3032a7; P9-T013 — 2111f0c; P9-T014 — 541120b; P9-T015 — 2db464f; P9-T016 — a0d9726; P9-T017 — see Git history for P9-T017; P9-T018 — see Git history for P9-T018
 - Phase 10 starting commit: 77baeed
-- Completed Phase 10 task commits: P10-T001 — see Git history for P10-T001; P10-T002 — see Git history for P10-T002; P10-T003 — see Git history for P10-T003; P10-T004 — see Git history for P10-T004; P10-T005 — see Git history for P10-T005; P10-T006 — see Git history for P10-T006; P10-T007 — see Git history for P10-T007; P10-T008 — see Git history for P10-T008; P10-T009 — 0b69134; P10-T010 — see Git history for P10-T010; P10-T011 — see Git history for P10-T011; P10-T012 — see Git history for P10-T012; P10-T013 — see Git history for P10-T013; P10-T014 — see Git history for P10-T014; P10-T015 — see Git history for P10-T015; P10-T016 — see Git history for P10-T016; P10-T017 — see Git history for P10-T017; P10-T018 — see Git history for P10-T018; P10-T019 — see Git history for P10-T019; P10-T020 — see Git history for P10-T020; P10-T020-CORRECTIVE — see Git history for P10-T020-CORRECTIVE; P10-T020-CORRECTIVE-G-R1 — see Git history for P10-T020-CORRECTIVE-G-R1; P10-CORRECTIVE-H — see Git history for P10-CORRECTIVE-H; P10-CORRECTIVE-H1 — see Git history for P10-CORRECTIVE-H1; P10-CORRECTIVE-H2 — see Git history for P10-CORRECTIVE-H2; P10-CORRECTIVE-H3 — see Git history for P10-CORRECTIVE-H3; P10-CORRECTIVE-H4 — chore(project): complete P10-CORRECTIVE-H4; P10-CORRECTIVE-H5 — chore(project): complete P10-CORRECTIVE-H5; P10-CORRECTIVE-H6 — chore(project): complete P10-CORRECTIVE-H6; P10-CORRECTIVE-I — see Git history for P10-CORRECTIVE-I; P10-CORRECTIVE-J — see Git history for P10-CORRECTIVE-J; P10-CORRECTIVE-K — see Git history for P10-CORRECTIVE-K; P10-CORRECTIVE-L — see Git history for P10-CORRECTIVE-L; P10-CORRECTIVE-M — see Git history for P10-CORRECTIVE-M
-- Phase 10 gate: complete. Corrective sequence through P10-CORRECTIVE-M passed. Gate review confirms all criteria satisfied.
-- Blocking issue: none
+- Completed Phase 10 task commits: P10-T001 — see Git history for P10-T001; P10-T002 — see Git history for P10-T002; P10-T003 — see Git history for P10-T003; P10-T004 — see Git history for P10-T004; P10-T005 — see Git history for P10-T005; P10-T006 — see Git history for P10-T006; P10-T007 — see Git history for P10-T007; P10-T008 — see Git history for P10-T008; P10-T009 — 0b69134; P10-T010 — see Git history for P10-T010; P10-T011 — see Git history for P10-T011; P10-T012 — see Git history for P10-T012; P10-T013 — see Git history for P10-T013; P10-T014 — see Git history for P10-T014; P10-T015 — see Git history for P10-T015; P10-T016 — see Git history for P10-T016; P10-T017 — see Git history for P10-T017; P10-T018 — see Git history for P10-T018; P10-T019 — see Git history for P10-T019; P10-T020 — see Git history for P10-T020; P10-T020-CORRECTIVE — see Git history for P10-T020-CORRECTIVE; P10-T020-CORRECTIVE-G-R1 — see Git history for P10-T020-CORRECTIVE-G-R1; P10-CORRECTIVE-H — see Git history for P10-CORRECTIVE-H; P10-CORRECTIVE-H1 — see Git history for P10-CORRECTIVE-H1; P10-CORRECTIVE-H2 — see Git history for P10-CORRECTIVE-H2; P10-CORRECTIVE-H3 — see Git history for P10-CORRECTIVE-H3; P10-CORRECTIVE-H4 — chore(project): complete P10-CORRECTIVE-H4; P10-CORRECTIVE-H5 — chore(project): complete P10-CORRECTIVE-H5; P10-CORRECTIVE-H6 — chore(project): complete P10-CORRECTIVE-H6; P10-CORRECTIVE-I — see Git history for P10-CORRECTIVE-I; P10-CORRECTIVE-J — see Git history for P10-CORRECTIVE-J; P10-CORRECTIVE-K — see Git history for P10-CORRECTIVE-K; P10-CORRECTIVE-L — see Git history for P10-CORRECTIVE-L; P10-CORRECTIVE-M — see Git history for P10-CORRECTIVE-M; P10-CORRECTIVE-N — chore(project): complete P10-CORRECTIVE-N
+- Phase 10 gate: reopened. Desktop verification of class-origin starting equipment is required before the gate can be closed again.
+- Blocking issue: Phase 10 desktop verification pending; do not begin Phase 11.
 
 ## Recent work
 
 Only the latest three task or gate entries are retained here. Older entries are stored in `docs/PROJECT_HISTORY.md`.
+
+2026-08-20 — P10-CORRECTIVE-N — Restore class starting equipment — complete
+Summary: First incorrect boundary: `extractStartingEquipment()` discarded valid structured `startingEquipment` because it expected an array. The generic repair supports applicable pinned 2014/2024 class starting-equipment structures; R1 added plural `equipmentTypes` support, R2 repaired pinned 2024 proficiency-array saving-throw extraction required by the real Monk source path, and R3 makes `UNSUPPORTED_STARTING_EQUIPMENT` block class normalization, preventing false-success equipment-less classes.
+Validation: focused corrective tests PASS; `npm --prefix obsidian-dnd-character run check` PASS; `npm --prefix obsidian-dnd-character run build` PASS; `git diff --check` PASS.
+Manual verification: desktop verification of class starting equipment has not yet been performed after this repair. Phase 10 gate remains reopened; do not begin Phase 11.
+Commit: chore(project): complete P10-CORRECTIVE-N.
 
 2026-08-18 — Phase 10 corrective — Catalog-backed origin grants — complete
 Summary: `loadCreatorConsequenceReadModel()` had silently omitted a required catalog-backed ItemRule when detail retrieval failed, so strict finalization received an incomplete dependency set and rejected the grant. It now confirms each required item ID against the active item index, obtains the exact ItemRule through the catalog cache or lazy detail loading, and runtime-validates it before finalization. Missing index entries, retrieval failures, and invalid details now fail before finalization with typed actionable diagnostics. The historical Silk Rope fetch failure is not recoverable, but the swallowed required-entity failure is reproduced and repaired; uncached Silk Rope lazy-loads and materializes for the Tiefling + Sailor + Paladin scenario. `character-finalize.ts` remains strict and unchanged. No entity/item-name exceptions, catalog definitions, candidate lists, or catalog paths persist in CharacterDocument.
@@ -101,12 +107,6 @@ Commit: see Git history for Phase 10 catalog-backed origin-grant corrective.
 Summary: Corrective sequence through P10-CORRECTIVE-M complete. Gate review confirms: (1) valid level-one creation for both rulesets via production rules engine; (2) core content eligibility and source policy enforced; (3) normalized origin ownership and dependency invalidation proven; (4) Species/Background/Class details use normalized catalog content only. Full validation suite passes.
 Validation: npm run check PASS (5062 tests, 2 skipped, 30 pre-existing warnings); npm run build PASS; diff check clean.
 Commit: see Git history for Phase 10 gate.
-
-2026-08-13 — P10-CORRECTIVE-M — Rebaseline Phase 10 state-machine and manual validation — complete (no changes needed)
-Summary: Verified that all acceptance criteria are already satisfied by existing implementation. Level-one character initialization correctly derives currentHp from max HP via production rules engine. Review snapshot shows derived results (abilities, HP) via `buildCreatorPreview`. Real PHB Elf (species:2014:phb:elf) consequences reach production `calculateAbilityScores` with DEX +2 origin contribution. Persistence invariants hold: currentHp persisted, maximumHp not persisted, base scores unchanged, no transient fields leaked. Full S0-S8 pipeline integration test confirms end-to-end correctness.
-Validation: npm run check PASS (5062 tests, 2 skipped); npm run build PASS; diff check clean.
-Compatibility notes: No new implementation or tests needed. Existing implementation in character-finalize.ts, character-review-snapshot.ts, and creator-preview.ts already satisfies all requirements.
-Commit: see Git history for P10-CORRECTIVE-M.
 
 2026-08-11 — P10-CORRECTIVE-K — Render consequence panels and normalized details — complete
 Summary: Added reusable normalized-catalog origin details, shared Species/Background/Class consequence summaries, active-choice status presentation, explicit command-backed random starting currency display, and a read-only consequence-aware review section. Details are offline, catalog-backed, and accessible; final save remains catalog-aware finalization.

@@ -1,5 +1,5 @@
 import type { ChoiceInstanceId, EntityId, RuleGrantId, Ruleset, SourceId } from "@obsidian-dnd/domain";
-import { createChoiceInstanceId } from "@obsidian-dnd/domain";
+import { createChoiceInstanceId, createRuleGrantId } from "@obsidian-dnd/domain";
 import type { CharacterChoice } from "@obsidian-dnd/character-contract";
 import type {
   BackgroundRule, CatalogQuery, ChoiceDefinition, ChoiceOption, ClassRule, EntityDetailResponse,
@@ -109,6 +109,17 @@ function addChoice(definition: ChoiceDefinition, originId: EntityId, parent: str
   const result = validateCreatorChoiceValue(definition, resolution?.selectedValue, candidates);
   choices.push({ instanceId, definition, originId, parentOptionId: parent, candidates, selectedValue: resolution?.selectedValue, status: result.status });
   if (result.status !== "resolved") diagnostics.push({ code: result.status === "unresolved" ? "unresolved-choice" : "invalid-choice", originId, choiceInstanceId: instanceId, message: result.message });
+  if (result.status === "resolved" && definition.type === "equipment" && resolution?.selectedValue?.type === "entity-ids") {
+    for (let index = 0; index < resolution.selectedValue.entityIds.length; index++) {
+      const itemId = resolution.selectedValue.entityIds[index]!;
+      grants.push({
+        grant: { id: createRuleGrantId(`${definition.id}:selected:${index}:${itemId}`), type: "item", itemId, quantity: 1 },
+        originId,
+        provenance: "option",
+        parentChoiceInstanceId: instanceId,
+      });
+    }
+  }
   if (result.status !== "resolved" || definition.type !== "closed-option" || resolution?.selectedValue?.type !== "option-ids") return;
   for (const optionId of resolution.selectedValue.optionIds) {
     const option = definition.options.find((candidate) => candidate.id === optionId);

@@ -70,6 +70,31 @@ describe("catalog-aware creator finalization", () => {
     expect(goldResult?.currency.gp).toBe(60); expect(Object.keys(goldResult!.selections)).toEqual([choiceId]);
   });
 
+  it("blocks unresolved class equipment picks, then materializes the selected catalog item with class ownership alongside background equipment", () => {
+    const packageId = createChoiceDefinitionId("choice:class:package");
+    const packageOption = createChoiceOptionId("option:class:package");
+    const equipmentId = createChoiceDefinitionId("choice:class:weapon");
+    const classChoice: ChoiceDefinition = {
+      id: packageId, label: "Class package", type: "closed-option", minimum: 1, maximum: 1, repeatable: false, prerequisites: [],
+      options: [{ id: packageOption, label: "Package A", grants: [], choices: [{ id: equipmentId, label: "Choose weapon", type: "equipment", minimum: 1, maximum: 1, repeatable: false, optionQuery: { type: "equipment", equipmentGroups: ["artisan-tool"] }, prerequisites: [] }] }],
+    };
+    const value = draft();
+    const originBackground = { ...background(), grants: [namedGrant] };
+    const entities = [species(speciesId, []), originBackground, classRule([classChoice]), item()];
+    const packageInstance = `${classId}:choice:${packageId}` as never;
+    const equipmentInstance = `${classId}:choice:${equipmentId}:option:${packageOption}` as never;
+    setCreatorChoice(value, entities, packageInstance, { type: "option-ids", optionIds: [packageOption] });
+    expect(finalizeCharacterWithCatalog(value, entities, revision)).toBeNull();
+    setCreatorChoice(value, entities, equipmentInstance, { type: "entity-ids", entityIds: [itemId] });
+    const finalized = finalizeCharacterWithCatalog(value, entities, revision);
+    expect(finalized?.inventory).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: "catalog-item", itemId, quantity: 1 }),
+      expect.objectContaining({ type: "named-item", name: "priestly vestments", quantity: 1 }),
+    ]));
+    expect(finalized?.catalog.createdWithRevision).toBe(revision);
+    expect(JSON.stringify(finalized)).not.toContain("equipmentGroups");
+  });
+
   it("rejects active blockers before construction while ignoring inactive historical values", () => {
     const value = draft(); const before = structuredClone(value);
     expect(finalizeCharacterWithCatalog(value, [species(), background(), classRule(), item()], revision)).toBeNull();

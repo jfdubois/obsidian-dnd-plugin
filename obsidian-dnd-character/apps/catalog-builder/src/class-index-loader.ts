@@ -208,7 +208,15 @@ function indexSingleClass(
   const startingSkillChoices = extractStartingSkillChoices(remaining);
 
   // 7. Extract starting equipment
-  const { grants: startingEquipmentGrants, choices: startingEquipmentChoices } = extractStartingEquipment(remaining);
+  const { grants: startingEquipmentGrants, choices: startingEquipmentChoices, diagnostics: startingEquipmentDiagnostics } = extractStartingEquipment(remaining);
+  for (const message of startingEquipmentDiagnostics) {
+    diagnostics.push(makeDiagnostic(
+      "UNSUPPORTED_STARTING_EQUIPMENT",
+      `Class "${record.name}" has unsupported starting equipment: ${message}`,
+      record.name,
+      opts,
+    ));
+  }
 
   // 8. Extract starting gold
   const startingGold = extractStartingGold(remaining);

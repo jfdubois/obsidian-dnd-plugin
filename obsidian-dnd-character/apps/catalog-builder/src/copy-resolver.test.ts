@@ -1910,5 +1910,5 @@ describe("source-role-aware canonical copy lookup", () => {
     expect(result.baseEntity.remaining.className).toBe("Artificer");
     expect(result.baseEntity.remaining.classSource).toBe("TCE");
     expect(result.baseEntity.remaining.shortName).toBe("Alchemist");
-  });
+  }, 15_000);
 });

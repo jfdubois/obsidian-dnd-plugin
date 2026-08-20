@@ -1,4 +1,5 @@
 import type { CopyModRawRecord } from "./mod-types";
+import type { EquipmentGroup } from "@obsidian-dnd/catalog-contract";
 
 /* ── Diagnostic types ──────────────────────────────────────────── */
 
@@ -11,7 +12,8 @@ export type ClassIndexDiagnosticCode =
   | "MISSING_HIT_DIE"
   | "INVALID_HIT_DIE"
   | "MISSING_PRIMARY_ABILITIES"
-  | "MISSING_SAVING_THROW_PROFICIENCIES";
+  | "MISSING_SAVING_THROW_PROFICIENCIES"
+  | "UNSUPPORTED_STARTING_EQUIPMENT";
 
 export interface ClassIndexDiagnostic {
   readonly code: ClassIndexDiagnosticCode;
@@ -113,12 +115,22 @@ export interface StartingEquipmentGrant {
 /** A closed-option equipment choice (pick one of A, B, C packages). */
 export interface StartingEquipmentChoice {
   readonly count: number;
+  readonly label?: string;
   readonly options: readonly StartingEquipmentOption[];
 }
 
 export interface StartingEquipmentOption {
   readonly label: string;
   readonly grants: readonly StartingEquipmentGrant[];
+  /** Nested equipment packages or type selections activated by this option. */
+  readonly choices?: readonly StartingEquipmentChoice[];
+  readonly equipmentChoices?: readonly StartingEquipmentTypeChoice[];
+}
+
+/** A catalog query to choose an item from mapped catalog-owned equipment groups. */
+export interface StartingEquipmentTypeChoice {
+  readonly equipmentGroups: readonly EquipmentGroup[];
+  readonly quantity: number;
 }
 
 /* ── Starting gold shapes ────────────────────────────────────── */

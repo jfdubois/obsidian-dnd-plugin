@@ -1,9 +1,10 @@
-import type { IndexedClassEntry } from "./class-index-types";
-import { isAbility, createEntityId, createSourceId, createRuleGrantId, createChoiceDefinitionId, createChoiceOptionId, isWeaponCategory, isWeaponPropertyRef, type Ability, type WeaponPropertyRef } from "@obsidian-dnd/domain";
+import type { IndexedClassEntry, StartingEquipmentChoice, StartingEquipmentGrant } from "./class-index-types";
+import { isAbility, createCanonicalEntityId, createEntityId, createSourceId, createRuleGrantId, createChoiceDefinitionId, createChoiceOptionId, isWeaponCategory, isWeaponPropertyRef, type Ability, type WeaponPropertyRef } from "@obsidian-dnd/domain";
 import {
   createClassRule,
   createChoiceDefinition,
   createClosedOptionChoiceDefinition,
+  createEquipmentQuery,
   createProficiencyQuery,
   createEntityQuery,
   createLevelDefinition,
@@ -41,6 +42,7 @@ export type ClassNormalizerDiagnosticCode =
   | "INVALID_PRIMARY_ABILITY"
   | "MISSING_SAVING_THROW_PROFICIENCIES"
   | "INVALID_SAVING_THROW_ABILITY"
+  | "UNSUPPORTED_STARTING_EQUIPMENT"
   | "SUBCLASS_EXCLUDED";
 
 export interface ClassNormalizerDiagnostic {
@@ -87,6 +89,7 @@ function makeDiagnostic(
     "INVALID_HIT_DIE",
     "MISSING_PRIMARY_ABILITIES",
     "MISSING_SAVING_THROW_PROFICIENCIES",
+    "UNSUPPORTED_STARTING_EQUIPMENT",
   ].includes(code);
 
   return Object.freeze({
@@ -200,6 +203,80 @@ function normalizeArmorCategory(raw: string): "light" | "medium" | "heavy" | "sh
 
 /* ── Starting grants builder ───────────────────────────────────── */
 
+function resolveStartingItemId(reference: string, entry: IndexedClassEntry) {
+  if (reference.startsWith("item:")) return createEntityId(reference);
+  const [name, rawSource] = reference.split("|");
+  if (name === undefined || name.length === 0) return undefined;
+  const source = rawSource?.toUpperCase() === "XPHB" ? "XPHB" : rawSource?.toUpperCase() === "PHB" ? "PHB" : entry.source;
+  const resolved = createCanonicalEntityId({ kind: "item", ruleset: entry.ruleset, source, name });
+  return resolved.ok ? resolved.id : undefined;
+}
+
+function buildNestedEquipmentChoices(
+  entry: IndexedClassEntry,
+  owner: string,
+  path: string,
+  choices: NonNullable<IndexedClassEntry["startingEquipmentChoices"][number]["options"][number]["equipmentChoices"]>,
+): ChoiceDefinition[] {
+  const result: ChoiceDefinition[] = [];
+  for (let index = 0; index < choices.length; index++) {
+    const equipment = choices[index]!;
+    result.push(createChoiceDefinition(
+      createChoiceDefinitionId(`${owner}:${path}:equipment:${index}`),
+      "Choose starting equipment",
+      "equipment",
+      equipment.quantity,
+      equipment.quantity,
+      equipment.quantity > 1,
+      createEquipmentQuery({ equipmentGroups: [...equipment.equipmentGroups] }),
+      [],
+    ));
+  }
+  return result;
+}
+
+function buildNestedStartingChoices(
+  entry: IndexedClassEntry, owner: string, path: string, choices: readonly StartingEquipmentChoice[],
+): ChoiceDefinition[] {
+  return choices.map((choice, choiceIndex) => createClosedOptionChoiceDefinition(
+    createChoiceDefinitionId(`${owner}:${path}:package:${choiceIndex}`),
+    choice.label ?? "Choose starting equipment",
+    choice.count,
+    choice.count,
+    false,
+    choice.options.map((option, optionIndex) => ({
+      id: createChoiceOptionId(`${owner}:${path}:package:${choiceIndex}:option:${optionIndex}`),
+      label: option.label,
+      grants: option.grants.flatMap((grant, grantIndex) => materializeStartingEquipmentGrant(
+        grant,
+        createRuleGrantId(`${owner}:${path}:package:${choiceIndex}:option:${optionIndex}:grant:${grantIndex}`),
+        entry,
+      )),
+      choices: [
+        ...buildNestedEquipmentChoices(entry, owner, `${path}:package:${choiceIndex}:option:${optionIndex}`, option.equipmentChoices ?? []),
+        ...buildNestedStartingChoices(entry, owner, `${path}:package:${choiceIndex}:option:${optionIndex}`, option.choices ?? []),
+      ],
+    })),
+    [],
+  ));
+}
+
+function materializeStartingEquipmentGrant(
+  grant: StartingEquipmentGrant, id: ReturnType<typeof createRuleGrantId>, entry: IndexedClassEntry,
+): RuleGrant[] {
+  if (grant.type === "item" && grant.itemId !== undefined) {
+    const itemId = resolveStartingItemId(grant.itemId, entry);
+    return itemId === undefined ? [] : [{ id, type: "item", itemId, quantity: grant.quantity ?? 1 }];
+  }
+  if (grant.type === "named-item" && grant.name !== undefined) return [{ id, type: "named-item", name: grant.name, quantity: grant.quantity ?? 1 }];
+  if (grant.type === "currency" && grant.denomination !== undefined) {
+    const denomination = grant.denomination as "cp" | "sp" | "ep" | "gp" | "pp";
+    if (grant.fixedValue !== undefined) return [{ id, type: "currency", denomination, amount: { type: "fixed", value: grant.fixedValue } }];
+    if (grant.diceCount !== undefined && grant.diceSides !== undefined) return [{ id, type: "currency", denomination, amount: { type: "dice", count: grant.diceCount, dieSides: grant.diceSides, multiplier: grant.diceMultiplier ?? 1 } }];
+  }
+  return [];
+}
+
 /**
  * Builds starting grants (RuleGrant[]) from indexed class entry data.
  *
@@ -278,7 +355,8 @@ function buildStartingGrants(
     const grantId = createRuleGrantId(`${entityId}:starting:equipment:${i}`);
     if (eg.type === "item" && eg.itemId) {
       const quantity = eg.quantity ?? 1;
-      grants.push({ id: grantId, type: "item", itemId: createEntityId(eg.itemId), quantity });
+      const itemId = resolveStartingItemId(eg.itemId, entry);
+      if (itemId !== undefined) grants.push({ id: grantId, type: "item", itemId, quantity });
     } else if (eg.type === "named-item" && eg.name) {
       const quantity = eg.quantity ?? 1;
       grants.push({ id: grantId, type: "named-item", name: eg.name, quantity });
@@ -372,7 +450,8 @@ function buildStartingChoices(
         const g = opt.grants[gIndex]!;
         const grantId = createRuleGrantId(`${entityId}:starting:choice:${i}:option:${optIndex}:grant:${gIndex}`);
         if (g.type === "item" && g.itemId) {
-          optGrants.push({ id: grantId, type: "item", itemId: createEntityId(g.itemId), quantity: g.quantity ?? 1 } as RuleGrant);
+          const itemId = resolveStartingItemId(g.itemId, entry);
+          if (itemId !== undefined) optGrants.push({ id: grantId, type: "item", itemId, quantity: g.quantity ?? 1 } as RuleGrant);
         } else if (g.type === "named-item" && g.name) {
           optGrants.push({ id: grantId, type: "named-item", name: g.name, quantity: g.quantity ?? 1 } as RuleGrant);
         } else if (g.type === "currency" && g.denomination) {
@@ -393,13 +472,16 @@ function buildStartingChoices(
         id: createChoiceOptionId(`${entityId}:starting:choice:${i}:option:${optIndex}`),
         label: opt.label,
         grants: optGrants,
-        choices: [],
+        choices: [
+          ...buildNestedEquipmentChoices(entry, entityId, `starting:choice:${i}:option:${optIndex}`, opt.equipmentChoices ?? []),
+          ...buildNestedStartingChoices(entry, entityId, `starting:choice:${i}:option:${optIndex}`, opt.choices ?? []),
+        ],
       };
     });
 
     choices.push(createClosedOptionChoiceDefinition(
       createChoiceDefinitionId(`${entityId}:starting:choice:${i}`),
-      "Choose starting equipment",
+      ec.label ?? "Choose starting equipment",
       ec.count,
       ec.count,
       false,
@@ -454,7 +536,8 @@ function normalizeSingleClass(
   // 2. Forward diagnostics from index loader
   for (const diag of entry.diagnostics) {
     const code = diag.code as ClassNormalizerDiagnosticCode;
-    if (code === "EXCLUDED_SOURCE" || code === "INVALID_SOURCE" || code === "UNKNOWN_SOURCE") {
+    if (code === "EXCLUDED_SOURCE" || code === "INVALID_SOURCE" || code === "UNKNOWN_SOURCE" ||
+        code === "UNSUPPORTED_STARTING_EQUIPMENT") {
       diagnostics.push(makeDiagnostic(
         code,
         diag.message,

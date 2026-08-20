@@ -1,5 +1,6 @@
 import type { RawRecord, ValidatedFileEnvelope } from "./raw-boundary";
 import type { CopyModRawRecord } from "./mod-types";
+import { mapRawEquipmentType, mapRawEquipmentTypes } from "./equipment-group-mapping";
 import type {
   ClassIndexDiagnostic,
   ClassIndexDiagnosticCode,
@@ -154,32 +155,31 @@ export function extractSavingThrows2014(remaining: Record<string, unknown>): rea
 /**
  * Extracts saving throw proficiencies for 2024 ruleset.
  *
- * 2024 (XPHB) classes use `proficiencies` array with entries like:
- * { name: "Athletics", type: "saving_throw", ability: "str" }
+ * Some 2024 records use `proficiencies` entries like:
+ * { name: "Athletics", type: "saving_throw", ability: "str" }.
+ * The pinned XPHB class records use the established structured `proficiency`
+ * string array, shared with the 2014 representation.
  */
 export function extractSavingThrows2024(remaining: Record<string, unknown>): readonly string[] {
   const proficiencies = remaining.proficiencies;
-  if (!Array.isArray(proficiencies)) {
-    return Object.freeze([]);
-  }
-
   const abilities: string[] = [];
-  for (const entry of proficiencies) {
-    if (typeof entry === "object" && entry !== null && !Array.isArray(entry)) {
-      const prof = entry as Record<string, unknown>;
-      if (prof.type === "saving_throw") {
-        const ability = prof.ability;
-        if (typeof ability === "string" && ability.length > 0) {
-          const upper = ability.toUpperCase();
-          if (!abilities.includes(upper)) {
-            abilities.push(upper);
+  if (Array.isArray(proficiencies)) {
+    for (const entry of proficiencies) {
+      if (typeof entry === "object" && entry !== null && !Array.isArray(entry)) {
+        const prof = entry as Record<string, unknown>;
+        if (prof.type === "saving_throw") {
+          const ability = prof.ability;
+          if (typeof ability === "string" && ability.length > 0) {
+            const upper = ability.toUpperCase();
+            if (!abilities.includes(upper)) {
+              abilities.push(upper);
+            }
           }
         }
       }
     }
   }
-
-  return Object.freeze(abilities);
+  return abilities.length > 0 ? Object.freeze(abilities) : extractSavingThrows2014(remaining);
 }
 
 /**
@@ -534,6 +534,7 @@ import type {
   StartingEquipmentGrant,
   StartingEquipmentChoice,
   StartingEquipmentOption,
+  StartingEquipmentTypeChoice,
 } from "./class-index-types";
 
 /**
@@ -545,13 +546,48 @@ import type {
 export function extractStartingEquipment(remaining: Record<string, unknown>): {
   readonly grants: readonly StartingEquipmentGrant[];
   readonly choices: readonly StartingEquipmentChoice[];
+  readonly diagnostics: readonly string[];
 } {
   const grants: StartingEquipmentGrant[] = [];
   const choices: StartingEquipmentChoice[] = [];
+  const diagnostics: string[] = [];
 
   const startingEquipment = remaining.startingEquipment;
+  if (isRecord(startingEquipment)) {
+    const defaultData = startingEquipment.defaultData;
+    if (!Array.isArray(defaultData)) {
+      diagnostics.push("startingEquipment must contain a defaultData array.");
+      return freezeStartingEquipment(grants, choices, diagnostics);
+    }
+    const defaultOption = parseStructuredEquipmentData(defaultData, diagnostics);
+    if (defaultOption === undefined) return freezeStartingEquipment([], [], diagnostics);
+    const goldAlternative = parseGoldAlternative(startingEquipment.goldAlternative);
+    if (startingEquipment.goldAlternative !== undefined && goldAlternative === undefined) {
+      diagnostics.push("startingEquipment.goldAlternative must be a supported dice expression.");
+      return freezeStartingEquipment([], [], diagnostics);
+    }
+    if (goldAlternative === undefined) {
+      grants.push(...defaultOption.grants);
+      choices.push(...(defaultOption.choices ?? []));
+      if (defaultOption.equipmentChoices.length > 0) {
+        choices.push({ count: 1, label: "Choose starting equipment", options: Object.freeze([{
+          label: "Starting equipment", grants: Object.freeze([]), equipmentChoices: Object.freeze(defaultOption.equipmentChoices),
+        }]) });
+      }
+      return freezeStartingEquipment(grants, choices, diagnostics);
+    }
+    choices.push({
+      count: 1,
+      label: "Choose starting equipment or gold",
+      options: Object.freeze([
+        { label: "Starting equipment", grants: Object.freeze(defaultOption.grants), choices: Object.freeze(defaultOption.choices ?? []), equipmentChoices: Object.freeze(defaultOption.equipmentChoices) },
+        { label: "Starting gold", grants: Object.freeze([goldAlternative]) },
+      ]),
+    });
+    return freezeStartingEquipment(grants, choices, diagnostics);
+  }
   if (!Array.isArray(startingEquipment)) {
-    return { grants: Object.freeze(grants), choices: Object.freeze(choices) };
+    return freezeStartingEquipment(grants, choices, diagnostics);
   }
 
   for (const entry of startingEquipment) {
@@ -661,10 +697,116 @@ export function extractStartingEquipment(remaining: Record<string, unknown>): {
     }
   }
 
-  return {
-    grants: Object.freeze(grants),
-    choices: Object.freeze(choices),
-  };
+  return freezeStartingEquipment(grants, choices, diagnostics);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function freezeStartingEquipment(
+  grants: readonly StartingEquipmentGrant[], choices: readonly StartingEquipmentChoice[], diagnostics: readonly string[],
+): { readonly grants: readonly StartingEquipmentGrant[]; readonly choices: readonly StartingEquipmentChoice[]; readonly diagnostics: readonly string[] } {
+  return { grants: Object.freeze([...grants]), choices: Object.freeze([...choices]), diagnostics: Object.freeze([...diagnostics]) };
+}
+
+function parseStructuredEquipmentData(
+  defaultData: readonly unknown[], diagnostics: string[],
+): { grants: StartingEquipmentGrant[]; choices: StartingEquipmentChoice[]; equipmentChoices: StartingEquipmentTypeChoice[] } | undefined {
+  const grants: StartingEquipmentGrant[] = [];
+  const choices: StartingEquipmentChoice[] = [];
+  const equipmentChoices: StartingEquipmentTypeChoice[] = [];
+  for (let index = 0; index < defaultData.length; index++) {
+    const container = defaultData[index];
+    if (!isRecord(container)) {
+      diagnostics.push(`startingEquipment.defaultData[${index}] must be an object.`);
+      return undefined;
+    }
+    const entries = Object.entries(container);
+    if (entries.length === 0 || entries.some(([, value]) => !Array.isArray(value))) {
+      diagnostics.push(`startingEquipment.defaultData[${index}] must contain named item arrays.`);
+      return undefined;
+    }
+    const automatic = container._;
+    if (automatic !== undefined) {
+      if (entries.length !== 1 || !Array.isArray(automatic)) {
+        diagnostics.push(`startingEquipment.defaultData[${index}] mixes automatic and alternative packages.`);
+        return undefined;
+      }
+      const parsed = parseEquipmentPackage(automatic, `startingEquipment.defaultData[${index}]`, diagnostics);
+      if (parsed === undefined) return undefined;
+      grants.push(...parsed.grants);
+      choices.push(...parsed.choices);
+      equipmentChoices.push(...parsed.equipmentChoices);
+      continue;
+    }
+    if (entries.length < 2) {
+      diagnostics.push(`startingEquipment.defaultData[${index}] requires at least two alternatives.`);
+      return undefined;
+    }
+    const options: StartingEquipmentOption[] = [];
+    for (const [label, packageItems] of entries) {
+      const parsed = parseEquipmentPackage(packageItems as unknown[], `startingEquipment.defaultData[${index}].${label}`, diagnostics);
+      if (parsed === undefined) return undefined;
+      options.push({ label: `Package ${label.toUpperCase()}`, grants: Object.freeze(parsed.grants), choices: Object.freeze(parsed.choices), equipmentChoices: Object.freeze(parsed.equipmentChoices) });
+    }
+    choices.push({ count: 1, label: "Choose starting equipment", options: Object.freeze(options) });
+  }
+  return { grants, choices, equipmentChoices };
+}
+
+function parseEquipmentPackage(
+  items: readonly unknown[], path: string, diagnostics: string[],
+): { grants: StartingEquipmentGrant[]; choices: StartingEquipmentChoice[]; equipmentChoices: StartingEquipmentTypeChoice[] } | undefined {
+  const grants: StartingEquipmentGrant[] = [];
+  const equipmentChoices: StartingEquipmentTypeChoice[] = [];
+  for (let index = 0; index < items.length; index++) {
+    const entry = items[index];
+    const entryPath = `${path}[${index}]`;
+    if (typeof entry === "string" && entry.includes("|")) {
+      grants.push({ type: "item", itemId: entry, quantity: 1 });
+      continue;
+    }
+    if (!isRecord(entry)) {
+      diagnostics.push(`${entryPath} must be an item reference or supported structured equipment entry.`);
+      return undefined;
+    }
+    const quantity = entry.quantity === undefined ? 1 : entry.quantity;
+    if (typeof quantity !== "number" || !Number.isInteger(quantity) || quantity < 1) {
+      diagnostics.push(`${entryPath}.quantity must be a positive integer.`);
+      return undefined;
+    }
+    if (typeof entry.item === "string" && entry.item.includes("|")) grants.push({ type: "item", itemId: entry.item, quantity });
+    else if (typeof entry.special === "string" && entry.special.trim().length > 0) grants.push({ type: "named-item", name: entry.special.trim(), quantity });
+    else if (typeof entry.value === "number" && Number.isSafeInteger(entry.value) && entry.value > 0) grants.push({ type: "currency", denomination: "cp", fixedValue: entry.value });
+    else if (typeof entry.equipmentType === "string") {
+      const group = mapRawEquipmentType(entry.equipmentType);
+      if (group !== undefined) equipmentChoices.push({ equipmentGroups: [group], quantity });
+      else {
+        diagnostics.push(`${entryPath}.equipmentType is not a supported equipment group.`);
+        return undefined;
+      }
+    } else if (entry.equipmentTypes !== undefined) {
+      const groups = mapRawEquipmentTypes(entry.equipmentTypes);
+      if (groups !== undefined) equipmentChoices.push({ equipmentGroups: Object.freeze(groups), quantity });
+      else {
+        diagnostics.push(`${entryPath}.equipmentTypes must be a non-empty array of supported equipment groups.`);
+        return undefined;
+      }
+    }
+    else {
+      diagnostics.push(`${entryPath} uses an unsupported starting-equipment structure.`);
+      return undefined;
+    }
+  }
+  return { grants, choices: [], equipmentChoices };
+}
+
+function parseGoldAlternative(value: unknown): StartingEquipmentGrant | undefined {
+  if (typeof value !== "string") return undefined;
+  const dice = value.match(/(\d+)d(\d+)(?:\s*[×x*]\s*(\d+))?/i);
+  if (dice === null) return undefined;
+  return { type: "currency", denomination: "gp", diceCount: Number(dice[1]), diceSides: Number(dice[2]), diceMultiplier: dice[3] === undefined ? 1 : Number(dice[3]) };
 }
 
 /**

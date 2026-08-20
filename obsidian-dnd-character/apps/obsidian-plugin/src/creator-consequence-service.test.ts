@@ -236,4 +236,24 @@ describe("creator draft authority", () => {
     expect(draft.equipment).toEqual({ items: [] });
     expect(Object.values(draft.selections).every((choice) => !("candidates" in choice))).toBe(true);
   });
+
+  it("materializes a selected item from either class equipment group as a class-origin consequence", () => {
+    const artisanId = createEntityId("item:2024:test:artisan-tools");
+    const instrumentId = createEntityId("item:2024:test:instrument");
+    const source = createSourceId("test");
+    const artisan = createItemRule(artisanId, "Artisan tools", source, "2024", "core", "adventuring-gear", [], false, [], [], [], [], [], false, undefined, undefined, undefined, undefined, undefined, undefined, ["artisan-tool"], undefined, ["artisan-tool"]);
+    const instrument = createItemRule(instrumentId, "Instrument", source, "2024", "core", "adventuring-gear", [], false, [], [], [], [], [], false, undefined, undefined, undefined, undefined, undefined, undefined, ["musical-instrument"], undefined, ["musical-instrument"]);
+    const equipment = createChoiceDefinitionId("choice:class:plural-equipment");
+    const definition: ChoiceDefinition = { id: equipment, label: "Choose starting equipment", type: "equipment", minimum: 1, maximum: 1, repeatable: false, optionQuery: { type: "equipment", equipmentGroups: ["musical-instrument", "artisan-tool"] }, prerequisites: [] };
+    const draft = createEmptyCharacterDraft();
+    draft.class.classId = classId;
+    const entities = [classRule([definition]), artisan, instrument];
+    const instanceId = `${classId}:choice:${equipment}` as CharacterChoice["instanceId"];
+    setCreatorChoice(draft, entities, instanceId, { type: "entity-ids", entityIds: [instrumentId] });
+    const consequence = deriveDraftConsequences(draft, entities).origins[0]!;
+    expect(consequence.choices[0]?.candidates.map((candidate) => candidate.id)).toEqual(expect.arrayContaining([artisanId, instrumentId]));
+    expect(consequence.grants).toEqual(expect.arrayContaining([
+      expect.objectContaining({ originId: classId, provenance: "option", grant: expect.objectContaining({ type: "item", itemId: instrumentId, quantity: 1 }) }),
+    ]));
+  });
 });
