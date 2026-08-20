@@ -1,5 +1,5 @@
 import type { CopyModRawRecord } from "./mod-types";
-import type { EquipmentGroup } from "@obsidian-dnd/catalog-contract";
+import type { EquipmentEligibility, EquipmentGroup } from "@obsidian-dnd/catalog-contract";
 
 /* ── Diagnostic types ──────────────────────────────────────────── */
 
@@ -131,6 +131,8 @@ export interface StartingEquipmentOption {
 export interface StartingEquipmentTypeChoice {
   readonly equipmentGroups: readonly EquipmentGroup[];
   readonly quantity: number;
+  readonly sourceId?: string;
+  readonly eligibility?: readonly EquipmentEligibility[];
 }
 
 /* ── Starting gold shapes ────────────────────────────────────── */

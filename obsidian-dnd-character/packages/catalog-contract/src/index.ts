@@ -151,6 +151,7 @@ export {
   type EquipmentRarity,
   type EquipmentBodySlot,
   type EquipmentGroup,
+  type EquipmentEligibility,
   /* Query enum constants */
   SPELL_ACQUISITION_MODES,
   PROFICIENCY_QUERY_KINDS,
@@ -164,6 +165,8 @@ export {
   isEquipmentRarity,
   isEquipmentBodySlot,
   isEquipmentGroup,
+  isEquipmentEligibility,
+  canonicalizeEquipmentEligibility,
   /* Query validator */
   isCatalogQuery,
   /* Query factories */
@@ -172,6 +175,7 @@ export {
   createProficiencyQuery,
   createEquipmentQuery,
   EQUIPMENT_GROUPS,
+  EQUIPMENT_ELIGIBILITY_ORDER,
 } from "./query";
 
 export {

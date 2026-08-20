@@ -3,6 +3,9 @@ import { normalizeBackgrounds, type BackgroundNormalizerInput } from "./backgrou
 import type { BackgroundSourceScopeContext } from "./background-source-scope";
 import type { RawRecord } from "./raw-boundary";
 import type { BackgroundRule } from "@obsidian-dnd/catalog-contract";
+import type { EquipmentQuery } from "@obsidian-dnd/catalog-contract";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 
 const TEST_CONTEXT: BackgroundSourceScopeContext = {
   knownPinnedSources: Object.freeze(new Set(["PHB", "XPHB", "VGtM"])),
@@ -28,6 +31,61 @@ function makeInput(records: RawRecord[]): BackgroundNormalizerInput {
 }
 
 describe("normalizeBackgrounds", () => {
+  type ChoiceLike = { readonly type: string; readonly optionQuery?: unknown; readonly choices?: readonly ChoiceLike[]; readonly options?: readonly { readonly choices?: readonly ChoiceLike[] }[] };
+  it("normalizes pinned PHB background filter semantics without name-based rules", () => {
+    const path = resolve(process.cwd(), "../external/5etools-src/data/backgrounds.json");
+    const records = (JSON.parse(readFileSync(path, "utf8")) as { background: Array<Record<string, unknown>> }).background
+      .filter((record) => ["Folk Hero", "Guild Artisan", "Entertainer"].includes(String(record.name)) && record.source === "PHB")
+      .map((record) => { const { name, source, ...remaining } = record; return { name: String(name), source: String(source), remaining }; });
+    const result = normalizeBackgrounds(makeInput(records));
+    expect(result.diagnostics.some((diagnostic) => diagnostic.code === "UNMAPPED_MECHANIC")).toBe(false);
+    const byName = new Map(result.backgrounds.map((background) => [background.name, background]));
+    for (const name of ["Folk Hero", "Guild Artisan"]) {
+      const queries: EquipmentQuery[] = [];
+      const visit = (choices: readonly ChoiceLike[]): void => choices.forEach((choice) => {
+        if (choice.type === "equipment" && typeof choice.optionQuery === "object" && choice.optionQuery !== null && (choice.optionQuery as { type?: unknown }).type === "equipment") queries.push(choice.optionQuery as EquipmentQuery);
+        if (choice.type === "closed-option") choice.options?.forEach((option) => visit(option.choices ?? []));
+      });
+      visit(byName.get(name)!.choices);
+      expect(queries).toEqual(expect.arrayContaining([expect.objectContaining({ equipmentGroups: ["artisan-tool"], eligibility: ["mundane"], sourceId: "phb" })]));
+    }
+    const entertainer = byName.get("Entertainer")!;
+    const query = entertainer.choices.flatMap((choice) => choice.type === "equipment" ? [choice.optionQuery] : []).find((candidate) => candidate.type === "equipment" && candidate.equipmentGroups?.includes("musical-instrument"));
+    expect(query).toEqual(expect.objectContaining({ equipmentGroups: ["musical-instrument"], eligibility: ["mundane"], sourceId: "phb" }));
+  });
+
+  it("keeps the real 2024 background equipment-type selectors normalized", () => {
+    const path = resolve(process.cwd(), "../external/5etools-src/data/backgrounds.json");
+    const names = ["Artisan", "Guard", "Noble", "Soldier", "Wayfarer"];
+    const records = (JSON.parse(readFileSync(path, "utf8")) as { background: Array<Record<string, unknown>> }).background
+      .filter((record) => names.includes(String(record.name)) && record.source === "XPHB")
+      .map((record) => { const { name, source, ...remaining } = record; return { name: String(name), source: String(source), remaining }; });
+    const result = normalizeBackgrounds(makeInput(records));
+    expect(new Set(result.backgrounds.map((background) => background.name))).toEqual(new Set(names));
+    const equipmentQueries = result.backgrounds.flatMap((background) => background.choices.flatMap((choice) => {
+      if (choice.type === "equipment") return [choice.optionQuery];
+      if (choice.type === "closed-option") return choice.options.flatMap((option) => option.choices.filter((nested) => nested.type === "equipment").flatMap((nested) => nested.type === "equipment" ? [nested.optionQuery] : []));
+      return [];
+    }));
+    expect(equipmentQueries).toEqual(expect.arrayContaining([
+      expect.objectContaining({ equipmentGroups: ["artisan-tool"] }),
+      expect.objectContaining({ equipmentGroups: ["gaming-set"] }),
+    ]));
+  });
+
+  it("rejects a background whose equipment selector has an unsupported constraint", () => {
+    const result = normalizeBackgrounds(makeInput([makeRecord({
+      name: "Unsupported equipment background",
+      remaining: {
+        startingEquipment: [{ _: [{ equipmentType: "instrumentMusical" }] }],
+        entries: [{ type: "list", items: [{ name: "Equipment:", entry: "Any {@filter musical instrument|items|miscellaneous=mundane|type=instrument|property=light}" }] }],
+      },
+    })]));
+    expect(result.backgrounds).toHaveLength(0);
+    expect(result.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "UNMAPPED_MECHANIC", message: expect.stringContaining("property") }),
+    ]));
+  });
   it("normalizes a valid PHB Acolyte with skill proficiencies", () => {
     const result = normalizeBackgrounds(makeInput([makeRecord()]));
     expect(result.backgrounds).toHaveLength(1);

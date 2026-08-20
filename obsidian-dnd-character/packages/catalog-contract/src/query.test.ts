@@ -102,6 +102,11 @@ describe("EquipmentGroup", () => {
 });
 
 describe("CatalogQuery", () => {
+  it("accepts typed starting-equipment eligibility constraints and rejects duplicates", () => {
+    expect(isCatalogQuery({ type: "equipment", equipmentGroups: ["simple-melee-weapon"], sourceId: "phb", eligibility: ["basic"] })).toBe(true);
+    expect(isCatalogQuery({ type: "equipment", equipmentGroups: ["simple-melee-weapon"], eligibility: ["basic", "basic"] })).toBe(false);
+    expect(isCatalogQuery({ type: "equipment", equipmentGroups: ["simple-melee-weapon"], eligibility: ["magic"] })).toBe(false);
+  });
   /* ── Positive: entity ────────────────────────────────────────── */
 
   it("validator accepts entity query with kind only", () => {
@@ -464,6 +469,19 @@ describe("factories", () => {
     expect(query.equipmentGroups).toEqual(groups);
     expect(isCatalogQuery({ type: "equipment", equipmentGroups: ["toolArtisan"] })).toBe(false);
     expect(isCatalogQuery({ type: "equipment", equipmentGroups: [] })).toBe(false);
+  });
+
+  it("defines deterministic conjunctive equipment eligibility semantics", () => {
+    expect(createEquipmentQuery({ eligibility: ["basic"] }).eligibility).toEqual(["basic"]);
+    expect(createEquipmentQuery({ eligibility: ["mundane"] }).eligibility).toEqual(["mundane"]);
+    expect(createEquipmentQuery({ eligibility: ["mundane", "basic"] }).eligibility).toEqual(["basic", "mundane"]);
+    expect(isCatalogQuery({ type: "equipment", eligibility: ["basic", "mundane"] })).toBe(true);
+    expect(isCatalogQuery({ type: "equipment", eligibility: ["mundane", "basic"] })).toBe(false);
+    expect(isCatalogQuery({ type: "equipment", eligibility: ["basic", "basic"] })).toBe(false);
+    expect(isCatalogQuery({ type: "equipment", eligibility: [] })).toBe(false);
+    expect(isCatalogQuery({ type: "equipment", eligibility: ["magic"] })).toBe(false);
+    expect(isCatalogQuery(createEquipmentQuery({ eligibility: [] }))).toBe(true);
+    expect(createEquipmentQuery({ eligibility: [] }).eligibility).toBeUndefined();
   });
 });
 

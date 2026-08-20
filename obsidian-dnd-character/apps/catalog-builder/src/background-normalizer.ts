@@ -7,12 +7,13 @@ import {
   extractPage,
   extractSummary,
 } from "./background-field-extractors";
-import { createCanonicalEntityId, createChoiceDefinitionId, createChoiceOptionId, type Ability, type EntityId } from "@obsidian-dnd/domain";
+import { createCanonicalEntityId, createChoiceDefinitionId, createChoiceOptionId, createSourceId, type Ability, type EntityId } from "@obsidian-dnd/domain";
 import { createBackgroundRule, createAbilityAllocationChoiceDefinition, createChoiceDefinition, createClosedOptionChoiceDefinition, createEntityQuery, createEquipmentQuery, createRuleEffectMetadata, createEffectPresentation, createEffectOrigin, createAddLanguageEffect, createAddProficiencyEffect, type ChoiceDefinition, type RuleEffect, type RuleGrant, type BackgroundRule } from "@obsidian-dnd/catalog-contract";
 import { createDeterministicRuleGrantId } from "./rule-grant-id";
 import { mapRawEquipmentType, mapRawEquipmentTypes } from "./equipment-group-mapping";
 import type { DeferredEquipmentDestination, DeferredEquipmentIntent } from "./deferred-equipment-resolution";
 import { createFiveEToolsExternalReference } from "./fiveetools-external-reference";
+import { parseStartingEquipmentFilters, type StartingEquipmentFilterConstraint } from "./starting-equipment-filter";
 
 export type BackgroundNormalizerDiagnosticCode =
   | "EXCLUDED_SOURCE"
@@ -117,7 +118,7 @@ function packageGrants(
   return { grants, deferredEquipment };
 }
 
-function packageChoices(items: unknown[], owner: string, path: string): ChoiceDefinition[] {
+function packageChoices(items: unknown[], owner: string, path: string, filters: readonly StartingEquipmentFilterConstraint[] = []): ChoiceDefinition[] {
   const choices: ChoiceDefinition[] = [];
   for (let index = 0; index < items.length; index++) {
     const entry = items[index];
@@ -128,6 +129,7 @@ function packageChoices(items: unknown[], owner: string, path: string): ChoiceDe
       return group === undefined ? undefined : [group];
     })();
     if (groups === undefined) continue;
+    const filter = filters[index];
     choices.push(createChoiceDefinition(
       createChoiceDefinitionId(`${owner}:${path}:${index}:equipment-group`),
       "Choose starting equipment",
@@ -135,7 +137,8 @@ function packageChoices(items: unknown[], owner: string, path: string): ChoiceDe
       1,
       1,
       false,
-      createEquipmentQuery({ equipmentGroups: groups }),
+      createEquipmentQuery({ equipmentGroups: groups, sourceId: filter?.sourceId ? createSourceId(filter.sourceId) : undefined,
+        eligibility: filter?.eligibility.length ? [...filter.eligibility] : undefined }),
       [],
     ));
   }
@@ -176,9 +179,12 @@ function isValidWeightedAbility(value: unknown): boolean {
 
 function extractBackgroundChoices(
   remaining: Record<string, unknown>, owner: EntityId, ruleset: "2014" | "2024", source: "PHB" | "XPHB", includeAbility: boolean, includeEquipment: boolean,
-): { choices: ChoiceDefinition[]; deferredEquipment: DeferredEquipmentIntent[] } {
+): { choices: ChoiceDefinition[]; deferredEquipment: DeferredEquipmentIntent[]; diagnostics: readonly string[] } {
   const choices: ChoiceDefinition[] = [];
   const deferredEquipment: DeferredEquipmentIntent[] = [];
+  const filterDiagnostics: string[] = [];
+  const equipmentText = findEquipmentEntryText(remaining);
+  const filters = parseStartingEquipmentFilters(equipmentText, filterDiagnostics, "startingEquipment");
   const languages = remaining.languageProficiencies;
   if (Array.isArray(languages)) languages.forEach((entry, index) => {
     if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return;
@@ -202,7 +208,7 @@ function extractBackgroundChoices(
   if (Array.isArray(equipment)) equipment.forEach((entry, index) => {
     if (typeof entry !== "object" || entry === null || Array.isArray(entry)) return;
     const defaultPackage = (entry as Record<string, unknown>)._;
-    if (Array.isArray(defaultPackage)) choices.push(...packageChoices(defaultPackage, owner, `startingEquipment:${index}:_`));
+    if (Array.isArray(defaultPackage)) choices.push(...packageChoices(defaultPackage, owner, `startingEquipment:${index}:_`, filters.slice(index)));
     const options = Object.entries(entry as Record<string, unknown>).filter(([key, value]) => key !== "_" && Array.isArray(value));
     if (options.length < 2) return;
     const choiceId = createChoiceDefinitionId(`${owner}:equipment:${index}`);
@@ -210,10 +216,21 @@ function extractBackgroundChoices(
       const optionId = createChoiceOptionId(`${owner}:equipment:${index}:${key}`);
       const packageResult = packageGrants(value as unknown[], owner, `startingEquipment:${index}:${key}`, ruleset, source, { scope: "choice-option-grants", ownerId: owner, choiceId, optionId });
       deferredEquipment.push(...packageResult.deferredEquipment);
-      return { id: optionId, label: `Package ${key}`, grants: packageResult.grants, choices: packageChoices(value as unknown[], owner, `startingEquipment:${index}:${key}`) };
+      return { id: optionId, label: `Package ${key}`, grants: packageResult.grants, choices: packageChoices(value as unknown[], owner, `startingEquipment:${index}:${key}`, filters.slice(index)) };
     }), []));
   });
-  return { choices, deferredEquipment };
+  return { choices, deferredEquipment, diagnostics: filterDiagnostics };
+}
+
+function findEquipmentEntryText(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    for (const item of value) { const found = findEquipmentEntryText(item); if (found !== undefined) return found; }
+  } else if (typeof value === "object" && value !== null) {
+    const obj = value as Record<string, unknown>;
+    if (obj.name === "Equipment:" && typeof obj.entry === "string") return obj.entry;
+    for (const child of Object.values(obj)) { const found = findEquipmentEntryText(child); if (found !== undefined) return found; }
+  }
+  return undefined;
 }
 
 function normalizeSingleBackground(record: RawRecord, opts: NormalizerOptions): SingleResult {
@@ -365,6 +382,10 @@ function normalizeSingleBackground(record: RawRecord, opts: NormalizerOptions): 
   // 9. Assemble BackgroundRule
   const choiceResult = extractBackgroundChoices(remaining, owner, scopeResult.ruleset, scopeResult.source, abilityIsValid, equipmentIsValid);
   deferredEquipment.push(...choiceResult.deferredEquipment);
+  if (choiceResult.diagnostics.length > 0) {
+    const backgroundDiagnostics = choiceResult.diagnostics.map((message) => makeDiagnostic("UNMAPPED_MECHANIC", message, record.name, opts));
+    return { ok: false, diagnostics: Object.freeze(backgroundDiagnostics) };
+  }
   const background = createBackgroundRule(
     idResult.id,
     record.name,

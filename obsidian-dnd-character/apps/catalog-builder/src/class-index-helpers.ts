@@ -7,6 +7,7 @@ import type {
   StartingGoldEntry,
   LevelOneFeature,
 } from "./class-index-types";
+import { startingEquipmentFiltersForIndex, type StartingEquipmentFilterConstraint } from "./starting-equipment-filter";
 
 /* ── Diagnostic builder ────────────────────────────────────────── */
 
@@ -559,7 +560,7 @@ export function extractStartingEquipment(remaining: Record<string, unknown>): {
       diagnostics.push("startingEquipment must contain a defaultData array.");
       return freezeStartingEquipment(grants, choices, diagnostics);
     }
-    const defaultOption = parseStructuredEquipmentData(defaultData, diagnostics);
+    const defaultOption = parseStructuredEquipmentData(defaultData, diagnostics, startingEquipment.default);
     if (defaultOption === undefined) return freezeStartingEquipment([], [], diagnostics);
     const goldAlternative = parseGoldAlternative(startingEquipment.goldAlternative);
     if (startingEquipment.goldAlternative !== undefined && goldAlternative === undefined) {
@@ -711,7 +712,7 @@ function freezeStartingEquipment(
 }
 
 function parseStructuredEquipmentData(
-  defaultData: readonly unknown[], diagnostics: string[],
+  defaultData: readonly unknown[], diagnostics: string[], displayData: unknown,
 ): { grants: StartingEquipmentGrant[]; choices: StartingEquipmentChoice[]; equipmentChoices: StartingEquipmentTypeChoice[] } | undefined {
   const grants: StartingEquipmentGrant[] = [];
   const choices: StartingEquipmentChoice[] = [];
@@ -733,7 +734,8 @@ function parseStructuredEquipmentData(
         diagnostics.push(`startingEquipment.defaultData[${index}] mixes automatic and alternative packages.`);
         return undefined;
       }
-      const parsed = parseEquipmentPackage(automatic, `startingEquipment.defaultData[${index}]`, diagnostics);
+      const parsed = parseEquipmentPackage(automatic, `startingEquipment.defaultData[${index}]`, diagnostics,
+        startingEquipmentFiltersForIndex(displayData, index, diagnostics, `startingEquipment.default[${index}]`));
       if (parsed === undefined) return undefined;
       grants.push(...parsed.grants);
       choices.push(...parsed.choices);
@@ -745,8 +747,12 @@ function parseStructuredEquipmentData(
       return undefined;
     }
     const options: StartingEquipmentOption[] = [];
+    const filters = startingEquipmentFiltersForIndex(displayData, index, diagnostics, `startingEquipment.default[${index}]`);
+    let optionIndex = 0;
     for (const [label, packageItems] of entries) {
-      const parsed = parseEquipmentPackage(packageItems as unknown[], `startingEquipment.defaultData[${index}].${label}`, diagnostics);
+      const parsed = parseEquipmentPackage(packageItems as unknown[], `startingEquipment.defaultData[${index}].${label}`, diagnostics,
+        filters.slice(optionIndex));
+      optionIndex += parsed?.equipmentChoices.length ?? 0;
       if (parsed === undefined) return undefined;
       options.push({ label: `Package ${label.toUpperCase()}`, grants: Object.freeze(parsed.grants), choices: Object.freeze(parsed.choices), equipmentChoices: Object.freeze(parsed.equipmentChoices) });
     }
@@ -756,10 +762,11 @@ function parseStructuredEquipmentData(
 }
 
 function parseEquipmentPackage(
-  items: readonly unknown[], path: string, diagnostics: string[],
+  items: readonly unknown[], path: string, diagnostics: string[], filters: readonly StartingEquipmentFilterConstraint[] = [],
 ): { grants: StartingEquipmentGrant[]; choices: StartingEquipmentChoice[]; equipmentChoices: StartingEquipmentTypeChoice[] } | undefined {
   const grants: StartingEquipmentGrant[] = [];
   const equipmentChoices: StartingEquipmentTypeChoice[] = [];
+  let filterIndex = 0;
   for (let index = 0; index < items.length; index++) {
     const entry = items[index];
     const entryPath = `${path}[${index}]`;
@@ -781,14 +788,18 @@ function parseEquipmentPackage(
     else if (typeof entry.value === "number" && Number.isSafeInteger(entry.value) && entry.value > 0) grants.push({ type: "currency", denomination: "cp", fixedValue: entry.value });
     else if (typeof entry.equipmentType === "string") {
       const group = mapRawEquipmentType(entry.equipmentType);
-      if (group !== undefined) equipmentChoices.push({ equipmentGroups: [group], quantity });
+      const filter = filters[filterIndex++];
+      if (group !== undefined) equipmentChoices.push({ equipmentGroups: [group], quantity, sourceId: filter?.sourceId,
+        eligibility: filter?.eligibility.length ? filter.eligibility : undefined });
       else {
         diagnostics.push(`${entryPath}.equipmentType is not a supported equipment group.`);
         return undefined;
       }
     } else if (entry.equipmentTypes !== undefined) {
       const groups = mapRawEquipmentTypes(entry.equipmentTypes);
-      if (groups !== undefined) equipmentChoices.push({ equipmentGroups: Object.freeze(groups), quantity });
+      const filter = filters[filterIndex++];
+      if (groups !== undefined) equipmentChoices.push({ equipmentGroups: Object.freeze(groups), quantity, sourceId: filter?.sourceId,
+        eligibility: filter?.eligibility.length ? filter.eligibility : undefined });
       else {
         diagnostics.push(`${entryPath}.equipmentTypes must be a non-empty array of supported equipment groups.`);
         return undefined;

@@ -122,6 +122,22 @@ export function isEquipmentGroup(value: unknown): value is EquipmentGroup {
   return EQUIPMENT_GROUPS.includes(value as EquipmentGroup);
 }
 
+export type EquipmentEligibility = "basic" | "mundane";
+
+/** Eligibility values are conjunctive (AND); omitted means no restriction. */
+export const EQUIPMENT_ELIGIBILITY_ORDER: readonly EquipmentEligibility[] = ["basic", "mundane"];
+
+export function isEquipmentEligibility(value: unknown): value is EquipmentEligibility {
+  return value === "basic" || value === "mundane";
+}
+
+export function canonicalizeEquipmentEligibility(
+  values: readonly EquipmentEligibility[],
+): EquipmentEligibility[] {
+  return [...values].sort((left, right) =>
+    EQUIPMENT_ELIGIBILITY_ORDER.indexOf(left) - EQUIPMENT_ELIGIBILITY_ORDER.indexOf(right));
+}
+
 /* ── Catalog queries ─────────────────────────────────────────────
    Discriminated union of query types used by choice definitions
    to filter candidate entities. Each query is evaluated against
@@ -169,6 +185,8 @@ export interface EquipmentQuery {
   sourceId?: SourceId;
   access?: ContentAccess;
   equipmentGroups?: EquipmentGroup[];
+  /** Selector-local item semantics, conjunctive AND; omitted means unrestricted. */
+  eligibility?: EquipmentEligibility[];
 }
 
 /* ── Validator ─────────────────────────────────────────────────── */
@@ -237,6 +255,10 @@ export function isCatalogQuery(value: unknown): value is CatalogQuery {
       if (obj.access !== undefined && !isContentAccess(obj.access)) return false;
       if (obj.equipmentGroups !== undefined && (!Array.isArray(obj.equipmentGroups)
         || obj.equipmentGroups.length === 0 || !obj.equipmentGroups.every(isEquipmentGroup))) return false;
+      if (obj.eligibility !== undefined && (!Array.isArray(obj.eligibility)
+        || obj.eligibility.length === 0 || !obj.eligibility.every(isEquipmentEligibility)
+        || new Set(obj.eligibility).size !== obj.eligibility.length
+        || JSON.stringify(obj.eligibility) !== JSON.stringify(canonicalizeEquipmentEligibility(obj.eligibility as EquipmentEligibility[])))) return false;
       return true;
     }
     default: {
@@ -300,6 +322,7 @@ export function createEquipmentQuery(
     sourceId?: SourceId;
     access?: ContentAccess;
     equipmentGroups?: EquipmentGroup[];
+    eligibility?: EquipmentEligibility[];
   },
 ): EquipmentQuery {
   return {
@@ -310,5 +333,7 @@ export function createEquipmentQuery(
     sourceId: options?.sourceId,
     access: options?.access,
     equipmentGroups: options?.equipmentGroups ? [...options.equipmentGroups] : undefined,
+    eligibility: options?.eligibility && options.eligibility.length > 0
+      ? canonicalizeEquipmentEligibility(options.eligibility) : undefined,
   };
 }

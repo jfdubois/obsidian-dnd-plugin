@@ -228,7 +228,9 @@ function buildNestedEquipmentChoices(
       equipment.quantity,
       equipment.quantity,
       equipment.quantity > 1,
-      createEquipmentQuery({ equipmentGroups: [...equipment.equipmentGroups] }),
+      createEquipmentQuery({ equipmentGroups: [...equipment.equipmentGroups],
+        sourceId: equipment.sourceId ? createSourceId(equipment.sourceId) : undefined,
+        eligibility: equipment.eligibility ? [...equipment.eligibility] : undefined }),
       [],
     ));
   }

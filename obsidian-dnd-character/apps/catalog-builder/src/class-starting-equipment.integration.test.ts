@@ -6,6 +6,7 @@ import { extractStartingEquipment } from "./class-index-helpers";
 import { loadClassIndex } from "./class-index-loader";
 import { normalizeClasses } from "./class-normalizer";
 import type { RawRecord, ValidatedCollection, ValidatedFileEnvelope } from "./raw-boundary";
+import type { EquipmentQuery } from "@obsidian-dnd/catalog-contract";
 
 const sourcePath = existsSync(resolve(process.cwd(), "external/5etools-src/data/class"))
   ? resolve(process.cwd(), "external/5etools-src/data/class")
@@ -31,6 +32,7 @@ function index(record: RawRecord) {
 }
 
 describe("structured class starting equipment", () => {
+  type ChoiceLike = { readonly type: string; readonly optionQuery?: unknown; readonly choices?: readonly ChoiceLike[]; readonly options?: readonly { readonly choices?: readonly ChoiceLike[] }[] };
   it("preserves pinned PHB Paladin packages, automatic grants, equipment-type picks, and gold alternative through normalization", () => {
     const indexed = index(classRecord("class-paladin.json", "Paladin", "PHB"));
     expect(indexed.diagnostics).toEqual([]);
@@ -51,6 +53,12 @@ describe("structured class starting equipment", () => {
     expect(equipment.choices).toHaveLength(4);
     expect(equipment.choices).toEqual(expect.arrayContaining([
       expect.objectContaining({ type: "equipment", optionQuery: { type: "equipment", equipmentGroups: ["holy-spellcasting-focus"] } }),
+    ]));
+    const martialQueries = equipment.choices.flatMap((choice) => choice.type === "closed-option"
+      ? choice.options.flatMap((option) => option.choices.filter((nested) => nested.type === "equipment")) : []);
+    expect(martialQueries).toEqual(expect.arrayContaining([
+      expect.objectContaining({ optionQuery: expect.objectContaining({ equipmentGroups: ["martial-weapon"], sourceId: "phb", eligibility: ["basic"] }) }),
+      expect.objectContaining({ optionQuery: expect.objectContaining({ equipmentGroups: ["simple-melee-weapon"], sourceId: "phb", eligibility: ["basic"] }) }),
     ]));
     expect(gold.grants).toEqual(expect.arrayContaining([
       expect.objectContaining({ type: "currency", denomination: "gp", amount: { type: "dice", count: 5, dieSides: 4, multiplier: 10 } }),
@@ -84,12 +92,47 @@ describe("structured class starting equipment", () => {
     ]));
   });
 
+  it("normalizes real selector-local constraints for Monk, Barbarian, and Bard", () => {
+    const cases = [
+      ["class-monk.json", "Monk", "PHB", ["simple-weapon"], ["phb"], ["basic"]],
+      ["class-barbarian.json", "Barbarian", "PHB", ["martial-melee-weapon"], ["phb"], ["basic"]],
+      ["class-bard.json", "Bard", "PHB", ["musical-instrument"], undefined, ["mundane"]],
+    ] as const;
+    for (const [file, name, source, groups, sourceIds, eligibility] of cases) {
+      const indexed = index(classRecord(file, name, source));
+      const normalized = normalizeClasses({ entries: indexed.classes }).classes[0]!;
+      const queries: EquipmentQuery[] = [];
+      const visit = (choices: readonly ChoiceLike[]): void => choices.forEach((choice) => {
+        if (choice.type === "equipment" && typeof choice.optionQuery === "object" && choice.optionQuery !== null && (choice.optionQuery as { type?: unknown }).type === "equipment") queries.push(choice.optionQuery as EquipmentQuery);
+        if (choice.choices) visit(choice.choices);
+        if (choice.options) choice.options.forEach((option) => visit(option.choices ?? []));
+      });
+      visit(normalized.startingChoices);
+      expect(queries).toEqual(expect.arrayContaining([
+        expect.objectContaining({ equipmentGroups: groups, ...(sourceIds === undefined ? {} : { sourceId: sourceIds[0] }), eligibility }),
+      ]));
+    }
+  });
+
   it("diagnoses malformed structured 2024 proficiency data", () => {
     const indexed = index({ name: "Broken 2024", source: "XPHB", remaining: {
       hd: { number: 1, faces: 8 }, primaryAbility: [{ dex: true }], proficiency: [42],
     } });
     expect(indexed.diagnostics).toEqual(expect.arrayContaining([
       expect.objectContaining({ code: "MISSING_SAVING_THROW_PROFICIENCIES", message: expect.stringContaining("saving throw") }),
+    ]));
+  });
+
+  it("diagnoses a recognized but unsupported starting-equipment filter constraint", () => {
+    const indexed = index({ name: "Unsupported filter", source: "PHB", remaining: {
+      hd: { number: 1, faces: 8 }, proficiency: ["str", "con"],
+      startingEquipment: {
+        default: ["any {@filter martial weapon|items|source=phb|category=basic|type=martial weapon|property=light}"],
+        defaultData: [{ a: [{ equipmentType: "weaponMartial" }], b: [{ value: 500 }] }],
+      },
+    } });
+    expect(indexed.diagnostics).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "UNSUPPORTED_STARTING_EQUIPMENT", message: expect.stringContaining("property") }),
     ]));
   });
 
