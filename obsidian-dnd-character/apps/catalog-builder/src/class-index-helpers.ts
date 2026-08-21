@@ -1,6 +1,7 @@
 import type { RawRecord, ValidatedFileEnvelope } from "./raw-boundary";
 import type { CopyModRawRecord } from "./mod-types";
 import { mapRawEquipmentType, mapRawEquipmentTypes } from "./equipment-group-mapping";
+import { createCanonicalEntityId } from "@obsidian-dnd/domain";
 import type {
   ClassIndexDiagnostic,
   ClassIndexDiagnosticCode,
@@ -45,19 +46,48 @@ export function makeDiagnostic(
 
 export function isSubclassRecord(record: CopyModRawRecord): boolean {
   const remaining = record.remaining;
-  const parent = remaining.parent;
-  if (typeof parent === "string" && parent.length > 0) {
+  // 5eTools (pinned 3c5d9d3) uses className/classSource for subclasses
+  if (typeof remaining.className === "string" && remaining.className.length > 0) {
+    return true;
+  }
+  // Legacy fallback
+  if (typeof remaining.parent === "string" && remaining.parent.length > 0) {
     return true;
   }
   return false;
 }
 
+/**
+ * Maps a 5eTools source abbreviation to the corresponding ruleset.
+ */
+function sourceToRuleset(source: string): "2014" | "2024" {
+  if (source === "XPHB") return "2024";
+  return "2014";
+}
+
 export function extractParentId(record: CopyModRawRecord): string | undefined {
   const remaining = record.remaining;
-  const parent = remaining.parent;
-  if (typeof parent === "string" && parent.length > 0) {
-    return parent;
+
+  // 5eTools (pinned 3c5d9d3) uses className/classSource for subclasses
+  if (typeof remaining.className === "string" && remaining.className.length > 0) {
+    const classSource = typeof remaining.classSource === "string" ? remaining.classSource : "PHB";
+    const ruleset = sourceToRuleset(classSource);
+    const idResult = createCanonicalEntityId({
+      kind: "class",
+      ruleset,
+      source: classSource,
+      name: remaining.className,
+    });
+    if (idResult.ok) {
+      return idResult.id;
+    }
   }
+
+  // Legacy fallback
+  if (typeof remaining.parent === "string" && remaining.parent.length > 0) {
+    return remaining.parent;
+  }
+
   return undefined;
 }
 
@@ -241,25 +271,22 @@ import type {
 /**
  * Extracts starting armor proficiencies from raw class data.
  *
- * 2014 (PHB): startingProficiencies array with armor entries like { armor: ["light"] }
+ * Pinned 5eTools (3c5d9d3) PHB format: startingProficiencies dict with armor array
+ *   e.g. { armor: ["light", "medium", "heavy", "shield"] }
  * 2024 (XPHB): proficiencies array with type: "armor" entries
  */
 export function extractStartingArmorProficiencies(remaining: Record<string, unknown>): readonly string[] {
   const armors: string[] = [];
 
-  // 2014: startingProficiencies with armor entries
+  // Pinned 5eTools: startingProficiencies dict with armor array
   const startingProf = remaining.startingProficiencies;
-  if (Array.isArray(startingProf)) {
-    for (const entry of startingProf) {
-      if (typeof entry === "object" && entry !== null && !Array.isArray(entry)) {
-        const prof = entry as Record<string, unknown>;
-        const armor = prof.armor;
-        if (Array.isArray(armor)) {
-          for (const a of armor) {
-            if (typeof a === "string" && a.length > 0 && !armors.includes(a)) {
-              armors.push(a);
-            }
-          }
+  if (typeof startingProf === "object" && startingProf !== null && !Array.isArray(startingProf)) {
+    const prof = startingProf as Record<string, unknown>;
+    const armor = prof.armor;
+    if (Array.isArray(armor)) {
+      for (const a of armor) {
+        if (typeof a === "string" && a.length > 0 && !armors.includes(a)) {
+          armors.push(a);
         }
       }
     }
@@ -287,25 +314,22 @@ export function extractStartingArmorProficiencies(remaining: Record<string, unkn
 /**
  * Extracts starting weapon proficiencies from raw class data.
  *
- * 2014 (PHB): startingProficiencies with weapons: ["simple"] or weaponProficiencies.all.fromFilter
+ * Pinned 5eTools (3c5d9d3) PHB format: startingProficiencies dict with weapons array
+ *   e.g. { weapons: ["simple", "martial"] }
  * 2024 (XPHB): proficiencies with type: "weapon", or weaponProficiencies.all.fromFilter for filter-based
  */
 export function extractStartingWeaponProficiencies(remaining: Record<string, unknown>): readonly StartingWeaponProficiency[] {
   const weapons: StartingWeaponProficiency[] = [];
 
-  // 2014: startingProficiencies with weapons entries
+  // Pinned 5eTools: startingProficiencies dict with weapons array
   const startingProf = remaining.startingProficiencies;
-  if (Array.isArray(startingProf)) {
-    for (const entry of startingProf) {
-      if (typeof entry === "object" && entry !== null && !Array.isArray(entry)) {
-        const prof = entry as Record<string, unknown>;
-        const weaponsList = prof.weapons;
-        if (Array.isArray(weaponsList)) {
-          for (const w of weaponsList) {
-            if (typeof w === "string" && w.length > 0) {
-              weapons.push({ type: "category", category: w });
-            }
-          }
+  if (typeof startingProf === "object" && startingProf !== null && !Array.isArray(startingProf)) {
+    const prof = startingProf as Record<string, unknown>;
+    const weaponsList = prof.weapons;
+    if (Array.isArray(weaponsList)) {
+      for (const w of weaponsList) {
+        if (typeof w === "string" && w.length > 0) {
+          weapons.push({ type: "category", category: w });
         }
       }
     }
@@ -397,26 +421,36 @@ function extractFilterProperties(str: string): string[] {
 /**
  * Extracts starting tool proficiencies from raw class data.
  *
- * 2014 (PHB): startingProficiencies with tools entries, or toolProficiencies.anyArtisansTool
+ * Pinned 5eTools (3c5d9d3) PHB format: startingProficiencies dict with tools/toolProficiencies
+ *   e.g. { tools: ["herbalism kit"] } or { toolProficiencies: { anyArtisansTool: 1 } }
  * 2024 (XPHB): proficiencies with type: "tool"
  */
 export function extractStartingToolProficiencies(remaining: Record<string, unknown>): readonly StartingToolProficiency[] {
   const tools: StartingToolProficiency[] = [];
 
-  // 2014: startingProficiencies with tools entries
+  // Pinned 5eTools: startingProficiencies dict with tools array
   const startingProf = remaining.startingProficiencies;
-  if (Array.isArray(startingProf)) {
-    for (const entry of startingProf) {
-      if (typeof entry === "object" && entry !== null && !Array.isArray(entry)) {
-        const prof = entry as Record<string, unknown>;
-        const toolsList = prof.tools;
-        if (Array.isArray(toolsList)) {
-          for (const t of toolsList) {
-            if (typeof t === "string" && t.length > 0) {
-              tools.push({ type: "fixed", toolRef: t });
-            }
-          }
+  if (typeof startingProf === "object" && startingProf !== null && !Array.isArray(startingProf)) {
+    const prof = startingProf as Record<string, unknown>;
+    const toolsList = prof.tools;
+    if (Array.isArray(toolsList)) {
+      for (const t of toolsList) {
+        if (typeof t === "string" && t.length > 0) {
+          tools.push({ type: "fixed", toolRef: t });
         }
+      }
+    }
+    // Also check toolProficiencies within startingProficiencies (Bard, etc.)
+    const toolProfs = prof.toolProficiencies;
+    if (typeof toolProfs === "object" && toolProfs !== null && !Array.isArray(toolProfs)) {
+      const tp = toolProfs as Record<string, unknown>;
+      const anyArtisans = tp.anyArtisansTool;
+      const anyMusical = tp.anyMusicalInstrument;
+      if (typeof anyArtisans === "number" && anyArtisans > 0) {
+        tools.push({ type: "choice", count: anyArtisans, group: "artisan-tool" });
+      }
+      if (typeof anyMusical === "number" && anyMusical > 0) {
+        tools.push({ type: "choice", count: anyMusical, group: "musical-instrument" });
       }
     }
   }
@@ -458,39 +492,36 @@ export function extractStartingToolProficiencies(remaining: Record<string, unkno
 /**
  * Extracts starting skill choices from raw class data.
  *
- * 2014 (PHB): startingProficiencies with skills entries like { choose: { count: 2, from: [...] } }
+ * Pinned 5eTools (3c5d9d3) PHB format: startingProficiencies dict with skills array
+ *   e.g. { skills: [{ choose: { count: 2, from: [...] } }] }
  * 2024 (XPHB): proficiencies with type: "skill" and choose sub-object
  */
 export function extractStartingSkillChoices(remaining: Record<string, unknown>): readonly StartingSkillChoice[] {
   const choices: StartingSkillChoice[] = [];
 
-  // 2014: startingProficiencies with skills entries
+  // Pinned 5eTools: startingProficiencies dict with skills array
   const startingProf = remaining.startingProficiencies;
-  if (Array.isArray(startingProf)) {
-    for (const entry of startingProf) {
-      if (typeof entry === "object" && entry !== null && !Array.isArray(entry)) {
-        const prof = entry as Record<string, unknown>;
-        const skills = prof.skills;
-        if (Array.isArray(skills)) {
-          for (const skill of skills) {
-            if (typeof skill === "object" && skill !== null && !Array.isArray(skill)) {
-              const skillObj = skill as Record<string, unknown>;
-              const choose = skillObj.choose;
-              if (typeof choose === "object" && choose !== null && !Array.isArray(choose)) {
-                const chooseObj = choose as Record<string, unknown>;
-                const count = chooseObj.count;
-                const from = chooseObj.from;
-                if (typeof count === "number" && count > 0) {
-                  const skillList = Array.isArray(from)
-                    ? from.filter((s) => typeof s === "string" && s.length > 0) as string[]
-                    : [];
-                  choices.push({
-                    count,
-                    from: Object.freeze(skillList),
-                    isAny: skillList.length === 0,
-                  });
-                }
-              }
+  if (typeof startingProf === "object" && startingProf !== null && !Array.isArray(startingProf)) {
+    const prof = startingProf as Record<string, unknown>;
+    const skills = prof.skills;
+    if (Array.isArray(skills)) {
+      for (const skill of skills) {
+        if (typeof skill === "object" && skill !== null && !Array.isArray(skill)) {
+          const skillObj = skill as Record<string, unknown>;
+          const choose = skillObj.choose;
+          if (typeof choose === "object" && choose !== null && !Array.isArray(choose)) {
+            const chooseObj = choose as Record<string, unknown>;
+            const count = chooseObj.count;
+            const from = chooseObj.from;
+            if (typeof count === "number" && count > 0) {
+              const skillList = Array.isArray(from)
+                ? from.filter((s) => typeof s === "string" && s.length > 0) as string[]
+                : [];
+              choices.push({
+                count,
+                from: Object.freeze(skillList),
+                isAny: skillList.length === 0,
+              });
             }
           }
         }
@@ -885,63 +916,56 @@ export function extractStartingGold(remaining: Record<string, unknown>): readonl
 /* ── Level-one feature extractors ─────────────────────────────── */
 
 /**
+ * Parses a pipe-delimited classFeature reference string.
+ *
+ * PHB format: "Divine Sense|Paladin||1" (name|class|source|level, source may be empty)
+ * XPHB format: "Spellcasting|Cleric|XPHB|1" (name|class|source|level)
+ *
+ * Returns the feature name and level, or undefined if the format is invalid.
+ */
+function parseClassFeatureRef(ref: string): { name: string; level: number } | undefined {
+  const parts = ref.split("|");
+  if (parts.length < 4) return undefined;
+  const name = parts[0];
+  const levelStr = parts[3];
+  if (!name || name.length === 0) return undefined;
+  if (typeof levelStr !== "string") return undefined;
+  const level = parseInt(levelStr, 10);
+  if (isNaN(level) || level < 1) return undefined;
+  return { name, level };
+}
+
+/**
  * Extracts level-one features from raw class data.
  *
- * 2014 (PHB): levels array with level 1 entries
- * 2024 (XPHB): proficiencies with type: "feature" at level 1
+ * Pinned 5eTools (3c5d9d3) uses `classFeatures` array with pipe-delimited strings
+ * or objects with `classFeature` property. Both PHB and XPHB share this structure.
+ *
+ * String format: "Divine Sense|Paladin||1" (PHB) or "Spellcasting|Cleric|XPHB|1" (XPHB)
+ * Object format: { classFeature: "Cleric Subclass|Cleric|XPHB|3", gainSubclassFeature: true }
  */
 export function extractLevelOneFeatures(remaining: Record<string, unknown>): readonly LevelOneFeature[] {
   const features: LevelOneFeature[] = [];
 
-  // 2014: levels array with level 1 entries
-  const levels = remaining.levels;
-  if (Array.isArray(levels)) {
-    for (const level of levels) {
-      if (typeof level === "object" && level !== null && !Array.isArray(level)) {
-        const lvl = level as Record<string, unknown>;
-        if (lvl.level === 1) {
-          const feats = lvl.feats;
-          if (Array.isArray(feats)) {
-            for (const feat of feats) {
-              if (typeof feat === "string" && feat.length > 0) {
-                features.push({ name: feat });
-              } else if (typeof feat === "object" && feat !== null && !Array.isArray(feat)) {
-                const f = feat as Record<string, unknown>;
-                if (typeof f.name === "string" && f.name.length > 0) {
-                  features.push({ name: f.name });
-                }
-              }
-            }
+  // Parse classFeatures array (both PHB and XPHB)
+  const classFeatures = remaining.classFeatures;
+  if (Array.isArray(classFeatures)) {
+    for (const cf of classFeatures) {
+      if (typeof cf === "string" && cf.length > 0) {
+        const parsed = parseClassFeatureRef(cf);
+        if (parsed && parsed.level === 1) {
+          if (!features.some((f) => f.name === parsed.name)) {
+            features.push({ name: parsed.name });
           }
         }
-      }
-    }
-  }
-
-  // 2024: proficiencies with type: "feature" at level 1
-  // (This is handled differently in 2024 - features are in the levels structure)
-  const levels2024 = remaining.levels;
-  if (Array.isArray(levels2024)) {
-    for (const level of levels2024) {
-      if (typeof level === "object" && level !== null && !Array.isArray(level)) {
-        const lvl = level as Record<string, unknown>;
-        if (lvl.level === 1) {
-          // Check for features in 2024 format
-          const featuresList = lvl.features;
-          if (Array.isArray(featuresList)) {
-            for (const feat of featuresList) {
-              if (typeof feat === "string" && feat.length > 0) {
-                if (!features.some(f => f.name === feat)) {
-                  features.push({ name: feat });
-                }
-              } else if (typeof feat === "object" && feat !== null && !Array.isArray(feat)) {
-                const f = feat as Record<string, unknown>;
-                if (typeof f.name === "string" && f.name.length > 0) {
-                  if (!features.some(f2 => f2.name === f.name)) {
-                    features.push({ name: f.name });
-                  }
-                }
-              }
+      } else if (typeof cf === "object" && cf !== null && !Array.isArray(cf)) {
+        const obj = cf as Record<string, unknown>;
+        const classFeatureRef = obj.classFeature;
+        if (typeof classFeatureRef === "string" && classFeatureRef.length > 0) {
+          const parsed = parseClassFeatureRef(classFeatureRef);
+          if (parsed && parsed.level === 1) {
+            if (!features.some((f) => f.name === parsed.name)) {
+              features.push({ name: parsed.name });
             }
           }
         }
