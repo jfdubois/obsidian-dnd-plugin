@@ -20,6 +20,14 @@ Deferred by operator; not executed. Remote mobile plugin installation or downloa
 
 Accepted for Phase 8 development with tracked deferred mobile validation.
 
+## P10-NORMALIZER-A1 — Audit existing catalog-builder code and data structures
+
+- Status: complete
+- Audit report: `docs/audits/audit-p10-normalizer-a1.md`
+- Files inspected: 8 (class-index-loader.ts, class-index-helpers.ts, class-normalizer.ts, subclass-normalizer.ts, catalog-build-normalizers.ts, raw-boundary.ts, source-file-role.ts, class-feature-normalizer.ts)
+- Critical defects found: 4 (subclass detection, level-one features, starting proficiencies, parent ID extraction)
+- Recommendation: Fix defects before P10 normalizer development
+
 ## Next roadmap task
 
 Phase 10 gate — desktop revalidation of class-origin starting equipment against catalog revision `5etools-3c5d9d3-b4`
